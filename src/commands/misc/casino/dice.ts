@@ -1,6 +1,10 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
-import { createBetEmbed } from '../../../utils/createEmbed'
+import {
+  createBetEmbed,
+  createErrorEmbed,
+  createInfoEmbed,
+} from '../../../utils/createEmbed'
 import { DICE_MAX_BET, DICE_WIN_MULTIPLIER } from '../../../utils/casinoConfig'
 import {
   checkChannelConfiguration,
@@ -8,20 +12,21 @@ import {
   formatNumberToReadableString,
   checkUserRegistration,
 } from '../../../utils/utils'
+import { rollDice } from '../../../utils/casinoHelpers'
 
 export const data: CommandData = {
   name: 'dice',
-  description: 'Zahraj si kostku!',
+  description: 'Play a dice game!',
   options: [
     {
       name: 'bet',
-      description: 'Vlož sázku (např. 2k, 4.5k).',
+      description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: 'side',
-      description: 'Zvol stranu kostky (1–6).',
+      description: 'Choose a dice side.',
       type: ApplicationCommandOptionType.Integer,
       required: true,
       choices: Array.from({ length: 6 }, (_, i) => ({
@@ -30,8 +35,19 @@ export const data: CommandData = {
       })),
     },
     {
+      name: 'rolls',
+      description: 'Number of rolls.',
+      type: ApplicationCommandOptionType.Integer,
+      required: false,
+      choices: Array.from({ length: 20 }, (_, i) => ({
+        name: (i + 1).toString(),
+        value: i + 1,
+      })),
+    },
+    {
       name: 'show-balance',
-      description: 'Zobrazí aktuální zůstatek (POZOR VIDÍ VŠICHNI)!',
+      description:
+        'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -45,11 +61,19 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(interaction.user.id)
+    const user = await checkUserRegistration(
+      interaction.user.id,
+      interaction.guildId!
+    )
 
     if (!user) {
       return interaction.reply({
-        content: 'Nemáš účet. Pro vytvoření účtu napiš `/register`.',
+        embeds: [
+          createErrorEmbed(
+            'Error - Not registered',
+            'You are not registered yet.\nUse the `/register` command to register.'
+          ),
+        ],
         flags: MessageFlags.Ephemeral,
       })
     }
@@ -59,79 +83,66 @@ export async function run({ interaction }: SlashCommandProps) {
       'casinoChannelIds',
       {
         notSet:
-          'Tento server nebyl ještě nastaven pro používání sázkových příkazů. Nastav ho pomocí `/setup-casino`.',
-        notAllowed: `Tento kanál není nastaven pro používání sázkových příkazů. Zkuste jeden z těchto kanálů:`,
+          'This server has not been configured for betting commands yet.\nSet it up using `/setup-casino`.',
+        notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
       }
     )
 
     if (configReply) return
 
+    const rolls = interaction.options.getInteger('rolls') || 1
     const side = interaction.options.getInteger('side', true)
-
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
-
     const showBalance = interaction.options.getBoolean('show-balance')
 
     if (isNaN(parsedBetAmount)) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            '❌ Neplatná částka',
-            'Red',
-            'Sázka musí být reálné číslo.'
+          createInfoEmbed(
+            'Invalid Input - Not a number',
+            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
           ),
         ],
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    if (parsedBetAmount < 1) {
+    if (parsedBetAmount <= 0) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            '❌ Neplatná sázka',
-            'Red',
-            'Sázka musí být větší než 0.'
+          createInfoEmbed(
+            'Invalid Input - Non-positive number',
+            'The number you provided must be greater than 0.\nPlease enter a positive value.'
           ),
         ],
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    if (parsedBetAmount > DICE_MAX_BET) {
+    if (DICE_MAX_BET > 0 && parsedBetAmount > DICE_MAX_BET) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            '❌ Neplatná sázka',
-            'Red',
-            `Maximální sázka je $${formatNumberToReadableString(DICE_MAX_BET)}.`
+          createInfoEmbed(
+            'Invalid Input - Above Maximum Bet',
+            `The maximum bet is **$${formatNumberToReadableString(
+              DICE_MAX_BET
+            )}**.`
           ),
         ],
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    if (side < 1 || side > 6) {
+    const totalBet = parsedBetAmount * rolls
+    if (user.balance < totalBet) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            '❌ Neplatná strana',
-            'Red',
-            'Strana kostky musí být mezi 1 a 6.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (user.balance < parsedBetAmount) {
-      return interaction.reply({
-        embeds: [
-          createBetEmbed(
-            '❌ Nedostatek peněz',
-            'Red',
-            `Nemáš dostatek peněz na sázku.\nTvůj aktuální zůstatek je **$${formatNumberToReadableString(
+          createInfoEmbed(
+            'Insufficient Funds',
+            `You don't have enough money to place this bet for ${rolls} flips (you need **$${formatNumberToReadableString(
+              totalBet
+            )}**).\nYour current balance is **$${formatNumberToReadableString(
               user.balance
             )}**.`
           ),
@@ -140,61 +151,53 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const dice = Math.floor(Math.random() * 6) + 1
+    let totalWinnings = 0
+    let results: string[] = []
 
-    if (dice === side) {
-      const winnings = Math.floor(parsedBetAmount * DICE_WIN_MULTIPLIER)
-      user.balance += winnings
-      await user.save()
+    for (let i = 0; i < rolls; i++) {
+      const dice = rollDice()
+      const resultString = `${dice}`
+      const win = side === dice
+      const winnings = win ? parsedBetAmount * DICE_WIN_MULTIPLIER : 0
 
-      return interaction.reply({
-        embeds: [
-          createBetEmbed(
-            '🎉 Výhra!',
-            'Green',
-            `🎲 Padlo **${dice}**!\n` +
-              `💰 Vyhrál jsi **$${formatNumberToReadableString(
-                winnings
-              )}**!\n` +
-              (showBalance
-                ? `🏦 Zůstatek: **$${formatNumberToReadableString(
-                    user.balance
-                  )}**`
-                : '')
-          ),
-        ],
-      })
-    } else {
-      user.balance -= parsedBetAmount
-      await user.save()
+      results.push(
+        `**${resultString}** | ${win ? '🎉' : '❌'} | ${
+          win
+            ? `**+$${formatNumberToReadableString(winnings)}**`
+            : `**-$${formatNumberToReadableString(parsedBetAmount)}**`
+        }`
+      )
 
-      return interaction.reply({
-        embeds: [
-          createBetEmbed(
-            '😢 Prohra',
-            'Red',
-            `🎲 Padlo **${dice}**!\n` +
-              `❌ Prohrál jsi **$${betAmount}**. Zkus to znovu!\n` +
-              (showBalance
-                ? `🏦 Aktuální zůstatek: **$${formatNumberToReadableString(
-                    user.balance
-                  )}**`
-                : '')
-          ),
-        ],
-      })
+      totalWinnings += winnings - parsedBetAmount
     }
-  } catch (error) {
-    console.error('Error running the command:', error)
+
+    user.balance += totalWinnings
+    await user.save()
+
+    const isWin = totalWinnings > 0
+    const isLoss = totalWinnings < 0
+
     return interaction.reply({
       embeds: [
         createBetEmbed(
-          '❌ Chyba',
-          'Red',
-          'Při zpracování příkazu došlo k chybě.'
+          isWin
+            ? '🎲 **Win!** 🎉'
+            : isLoss
+            ? '🎲 **Better Luck Next Time...** ❌'
+            : '🎲 **Not Bad...** 👀',
+          isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
+          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+            `🎲 **Roll Results:**\n${results.join('\n')}\n\n` +
+            `💰 Total Winnings: ${
+              isWin ? '🟢' : isLoss ? '🔴' : '🟡'
+            } **$${formatNumberToReadableString(totalWinnings)}**\n` +
+            (showBalance
+              ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
+              : '')
         ),
       ],
-      flags: MessageFlags.Ephemeral,
     })
+  } catch (error) {
+    console.error('Error running the command:', error)
   }
 }

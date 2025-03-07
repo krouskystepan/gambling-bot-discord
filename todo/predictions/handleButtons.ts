@@ -72,9 +72,12 @@ export default async (interaction: Interaction) => {
       })
     }
 
-    // Bezpečná aktualizace uživatelského zůstatku
     const updatedUser = await User.findOneAndUpdate(
-      { userId: modalInteraction.user.id, balance: { $gte: parsedBetAmount } },
+      {
+        userId: modalInteraction.user.id,
+        guildId: modalInteraction.guildId,
+        balance: { $gte: parsedBetAmount },
+      },
       { $inc: { balance: -parsedBetAmount } },
       { new: true }
     )

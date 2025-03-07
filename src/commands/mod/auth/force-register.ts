@@ -3,24 +3,28 @@ import { checkUserRegistration } from '../../../utils/utils'
 import {
   ApplicationCommandOptionType,
   EmbedBuilder,
-  GuildMember,
   MessageFlags,
   TextChannel,
 } from 'discord.js'
 import User from '../../../models/User'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import {
+  createErrorEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'force-register',
-  description: 'Registruj uživatele.',
+  description: 'Force register a user.',
   options: [
     {
       name: 'user',
-      description: 'Uživatele, kterého chceš odregistrovat.',
+      description: 'The user you want to register.',
       type: ApplicationCommandOptionType.User,
       required: true,
     },
   ],
+  contexts: [0],
 }
 
 export const options: CommandOptions = {
@@ -29,24 +33,39 @@ export const options: CommandOptions = {
 
 export async function run({ interaction, client }: SlashCommandProps) {
   try {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral })
-
     const guildConfiguration = await GuildConfiguration.findOne({
       guildId: interaction.guildId,
     })
 
     if (!guildConfiguration?.atmChannelIds.logs) {
-      return interaction.editReply(
-        'Není nastaven logovací kanál pro ATM. Nastav ho pomocí `/setup-atm`.'
-      )
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Logs Not Set Up',
+            'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     const user = interaction.options.getUser('user', true)
 
-    const registeredUser = await checkUserRegistration(user.id)
+    const registeredUser = await checkUserRegistration(
+      user.id,
+      guildConfiguration.guildId
+    )
 
     if (registeredUser) {
-      return interaction.editReply('Uživatel je již zaregistrován.')
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'ATM Error - Registered.',
+            'User is already registered in the system.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     const logChannel = client.channels.cache.get(
@@ -57,8 +76,9 @@ export async function run({ interaction, client }: SlashCommandProps) {
       .send({
         embeds: [
           new EmbedBuilder()
-            .setTitle(
-              `Manažer ${interaction.user.username} zaregistroval uživatele ${user.username}`
+            .setTitle('ATM - User Registered')
+            .setDescription(
+              `Manager <@${interaction.user.id}> has successfully registered ${user}.`
             )
             .setColor('Grey'),
         ],
@@ -67,16 +87,21 @@ export async function run({ interaction, client }: SlashCommandProps) {
 
     const newUser = new User({
       userId: user.id,
+      guildId: guildConfiguration.guildId,
     })
 
     await newUser.save()
 
-    return interaction.editReply('Uživatel byl úspěšně zaregistrován.')
-  } catch (error) {
-    console.error('Error running the command:', error)
     return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
+      embeds: [
+        createSuccessEmbed(
+          'ATM Success - Registered',
+          'The user has been successfully registered in the system.'
+        ),
+      ],
       flags: MessageFlags.Ephemeral,
     })
+  } catch (error) {
+    console.error('Error running the command:', error)
   }
 }

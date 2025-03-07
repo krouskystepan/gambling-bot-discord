@@ -1,57 +1,62 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
-import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
-import { SLOT_MULTIPLIERS, SYMBOL_WEIGHTS } from '../../utils/casinoConfig'
-import { createBetEmbed } from '../../utils/createEmbed'
-import { spinSlot, calculateRTP } from '../../utils/slotsHelpers'
+import { ApplicationCommandOptionType } from 'discord.js'
+import {
+  MAX_SIMULATE_SPINS,
+  SLOT_MULTIPLIERS,
+  SYMBOL_WEIGHTS,
+} from '../../../utils/casinoConfig'
+import { createBetEmbed } from '../../../utils/createEmbed'
+import { spinSlot } from '../../../utils/casinoHelpers'
 import {
   parseReadableStringToNumber,
   formatNumberToReadableString,
   formatNumberWithSpaces,
-} from '../../utils/utils'
+} from '../../../utils/utils'
 
 export const data: CommandData = {
   name: 'simulate-slots',
-  description: 'Simulace X spinů na slot machine. !POZOR: Může trvat dlouho!',
+  description:
+    'Simulate X spins on a slot machine. WARNING: May take a long time!',
   options: [
     {
       name: 'spins',
-      description: 'Počet spinů, které chceš simulovat.',
+      description: 'Number of spins you want to simulate.',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: 'bet',
-      description: 'Vlož sázku (např. 2k, 4.5k).',
+      description: 'Enter a bet (e.g. 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: 'details',
-      description: 'Zobrazí detaily výher.',
+      description: 'Displays win details.',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
     {
       name: 'wins-losses-count',
-      description: 'Zobrazí počet výher a proher.',
+      description: 'Displays the count of wins and losses.',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
     {
       name: 'win-losses-series',
-      description: 'Zobrazí nejdelší výherní a proherní sérii.',
+      description: 'Displays the longest winning and losing streak.',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
     {
       name: 'multipliers',
-      description: 'Zobrazí multiplikátory.',
+      description: 'Displays multipliers.',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
     {
       name: 'weights',
-      description: 'Zobrazí váhy symbolů.',
+      description: 'Displays symbol weights.',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -84,12 +89,10 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction.options.getString('spins', true)
     )
 
-    const MAX_SPINS = 50_000_000
-
-    if (spins > MAX_SPINS) {
+    if (spins > MAX_SIMULATE_SPINS) {
       return interaction.editReply({
-        content: `Maximální počet spinů je ${formatNumberToReadableString(
-          MAX_SPINS
+        content: `The maximum number of spins is ${formatNumberToReadableString(
+          MAX_SIMULATE_SPINS
         )}.`,
       })
     }
@@ -105,11 +108,11 @@ export async function run({ interaction }: SlashCommandProps) {
     const weights = interaction.options.getBoolean('weights')
 
     await interaction.editReply(
-      `Simuluji **${formatNumberToReadableString(
+      `Simulating **${formatNumberToReadableString(
         spins
-      )}** spinů se sázkou **$${formatNumberToReadableString(
+      )}** spins with a bet of **$${formatNumberToReadableString(
         bet
-      )}**. Čekej prosím...`
+      )}**. Please wait...`
     )
 
     const startTime = performance.now()
@@ -143,19 +146,19 @@ export async function run({ interaction }: SlashCommandProps) {
     }
     const endTime = performance.now()
 
-    await interaction.editReply(`Simulace dokončena. Generuji výsledky...`)
+    await interaction.editReply(`Simulation complete. Generating results...`)
 
     const profitOrLoss = totalWinnings - totalBet
     const profitOrLossPercentage = (profitOrLoss / totalBet) * 100
-    const rtp = calculateRTP(spins)
+    const rtp = (totalWinnings / totalBet) * 100
 
     const winLossesDetails =
-      `🎉 Výhry: **${formatNumberWithSpaces(wins)}**\n` +
-      `❌ Prohry: **${formatNumberWithSpaces(losses)}**`
+      `🎉 Wins: **${formatNumberWithSpaces(wins)}**\n` +
+      `❌ Losses: **${formatNumberWithSpaces(losses)}**`
 
     const winLossesSeriesDetails =
-      `🔥 Nejdelší výherní série: **${biggestWinningStreak}**\n` +
-      `💀 Nejdelší proherní série: **${biggestLosingStreak}**`
+      `🔥 Longest winning streak: **${biggestWinningStreak}**\n` +
+      `💀 Longest losing streak: **${biggestLosingStreak}**`
 
     const winDetails = Object.entries(winCounts)
       .sort((a, b) => b[1] - a[1])
@@ -175,36 +178,28 @@ export async function run({ interaction }: SlashCommandProps) {
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 
     const embed = createBetEmbed(
-      `🎰 Simulace Slotů - ${formatNumberToReadableString(spins)} spinů`,
+      `🎰 Slot Simulation - ${formatNumberToReadableString(spins)} spins`,
       profitOrLoss >= 0 ? 'Green' : 'Red',
-      `Celková sázka: **$${formatNumberToReadableString(totalBet)}**\n` +
-        `Celkové výhry: **$${formatNumberToReadableString(totalWinnings)}**\n` +
-        `Profit/Ztráta: **$${formatNumberToReadableString(profitOrLoss)}**\n` +
-        `Procento profit/ztráta: **${profitOrLossPercentage.toFixed(2)}%**\n` +
+      `Total bet: **$${formatNumberToReadableString(totalBet)}**\n` +
+        `Total winnings: **$${formatNumberToReadableString(
+          totalWinnings
+        )}**\n` +
+        `Profit/Loss: **$${formatNumberToReadableString(profitOrLoss)}**\n` +
+        `Profit/Loss Percentage: **${profitOrLossPercentage.toFixed(2)}%**\n` +
         `📊 RTP: **${rtp.toFixed(2)}%**\n\n` +
         (winsLosses ? `${winLossesDetails}\n\n` : '') +
         (winLossesSeries ? `${winLossesSeriesDetails}\n\n` : '') +
-        (details ? `Detail výher:\n${winDetails || 'Žádné výhry'}\n\n` : '') +
-        (multipliers ? `Multiplikátory:\n${multipliersDetails}\n\n` : '') +
-        (weights ? `Váhy symbolů:\n${symbolWeightsDetails}\n\n` : '') +
-        `Všechny spiny trvaly: **${totalTime}s**`
+        (details ? `Win details:\n${winDetails || 'No wins'}\n\n` : '') +
+        (multipliers ? `Multipliers:\n${multipliersDetails}\n\n` : '') +
+        (weights ? `Symbol weights:\n${symbolWeightsDetails}\n\n` : '') +
+        `All spins took: **${totalTime}s**`
     )
 
     await interaction.editReply({
-      content: `Simulace dokončena.`,
+      content: `Simulation completed.`,
       embeds: [embed],
     })
   } catch (error) {
     console.error('Error running the command:', error)
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({
-        content: 'Při zpracování příkazu došlo k chybě.',
-      })
-    } else {
-      await interaction.reply({
-        content: 'Při zpracování příkazu došlo k chybě.',
-        flags: MessageFlags.Ephemeral,
-      })
-    }
   }
 }

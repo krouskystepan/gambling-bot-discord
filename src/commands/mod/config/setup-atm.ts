@@ -6,19 +6,24 @@ import {
   MessageFlags,
 } from 'discord.js'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import {
+  createErrorEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-atm',
-  description: 'Správa kanálů pro ATM a logy.',
+  description: 'Manage ATM and log channels.',
   options: [
     {
       name: 'add-actions',
-      description: 'Nastav kanál pro ATM. (výběry a vklady)',
+      description:
+        'Set a channel for ATM transactions (deposits and withdrawals).',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel',
-          description: 'Kanál, který chceš nastavit.',
+          description: 'The channel you want to set.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
           required: true,
@@ -27,12 +32,13 @@ export const data: CommandData = {
     },
     {
       name: 'remove-actions',
-      description: 'Odeber kanál pro ATM skrze ID. (výběry a vklady)',
+      description:
+        'Remove an ATM channel using its ID (deposits and withdrawals).',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel-id',
-          description: 'ID kanálu, který chceš odebrat.',
+          description: 'The ID of the channel you want to remove.',
           type: ApplicationCommandOptionType.String,
           required: true,
         },
@@ -40,12 +46,12 @@ export const data: CommandData = {
     },
     {
       name: 'add-logs',
-      description: 'Nastav kanál pro logy. (logy o transakcích)',
+      description: 'Set a channel for ATM logs (transaction logs).',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel',
-          description: 'Kanál, který chceš nastavit.',
+          description: 'The channel you want to set.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
           required: true,
@@ -54,12 +60,12 @@ export const data: CommandData = {
     },
     {
       name: 'remove-logs',
-      description: 'Odeber kanál pro logy skrze ID. (logy o transakcích)',
+      description: 'Remove a log channel using its ID (transaction logs).',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel-id',
-          description: 'ID kanálu, který chceš odebrat.',
+          description: 'The ID of the channel you want to remove.',
           type: ApplicationCommandOptionType.String,
           required: true,
         },
@@ -99,7 +105,12 @@ export async function run({ interaction }: SlashCommandProps) {
       await guildConfiguration.save()
 
       return interaction.reply({
-        content: `Kanál ${channel} byl úspěšně nastaven pro ATM.`,
+        embeds: [
+          createSuccessEmbed(
+            'ATM Actions Channel Setup - Add',
+            `Channel ${channel} has been successfully set for ATM transactions.`
+          ),
+        ],
       })
     }
 
@@ -107,18 +118,29 @@ export async function run({ interaction }: SlashCommandProps) {
       const channelId = options.getString('channel-id', true)
 
       if (guildConfiguration.atmChannelIds.actions !== channelId) {
-        return await interaction.reply(
-          `Kanál s ID ${channelId} není nastavený pro ATM.`
-        )
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'ATM Actions Channel Setup - Remove',
+              `Channel with ID ${channelId} is not set for ATM transactions.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       guildConfiguration.atmChannelIds.actions = ''
 
       await guildConfiguration.save()
 
-      return interaction.reply(
-        `Kanál s ID ${channelId} byl úspěšně odebrán z používání ATM.`
-      )
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM Actions Channel Setup - Remove',
+            `Channel with ID ${channelId} has been successfully removed from ATM transactions.`
+          ),
+        ],
+      })
     }
 
     if (subcommand === 'add-logs') {
@@ -129,7 +151,12 @@ export async function run({ interaction }: SlashCommandProps) {
       await guildConfiguration.save()
 
       return interaction.reply({
-        content: `Kanál ${channel} byl úspěšně nastaven pro logy z ATM.`,
+        embeds: [
+          createSuccessEmbed(
+            'ATM Logs Channel Setup - Add',
+            `Channel ${channel} has been successfully set for ATM logs.`
+          ),
+        ],
       })
     }
 
@@ -137,29 +164,31 @@ export async function run({ interaction }: SlashCommandProps) {
       const channelId = options.getString('channel-id', true)
 
       if (guildConfiguration.atmChannelIds.logs !== channelId) {
-        return await interaction.reply(
-          `Kanál s ID ${channelId} není nastavený pro logy z ATM.`
-        )
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'ATM Logs Channel Setup - Remove',
+              `Channel with ID ${channelId} is not set for ATM logs.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       guildConfiguration.atmChannelIds.logs = ''
 
       await guildConfiguration.save()
 
-      return interaction.reply(
-        `Kanál s ID ${channelId} byl úspěšně odebrán z logů z ATM.`
-      )
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM Logs Channel Setup - Remove',
+            `Channel with ID ${channelId} has been successfully removed from ATM logs.`
+          ),
+        ],
+      })
     }
-
-    return interaction.reply({
-      content: 'Něco se pokazilo.',
-      flags: MessageFlags.Ephemeral,
-    })
   } catch (error) {
     console.error('Error running the command:', error)
-    return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

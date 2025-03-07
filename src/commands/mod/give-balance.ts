@@ -6,22 +6,22 @@ import {
   ButtonStyle,
   Colors,
   EmbedBuilder,
-  MessageFlags,
 } from 'discord.js'
 import User from '../../models/User'
 import { parseReadableStringToNumber } from '../../utils/utils'
 
 export const data: CommandData = {
   name: 'give-balance',
-  description: 'Vytvoř embed pro givovalní peněz.',
+  description: 'Create an embed for giving money.',
   options: [
     {
       name: 'amount',
-      description: 'Množství peněz, které chceš dát.',
+      description: 'The amount of money you want to give.',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
   ],
+  contexts: [0],
 }
 
 export const options: CommandOptions = {
@@ -35,19 +35,19 @@ export async function run({ interaction }: SlashCommandProps) {
     const amount = interaction.options.getString('amount', true)
     const parsedAmount = parseReadableStringToNumber(amount)
 
-    User.findOne({ userId: interaction.user.id })
+    User.findOne({ userId: interaction.user.id, guildId: interaction.guildId })
 
     const embed = new EmbedBuilder()
-      .setTitle('Generátor peněz')
+      .setTitle('Money Generator')
       .setColor(Colors.Yellow)
       .setDescription(
-        `Klikni s přidej si **$${amount}** na svůj účet.\n` +
-          'Můžeš takto zkusit **CASINO** hry.'
+        `Click to add **$${amount}** to your account.\n` +
+          'You can use this money to try **CASINO** games.'
       )
       .setTimestamp()
 
     const betButtons = new ButtonBuilder()
-      .setLabel(`💸 Získat peníze`)
+      .setLabel(`💸 Claim Money`)
       .setStyle(ButtonStyle.Success)
       .setCustomId(`give-money.${parsedAmount}`)
 
@@ -59,9 +59,5 @@ export async function run({ interaction }: SlashCommandProps) {
     })
   } catch (error) {
     console.error('Error running the command:', error)
-    return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

@@ -3,6 +3,7 @@ import {
   EmbedBuilder,
   GuildMember,
   Interaction,
+  MessageFlags,
   TextChannel,
 } from 'discord.js'
 import User from '../../../models/User'
@@ -24,14 +25,17 @@ export default async (interaction: Interaction, client: Client) => {
 
     if (!guildConfiguration?.atmChannelIds.logs) {
       return await interaction.reply({
-        content: 'Není nastavený logovací kanál pro ATM.',
-        ephemeral: true,
+        content: 'ATM log channel is not set.',
+        flags: MessageFlags.Ephemeral,
       })
     }
 
     const parsedAmount = parseInt(amount)
 
-    const user = await User.findOne({ userId: interaction.user.id })
+    const user = await User.findOne({
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+    })
 
     if (!user) return
 
@@ -42,36 +46,37 @@ export default async (interaction: Interaction, client: Client) => {
       guildConfiguration.atmChannelIds.logs
     ) as TextChannel
 
-    const member = interaction.member as GuildMember | null
-    const displayName =
-      member?.displayName ||
-      interaction.user.globalName ||
-      interaction.user.username
-
     logChannel
       .send({
         embeds: [
           new EmbedBuilder()
-            .setTitle(
-              `Uživatel ${displayName} (${interaction.user.username}) si přidal peníze na účet.`
-            )
+            .setTitle('ATM - Money Generator')
             .setDescription(
-              `Bylo mu přidáno **$${formatNumberToReadableString(
+              `<@${
+                interaction.user.id
+              }> has added **$${formatNumberToReadableString(
                 parsedAmount
-              )}** na účet.`
+              )}** to their account.`
             )
             .setColor('Gold'),
         ],
       })
       .catch(console.error)
 
+    const embed = new EmbedBuilder()
+      .setTitle('ATM - Money Generator')
+      .setDescription(
+        `Server has added **$${formatNumberToReadableString(
+          parsedAmount
+        )}** to your account.\nYour new balance is **$${formatNumberToReadableString(
+          user.balance
+        )}**.`
+      )
+      .setColor('Gold')
+
     await interaction.reply({
-      content: `Přidal jsem ti ${formatNumberToReadableString(
-        parsedAmount
-      )} na účet.\nTvůj nový zůstatek je **$${formatNumberToReadableString(
-        user.balance
-      )}**.`,
-      ephemeral: true,
+      embeds: [embed],
+      flags: MessageFlags.Ephemeral,
     })
   } catch (error) {
     console.error('Error in handlePrediction.ts', error)

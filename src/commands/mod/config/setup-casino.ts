@@ -6,20 +6,20 @@ import {
   MessageFlags,
 } from 'discord.js'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import { createSuccessEmbed } from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-casino',
-  description: 'Správa sázkových kanálu.',
+  description: 'Management of casino betting channels.',
   options: [
     {
       name: 'add',
-      description: 'Nastav kanál pro používání casino sázek.',
+      description: 'Set a channel for using casino bets.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel',
-          description:
-            'Kanál, který chceš nastavit pro používání casino sázek.',
+          description: 'The channel you want to set for casino bets.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
           required: true,
@@ -28,13 +28,13 @@ export const data: CommandData = {
     },
     {
       name: 'remove',
-      description: 'Odeber kanál pro používání casino sázek skrze ID.',
+      description: 'Remove a channel for using casino bets by ID.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel-id',
           description:
-            'ID kanálu, který chceš odebrat z používání casino sázek.',
+            'The ID of the channel you want to remove from casino bets.',
           type: ApplicationCommandOptionType.String,
           required: true,
         },
@@ -74,7 +74,12 @@ export async function run({ interaction }: SlashCommandProps) {
       await guildConfiguration.save()
 
       return interaction.reply({
-        content: `Kanál ${channel} byl úspěšně nastaven pro používání casino sázkových příkazů.`,
+        embeds: [
+          createSuccessEmbed(
+            'Casino Channel Setup - Add',
+            `The channel ${channel} has been successfully set up for casino betting commands.`
+          ),
+        ],
       })
     }
 
@@ -82,9 +87,15 @@ export async function run({ interaction }: SlashCommandProps) {
       const channelId = options.getString('channel-id', true)
 
       if (!guildConfiguration.casinoChannelIds.includes(channelId)) {
-        return await interaction.reply(
-          `Kanál s ID ${channelId} není nastavený pro casino sázkové příkazů.`
-        )
+        return interaction.reply({
+          embeds: [
+            createSuccessEmbed(
+              'Casino Channel Setup - Remove',
+              `The channel with ID ${channelId} is not set up for casino betting commands.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       guildConfiguration.casinoChannelIds =
@@ -92,20 +103,16 @@ export async function run({ interaction }: SlashCommandProps) {
 
       await guildConfiguration.save()
 
-      return interaction.reply(
-        `Kanál s ID ${channelId} byl úspěšně odebrán z používání casino sázkových příkazů.`
-      )
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'Casino Channel Setup - Remove',
+            `The channel with ID ${channelId} has been successfully removed from casino betting commands.`
+          ),
+        ],
+      })
     }
-
-    return interaction.reply({
-      content: 'Něco se pokazilo.',
-      flags: MessageFlags.Ephemeral,
-    })
   } catch (error) {
     console.error('Error running the command:', error)
-    return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

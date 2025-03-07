@@ -4,10 +4,15 @@ import {
   formatNumberToReadableString,
 } from '../../../utils/utils'
 import { MessageFlags } from 'discord.js'
+import {
+  createErrorEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'balance',
-  description: 'Zjisti tvůj zůstatek (ostatním uživatelům se nezobrazuje).',
+  description: 'Check your current balance (only you can see this).',
+  contexts: [0],
 }
 
 export const options: CommandOptions = {
@@ -16,25 +21,33 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral })
-
-    const user = await checkUserRegistration(interaction.user.id)
+    const user = await checkUserRegistration(
+      interaction.user.id,
+      interaction.guildId!
+    )
 
     if (!user) {
       return interaction.reply({
-        content: 'Nemáš účet. Pro vytvoření účtu napiš `/register`.',
+        embeds: [
+          createErrorEmbed(
+            'Error - Not registered',
+            'You are not registered yet.\nUse the `/register` command to register.'
+          ),
+        ],
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    return interaction.editReply(
-      `Tvůj zůstatek je $**${formatNumberToReadableString(user.balance)}**.`
-    )
-  } catch (error) {
-    console.error('Error running the command:', error)
     return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
+      embeds: [
+        createSuccessEmbed(
+          'ATM - Balance',
+          `Your balance is **$${formatNumberToReadableString(user.balance)}**.`
+        ),
+      ],
       flags: MessageFlags.Ephemeral,
     })
+  } catch (error) {
+    console.error('Error running the command:', error)
   }
 }

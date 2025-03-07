@@ -12,25 +12,30 @@ import {
   TextChannel,
 } from 'discord.js'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import {
+  createErrorEmbed,
+  createInfoEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'withdraw',
-  description:
-    'Vyber peníze z herního účtu (ostatním uživatelům se nezobrazuje).',
+  description: 'Withdraw money from your account.',
   options: [
     {
       name: 'amount',
-      description: 'Částka, kterou chceš vybrat (např 1000, 2k, 10.5k).',
+      description: 'The amount you want to withdraw (e.g., 1000, 2k, 10.5k).',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: 'account',
-      description: 'Účet na který chceš poslat peníze.',
+      description: 'The account you want to send the money to.',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
   ],
+  contexts: [0],
 }
 
 export const options: CommandOptions = {
@@ -39,29 +44,21 @@ export const options: CommandOptions = {
 
 export async function run({ interaction, client }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(interaction.user.id)
+    const user = await checkUserRegistration(
+      interaction.user.id,
+      interaction.guildId!
+    )
 
     if (!user) {
       return interaction.reply({
-        content: 'Nemáš účet. Pro vytvoření účtu napiš `/register`.',
+        embeds: [
+          createErrorEmbed(
+            'Error - Not registered',
+            'You are not registered yet.\nUse the `/register` command to register.'
+          ),
+        ],
         flags: MessageFlags.Ephemeral,
       })
-    }
-
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral })
-
-    const account = interaction.options.getString('account', true)
-
-    const amount = interaction.options.getString('amount', true)
-    const parsedAmout = parseReadableStringToNumber(amount)
-    const readableAmount = formatNumberToReadableString(parsedAmout)
-
-    if (isNaN(parsedAmout)) {
-      return interaction.editReply('Částka musí být reálné číslo.')
-    }
-
-    if (parsedAmout <= 0) {
-      return interaction.editReply('Částka musí být kladné číslo.')
     }
 
     const guildConfiguration = await GuildConfiguration.findOne({
@@ -69,28 +66,86 @@ export async function run({ interaction, client }: SlashCommandProps) {
     })
 
     if (!guildConfiguration?.atmChannelIds.logs) {
-      return interaction.editReply('ATM ještě není nastaven. Počkejte prosím.')
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Logs Not Set Up',
+            'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     if (!guildConfiguration?.atmChannelIds.actions) {
-      return interaction.editReply(`Tento příkaz zatím není nastaven.`)
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Actions Not Configured',
+            'This ATM command has not been set up yet.\nPlease contact an administrator to complete the setup.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     if (guildConfiguration?.atmChannelIds.actions !== interaction.channelId) {
-      return interaction.editReply(
-        `Tento příkaz můžeš použít pouze v kanálu <#${guildConfiguration.atmChannelIds.actions}>`
-      )
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Incorrect Channel',
+            `This command can only be used in <#${guildConfiguration.atmChannelIds.actions}>.\nPlease use the correct channel to proceed.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
-    if (user.balance < parsedAmout) {
-      return interaction.editReply(
-        `Nemáš dostatek peněz na účtu k vybrání.\nTvůj aktuální zůstatek je **$${formatNumberToReadableString(
-          user.balance
-        )}**.`
-      )
+    const account = interaction.options.getString('account', true)
+
+    const amount = interaction.options.getString('amount', true)
+    const parsedAmount = parseReadableStringToNumber(amount)
+    const readableAmount = formatNumberToReadableString(parsedAmount)
+
+    if (isNaN(parsedAmount)) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Not a number',
+            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
-    user.balance -= parsedAmout
+    if (parsedAmount <= 0) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Non-positive number',
+            'The number you provided must be greater than 0.\nPlease enter a positive value.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (user.balance < parsedAmount) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Insufficient Funds',
+            `You don't have enough funds to withdraw **$${readableAmount}**.\nYour current balance is **$${formatNumberToReadableString(
+              user.balance
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    user.balance -= parsedAmount
 
     await user.save()
 
@@ -108,10 +163,12 @@ export async function run({ interaction, client }: SlashCommandProps) {
       .send({
         embeds: [
           new EmbedBuilder()
-            .setTitle(`Výběr od ${displayName} (${interaction.user.username})`)
+            .setTitle(
+              `Withdrawal by ${displayName} (${interaction.user.username})`
+            )
             .setColor('Red')
             .setDescription(
-              `Uživatel vybral **$${readableAmount}** na účet **${account}**.`
+              `<@${interaction.user.id}> has withdrawn **$${readableAmount}** into account **${account}**.`
             ),
         ],
       })
@@ -120,14 +177,16 @@ export async function run({ interaction, client }: SlashCommandProps) {
       })
       .catch(console.error)
 
-    return interaction.editReply(
-      `Vybral jsi **$${readableAmount}**. Počkej na zpracování.`
-    )
-  } catch (error) {
-    console.error('Error running the command:', error)
     return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
+      embeds: [
+        createSuccessEmbed(
+          'ATM - Withdraw',
+          `You have successfully withdrawn **$${readableAmount}**.\nPlease wait for the transaction to be processed.`
+        ),
+      ],
       flags: MessageFlags.Ephemeral,
     })
+  } catch (error) {
+    console.error('Error running the command:', error)
   }
 }

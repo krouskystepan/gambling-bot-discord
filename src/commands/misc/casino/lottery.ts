@@ -6,40 +6,37 @@ import {
   createInfoEmbed,
 } from '../../../utils/createEmbed'
 import {
-  COINFLIP_MAX_BET,
-  COINFLIP_WIN_MULTIPLIER,
-} from '../../../utils/casinoConfig'
-import {
-  checkChannelConfiguration,
+  checkUserRegistration,
   parseReadableStringToNumber,
   formatNumberToReadableString,
-  checkUserRegistration,
+  checkChannelConfiguration,
 } from '../../../utils/utils'
-import { flipCoin } from '../../../utils/casinoHelpers'
+import { drawLottery } from '../../../utils/casinoHelpers'
+import {
+  getLotteryMultiplier,
+  LOTTERY_MAX_BET,
+} from '../../../utils/casinoConfig'
 
 export const data: CommandData = {
-  name: 'coin-flip',
-  description: 'Flip a coin!',
+  name: 'lottery',
+  description: 'Play the lottery! Pick 5 numbers and see if you win.',
   options: [
     {
       name: 'bet',
-      description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
+      description: 'Your bet amount (e.g., 100, 1k, 5k).',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
-      name: 'side',
-      description: 'Choose the coin side.',
+      name: 'numbers',
+      description:
+        'Pick 5 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38, 49).',
       type: ApplicationCommandOptionType.String,
       required: true,
-      choices: [
-        { name: 'Heads', value: 'heads' },
-        { name: 'Tails', value: 'tails' },
-      ],
     },
     {
-      name: 'flips',
-      description: 'Number of flips.',
+      name: 'entries',
+      description: 'Number of entries.',
       type: ApplicationCommandOptionType.Integer,
       required: false,
       choices: Array.from({ length: 20 }, (_, i) => ({
@@ -93,8 +90,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (configReply) return
 
-    const flips = interaction.options.getInteger('flips') || 1
-    const side = interaction.options.getString('side', true)
+    const entries = interaction.options.getInteger('entries') || 1
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
@@ -123,13 +119,13 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (COINFLIP_MAX_BET > 0 && parsedBetAmount > COINFLIP_MAX_BET) {
+    if (LOTTERY_MAX_BET > 0 && parsedBetAmount > LOTTERY_MAX_BET) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              COINFLIP_MAX_BET
+              LOTTERY_MAX_BET
             )}**.`
           ),
         ],
@@ -137,13 +133,13 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const totalBet = parsedBetAmount * flips
+    const totalBet = parsedBetAmount * entries
     if (user.balance < totalBet) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Insufficient Funds',
-            `You don't have enough money to place this bet for ${flips} flips (you need **$${formatNumberToReadableString(
+            `You don't have enough money to place this bet for ${entries} entries (you need **$${formatNumberToReadableString(
               totalBet
             )}**).\nYour current balance is **$${formatNumberToReadableString(
               user.balance
@@ -154,27 +150,56 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
+    const numbersInput = interaction.options.getString('numbers', true)
+    const userNumbers = numbersInput.split(',').map((n) => parseFloat(n.trim()))
+
+    if (
+      userNumbers.length !== 5 ||
+      userNumbers.some(
+        (n) =>
+          !Number.isInteger(n) ||
+          n < 1 ||
+          n > 50 ||
+          new Set(userNumbers).size !== 5
+      )
+    ) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Invalid Numbers',
+            'Pick 5 unique whole numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38, 49).'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
     let totalWinnings = 0
     let results: string[] = []
-    let winCount = 0
 
-    for (let i = 0; i < flips; i++) {
-      const flipResult = flipCoin()
-      const win = side === flipResult
-      const winnings = win ? parsedBetAmount * COINFLIP_WIN_MULTIPLIER : 0
+    for (let i = 0; i < entries; i++) {
+      const lotteryNumbers = drawLottery()
+      const resultString = `${lotteryNumbers
+        .map((n) => n.toString().padStart(2, '0'))
+        .join(', ')}`
+      const matchedNumbers = userNumbers.filter((n) =>
+        lotteryNumbers.includes(n)
+      ).length
+      const winnings = parsedBetAmount * getLotteryMultiplier(matchedNumbers)
 
       results.push(
-        `**${flipResult === 'heads' ? 'H 👑' : 'T 🐍'}** | ${
-          win ? '🎉' : '❌'
+        `**${resultString}** | ${
+          matchedNumbers >= 2
+            ? `🎉 **${matchedNumbers}**`
+            : `❌ **${matchedNumbers}**`
         } | ${
-          win
+          matchedNumbers >= 2
             ? `**+$${formatNumberToReadableString(winnings)}**`
             : `**-$${formatNumberToReadableString(parsedBetAmount)}**`
         }`
       )
 
       totalWinnings += winnings - parsedBetAmount
-      if (win) winCount++
     }
 
     user.balance += totalWinnings
@@ -187,20 +212,21 @@ export async function run({ interaction }: SlashCommandProps) {
       embeds: [
         createBetEmbed(
           isWin
-            ? '🪙 **Win!** 🎉'
+            ? '🎟️ **Win!** 🎉'
             : isLoss
-            ? '🪙 **Better Luck Next Time...** ❌'
-            : '🪙 **Not Bad...** 👀',
+            ? '🎟️ **Better Luck Next Time...** ❌'
+            : '🎟️ **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
-            `🪙 **Flip Results:**\n${results.join('\n')}\n\n` +
+            `Your numbers: **${userNumbers
+              .map((n) => n.toString().padStart(2, '0'))
+              .join(', ')}**\n\n` +
+            `🎟️ **Draw Results:**\n${results.join('\n')}\n\n` +
             `💰 Total Winnings: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(totalWinnings)}**\n` +
             (showBalance
-              ? `🏦 Current Balance: **$${formatNumberToReadableString(
-                  user.balance
-                )}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
               : '')
         ),
       ],

@@ -8,10 +8,15 @@ import {
 } from 'discord.js'
 import User from '../../../models/User'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import {
+  createErrorEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'register',
-  description: 'Zaregistruj se do systému.',
+  description: 'Register yourself in the system.',
+  contexts: [0],
 }
 
 export const options: CommandOptions = {
@@ -20,12 +25,21 @@ export const options: CommandOptions = {
 
 export async function run({ interaction, client }: SlashCommandProps) {
   try {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral })
-
-    const user = await checkUserRegistration(interaction.user.id)
+    const user = await checkUserRegistration(
+      interaction.user.id,
+      interaction.guildId!
+    )
 
     if (user) {
-      return interaction.editReply('Už jsi zaregistrován.')
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'ATM Error - Registered.',
+            'You are already registered in the system.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     const guildConfiguration = await GuildConfiguration.findOne({
@@ -33,35 +47,52 @@ export async function run({ interaction, client }: SlashCommandProps) {
     })
 
     if (!guildConfiguration?.atmChannelIds.logs) {
-      return interaction.editReply('ATM ještě není nastaven. Počkejte prosím.')
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Logs Not Set Up',
+            'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     if (!guildConfiguration?.atmChannelIds.actions) {
-      return interaction.editReply(`Tento příkaz zatím není nastaven.`)
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Actions Not Configured',
+            'This ATM command has not been set up yet.\nPlease contact an administrator to complete the setup.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     if (guildConfiguration?.atmChannelIds.actions !== interaction.channelId) {
-      return interaction.editReply(
-        `Tento příkaz můžeš použít pouze v kanálu <#${guildConfiguration.atmChannelIds.actions}>`
-      )
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Incorrect Channel',
+            `This command can only be used in <#${guildConfiguration.atmChannelIds.actions}>.\nPlease use the correct channel to proceed.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     const logChannel = client.channels.cache.get(
       guildConfiguration.atmChannelIds.logs
     ) as TextChannel
 
-    const member = interaction.member as GuildMember | null
-    const displayName =
-      member?.displayName ||
-      interaction.user.globalName ||
-      interaction.user.username
-
     logChannel
       .send({
         embeds: [
           new EmbedBuilder()
-            .setTitle(
-              `Registrace uživatele ${displayName} (${interaction.user.username})`
+            .setTitle('ATM - User Registration')
+            .setDescription(
+              `User <@${interaction.user.id}> has successfully registered in the system.`
             )
             .setColor('White'),
         ],
@@ -70,16 +101,21 @@ export async function run({ interaction, client }: SlashCommandProps) {
 
     const newUser = new User({
       userId: interaction.user.id,
+      guildId: interaction.guildId,
     })
 
     await newUser.save()
 
-    return interaction.editReply('Byl jsi úspěšně zaregistrován.')
-  } catch (error) {
-    console.error('Error running the command:', error)
     return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
+      embeds: [
+        createSuccessEmbed(
+          'ATM Success - Registered',
+          'You have been successfully registered in the system.'
+        ),
+      ],
       flags: MessageFlags.Ephemeral,
     })
+  } catch (error) {
+    console.error('Error running the command:', error)
   }
 }

@@ -6,6 +6,7 @@ import {
   MessageFlags,
 } from 'discord.js'
 import User from '../models/User'
+import { createErrorEmbed } from './createEmbed'
 
 export const connectToDatabase = async () => {
   try {
@@ -44,7 +45,7 @@ export const checkChannelConfiguration = async (
 
     if (!guildConfiguration[channelType].length) {
       await interaction.reply({
-        content: messages.notSet,
+        embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
         flags: MessageFlags.Ephemeral,
       })
       return true
@@ -52,9 +53,14 @@ export const checkChannelConfiguration = async (
 
     if (!guildConfiguration[channelType].includes(interaction.channelId)) {
       await interaction.reply({
-        content: `${messages.notAllowed} ${guildConfiguration[channelType]
-          .map((id) => `<#${id}>`)
-          .join(', ')}.`,
+        embeds: [
+          createErrorEmbed(
+            'Error - Incorrect Channel',
+            `${messages.notAllowed} ${guildConfiguration[channelType]
+              .map((id) => `<#${id}>`)
+              .join(', ')}.`
+          ),
+        ],
         flags: MessageFlags.Ephemeral,
       })
       return true
@@ -63,16 +69,15 @@ export const checkChannelConfiguration = async (
     return false
   } catch (error) {
     console.error('Error checking channel configuration:', error)
-    await interaction.reply({
-      content: 'Došlo k chybě při kontrole nastavení kanálu.',
-      flags: MessageFlags.Ephemeral,
-    })
     return true
   }
 }
 
-export const checkUserRegistration = async (userId: string) => {
-  return await User.findOne({ userId })
+export const checkUserRegistration = async (
+  userId: string,
+  guildId: string
+) => {
+  return await User.findOne({ userId, guildId })
 }
 
 export const formatNumberToReadableString = (number: number): string => {
@@ -100,14 +105,16 @@ export const formatNumberToReadableString = (number: number): string => {
 export const parseReadableStringToNumber = (readableString: string): number => {
   const normalizedString = readableString.toUpperCase()
 
+  if (!/^[-]?[0-9.]+[BMK]?$/.test(normalizedString)) {
+    return NaN
+  }
+
   if (normalizedString.endsWith('B')) {
     return parseFloat(normalizedString.slice(0, -1)) * 1_000_000_000
   } else if (normalizedString.endsWith('M')) {
     return parseFloat(normalizedString.slice(0, -1)) * 1_000_000
   } else if (normalizedString.endsWith('K')) {
     return parseFloat(normalizedString.slice(0, -1)) * 1_000
-  } else if (/[^0-9\.]/.test(normalizedString)) {
-    return NaN
   } else {
     return parseFloat(normalizedString)
   }

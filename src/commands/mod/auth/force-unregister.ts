@@ -5,24 +5,26 @@ import {
   MessageFlags,
   TextChannel,
 } from 'discord.js'
-import {
-  checkChannelConfiguration,
-  checkUserRegistration,
-} from '../../../utils/utils'
+import { checkUserRegistration } from '../../../utils/utils'
 import User from '../../../models/User'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import {
+  createErrorEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'force-unregister',
-  description: 'Odregistruj uživatele (smaž z DB).',
+  description: 'Unregister a user (delete from DB).',
   options: [
     {
       name: 'user-id',
-      description: 'ID uživatele, kterého chceš odregistrovat.',
+      description: 'The ID of the user you want to unregister.',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
   ],
+  contexts: [0],
 }
 
 export const options: CommandOptions = {
@@ -33,24 +35,39 @@ export const options: CommandOptions = {
 
 export async function run({ interaction, client }: SlashCommandProps) {
   try {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral })
-
     const guildConfiguration = await GuildConfiguration.findOne({
       guildId: interaction.guildId,
     })
 
     if (!guildConfiguration?.atmChannelIds.logs) {
-      return interaction.editReply(
-        'Není nastaven logovací kanál pro ATM. Nastav ho pomocí `/setup-atm`.'
-      )
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Logs Not Set Up',
+            'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     const userId = interaction.options.getString('user-id', true)
 
-    const registeredUser = await checkUserRegistration(userId)
+    const registeredUser = await checkUserRegistration(
+      userId,
+      guildConfiguration.guildId
+    )
 
     if (!registeredUser) {
-      return interaction.editReply('Uživatel ještě není registrován.')
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'ATM Error - Not Registered.',
+            'User is not registered yet.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
     }
 
     const logChannel = client.channels.cache.get(
@@ -61,24 +78,27 @@ export async function run({ interaction, client }: SlashCommandProps) {
       .send({
         embeds: [
           new EmbedBuilder()
-            .setTitle(
-              `Manažer ${interaction.user.username} odregistroval uživatele s ID ${userId}`
+            .setTitle('ATM - User Unregistered')
+            .setDescription(
+              `Manager <@${interaction.user.id}> has unregistered the user with ID ${userId}.`
             )
             .setColor('NotQuiteBlack'),
         ],
       })
       .catch(console.error)
 
-    User.findOneAndDelete({ userId }).exec()
+    await registeredUser.deleteOne()
 
-    return interaction.editReply({
-      content: `Uživatel s ID ${userId} byl úspěšně odregistrován.`,
+    return interaction.reply({
+      embeds: [
+        createSuccessEmbed(
+          'ATM Success - Unregistered',
+          `The user with ID ${userId} has been successfully unregistered.`
+        ),
+      ],
+      flags: MessageFlags.Ephemeral,
     })
   } catch (error) {
     console.error('Error running the command:', error)
-    return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

@@ -10,26 +10,31 @@ import {
   CommandInteractionOptionResolver,
   MessageFlags,
 } from 'discord.js'
+import {
+  createErrorEmbed,
+  createInfoEmbed,
+  createSuccessEmbed,
+} from '../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'manage-balance',
-  description: 'Spravuj peníze uživatelů.',
+  description: 'Manage user balances.',
   options: [
     {
       name: 'deposit',
-      description: 'Přidej peníze uživateli.',
+      description: 'Add money to a user.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'user',
-          description: 'Uživatel, kterému chceš přidat peníze.',
+          description: 'The user to whom you want to add money.',
           type: ApplicationCommandOptionType.User,
           required: true,
         },
         {
           name: 'amount',
           description:
-            'Částka, kterou chceš přidat. (Můžeš zadat i 5k, 2.5k, 2M).',
+            'The amount you want to add. (You can also enter 1000, 2.5k, 2M).',
           type: ApplicationCommandOptionType.String,
           required: true,
         },
@@ -37,19 +42,19 @@ export const data: CommandData = {
     },
     {
       name: 'withdraw',
-      description: 'Odeber peníze uživateli.',
+      description: 'Remove money from a user.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'user',
-          description: 'Uživatel, kterému chceš odebrat peníze.',
+          description: 'The user from whom you want to remove money.',
           type: ApplicationCommandOptionType.User,
           required: true,
         },
         {
           name: 'amount',
           description:
-            'Částka, kterou chceš odebrat. (Můžeš zadat i 5k, 2.5k, 2M).',
+            'The amount you want to remove. (You can also enter 5k, 2.5k, 2M).',
           type: ApplicationCommandOptionType.String,
           required: true,
         },
@@ -57,12 +62,12 @@ export const data: CommandData = {
     },
     {
       name: 'check',
-      description: 'Zjisti zůstatek uživatele.',
+      description: 'Check a user’s balance.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'user',
-          description: 'Uživatel, jehož zůstatek chceš zjistit.',
+          description: 'The user whose balance you want to check.',
           type: ApplicationCommandOptionType.User,
           required: true,
         },
@@ -70,17 +75,17 @@ export const data: CommandData = {
     },
     {
       name: 'list',
-      description: 'Zjisti zůstatek všech uživatelů.',
+      description: 'Check the balance of all users.',
       type: ApplicationCommandOptionType.Subcommand,
     },
     {
       name: 'reset',
-      description: 'Resetuj zůstatek uživatele.',
+      description: 'Reset a user’s balance.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'user',
-          description: 'Uživatel, jehož zůstatek chceš resetovat.',
+          description: 'The user whose balance you want to reset.',
           type: ApplicationCommandOptionType.User,
           required: true,
         },
@@ -103,8 +108,8 @@ export async function run({ interaction, client }: SlashCommandProps) {
       'adminChannelIds',
       {
         notSet:
-          'Tento server nebyl ještě nastaven pro používání sázkových příkazů. Nastav ho pomocí `/setup-manage`.',
-        notAllowed: `Tento kanál není nastaven pro používání sázkových příkazů. Zkuste jeden z těchto kanálů:`,
+          'This server has not been configured for betting commands yet. Set it up using `/setup-manage`.',
+        notAllowed: `This channel is not configured for betting commands. Try one of these channels:`,
       }
     )
 
@@ -118,162 +123,294 @@ export async function run({ interaction, client }: SlashCommandProps) {
       const user = interaction.options.getUser('user', true)
 
       if (user.bot) {
-        return interaction.reply('Nemůžeš přidat peníze botovi.')
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Bot user',
+              'You cannot deposit money to a bot.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       const amount = interaction.options.getString('amount', true)
 
       const parsedAmount = parseReadableStringToNumber(amount)
 
-      if (parsedAmount < 0) {
-        return interaction.reply('Částka nemůže být záporná.')
+      if (isNaN(parsedAmount)) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Not a number',
+              'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
-      const userDocument = await User.findOne({ userId: user.id })
+      if (parsedAmount <= 0) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Non-positive number',
+              'The number you provided must be greater than 0.\nPlease enter a positive value.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const userDocument = await User.findOne({
+        userId: user.id,
+        guildId: interaction.guildId,
+      })
       if (!userDocument) {
-        return interaction.reply(
-          'Tento uživatel se ještě nezaregistroval. Ať použije `/register`.'
-        )
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Error - Not registered',
+              'This user has not registered yet.\nThey should use `/register` or you can force register them with `/force-register`.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       userDocument.balance += parsedAmount
       await userDocument.save()
 
-      return interaction.reply(
-        `Přidal jsi **$${amount}** uživateli <@${
-          user.id
-        }> \nAktuální stav účtu: **$${formatNumberToReadableString(
-          userDocument ? userDocument.balance : parsedAmount
-        )}**.`
-      )
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM - Admin Deposit',
+            `You have successfully added **$${amount}** to <@${
+              user.id
+            }>.\nTheir new balance is now: **$${formatNumberToReadableString(
+              userDocument.balance
+            )}**.`
+          ),
+        ],
+      })
     }
 
     if (subcommand === 'withdraw') {
       const user = interaction.options.getUser('user', true)
 
       if (user.bot) {
-        return interaction.reply('Nemůžeš odebrat peníze botovi.')
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Bot user',
+              'You cannot withdraw money from a bot.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       const amount = interaction.options.getString('amount', true)
 
       const parsedAmount = parseReadableStringToNumber(amount)
 
-      if (parsedAmount < 0) {
-        return interaction.reply('Částka nemůže být záporná.')
+      if (isNaN(parsedAmount)) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Not a number',
+              'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
-      const userDocument = await User.findOne({ userId: user.id })
+      if (parsedAmount <= 0) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Non-positive number',
+              'The number you provided must be greater than 0.\nPlease enter a positive value.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const userDocument = await User.findOne({
+        userId: user.id,
+        guildId: interaction.guildId,
+      })
 
       if (!userDocument) {
-        return interaction.reply(
-          'Tento uživatel se ještě nezaregistroval. Ať použije `/register`.'
-        )
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Error - Not registered',
+              'This user has not registered yet.\nThey should use `/register` or you can force register them with `/force-register`.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
-      if (userDocument?.balance! < parsedAmount) {
-        return interaction.reply(
-          `Uživatel <@${user.id}> nemá dostatečný zůstatek na účtu.`
-        )
+      if (userDocument.balance < parsedAmount) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Insufficient Funds',
+              `User <@${
+                userDocument.id
+              }> does not have enough balance.\nCurrent balance: $${formatNumberToReadableString(
+                userDocument.balance
+              )}.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       userDocument.balance -= parsedAmount
       await userDocument.save()
 
-      return interaction.reply(
-        `Odebral jsi **$${formatNumberToReadableString(
-          parsedAmount
-        )}** uživateli <@${
-          user.id
-        }> \nAktuální stav účtu: **$${formatNumberToReadableString(
-          userDocument?.balance!
-        )}**.`
-      )
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM - Admin Withdraw',
+            `You have successfully removed **$${amount}** from <@${
+              user.id
+            }>.\nTheir new balance is now: **$${formatNumberToReadableString(
+              userDocument.balance
+            )}**.`
+          ),
+        ],
+      })
     }
 
     if (subcommand === 'reset') {
       const user = interaction.options.getUser('user', true)
 
       if (user.bot) {
-        return interaction.reply('Nemůžeš resetovat zůstatek botovi.')
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Bot user',
+              'You cannot reset the balance of a bot.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
-      const userDocument = await User.findOne({ userId: user.id })
+      const userDocument = await User.findOne({
+        userId: user.id,
+        guildId: interaction.guildId,
+      })
 
       if (!userDocument) {
-        return interaction.reply(
-          'Tento uživatel se ještě nezaregistroval. Ať použije `/register`.'
-        )
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Error - Not registered',
+              'This user has not registered yet.\nThey should use `/register` or you can force register them with `/force-register`.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       userDocument.balance = 0
 
       await userDocument.save()
 
-      return interaction.reply(
-        `Zůstatek uživatele <@${user.id}> byl resetován.`
-      )
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM - Admin Reset',
+            `You have successfully reset the balance of <@${
+              user.id
+            }>.\nTheir new balance is now: **$${formatNumberToReadableString(
+              userDocument.balance
+            )}**.`
+          ),
+        ],
+      })
     }
 
     if (subcommand === 'check') {
       const user = interaction.options.getUser('user', true)
 
       if (user.bot) {
-        return interaction.reply('Bot nemá zůstatek.')
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Bot user',
+              'You cannot check the balance of a bot.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
-      const userDocument = await User.findOne({ userId: user.id })
+      const userDocument = await User.findOne({
+        userId: user.id,
+        guildId: interaction.guildId,
+      })
 
       if (!userDocument) {
-        return interaction.reply(
-          'Tento uživatel se ještě nezaregistroval. Ať použije `/register`.'
-        )
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Error - Not registered',
+              'This user has not registered yet.\nThey should use `/register` or you can force register them with `/force-register`.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
-      return interaction.reply(
-        `Uživatel <@${user.id}> má na účtu **$${formatNumberToReadableString(
-          userDocument.balance
-        )}**.`
-      )
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM - Admin Check',
+            `The balance of <@${user.id}> is **$${formatNumberToReadableString(
+              userDocument.balance
+            )}**.`
+          ),
+        ],
+      })
     }
 
     if (subcommand === 'list') {
-      await interaction.deferReply()
+      const users = await User.find({ guildId: interaction.guildId })
 
-      const users = await User.find()
-
-      const guild = client.guilds.cache.get(interaction.guildId!)
-      if (!guild) throw new Error('Guild not found')
-
-      const usersString = await Promise.all(
-        users.map(async (user) => {
-          const member = await guild.members
-            .fetch(user.userId)
-            .catch(() => null)
-
-          return member
-            ? `${
-                member.nickname ||
-                member.user.globalName ||
-                member.user.username
-              } (${member.user.username}): **$${formatNumberToReadableString(
-                user.balance
-              )}**`
-            : `**Unknown User (${
-                user.userId
-              })**: **$${formatNumberToReadableString(user.balance)}**`
+      if (!users.length) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed('No users found', 'No users have registered yet.'),
+          ],
         })
-      ).then((lines) => lines.join('\n'))
+      }
 
-      return interaction.editReply(`Zůstatek všech uživatelů:\n${usersString}`)
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM - User Balances',
+            users
+              .sort((a, b) => b.balance - a.balance)
+              .map(
+                (user) =>
+                  `<@${user.userId}>: **$${formatNumberToReadableString(
+                    user.balance
+                  )}**.`
+              )
+              .join('\n')
+          ),
+        ],
+      })
     }
-
-    return interaction.reply('Příkaz nebyl nalezen.')
   } catch (error) {
     console.error('Error running the command:', error)
-    return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

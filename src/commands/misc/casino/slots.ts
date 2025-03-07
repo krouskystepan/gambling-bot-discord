@@ -1,34 +1,43 @@
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
-import { createBetEmbed } from '../../../utils/createEmbed'
-import { spinSlot, calculateWinnings } from '../../../utils/slotsHelpers'
+import {
+  createBetEmbed,
+  createErrorEmbed,
+  createInfoEmbed,
+} from '../../../utils/createEmbed'
+import { spinSlot } from '../../../utils/casinoHelpers'
 import {
   checkChannelConfiguration,
   parseReadableStringToNumber,
   formatNumberToReadableString,
   checkUserRegistration,
 } from '../../../utils/utils'
-import { SLOT_MAX_BET } from '../../../utils/casinoConfig'
+import { SLOT_MAX_BET, SLOT_MULTIPLIERS } from '../../../utils/casinoConfig'
 
 export const data: CommandData = {
   name: 'slots',
-  description: 'Zatoč si na slot machine a vyhraj!',
+  description: 'Spin the slot machine!',
   options: [
     {
       name: 'bet',
-      description: 'Vlož sázku (např. 2k, 4.5k).',
+      description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: 'spins',
-      description: 'Počet spinů (výchozí: 1, max: 20).',
+      description: 'Number of spins.',
       type: ApplicationCommandOptionType.Integer,
       required: false,
+      choices: Array.from({ length: 20 }, (_, i) => ({
+        name: (i + 1).toString(),
+        value: i + 1,
+      })),
     },
     {
       name: 'show-balance',
-      description: 'Zobrazí aktuální zůstatek (POZOR VIDÍ VŠICHNI)!',
+      description:
+        'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -42,11 +51,19 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(interaction.user.id)
+    const user = await checkUserRegistration(
+      interaction.user.id,
+      interaction.guildId!
+    )
 
     if (!user) {
       return interaction.reply({
-        content: 'Nemáš účet. Pro vytvoření účtu napiš `/register`.',
+        embeds: [
+          createErrorEmbed(
+            'Error - Not registered',
+            'You are not registered yet.\nUse the `/register` command to register.'
+          ),
+        ],
         flags: MessageFlags.Ephemeral,
       })
     }
@@ -56,66 +73,50 @@ export async function run({ interaction }: SlashCommandProps) {
       'casinoChannelIds',
       {
         notSet:
-          'Tento server nebyl ještě nastaven pro používání sázkových příkazů. Nastav ho pomocí `/setup-casino`.',
-        notAllowed: `Tento kanál není nastaven pro používání sázkových příkazů. Zkus jiný.`,
+          'This server has not been configured for betting commands yet.\nSet it up using `/setup-casino`.',
+        notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
       }
     )
 
     if (configReply) return
 
     const spins = interaction.options.getInteger('spins') || 1
-
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
-
     const showBalance = interaction.options.getBoolean('show-balance')
 
     if (isNaN(parsedBetAmount)) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            '❌ Neplatná částka',
-            'Red',
-            'Sázka musí být reálné číslo.'
+          createInfoEmbed(
+            'Invalid Input - Not a number',
+            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
           ),
         ],
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    if (parsedBetAmount < 1) {
+    if (parsedBetAmount <= 0) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            '❌ Neplatná sázka',
-            'Red',
-            'Sázka musí být větší než 0.'
+          createInfoEmbed(
+            'Invalid Input - Non-positive number',
+            'The number you provided must be greater than 0.\nPlease enter a positive value.'
           ),
         ],
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    if (parsedBetAmount > SLOT_MAX_BET) {
+    if (SLOT_MAX_BET > 0 && parsedBetAmount > SLOT_MAX_BET) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            '❌ Neplatná sázka',
-            'Red',
-            `Maximální sázka je $${formatNumberToReadableString(SLOT_MAX_BET)}.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (spins < 1 || spins > 20) {
-      return interaction.reply({
-        embeds: [
-          createBetEmbed(
-            '❌ Neplatný počet spinů',
-            'Red',
-            'Počet otoček musí být mezi 1 a 20.'
+          createInfoEmbed(
+            'Invalid Input - Above Maximum Bet',
+            `The maximum bet is **$${formatNumberToReadableString(
+              SLOT_MAX_BET
+            )}**.`
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -126,12 +127,11 @@ export async function run({ interaction }: SlashCommandProps) {
     if (user.balance < totalBet) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            '❌ Nedostatek peněz',
-            'Red',
-            `Nemáš dostatek peněz na ${spins} spinů (potřebuješ **$${formatNumberToReadableString(
+          createInfoEmbed(
+            'Insufficient Funds',
+            `You don't have enough money to place this bet for ${spins} spins (you need **$${formatNumberToReadableString(
               totalBet
-            )}**).\nTvůj aktuální zůstatek je **$${formatNumberToReadableString(
+            )}**).\nYour current balance is **$${formatNumberToReadableString(
               user.balance
             )}**.`
           ),
@@ -145,7 +145,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     for (let i = 0; i < spins; i++) {
       const resultString = spinSlot()
-      const winnings = calculateWinnings(resultString, parsedBetAmount)
+      const winnings = (SLOT_MULTIPLIERS[resultString] || 0) * parsedBetAmount
       const isWin = winnings > 0
 
       results.push(
@@ -169,20 +169,18 @@ export async function run({ interaction }: SlashCommandProps) {
       embeds: [
         createBetEmbed(
           isWin
-            ? '🎰 **Výhra!** 🎉'
+            ? '🎰 **Win!** 🎉'
             : isLoss
-            ? '🎰 **Smůla...** ❌'
-            : '🎰 **Nic moc...** 👀',
+            ? '🎰 **Better Luck Next Time...** ❌'
+            : '🎰 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-          `💵 Celková vsazená částka: **$${formatNumberToReadableString(
-            totalBet
-          )}**\n\n` +
-            `🕹 **Výsledky spinů:**\n${results.join('\n')}\n\n` +
-            `💰 Celkový výsledek: ${
+          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+            `🕹 **Spin Results:**\n${results.join('\n')}\n\n` +
+            `💰 Total Winnings: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(totalWinnings)}**\n` +
             (showBalance
-              ? `🏦 Aktuální zůstatek: **$${formatNumberToReadableString(
+              ? `🏦 Current Balance: **$${formatNumberToReadableString(
                   user.balance
                 )}**`
               : '')
@@ -191,15 +189,5 @@ export async function run({ interaction }: SlashCommandProps) {
     })
   } catch (error) {
     console.error('Error running the command:', error)
-    return interaction.reply({
-      embeds: [
-        createBetEmbed(
-          '❌ Chyba',
-          'Red',
-          'Při zpracování příkazu došlo k chybě.'
-        ),
-      ],
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

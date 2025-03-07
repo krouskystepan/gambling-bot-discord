@@ -3,9 +3,8 @@ import {
   ApplicationCommandOptionType,
   ChannelType,
   CommandInteractionOptionResolver,
-  MessageFlags,
 } from 'discord.js'
-import GuildConfiguration from '../../../models/GuildConfiguration'
+import GuildConfiguration from '../src/models/GuildConfiguration'
 
 export const data: CommandData = {
   name: 'setup-prediction',
@@ -94,16 +93,7 @@ export async function run({ interaction }: SlashCommandProps) {
         `Kanál s ID ${channelId} byl úspěšně odebrán z používání předpovědí.`
       )
     }
-
-    return interaction.reply({
-      content: 'Něco se pokazilo.',
-      flags: MessageFlags.Ephemeral,
-    })
   } catch (error) {
     console.error('Error running the command:', error)
-    return interaction.reply({
-      content: 'Při zpracování příkazu došlo k chybě.',
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }
