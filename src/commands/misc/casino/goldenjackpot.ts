@@ -12,11 +12,12 @@ import {
   parseReadableStringToNumber,
 } from '../../../utils/utils'
 import {
-  GOLDEN_JACKPOT_MAX_ENTRIES,
   GOLDEN_JACKPOT_MULTIPLIER,
   LOTTERY_MAX_BET,
 } from '../../../utils/casinoConfig'
 import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
+
+const GOLDEN_JACKPOT_MAX_ENTRIES = 200
 
 export const data: CommandData = {
   name: 'goldenjackpot',
