@@ -1,15 +1,15 @@
 // Dice
-export const MAX_SIMULATE_ROLLS = 100_000_0000
+export const DICE_MAX_SIMULATE_ROLLS = 100_000_0000
 export const DICE_WIN_MULTIPLIER = 5
 export const DICE_MAX_BET = 3000
 
 // Coin Flip
-export const MAX_SIMULATE_FLIPS = 200_000_000
+export const COINFLIP_MAX_SIMULATE_FLIPS = 200_000_000
 export const COINFLIP_WIN_MULTIPLIER = 1.9
 export const COINFLIP_MAX_BET = 3000
 
 // Slots
-export const MAX_SIMULATE_SPINS = 50_000_000
+export const SLOT_MAX_SIMULATE_SPINS = 50_000_000
 export const SLOT_MULTIPLIERS = {
   '🍒🍒🍒': 5,
   '🍋🍋🍋': 10,
@@ -30,28 +30,23 @@ export const WEIGHTED_SYMBOLS = Object.entries(SYMBOL_WEIGHTS).flatMap(
 export const SLOT_MAX_BET = 1000
 
 // Lottery
-export const MAX_SIMULATE_LOTTERY = 10_000_000
+export const LOTTERY_MAX_SIMULATE_ENTRIES = 10_000_000
 export const LOTTERY_MAX_BET = 1000
-export const getLotteryMultiplier = (matchedNumbers: number): number => {
-  let multiplier: number
-  switch (matchedNumbers) {
-    case 5:
-      multiplier = 1000
-      break
-    case 4:
-      multiplier = 125
-      break
-    case 3:
-      multiplier = 25
-      break
-    case 2:
-      multiplier = 4
-      break
-    default:
-      multiplier = 0
-  }
-  return multiplier
+export const LOTTERY_MULTIPLIERS = {
+  5: 1000,
+  4: 125,
+  3: 25,
+  2: 4,
+  1: 0,
+  0: 0,
 }
 
 // Rock, Paper, Scissors
 export const RPS_CASINO_CUT = 0.025
+
+// Golden Jackpot
+export const GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES = 100_000_000
+export const GOLDEN_JACKPOT_MAX_ENTRIES = 200
+export const GOLDEN_JACKPOT_MAX_BET = 1000
+export const GOLDEN_JACKPOT_MULTIPLIER = 10_000
+export const GOLDEN_JACKPOT_ONE_IN_CHANCE = 11_000

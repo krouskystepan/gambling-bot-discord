@@ -8,7 +8,7 @@ import {
 } from '../../../utils/utils'
 import {
   COINFLIP_WIN_MULTIPLIER,
-  MAX_SIMULATE_FLIPS,
+  COINFLIP_MAX_SIMULATE_FLIPS,
 } from '../../../utils/casinoConfig'
 import { flipCoin } from '../../../utils/casinoHelpers'
 
@@ -64,7 +64,6 @@ export async function run({ interaction }: SlashCommandProps) {
     let totalWinnings = 0
     let wins = 0
     let losses = 0
-    let winCounts: Record<string, number> = {}
 
     let currentWinningStreak = 0
     let biggestWinningStreak = 0
@@ -75,10 +74,10 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction.options.getString('flips', true)
     )
 
-    if (flips > MAX_SIMULATE_FLIPS) {
+    if (flips > COINFLIP_MAX_SIMULATE_FLIPS) {
       return interaction.editReply({
         content: `The maximum number of flips is **${formatNumberToReadableString(
-          MAX_SIMULATE_FLIPS
+          COINFLIP_MAX_SIMULATE_FLIPS
         )}**.`,
       })
     }
@@ -108,7 +107,6 @@ export async function run({ interaction }: SlashCommandProps) {
       if (coinFlip === 'heads') {
         winnings = bet * COINFLIP_WIN_MULTIPLIER
         wins++
-        winCounts[coinFlip] = (winCounts[coinFlip] || 0) + 1
 
         currentLosingStreak = 0
         currentWinningStreak++

@@ -1,8 +1,8 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType } from 'discord.js'
 import {
-  getLotteryMultiplier,
-  MAX_SIMULATE_LOTTERY,
+  LOTTERY_MULTIPLIERS,
+  LOTTERY_MAX_SIMULATE_ENTRIES,
 } from '../../../utils/casinoConfig'
 import { createBetEmbed } from '../../../utils/createEmbed'
 import { drawLottery } from '../../../utils/casinoHelpers'
@@ -81,10 +81,10 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction.options.getString('entries', true)
     )
 
-    if (entries > MAX_SIMULATE_LOTTERY) {
+    if (entries > LOTTERY_MAX_SIMULATE_ENTRIES) {
       return interaction.editReply({
         content: `The maximum number of entries is ${formatNumberToReadableString(
-          MAX_SIMULATE_LOTTERY
+          LOTTERY_MAX_SIMULATE_ENTRIES
         )}.`,
       })
     }
@@ -118,9 +118,9 @@ export async function run({ interaction }: SlashCommandProps) {
       const matchedNumbers = userNumbers.filter((n: number) =>
         lotteryNumbers.includes(n)
       ).length
-      winnings = bet * getLotteryMultiplier(matchedNumbers)
+      winnings = bet * LOTTERY_MULTIPLIERS[matchedNumbers]
 
-      if (getLotteryMultiplier(matchedNumbers)) {
+      if (LOTTERY_MULTIPLIERS[matchedNumbers]) {
         wins++
         winCounts[matchedNumbers] = (winCounts[matchedNumbers] || 0) + 1
 
@@ -166,7 +166,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const multipliersDetails = Array.from(
       { length: 6 },
-      (_, i) => `${i}: **${getLotteryMultiplier(i)}**x`
+      (_, i) => `${i}: **${LOTTERY_MULTIPLIERS[i]}**x`
     ).join('\n')
 
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)

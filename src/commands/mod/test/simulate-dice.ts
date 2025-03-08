@@ -7,7 +7,7 @@ import {
   formatNumberWithSpaces,
 } from '../../../utils/utils'
 import {
-  MAX_SIMULATE_ROLLS,
+  DICE_MAX_SIMULATE_ROLLS,
   DICE_WIN_MULTIPLIER,
 } from '../../../utils/casinoConfig'
 import { rollDice } from '../../../utils/casinoHelpers'
@@ -64,7 +64,6 @@ export async function run({ interaction }: SlashCommandProps) {
     let totalWinnings = 0
     let wins = 0
     let losses = 0
-    let winCounts: Record<string, number> = {}
 
     let currentWinningStreak = 0
     let biggestWinningStreak = 0
@@ -75,10 +74,10 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction.options.getString('rolls', true)
     )
 
-    if (rolls > MAX_SIMULATE_ROLLS) {
+    if (rolls > DICE_MAX_SIMULATE_ROLLS) {
       return interaction.editReply({
         content: `The maximum number of rolls is **${formatNumberToReadableString(
-          MAX_SIMULATE_ROLLS
+          DICE_MAX_SIMULATE_ROLLS
         )}**.`,
       })
     }
@@ -109,7 +108,6 @@ export async function run({ interaction }: SlashCommandProps) {
       if (diceRoll === 6) {
         winnings = bet * DICE_WIN_MULTIPLIER
         wins++
-        winCounts[diceRoll] = (winCounts[diceRoll] || 0) + 1
 
         currentLosingStreak = 0
         currentWinningStreak++

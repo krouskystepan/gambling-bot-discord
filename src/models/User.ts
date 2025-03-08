@@ -4,21 +4,28 @@ export type User = Document & {
   userId: string
   guildId: string
   balance: number
+  createdAt: Date
+  updatedAt: Date
 }
 
-const UserSchema = new Schema<User>({
-  userId: {
-    type: String,
-    unique: true,
+const UserSchema = new Schema<User>(
+  {
+    userId: {
+      type: String,
+      unique: true,
+    },
+    guildId: {
+      type: String,
+      required: true,
+    },
+    balance: {
+      type: Number,
+      default: 0,
+    },
   },
-  guildId: {
-    type: String,
-    required: true,
-  },
-  balance: {
-    type: Number,
-    default: 0,
-  },
-})
+  {
+    timestamps: true,
+  }
+)
 
 export default model<User>('User', UserSchema)

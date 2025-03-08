@@ -108,8 +108,8 @@ export async function run({ interaction, client }: SlashCommandProps) {
       'adminChannelIds',
       {
         notSet:
-          'This server has not been configured for betting commands yet. Set it up using `/setup-manage`.',
-        notAllowed: `This channel is not configured for betting commands. Try one of these channels:`,
+          'This server has not been configured for admin commands yet. Set it up using `/setup-manage`.',
+        notAllowed: `This channel is not configured for admin commands. Try one of these channels:`,
       }
     )
 

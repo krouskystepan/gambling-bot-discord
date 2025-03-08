@@ -9,12 +9,6 @@
     "resolveJsonModule": true,
     "outDir": "dist"
   },
-  "include": [
-    "src",
-    "temp/register-commands.ts",
-    "temp/blackjack.ts",
-    "todo/prediction.ts",
-    "todo/setup-prediction.ts"
-  ],
+  "include": ["src"],
   "exclude": ["node_modules"]
 }

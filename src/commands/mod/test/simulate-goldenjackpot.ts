@@ -1,26 +1,26 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType } from 'discord.js'
-import {
-  SLOT_MAX_SIMULATE_SPINS,
-  SLOT_MULTIPLIERS,
-  SYMBOL_WEIGHTS,
-} from '../../../utils/casinoConfig'
 import { createBetEmbed } from '../../../utils/createEmbed'
-import { spinSlot } from '../../../utils/casinoHelpers'
 import {
   parseReadableStringToNumber,
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
+import {
+  GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES,
+  GOLDEN_JACKPOT_MULTIPLIER,
+  GOLDEN_JACKPOT_ONE_IN_CHANCE,
+} from '../../../utils/casinoConfig'
+import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
 
 export const data: CommandData = {
-  name: 'simulate-slots',
+  name: 'simulate-goldenjackpot',
   description:
-    'Simulate X spins on a slot machine. WARNING: May take a long time!',
+    'Simulate X goldenjackpot entries. WARNING: May take a long time!',
   options: [
     {
-      name: 'spins',
-      description: 'Number of spins you want to simulate.',
+      name: 'entries',
+      description: 'Number of entries you want to simulate.',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -43,20 +43,8 @@ export const data: CommandData = {
       required: false,
     },
     {
-      name: 'win-losses-series',
-      description: 'Displays the longest winning and losing streak.',
-      type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
-    {
       name: 'multipliers',
       description: 'Displays multipliers.',
-      type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
-    {
-      name: 'weights',
-      description: 'Displays symbol weights.',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -78,22 +66,16 @@ export async function run({ interaction }: SlashCommandProps) {
     let totalWinnings = 0
     let wins = 0
     let losses = 0
-    let winCounts: Record<string, number> = {}
 
-    let currentWinningStreak = 0
-    let biggestWinningStreak = 0
-    let currentLosingStreak = 0
-    let biggestLosingStreak = 0
-
-    const spins = parseReadableStringToNumber(
-      interaction.options.getString('spins', true)
+    const entries = parseReadableStringToNumber(
+      interaction.options.getString('entries', true)
     )
 
-    if (spins > SLOT_MAX_SIMULATE_SPINS) {
+    if (entries > GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES) {
       return interaction.editReply({
-        content: `The maximum number of spins is ${formatNumberToReadableString(
-          SLOT_MAX_SIMULATE_SPINS
-        )}.`,
+        content: `The maximum number of entries is **${formatNumberToReadableString(
+          GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES
+        )}**.`,
       })
     }
 
@@ -101,49 +83,35 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction.options.getString('bet', true)
     )
 
-    const details = interaction.options.getBoolean('details')
     const winsLosses = interaction.options.getBoolean('wins-losses-count')
-    const winLossesSeries = interaction.options.getBoolean('win-losses-series')
     const multipliers = interaction.options.getBoolean('multipliers')
-    const weights = interaction.options.getBoolean('weights')
+    const details = interaction.options.getBoolean('details')
 
     await interaction.editReply(
       `Simulating **${formatNumberToReadableString(
-        spins
-      )}** spins with a bet of **$${formatNumberToReadableString(
+        entries
+      )}** entries with a bet of **$${formatNumberToReadableString(
         bet
       )}**. Please wait...`
     )
 
     const startTime = performance.now()
 
-    for (let i = 1; i <= spins; i++) {
+    for (let i = 1; i <= entries; i++) {
       totalBet += bet
-      const resultString = spinSlot()
+      const jackpotNumber = drawGoldenJackpot()
       let winnings = 0
 
-      if (SLOT_MULTIPLIERS[resultString]) {
-        winnings = bet * SLOT_MULTIPLIERS[resultString]
+      if (jackpotNumber === 1) {
+        winnings = bet * GOLDEN_JACKPOT_MULTIPLIER
         wins++
-        winCounts[resultString] = (winCounts[resultString] || 0) + 1
-
-        currentLosingStreak = 0
-        currentWinningStreak++
-        if (currentWinningStreak > biggestWinningStreak) {
-          biggestWinningStreak = currentWinningStreak
-        }
       } else {
         losses++
-
-        currentWinningStreak = 0
-        currentLosingStreak++
-        if (currentLosingStreak > biggestLosingStreak) {
-          biggestLosingStreak = currentLosingStreak
-        }
       }
 
       totalWinnings += winnings
     }
+
     const endTime = performance.now()
 
     await interaction.editReply(`Simulation complete. Generating results...`)
@@ -152,33 +120,24 @@ export async function run({ interaction }: SlashCommandProps) {
     const profitOrLossPercentage = (profitOrLoss / totalBet) * 100
     const rtp = (totalWinnings / totalBet) * 100
 
+    const winDetails = `**1** in **${formatNumberWithSpaces(
+      GOLDEN_JACKPOT_ONE_IN_CHANCE
+    )}**`
+
     const winLossesDetails =
       `🎉 Wins: **${formatNumberWithSpaces(wins)}**\n` +
       `❌ Losses: **${formatNumberWithSpaces(losses)}**`
 
-    const winLossesSeriesDetails =
-      `🔥 Longest winning streak: **${biggestWinningStreak}**\n` +
-      `💀 Longest losing streak: **${biggestLosingStreak}**`
-
-    const winDetails = Object.entries(winCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map(
-        ([symbol, count]) => `${symbol}: **${formatNumberWithSpaces(count)}**x`
-      )
-      .join('\n')
-
-    const multipliersDetails = Object.entries(SLOT_MULTIPLIERS)
-      .map(([symbol, multiplier]) => `${symbol}: **${multiplier}**x`)
-      .join('\n')
-
-    const symbolWeightsDetails = Object.entries(SYMBOL_WEIGHTS)
-      .map(([symbol, weight]) => `${symbol}: **${weight}**`)
-      .join('\n')
+    const multipliersDetails = `**${formatNumberWithSpaces(
+      GOLDEN_JACKPOT_MULTIPLIER
+    )}x**`
 
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 
     const embed = createBetEmbed(
-      `🎰 Slot Simulation - ${formatNumberToReadableString(spins)} spins`,
+      `🤑 GoldenJackpot Simulation - ${formatNumberToReadableString(
+        entries
+      )} entries`,
       profitOrLoss >= 0 ? 'Green' : 'Red',
       `Total bet: **$${formatNumberToReadableString(totalBet)}**\n` +
         `Total winnings: **$${formatNumberToReadableString(
@@ -188,11 +147,9 @@ export async function run({ interaction }: SlashCommandProps) {
         `Profit/Loss Percentage: **${profitOrLossPercentage.toFixed(2)}%**\n` +
         `📊 RTP: **${rtp.toFixed(2)}%**\n\n` +
         (winsLosses ? `${winLossesDetails}\n\n` : '') +
-        (winLossesSeries ? `${winLossesSeriesDetails}\n\n` : '') +
-        (details ? `Win details:\n${winDetails || 'No wins'}\n\n` : '') +
-        (multipliers ? `Multipliers:\n${multipliersDetails}\n\n` : '') +
-        (weights ? `Symbol weights:\n${symbolWeightsDetails}\n\n` : '') +
-        `All spins took: **${totalTime}s**`
+        (details ? `Details: ${winDetails}\n\n` : '') +
+        (multipliers ? `Multiplier: ${multipliersDetails}\n\n` : '') +
+        `All entries took: **${totalTime}s**`
     )
 
     await interaction.editReply({

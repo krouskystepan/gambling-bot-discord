@@ -6,43 +6,35 @@ import {
   createInfoEmbed,
 } from '../../../utils/createEmbed'
 import {
-  checkUserRegistration,
-  parseReadableStringToNumber,
-  formatNumberToReadableString,
   checkChannelConfiguration,
+  checkUserRegistration,
+  formatNumberToReadableString,
+  parseReadableStringToNumber,
 } from '../../../utils/utils'
-import { drawLottery } from '../../../utils/casinoHelpers'
 import {
-  LOTTERY_MULTIPLIERS,
+  GOLDEN_JACKPOT_MAX_ENTRIES,
+  GOLDEN_JACKPOT_MULTIPLIER,
   LOTTERY_MAX_BET,
 } from '../../../utils/casinoConfig'
+import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
 
 export const data: CommandData = {
-  name: 'lottery',
-  description: 'Play the lottery! Pick 5 numbers and see if you win.',
+  name: 'goldenjackpot',
+  description: `Try your luck at the Golden Jackpot ${formatNumberToReadableString(
+    GOLDEN_JACKPOT_MULTIPLIER
+  )}x!`,
   options: [
     {
       name: 'bet',
-      description: 'Your bet amount (e.g., 100, 1k, 5k).',
-      type: ApplicationCommandOptionType.String,
-      required: true,
-    },
-    {
-      name: 'numbers',
-      description:
-        'Pick 5 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38, 49).',
+      description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: 'entries',
-      description: 'Number of entries.',
+      description: `Number of entries (max is ${GOLDEN_JACKPOT_MAX_ENTRIES}).`,
       type: ApplicationCommandOptionType.Integer,
       required: false,
-      choices: Array.from({ length: 20 }, (_, i) => ({
-        name: (i + 1).toString(),
-        value: i + 1,
-      })),
     },
     {
       name: 'show-balance',
@@ -94,6 +86,18 @@ export async function run({ interaction }: SlashCommandProps) {
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
+
+    if (entries > GOLDEN_JACKPOT_MAX_ENTRIES || entries < 1) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Entries',
+            `The number of entries must be between 1 and ${GOLDEN_JACKPOT_MAX_ENTRIES}.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
 
     if (isNaN(parsedBetAmount)) {
       return interaction.reply({
@@ -150,54 +154,23 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const numbersInput = interaction.options.getString('numbers', true)
-    const userNumbers = numbersInput.split(',').map((n) => parseFloat(n.trim()))
-
-    if (
-      userNumbers.length !== 5 ||
-      userNumbers.some(
-        (n) =>
-          !Number.isInteger(n) ||
-          n < 1 ||
-          n > 50 ||
-          new Set(userNumbers).size !== 5
-      )
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Invalid Numbers',
-            'Pick 5 unique whole numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38, 49).'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
     let totalWinnings = 0
     let results: string[] = []
 
     for (let i = 0; i < entries; i++) {
-      const lotteryNumbers = drawLottery()
-      const resultString = `${lotteryNumbers
-        .map((n) => n.toString().padStart(2, '0'))
-        .join(', ')}`
-      const matchedNumbers = userNumbers.filter((n) =>
-        lotteryNumbers.includes(n)
-      ).length
-      const winnings = parsedBetAmount * LOTTERY_MULTIPLIERS[matchedNumbers]
+      const jackpotNumber = drawGoldenJackpot()
+      const isJackpot = jackpotNumber === 1
+      const winnings = isJackpot
+        ? parsedBetAmount * GOLDEN_JACKPOT_MULTIPLIER
+        : 0
 
-      results.push(
-        `**${resultString}** | ${
-          matchedNumbers >= 2
-            ? `🎉 **${matchedNumbers}**`
-            : `❌ **${matchedNumbers}**`
-        } | ${
-          matchedNumbers >= 2
-            ? `**+$${formatNumberToReadableString(winnings)}**`
-            : `**-$${formatNumberToReadableString(parsedBetAmount)}**`
-        }`
-      )
+      if (isJackpot) {
+        results.push(
+          `**JACKPOT!** You won **$${formatNumberToReadableString(
+            winnings
+          )}** on Try **#${(i + 1).toString().padStart(3, '0')}**! 🔥`
+        )
+      }
 
       totalWinnings += winnings - parsedBetAmount
     }
@@ -212,16 +185,15 @@ export async function run({ interaction }: SlashCommandProps) {
       embeds: [
         createBetEmbed(
           isWin
-            ? '🎟️ **Win!** 🎉'
+            ? '🤑 **JACKPOT!** 🎉'
             : isLoss
-            ? '🎟️ **Better Luck Next Time...** ❌'
-            : '🎟️ **Not Bad...** 👀',
+            ? '🤑 **Better Luck Next Time...** ❌'
+            : '🤑 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
-            `Your numbers: **${userNumbers
-              .map((n) => n.toString().padStart(2, '0'))
-              .join(', ')}**\n\n` +
-            `🎟️ **Draw Results:**\n${results.join('\n')}\n\n` +
+            `🤑 **Draw Result:**${
+              isWin ? `\n ${results.join('\n')}` : ' No win'
+            }\n\n` +
             `💰 Total Winnings: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(totalWinnings)}**\n` +
