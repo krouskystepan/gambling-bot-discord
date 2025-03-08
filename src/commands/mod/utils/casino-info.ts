@@ -57,7 +57,7 @@ export async function run({ interaction }: SlashCommandProps) {
           )}`
         : ''
     }
-    - **Win Multiplier:** ${DICE_WIN_MULTIPLIER}x
+    - **Multiplier:** ${DICE_WIN_MULTIPLIER}x
     - **Max Bet:** ${
       DICE_MAX_BET === 0
         ? 'No Limit'
@@ -72,7 +72,7 @@ export async function run({ interaction }: SlashCommandProps) {
           )}`
         : ''
     }
-    - **Win Multiplier:** ${COINFLIP_WIN_MULTIPLIER}x
+    - **Multiplier:** ${COINFLIP_WIN_MULTIPLIER}x
     - **Max Bet:** ${
       COINFLIP_MAX_BET === 0
         ? 'No Limit'

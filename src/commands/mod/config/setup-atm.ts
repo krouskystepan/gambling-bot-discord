@@ -13,7 +13,7 @@ import {
 
 export const data: CommandData = {
   name: 'setup-atm',
-  description: 'Manage ATM and log channels.',
+  description: 'Manage ATM actions and logs channels.',
   options: [
     {
       name: 'add-actions',
@@ -33,7 +33,7 @@ export const data: CommandData = {
     {
       name: 'remove-actions',
       description:
-        'Remove an ATM channel using its ID (deposits and withdrawals).',
+        'Remove a channel for ATM transactions using its ID (deposits and withdrawals).',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
@@ -60,7 +60,8 @@ export const data: CommandData = {
     },
     {
       name: 'remove-logs',
-      description: 'Remove a log channel using its ID (transaction logs).',
+      description:
+        'Remove a channel for ATM logs using its ID (transaction logs).',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {

@@ -10,7 +10,7 @@ import { createSuccessEmbed } from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-casino',
-  description: 'Management of casino betting channels.',
+  description: 'Manage the casino channels.',
   options: [
     {
       name: 'add',

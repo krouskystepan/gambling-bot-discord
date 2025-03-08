@@ -7,11 +7,11 @@ import {
   Colors,
   EmbedBuilder,
 } from 'discord.js'
-import User from '../../models/User'
+import User from '../../../models/User'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
-} from '../../utils/utils'
+} from '../../../utils/utils'
 
 export const data: CommandData = {
   name: 'give-balance',

@@ -13,7 +13,7 @@ import {
 
 export const data: CommandData = {
   name: 'setup-admin',
-  description: 'Manage the admin channel.',
+  description: 'Manage the admin channels.',
   options: [
     {
       name: 'add',

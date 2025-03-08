@@ -6,7 +6,6 @@ import {
   TextChannel,
 } from 'discord.js'
 import { checkUserRegistration } from '../../../utils/utils'
-import User from '../../../models/User'
 import GuildConfiguration from '../../../models/GuildConfiguration'
 import {
   createErrorEmbed,

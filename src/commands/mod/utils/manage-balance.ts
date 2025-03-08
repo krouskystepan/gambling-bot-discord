@@ -1,10 +1,10 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
-import User from '../../models/User'
+import User from '../../../models/User'
 import {
   checkChannelConfiguration,
   formatNumberToReadableString,
   parseReadableStringToNumber,
-} from '../../utils/utils'
+} from '../../../utils/utils'
 import {
   ApplicationCommandOptionType,
   CommandInteractionOptionResolver,
@@ -14,7 +14,7 @@ import {
   createErrorEmbed,
   createInfoEmbed,
   createSuccessEmbed,
-} from '../../utils/createEmbed'
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'manage-balance',

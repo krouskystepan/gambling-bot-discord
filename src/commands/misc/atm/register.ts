@@ -1,11 +1,6 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { checkUserRegistration } from '../../../utils/utils'
-import {
-  EmbedBuilder,
-  GuildMember,
-  MessageFlags,
-  TextChannel,
-} from 'discord.js'
+import { EmbedBuilder, MessageFlags, TextChannel } from 'discord.js'
 import User from '../../../models/User'
 import GuildConfiguration from '../../../models/GuildConfiguration'
 import {

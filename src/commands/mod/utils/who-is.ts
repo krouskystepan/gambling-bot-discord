@@ -10,7 +10,7 @@ import {
 } from '../../../utils/utils'
 
 export const data: CommandData = {
-  name: 'whois',
+  name: 'who-is',
   description: 'Get information about a user.',
   options: [
     {

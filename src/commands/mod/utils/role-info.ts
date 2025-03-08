@@ -8,7 +8,7 @@ import {
 } from 'discord.js'
 
 export const data: CommandData = {
-  name: 'roleinfo',
+  name: 'role-info',
   description: 'Display information about a role.',
   options: [
     {
