@@ -43,6 +43,12 @@ export const data: CommandData = {
       required: false,
     },
     {
+      name: 'win-losses-series',
+      description: 'Displays the longest winning and losing streak.',
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
       name: 'multipliers',
       description: 'Displays multipliers.',
       type: ApplicationCommandOptionType.Boolean,
@@ -67,6 +73,11 @@ export async function run({ interaction }: SlashCommandProps) {
     let wins = 0
     let losses = 0
 
+    let currentWinningStreak = 0
+    let biggestWinningStreak = 0
+    let currentLosingStreak = 0
+    let biggestLosingStreak = 0
+
     const entries = parseReadableStringToNumber(
       interaction.options.getString('entries', true)
     )
@@ -84,6 +95,7 @@ export async function run({ interaction }: SlashCommandProps) {
     )
 
     const winsLosses = interaction.options.getBoolean('wins-losses-count')
+    const winLossesSeries = interaction.options.getBoolean('win-losses-series')
     const multipliers = interaction.options.getBoolean('multipliers')
     const details = interaction.options.getBoolean('details')
 
@@ -105,8 +117,20 @@ export async function run({ interaction }: SlashCommandProps) {
       if (jackpotNumber === 1) {
         winnings = bet * GOLDEN_JACKPOT_MULTIPLIER
         wins++
+
+        currentLosingStreak = 0
+        currentWinningStreak++
+        if (currentWinningStreak > biggestWinningStreak) {
+          biggestWinningStreak = currentWinningStreak
+        }
       } else {
         losses++
+
+        currentWinningStreak = 0
+        currentLosingStreak++
+        if (currentLosingStreak > biggestLosingStreak) {
+          biggestLosingStreak = currentLosingStreak
+        }
       }
 
       totalWinnings += winnings
@@ -128,6 +152,10 @@ export async function run({ interaction }: SlashCommandProps) {
       `🎉 Wins: **${formatNumberWithSpaces(wins)}**\n` +
       `❌ Losses: **${formatNumberWithSpaces(losses)}**`
 
+    const winLossesSeriesDetails =
+      `🔥 Longest winning streak: **${biggestWinningStreak}**\n` +
+      `💀 Longest losing streak: **${biggestLosingStreak}**`
+
     const multipliersDetails = `**${formatNumberWithSpaces(
       GOLDEN_JACKPOT_MULTIPLIER
     )}x**`
@@ -147,6 +175,7 @@ export async function run({ interaction }: SlashCommandProps) {
         `Profit/Loss Percentage: **${profitOrLossPercentage.toFixed(2)}%**\n` +
         `📊 RTP: **${rtp.toFixed(2)}%**\n\n` +
         (winsLosses ? `${winLossesDetails}\n\n` : '') +
+        (winLossesSeries ? `${winLossesSeriesDetails}\n\n` : '') +
         (details ? `Details: ${winDetails}\n\n` : '') +
         (multipliers ? `Multiplier: ${multipliersDetails}\n\n` : '') +
         `All entries took: **${totalTime}s**`
