@@ -164,7 +164,7 @@ export async function run({ interaction }: SlashCommandProps) {
       const winnings = win ? parsedBetAmount * COINFLIP_WIN_MULTIPLIER : 0
 
       results.push(
-        `**${flipResult === 'heads' ? 'H 👑' : 'T 🐍'}** | ${
+        `**${flipResult === 'heads' ? 'H' : 'T'}** | ${
           win ? '🎉' : '❌'
         } | ${
           win

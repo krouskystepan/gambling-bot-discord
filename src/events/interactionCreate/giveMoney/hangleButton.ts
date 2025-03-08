@@ -9,6 +9,7 @@ import {
 import User from '../../../models/User'
 import { formatNumberToReadableString } from '../../../utils/utils'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import { createErrorEmbed } from '../../../utils/createEmbed'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -24,9 +25,13 @@ export default async (interaction: Interaction, client: Client) => {
     })
 
     if (!guildConfiguration?.atmChannelIds.logs) {
-      return await interaction.reply({
-        content: 'ATM log channel is not set.',
-        flags: MessageFlags.Ephemeral,
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Not Configured',
+            'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
+          ),
+        ],
       })
     }
 
@@ -37,7 +42,17 @@ export default async (interaction: Interaction, client: Client) => {
       guildId: interaction.guildId,
     })
 
-    if (!user) return
+    if (!user) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Not registered',
+            'You are not registered yet.\nUse the `/register` command to register.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
 
     user.balance += parsedAmount
     user.save()
