@@ -134,8 +134,9 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const betAmount = interaction.options.getString('bet', true)
+    const betAmount = interaction.options.getString('bet', true).toUpperCase()
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
+    const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const realWinAmount = parsedBetAmount * (1 - RPS_CASINO_CUT)
 
     if (user.balance < parsedBetAmount) {
@@ -169,11 +170,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(buttons)
 
     const reply = await interaction.reply({
-      content: `${targetDiscordUser}, you’ve been challenged by ${
-        interaction.user
-      } to a game of Rock, Paper, Scissors for **$${formatNumberToReadableString(
-        parsedBetAmount
-      )}**!\nChoose one of the options to start the game.`,
+      content: `${targetDiscordUser}, you’ve been challenged by ${interaction.user} to a game of Rock, Paper, Scissors for **$${readableBetAmount}**!\nChoose one of the options to start the game.`,
       embeds: [embed],
       components: [row],
     })

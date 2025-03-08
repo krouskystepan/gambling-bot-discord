@@ -8,7 +8,10 @@ import {
   EmbedBuilder,
 } from 'discord.js'
 import User from '../../models/User'
-import { parseReadableStringToNumber } from '../../utils/utils'
+import {
+  formatNumberToReadableString,
+  parseReadableStringToNumber,
+} from '../../utils/utils'
 
 export const data: CommandData = {
   name: 'give-balance',
@@ -32,8 +35,9 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const amount = interaction.options.getString('amount', true)
+    const amount = interaction.options.getString('amount', true).toUpperCase()
     const parsedAmount = parseReadableStringToNumber(amount)
+    const readableAmount = formatNumberToReadableString(parsedAmount)
 
     User.findOne({ userId: interaction.user.id, guildId: interaction.guildId })
 
@@ -41,7 +45,7 @@ export async function run({ interaction }: SlashCommandProps) {
       .setTitle('Money Generator')
       .setColor(Colors.Yellow)
       .setDescription(
-        `Click to add **$${amount}** to your account.\n` +
+        `Click to add **$${readableAmount}** to your account.\n` +
           'You can use this money to try **CASINO** games.'
       )
       .setTimestamp()

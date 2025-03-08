@@ -134,9 +134,9 @@ export async function run({ interaction, client }: SlashCommandProps) {
         })
       }
 
-      const amount = interaction.options.getString('amount', true)
-
+      const amount = interaction.options.getString('amount', true).toUpperCase()
       const parsedAmount = parseReadableStringToNumber(amount)
+      const readableAmount = formatNumberToReadableString(parsedAmount)
 
       if (isNaN(parsedAmount)) {
         return interaction.reply({
@@ -185,7 +185,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Deposit',
-            `You have successfully added **$${amount}** to <@${
+            `You have successfully added **$${readableAmount}** to <@${
               user.id
             }>.\nTheir new balance is now: **$${formatNumberToReadableString(
               userDocument.balance
@@ -210,9 +210,9 @@ export async function run({ interaction, client }: SlashCommandProps) {
         })
       }
 
-      const amount = interaction.options.getString('amount', true)
-
+      const amount = interaction.options.getString('amount', true).toUpperCase()
       const parsedAmount = parseReadableStringToNumber(amount)
+      const readableAmount = formatNumberToReadableString(parsedAmount)
 
       if (isNaN(parsedAmount)) {
         return interaction.reply({
@@ -278,7 +278,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Withdraw',
-            `You have successfully removed **$${amount}** from <@${
+            `You have successfully removed **$${readableAmount}** from <@${
               user.id
             }>.\nTheir new balance is now: **$${formatNumberToReadableString(
               userDocument.balance

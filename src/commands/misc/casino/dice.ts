@@ -92,8 +92,9 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const rolls = interaction.options.getInteger('rolls') || 1
     const side = interaction.options.getInteger('side', true)
-    const betAmount = interaction.options.getString('bet', true)
+    const betAmount = interaction.options.getString('bet', true).toUpperCase()
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
+    const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
 
     if (isNaN(parsedBetAmount)) {
@@ -164,7 +165,7 @@ export async function run({ interaction }: SlashCommandProps) {
         `**${resultString}** | ${win ? '🎉' : '❌'} | ${
           win
             ? `**+$${formatNumberToReadableString(winnings)}**`
-            : `**-$${formatNumberToReadableString(parsedBetAmount)}**`
+            : `**-$${readableBetAmount}**`
         }`
       )
 

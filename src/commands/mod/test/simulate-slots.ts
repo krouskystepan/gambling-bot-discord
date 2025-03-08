@@ -100,7 +100,6 @@ export async function run({ interaction }: SlashCommandProps) {
     const bet = parseReadableStringToNumber(
       interaction.options.getString('bet', true)
     )
-
     const details = interaction.options.getBoolean('details')
     const winsLosses = interaction.options.getBoolean('wins-losses-count')
     const winLossesSeries = interaction.options.getBoolean('win-losses-series')

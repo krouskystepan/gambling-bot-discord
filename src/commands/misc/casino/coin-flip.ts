@@ -97,6 +97,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const side = interaction.options.getString('side', true)
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
+    const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
 
     if (isNaN(parsedBetAmount)) {
@@ -164,12 +165,10 @@ export async function run({ interaction }: SlashCommandProps) {
       const winnings = win ? parsedBetAmount * COINFLIP_WIN_MULTIPLIER : 0
 
       results.push(
-        `**${flipResult === 'heads' ? 'H' : 'T'}** | ${
-          win ? '🎉' : '❌'
-        } | ${
+        `**${flipResult === 'heads' ? 'H' : 'T'}** | ${win ? '🎉' : '❌'} | ${
           win
             ? `**+$${formatNumberToReadableString(winnings)}**`
-            : `**-$${formatNumberToReadableString(parsedBetAmount)}**`
+            : `**-$${readableBetAmount}**`
         }`
       )
 
