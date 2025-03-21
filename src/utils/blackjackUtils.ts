@@ -186,14 +186,16 @@ export const createBlackjackEmbed = (
   let resultText = ''
   let color: ColorResolvable = 'Yellow'
 
+  const betAmount = parseReadableStringToNumber(bet)
+
   switch (resultId) {
     case 'BBJ':
       resultText = `You both have Blackjack!\n💰 Total: 🟡 **$${0}**`
       break
     case 'PBJ':
-      resultText = `You have Blackjack!\n💰 Total: 🟢 **$${
-        parseReadableStringToNumber(bet) * 2.5
-      }**`
+      resultText = `You have Blackjack!\n💰 Total: 🟢 **$${formatNumberToReadableString(
+        betAmount * 2.5
+      )}**`
       color = 'Green'
       break
     case 'DBJ':
@@ -205,15 +207,15 @@ export const createBlackjackEmbed = (
       color = 'Red'
       break
     case 'DB':
-      resultText = `Dealer busted!\n💰 Total: 🟢 **$${
-        parseReadableStringToNumber(bet) * 2
-      }**`
+      resultText = `Dealer busted!\n💰 Total: 🟢 **$${formatNumberToReadableString(
+        betAmount * 2
+      )}**`
       color = 'Green'
       break
     case 'PW':
-      resultText = `You win!\n💰 Total: 🟢 **$${
-        parseReadableStringToNumber(bet) * 2
-      }**`
+      resultText = `You win!\n💰 Total: 🟢 **$${formatNumberToReadableString(
+        betAmount * 2
+      )}**`
       color = 'Green'
       break
     case 'DW':
