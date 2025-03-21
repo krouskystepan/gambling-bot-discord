@@ -13,12 +13,10 @@ const UserSchema = new Schema<User>(
     userId: {
       type: String,
       required: true,
-      index: true,
     },
     guildId: {
       type: String,
       required: true,
-      index: true,
     },
     balance: {
       type: Number,
@@ -29,5 +27,7 @@ const UserSchema = new Schema<User>(
     timestamps: true,
   }
 )
+
+UserSchema.index({ userId: 1, guildId: 1 }, { unique: true })
 
 export default model<User>('User', UserSchema)
