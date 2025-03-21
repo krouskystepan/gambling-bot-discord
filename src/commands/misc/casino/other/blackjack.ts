@@ -4,7 +4,6 @@ import {
   ApplicationCommandOptionType,
   ButtonBuilder,
   ButtonStyle,
-  ColorResolvable,
   MessageFlags,
 } from 'discord.js'
 import {
@@ -158,6 +157,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (playerHasBlackjack || dealerHasBlackjack) {
       if (playerHasBlackjack && dealerHasBlackjack) {
+        resultId = 'BBJ'
         user.balance += parsedBetAmount
       } else if (playerHasBlackjack) {
         user.balance += parsedBetAmount * 2.5
