@@ -86,7 +86,7 @@ export const revealDealerCards = async (
         dealerTotal,
         playerCards,
         playerTotal,
-        'PUSH'
+        'DRAWING'
       ),
     ],
     components: [],
@@ -109,7 +109,7 @@ export const revealDealerCards = async (
           dealerTotal,
           playerCards,
           playerTotal,
-          'PUSH'
+          'DRAWING'
         ),
       ],
       components: [],
@@ -157,15 +157,16 @@ export const revealDealerCards = async (
 }
 
 export type BJResults =
-  | 'BBJ' // x
-  | 'PBJ' // x
-  | 'DBJ' // x
-  | 'PB' // x
-  | 'DB' // x
-  | 'PW' // x
-  | 'DW' // x
-  | 'PUSH' // x
-  | undefined // x
+  | 'BBJ'
+  | 'PBJ'
+  | 'DBJ'
+  | 'PB'
+  | 'DB'
+  | 'PW'
+  | 'DW'
+  | 'PUSH'
+  | 'DRAWING'
+  | undefined
 
 export const createBlackjackEmbed = (
   bet: string,
@@ -187,7 +188,7 @@ export const createBlackjackEmbed = (
 
   switch (resultId) {
     case 'BBJ':
-      resultText = `You both have Blackjack!\n💰 Total: 🟡 **$${bet}**`
+      resultText = `You both have Blackjack!\n💰 Total: 🟡 **$${0}**`
       break
     case 'PBJ':
       resultText = `You have Blackjack!\n💰 Total: 🟢 **$${
@@ -204,11 +205,15 @@ export const createBlackjackEmbed = (
       color = 'Red'
       break
     case 'DB':
-      resultText = `Dealer busted!\n💰 Total: 🟢 **$${bet}**`
+      resultText = `Dealer busted!\n💰 Total: 🟢 **$${
+        parseReadableStringToNumber(bet) * 2
+      }**`
       color = 'Green'
       break
     case 'PW':
-      resultText = `You win!\n💰 Total: 🟢 **$${bet}**`
+      resultText = `You win!\n💰 Total: 🟢 **$${
+        parseReadableStringToNumber(bet) * 2
+      }**`
       color = 'Green'
       break
     case 'DW':
@@ -216,6 +221,9 @@ export const createBlackjackEmbed = (
       color = 'Red'
       break
     case 'PUSH':
+      resultText = `It's a push!\n💰 Total: 🟡 **$${0}**`
+      break
+    case 'DRAWING':
       resultText = `Dealer is drawing...`
       break
     default:
