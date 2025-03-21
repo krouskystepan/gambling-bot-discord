@@ -16,6 +16,7 @@ import {
   DECK,
   calculateHandValue,
   createBlackjackEmbed,
+  BJResults,
 } from '../../../../utils/blackjackUtils'
 import BlackjackGame from '../../../../models/BlackjackGame'
 import { drawNextCard } from '../../../../utils/casinoHelpers'
@@ -36,13 +37,6 @@ export const data: CommandData = {
       description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
       required: true,
-    },
-    {
-      name: 'show-balance',
-      description:
-        'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
-      type: ApplicationCommandOptionType.Boolean,
-      required: false,
     },
   ],
   contexts: [0],
@@ -86,7 +80,6 @@ export async function run({ interaction }: SlashCommandProps) {
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
-    const showBalance = interaction.options.getBoolean('show-balance')
 
     if (isNaN(parsedBetAmount)) {
       return interaction.reply({
@@ -161,25 +154,16 @@ export async function run({ interaction }: SlashCommandProps) {
     const playerHasBlackjack = playerCards.length === 2 && playerTotal === 21
     const dealerHasBlackjack = dealerCards.length === 2 && dealerTotal === 21
 
-    let resultText = ''
-    let resultColor: ColorResolvable = 'Yellow'
+    let resultId: BJResults
 
     if (playerHasBlackjack || dealerHasBlackjack) {
       if (playerHasBlackjack && dealerHasBlackjack) {
         user.balance += parsedBetAmount
-        resultText = `You both have Blackjack!\n💰 Total: 🟡 **$${readableBetAmount}**`
       } else if (playerHasBlackjack) {
-        const winAmount = parsedBetAmount * 2.5
-        user.balance += winAmount
-        resultText = `You have Blackjack!\n💰 Total: 🟢 **$${formatNumberToReadableString(
-          winAmount
-        )}**`
-        resultColor = 'Green'
+        user.balance += parsedBetAmount * 2.5
+        resultId = 'PBJ'
       } else if (dealerHasBlackjack) {
-        resultText = `Dealer has Blackjack!\n💰 Total: 🔴 **$${formatNumberToReadableString(
-          parsedBetAmount * -1
-        )}**`
-        resultColor = 'Red'
+        resultId = 'DBJ'
       }
 
       await user.save()
@@ -192,14 +176,7 @@ export async function run({ interaction }: SlashCommandProps) {
             dealerTotal,
             playerCards,
             playerTotal,
-            resultColor,
-            `**Result:**\n${resultText}${
-              showBalance
-                ? `\n🏦 Balance: **$${formatNumberToReadableString(
-                    user.balance
-                  )}**`
-                : ''
-            }`
+            resultId!
           ),
         ],
       })
@@ -215,7 +192,6 @@ export async function run({ interaction }: SlashCommandProps) {
       deck: shuffledDeck,
       playerCards,
       dealerCards,
-      showBalance,
     })
 
     await game.save()
@@ -255,10 +231,7 @@ export async function run({ interaction }: SlashCommandProps) {
           dealerTotal,
           playerCards,
           playerTotal,
-          'Yellow',
-          showBalance
-            ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
-            : undefined,
+          undefined,
           true
         ),
       ],

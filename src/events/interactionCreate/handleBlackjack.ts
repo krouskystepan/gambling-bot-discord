@@ -98,8 +98,7 @@ export default async (interaction: Interaction, client: Client) => {
         gameIndex,
         user,
         guildId,
-        gameId,
-        game.showBalance
+        gameId
       )
 
       return interaction.followUp({
@@ -158,23 +157,7 @@ export default async (interaction: Interaction, client: Client) => {
               dealerTotal,
               game.playerCards,
               playerTotal,
-              'Red',
-              [
-                '**Result:**',
-                'You busted!',
-                `💰 Total: 🔴 **$-${formatNumberToReadableString(
-                  game.betAmount
-                )}**`,
-                `${
-                  game.showBalance
-                    ? `🏦 Balance: **$${formatNumberToReadableString(
-                        user.balance
-                      )}**`
-                    : ''
-                }`,
-              ]
-                .filter(Boolean)
-                .join('\n')
+              'PB'
             ),
           ],
           components: [],
@@ -200,8 +183,7 @@ export default async (interaction: Interaction, client: Client) => {
           gameIndex + 1,
           user,
           guildId,
-          gameId,
-          game.showBalance
+          gameId
         )
 
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
@@ -225,10 +207,7 @@ export default async (interaction: Interaction, client: Client) => {
             dealerTotal,
             game.playerCards,
             playerTotal,
-            'Yellow',
-            game.showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
-              : undefined,
+            undefined,
             true
           ),
         ],
@@ -250,15 +229,31 @@ export default async (interaction: Interaction, client: Client) => {
 
       let gameIndex = game.dealerCards.length + game.playerCards.length
 
+      const user = await User.findOne({ userId, guildId })
+
+      const betAmount = game.betAmount * 2
+
+      if (!user) return
+
+      if (betAmount > user.balance) {
+        return interaction.followUp({
+          embeds: [
+            createInfoEmbed(
+              'Insufficient balance',
+              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(
+                user.balance
+              )}**.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
       const drawnCard = drawNextCard(game.deck, gameIndex)
 
       game.playerCards.push(drawnCard)
 
       playerTotal = calculateHandValue(game.playerCards)
-
-      const user = await User.findOne({ userId, guildId })
-
-      if (!user) return
 
       if (playerTotal > 21) {
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
@@ -266,28 +261,12 @@ export default async (interaction: Interaction, client: Client) => {
         await message.edit({
           embeds: [
             createBlackjackEmbed(
-              formatNumberToReadableString(game.betAmount),
+              formatNumberToReadableString(betAmount),
               dealerCards,
               dealerTotal,
               game.playerCards,
               playerTotal,
-              'Red',
-              [
-                '**Result:**',
-                'You busted!',
-                `💰 Total: 🔴 **$-${formatNumberToReadableString(
-                  game.betAmount
-                )}**`,
-                `${
-                  game.showBalance
-                    ? `🏦 Balance: **$${formatNumberToReadableString(
-                        user.balance
-                      )}**`
-                    : ''
-                }`,
-              ]
-                .filter(Boolean)
-                .join('\n')
+              'PB'
             ),
           ],
           components: [],
@@ -300,7 +279,7 @@ export default async (interaction: Interaction, client: Client) => {
       }
 
       await revealDealerCards(
-        formatNumberToReadableString(game.betAmount),
+        formatNumberToReadableString(betAmount),
         message,
         dealerCards,
         dealerTotal,
@@ -310,8 +289,7 @@ export default async (interaction: Interaction, client: Client) => {
         gameIndex + 1,
         user,
         guildId,
-        gameId,
-        game.showBalance
+        gameId
       )
 
       return interaction.followUp({

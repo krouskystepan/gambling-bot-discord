@@ -9,7 +9,6 @@ export interface BlackjackGame {
   deck: Card[]
   playerCards: Card[]
   dealerCards: Card[]
-  showBalance?: boolean
 }
 
 const BlackjackGameSchema = new Schema<BlackjackGame>({
@@ -53,10 +52,6 @@ const BlackjackGameSchema = new Schema<BlackjackGame>({
       value: { type: Number, required: true },
     },
   ],
-  showBalance: {
-    type: Boolean,
-    default: false,
-  },
 })
 
 export default model<BlackjackGame>('BlackjackGame', BlackjackGameSchema)

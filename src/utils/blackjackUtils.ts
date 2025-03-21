@@ -76,8 +76,7 @@ export const revealDealerCards = async (
   gameIndex: number,
   user: User,
   guildId: string,
-  gameId: string,
-  showBalance?: boolean
+  gameId: string
 ) => {
   await message.edit({
     embeds: [
@@ -87,12 +86,7 @@ export const revealDealerCards = async (
         dealerTotal,
         playerCards,
         playerTotal,
-        'Yellow',
-        `**Dealer is drawing...**${
-          showBalance
-            ? `\n🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
-            : ''
-        }`
+        'PUSH'
       ),
     ],
     components: [],
@@ -115,14 +109,7 @@ export const revealDealerCards = async (
           dealerTotal,
           playerCards,
           playerTotal,
-          'Yellow',
-          `Dealer is drawing...${
-            showBalance
-              ? `\n🏦 Balance: **$${formatNumberToReadableString(
-                  user.balance
-                )}**`
-              : ''
-          }`
+          'PUSH'
         ),
       ],
       components: [],
@@ -132,29 +119,24 @@ export const revealDealerCards = async (
   }
 
   const betAmount = parseReadableStringToNumber(bet)
-  const result = { text: '', color: '' }
+  let resultId: BJResults
 
   if (dealerTotal > 21) {
-    result.text = `**Dealer busted!**\n💰 Total: 🟢 **$${bet}**`
-    result.color = 'Green'
-
+    resultId = 'DB'
     user.balance += betAmount * 2
     await user.save()
   } else if (dealerTotal === playerTotal) {
-    result.text = `**It's a tie!**\n💰 Total: 🟡 **$${0}**`
-    result.color = 'Yellow'
+    resultId = 'PUSH'
 
     user.balance += betAmount
     await user.save()
   } else if (playerTotal > dealerTotal) {
-    result.text = `**You win!**\n💰 Total: 🟢 **$${bet}**`
-    result.color = 'Green'
+    resultId = 'PW'
 
     user.balance += betAmount * 2
     await user.save()
   } else {
-    result.text = `**Dealer wins!**\n💰 Total: 🔴 **$-${bet}**`
-    result.color = 'Red'
+    resultId = 'DW'
   }
 
   await message.edit({
@@ -165,12 +147,7 @@ export const revealDealerCards = async (
         dealerTotal,
         playerCards,
         playerTotal,
-        result.color as ColorResolvable,
-        `${result.text}${
-          showBalance
-            ? `\n🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
-            : ''
-        }`
+        resultId
       ),
     ],
     components: [],
@@ -179,14 +156,24 @@ export const revealDealerCards = async (
   await BlackjackGame.findOneAndDelete({ userId: user.userId, guildId, gameId })
 }
 
+export type BJResults =
+  | 'BBJ' // x
+  | 'PBJ' // x
+  | 'DBJ' // x
+  | 'PB' // x
+  | 'DB' // x
+  | 'PW' // x
+  | 'DW' // x
+  | 'PUSH' // x
+  | undefined // x
+
 export const createBlackjackEmbed = (
   bet: string,
   dealerCards: Card[],
   dealerTotal: number,
   playerCards: Card[],
   playerTotal: number,
-  color: ColorResolvable,
-  resultText?: string,
+  resultId: BJResults,
   dealerVisibleOneCard: boolean = false
 ) => {
   const dealerHandText = dealerVisibleOneCard
@@ -194,6 +181,47 @@ export const createBlackjackEmbed = (
     : `${dealerCards
         .map((c) => `${c.label}${c.suite}`)
         .join(' ')} (**${dealerTotal}**)`
+
+  let resultText = ''
+  let color: ColorResolvable = 'Yellow'
+
+  switch (resultId) {
+    case 'BBJ':
+      resultText = `You both have Blackjack!\n💰 Total: 🟡 **$${bet}**`
+      break
+    case 'PBJ':
+      resultText = `You have Blackjack!\n💰 Total: 🟢 **$${
+        parseReadableStringToNumber(bet) * 2.5
+      }**`
+      color = 'Green'
+      break
+    case 'DBJ':
+      resultText = `Dealer has Blackjack!\n💰 Total: 🔴 **$-${bet}**`
+      color = 'Red'
+      break
+    case 'PB':
+      resultText = `You busted!\n💰 Total: 🔴 **$-${bet}**`
+      color = 'Red'
+      break
+    case 'DB':
+      resultText = `Dealer busted!\n💰 Total: 🟢 **$${bet}**`
+      color = 'Green'
+      break
+    case 'PW':
+      resultText = `You win!\n💰 Total: 🟢 **$${bet}**`
+      color = 'Green'
+      break
+    case 'DW':
+      resultText = `Dealer wins!\n💰 Total: 🔴 **$-${bet}**`
+      color = 'Red'
+      break
+    case 'PUSH':
+      resultText = `Dealer is drawing...`
+      break
+    default:
+      resultText = ''
+      break
+  }
 
   return createBetEmbed(
     '🃏 Blackjack',
@@ -204,7 +232,7 @@ export const createBlackjackEmbed = (
       `**Your Hand:**\n${playerCards
         .map((c) => `${c.label}${c.suite}`)
         .join(' ')} (**${playerTotal}**)`,
-      resultText ? `${resultText}` : '',
+      resultText ? `**Result**\n${resultText}` : undefined,
     ]
       .filter(Boolean)
       .join('\n\n')
