@@ -167,16 +167,16 @@ export async function run({ interaction }: SlashCommandProps) {
     if (playerHasBlackjack || dealerHasBlackjack) {
       if (playerHasBlackjack && dealerHasBlackjack) {
         user.balance += parsedBetAmount
-        resultText = `**You both have Blackjack!**\n💰 Total: 🟡 **$${readableBetAmount}**`
+        resultText = `You both have Blackjack!\n💰 Total: 🟡 **$${readableBetAmount}**`
       } else if (playerHasBlackjack) {
         const winAmount = parsedBetAmount * 2.5
         user.balance += winAmount
-        resultText = `**You have Blackjack!**\n💰 Total: 🟢 **$${formatNumberToReadableString(
+        resultText = `You have Blackjack!\n💰 Total: 🟢 **$${formatNumberToReadableString(
           winAmount
         )}**`
         resultColor = 'Green'
       } else if (dealerHasBlackjack) {
-        resultText = `**Dealer has Blackjack!**\n💰 Total: 🔴 **$${formatNumberToReadableString(
+        resultText = `Dealer has Blackjack!\n💰 Total: 🔴 **$${formatNumberToReadableString(
           parsedBetAmount * -1
         )}**`
         resultColor = 'Red'
@@ -193,7 +193,7 @@ export async function run({ interaction }: SlashCommandProps) {
             playerCards,
             playerTotal,
             resultColor,
-            `${resultText}${
+            `**Result:**\n${resultText}${
               showBalance
                 ? `\n🏦 Balance: **$${formatNumberToReadableString(
                     user.balance

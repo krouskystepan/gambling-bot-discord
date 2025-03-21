@@ -160,7 +160,7 @@ export default async (interaction: Interaction, client: Client) => {
               playerTotal,
               'Red',
               [
-                '**Result**',
+                '**Result:**',
                 'You busted!',
                 `💰 Total: 🔴 **$-${formatNumberToReadableString(
                   game.betAmount
@@ -207,7 +207,7 @@ export default async (interaction: Interaction, client: Client) => {
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
 
         return interaction.followUp({
-          content: 'You have busted.',
+          content: 'You have hit.',
           flags: MessageFlags.Ephemeral,
         })
       }
@@ -272,7 +272,22 @@ export default async (interaction: Interaction, client: Client) => {
               game.playerCards,
               playerTotal,
               'Red',
-              'You busted!'
+              [
+                '**Result:**',
+                'You busted!',
+                `💰 Total: 🔴 **$-${formatNumberToReadableString(
+                  game.betAmount
+                )}**`,
+                `${
+                  game.showBalance
+                    ? `🏦 Balance: **$${formatNumberToReadableString(
+                        user.balance
+                      )}**`
+                    : ''
+                }`,
+              ]
+                .filter(Boolean)
+                .join('\n')
             ),
           ],
           components: [],
