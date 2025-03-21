@@ -8,7 +8,6 @@ import {
   MessageFlags,
 } from 'discord.js'
 import {
-  createBetEmbed,
   createErrorEmbed,
   createInfoEmbed,
 } from '../../../../utils/createEmbed'
@@ -16,7 +15,6 @@ import {
   shuffleDeck,
   DECK,
   calculateHandValue,
-  Card,
   createBlackjackEmbed,
 } from '../../../../utils/blackjackUtils'
 import BlackjackGame from '../../../../models/BlackjackGame'
@@ -169,7 +167,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (playerHasBlackjack || dealerHasBlackjack) {
       if (playerHasBlackjack && dealerHasBlackjack) {
         user.balance += parsedBetAmount
-        resultText = `**You both have Blackjack!**\n💰 Total: 🟡 **$${parsedBetAmount}**`
+        resultText = `**You both have Blackjack!**\n💰 Total: 🟡 **$${readableBetAmount}**`
       } else if (playerHasBlackjack) {
         const winAmount = parsedBetAmount * 2.5
         user.balance += winAmount
@@ -195,9 +193,13 @@ export async function run({ interaction }: SlashCommandProps) {
             playerCards,
             playerTotal,
             resultColor,
-            `${resultText}\n🏦 Balance: **$${formatNumberToReadableString(
-              user.balance
-            )}**`
+            `${resultText}${
+              showBalance
+                ? `\n🏦 Balance: **$${formatNumberToReadableString(
+                    user.balance
+                  )}**`
+                : ''
+            }`
           ),
         ],
       })
@@ -209,7 +211,7 @@ export async function run({ interaction }: SlashCommandProps) {
       gameId: message.id,
       userId: interaction.user.id,
       guildId: interaction.guildId,
-      betAmount: 0,
+      betAmount: parsedBetAmount,
       deck: shuffledDeck,
       playerCards,
       dealerCards,
@@ -254,7 +256,9 @@ export async function run({ interaction }: SlashCommandProps) {
           playerCards,
           playerTotal,
           'Yellow',
-          `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`,
+          showBalance
+            ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
+            : undefined,
           true
         ),
       ],

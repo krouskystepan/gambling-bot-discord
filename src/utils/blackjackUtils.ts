@@ -88,13 +88,17 @@ export const revealDealerCards = async (
         playerCards,
         playerTotal,
         'Yellow',
-        'Dealer is drawing...'
+        `Dealer is drawing...${
+          showBalance
+            ? `\n🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
+            : ''
+        }`
       ),
     ],
     components: [],
   })
 
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  await new Promise((resolve) => setTimeout(resolve, 1000))
 
   while (dealerTotal < 17) {
     const drawnCard = drawNextCard(deck, gameIndex)
@@ -112,7 +116,13 @@ export const revealDealerCards = async (
           playerCards,
           playerTotal,
           'Yellow',
-          'Dealer is drawing...'
+          `Dealer is drawing...${
+            showBalance
+              ? `\n🏦 Balance: **$${formatNumberToReadableString(
+                  user.balance
+                )}**`
+              : ''
+          }`
         ),
       ],
       components: [],
@@ -125,25 +135,25 @@ export const revealDealerCards = async (
   const result = { text: '', color: '' }
 
   if (dealerTotal > 21) {
-    result.text = `Dealer busted!**\n💰 Total: 🟢 **$${bet}**`
+    result.text = `Dealer busted!\n💰 Total: 🟢 **$${bet}**`
     result.color = 'Green'
 
     user.balance += betAmount * 2
     await user.save()
   } else if (dealerTotal === playerTotal) {
-    result.text = `It's a tie!**\n💰 Total: 🟡 **$${0}**`
+    result.text = `It's a tie!\n💰 Total: 🟡 **$${0}**`
     result.color = 'Yellow'
 
     user.balance += betAmount
     await user.save()
   } else if (playerTotal > dealerTotal) {
-    result.text = `You win!**\n💰 Total: 🟢 **$-${bet}**`
+    result.text = `You win!\n💰 Total: 🟢 **$-${bet}**`
     result.color = 'Green'
 
     user.balance += betAmount * 2
     await user.save()
   } else {
-    result.text = `**Dealer wins!**\n💰 Total: 🔴 **$-${bet}**`
+    result.text = `Dealer wins!\n💰 Total: 🔴 **$-${bet}**`
     result.color = 'Red'
   }
 
@@ -159,7 +169,13 @@ export const revealDealerCards = async (
           `**Your Hand:**\n${playerCards
             .map((c) => `${c.label}${c.suite}`)
             .join(' ')} (**${playerTotal}**)`,
-          `**Result:**\n${result.text}`,
+          `**Result:**\n${result.text}${
+            showBalance
+              ? `\n🏦 Balance: **$${formatNumberToReadableString(
+                  user.balance
+                )}**`
+              : ''
+          }`,
         ].join('\n\n')
       ),
     ],
