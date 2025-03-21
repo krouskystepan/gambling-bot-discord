@@ -12,7 +12,7 @@ import {
 export const data: CommandData = {
   name: 'balance',
   description: 'Check your current balance (only you can see this).',
-  contexts: [0],
+  dm_permission: false,
 }
 
 export const options: CommandOptions = {

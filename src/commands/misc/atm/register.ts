@@ -11,7 +11,7 @@ import {
 export const data: CommandData = {
   name: 'register',
   description: 'Register yourself in the system.',
-  contexts: [0],
+  dm_permission: false,
 }
 
 export const options: CommandOptions = {

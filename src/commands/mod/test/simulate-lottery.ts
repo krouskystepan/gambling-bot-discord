@@ -53,7 +53,7 @@ export const data: CommandData = {
       required: false,
     },
   ],
-  contexts: [0],
+  dm_permission: false,
 }
 
 export const options: CommandOptions = {

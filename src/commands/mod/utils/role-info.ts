@@ -18,7 +18,7 @@ export const data: CommandData = {
       required: true,
     },
   ],
-  contexts: [0],
+  dm_permission: false,
 }
 
 export const options: CommandOptions = {
