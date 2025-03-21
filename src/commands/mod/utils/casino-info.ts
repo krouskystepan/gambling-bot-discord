@@ -82,23 +82,22 @@ export async function run({ interaction }: SlashCommandProps) {
   const slotMessage = `## 🎰 Slots
     ${
       isAdmin
-        ? `- **Max Simulate Spins:** ${formatNumberToReadableString(
+        ? `
+- **Max Simulate Spins:** ${formatNumberToReadableString(
             SLOT_MAX_SIMULATE_SPINS
           )}
-           - **Symbol Weights:** \n${Object.entries(SYMBOL_WEIGHTS)
-             .map(([symbol, weight]) => ` - ${symbol}: ${weight}`)
-             .join('\n')}
+- **Symbol Weights:** \n${Object.entries(SYMBOL_WEIGHTS)
+            .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
+            .join('\n')}
           `
         : ''
     }
-    - **Multipliers:** \n${Object.entries(SLOT_MULTIPLIERS)
-      .map(([symbol, multiplier]) => ` - ${symbol}: ${multiplier}x`)
-      .join('\n')}
-    - **Max Bet:** ${
-      SLOT_MAX_BET === 0
-        ? 'No Limit'
-        : formatNumberToReadableString(SLOT_MAX_BET)
-    }`
+- **Multipliers:** \n${Object.entries(SLOT_MULTIPLIERS)
+    .map(([symbol, multiplier]) => `  - ${symbol}: ${multiplier}x`)
+    .join('\n')}
+- **Max Bet:** ${
+    SLOT_MAX_BET === 0 ? 'No Limit' : formatNumberToReadableString(SLOT_MAX_BET)
+  }`
 
   const lotteryMessage = `## 🎟️ Lottery
     ${
@@ -149,7 +148,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
   return interaction.reply({
     content: `
-    # Casino Information\n${games.join('\n\n')}
+    # ${isAdmin ? 'Admin' : ''} Casino Information\n${games.join('\n\n')}
     `,
   })
 }

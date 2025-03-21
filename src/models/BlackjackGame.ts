@@ -1,0 +1,62 @@
+import { Schema, model } from 'mongoose'
+import { Card } from '../utils/blackjackUtils'
+
+export interface BlackjackGame {
+  gameId: string
+  userId: string
+  guildId: string
+  betAmount: number
+  deck: Card[]
+  playerCards: Card[]
+  dealerCards: Card[]
+  showBalance?: boolean
+}
+
+const BlackjackGameSchema = new Schema<BlackjackGame>({
+  gameId: {
+    type: String,
+    required: true,
+    index: true,
+  },
+  userId: {
+    type: String,
+    required: true,
+    index: true,
+  },
+  guildId: {
+    type: String,
+    required: true,
+    index: true,
+  },
+  betAmount: {
+    type: Number,
+    required: true,
+  },
+  deck: [
+    {
+      suite: { type: String, required: true },
+      label: { type: String, required: true },
+      value: { type: Number, required: true },
+    },
+  ],
+  playerCards: [
+    {
+      suite: { type: String, required: true },
+      label: { type: String, required: true },
+      value: { type: Number, required: true },
+    },
+  ],
+  dealerCards: [
+    {
+      suite: { type: String, required: true },
+      label: { type: String, required: true },
+      value: { type: Number, required: true },
+    },
+  ],
+  showBalance: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+export default model<BlackjackGame>('BlackjackGame', BlackjackGameSchema)

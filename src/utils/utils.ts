@@ -41,6 +41,8 @@ export const checkChannelConfiguration = async (
       guildConfiguration = new GuildConfiguration({
         guildId: interaction.guildId,
       })
+
+      await guildConfiguration.save()
     }
 
     if (!guildConfiguration[channelType].length) {

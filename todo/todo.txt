@@ -1,7 +1,0 @@
-add this
-if (!/^[-]?[0-9.]+[BMK]?$/.test(normalizedString)) {
-  return NaN;
-}
-
-
-to parseReadableStringToNumber

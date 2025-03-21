@@ -12,11 +12,13 @@ const UserSchema = new Schema<User>(
   {
     userId: {
       type: String,
-      unique: true,
+      required: true,
+      index: true,
     },
     guildId: {
       type: String,
       required: true,
+      index: true,
     },
     balance: {
       type: Number,

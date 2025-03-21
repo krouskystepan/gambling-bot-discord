@@ -1,3 +1,4 @@
+import { Card } from './blackjackUtils'
 import { GOLDEN_JACKPOT_ONE_IN_CHANCE, WEIGHTED_SYMBOLS } from './casinoConfig'
 
 export function spinSlot() {
@@ -24,4 +25,12 @@ export function drawLottery() {
 
 export function drawGoldenJackpot() {
   return Math.floor(Math.random() * GOLDEN_JACKPOT_ONE_IN_CHANCE) + 1
+}
+
+export function drawNextCard(deck: Card[], cardIndex: number): Card {
+  if (cardIndex >= deck.length) {
+    cardIndex = 0
+  }
+
+  return deck[cardIndex]
 }

@@ -195,7 +195,7 @@ export async function run({ interaction }: SlashCommandProps) {
             `🤑 **Draw Result:**${
               isWin ? `\n ${results.join('\n')}` : ' No win'
             }\n\n` +
-            `💰 Total Winnings: ${
+            `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(totalWinnings)}**\n` +
             (showBalance

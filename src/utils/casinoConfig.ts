@@ -43,9 +43,13 @@ export const LOTTERY_MULTIPLIERS = {
 
 // Rock, Paper, Scissors
 export const RPS_CASINO_CUT = 0.025
+export const RPS_MAX_BET = 0 // 10000
 
 // Golden Jackpot
 export const GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES = 100_000_000
 export const GOLDEN_JACKPOT_MAX_BET = 0 // 1000
 export const GOLDEN_JACKPOT_MULTIPLIER = 10_000
 export const GOLDEN_JACKPOT_ONE_IN_CHANCE = 12_000
+
+// Blackjack
+export const BLACKJACK_MAX_BET = 0 // 1000

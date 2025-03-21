@@ -150,9 +150,7 @@ export async function run({ interaction }: SlashCommandProps) {
       `🪙 Coin Flip Simulation - ${formatNumberToReadableString(flips)} flips`,
       profitOrLoss >= 0 ? 'Green' : 'Red',
       `Total bet: **$${formatNumberToReadableString(totalBet)}**\n` +
-        `Total winnings: **$${formatNumberToReadableString(
-          totalWinnings
-        )}**\n` +
+        `Total: **$${formatNumberToReadableString(totalWinnings)}**\n` +
         `Profit/Loss: **$${formatNumberToReadableString(profitOrLoss)}**\n` +
         `Profit/Loss Percentage: **${profitOrLossPercentage.toFixed(2)}%**\n` +
         `📊 RTP: **${rtp.toFixed(2)}%**\n\n` +

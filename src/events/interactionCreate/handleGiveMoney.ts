@@ -6,10 +6,10 @@ import {
   MessageFlags,
   TextChannel,
 } from 'discord.js'
-import User from '../../../models/User'
-import { formatNumberToReadableString } from '../../../utils/utils'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import { createErrorEmbed } from '../../../utils/createEmbed'
+import User from '../../models/User'
+import { formatNumberToReadableString } from '../../utils/utils'
+import GuildConfiguration from '../../models/GuildConfiguration'
+import { createErrorEmbed } from '../../utils/createEmbed'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -32,6 +32,7 @@ export default async (interaction: Interaction, client: Client) => {
             'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
           ),
         ],
+        flags: MessageFlags.Ephemeral,
       })
     }
 
@@ -94,6 +95,6 @@ export default async (interaction: Interaction, client: Client) => {
       flags: MessageFlags.Ephemeral,
     })
   } catch (error) {
-    console.error('Error in handlePrediction.ts', error)
+    console.error('Error in handleGiveMoney.ts', error)
   }
 }

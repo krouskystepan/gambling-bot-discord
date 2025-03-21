@@ -17,7 +17,7 @@ import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from '../../../../utils/utils'
-import { RPS_CASINO_CUT } from '../../../../utils/casinoConfig'
+import { RPS_CASINO_CUT, RPS_MAX_BET } from '../../../../utils/casinoConfig'
 
 const choices = [
   {
@@ -139,6 +139,44 @@ export async function run({ interaction }: SlashCommandProps) {
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const realWinAmount = parsedBetAmount * (1 - RPS_CASINO_CUT)
 
+    if (isNaN(parsedBetAmount)) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Not a number',
+            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (parsedBetAmount <= 0) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Non-positive number',
+            'The number you provided must be greater than 0.\nPlease enter a positive value.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (RPS_MAX_BET > 0 && parsedBetAmount > RPS_MAX_BET) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Above Maximum Bet',
+            `The maximum bet is **$${formatNumberToReadableString(
+              RPS_MAX_BET
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
     if (user.balance < parsedBetAmount) {
       return interaction.reply({
         embeds: [
@@ -205,8 +243,6 @@ export async function run({ interaction }: SlashCommandProps) {
           embeds: [embed],
           components: [],
         })
-
-        console.log('Some error')
       })
 
     if (!targetUserInteraction) return

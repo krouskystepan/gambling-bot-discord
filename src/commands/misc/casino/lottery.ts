@@ -223,7 +223,7 @@ export async function run({ interaction }: SlashCommandProps) {
               .map((n) => n.toString().padStart(2, '0'))
               .join(', ')}**\n\n` +
             `🎟️ **Draw Results:**\n${results.join('\n')}\n\n` +
-            `💰 Total Winnings: ${
+            `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(totalWinnings)}**\n` +
             (showBalance

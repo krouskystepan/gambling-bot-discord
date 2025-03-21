@@ -16,6 +16,7 @@ const guildConfigurationSchema = new Schema<GuildConfiguration>({
     type: String,
     required: true,
     unique: true,
+    index: true,
   },
   atmChannelIds: {
     actions: {
