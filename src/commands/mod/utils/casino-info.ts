@@ -1,5 +1,6 @@
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 import {
+  BLACKJACK_MAX_BET,
   COINFLIP_MAX_BET,
   COINFLIP_MAX_SIMULATE_FLIPS,
   COINFLIP_WIN_MULTIPLIER,
@@ -14,6 +15,7 @@ import {
   LOTTERY_MAX_SIMULATE_ENTRIES,
   LOTTERY_MULTIPLIERS,
   RPS_CASINO_CUT,
+  RPS_MAX_BET,
   SLOT_MAX_BET,
   SLOT_MAX_SIMULATE_SPINS,
   SLOT_MULTIPLIERS,
@@ -116,9 +118,6 @@ export async function run({ interaction }: SlashCommandProps) {
         : formatNumberToReadableString(LOTTERY_MAX_BET)
     }`
 
-  const rpsMessage = `## 🪨📄✂️ RPS
-    - **Casino Cut:** ${RPS_CASINO_CUT * 100}%`
-
   const goldenJackpotMessage = `## 🤑 Golden Jackpot
     ${
       isAdmin
@@ -137,13 +136,27 @@ export async function run({ interaction }: SlashCommandProps) {
       : formatNumberToReadableString(GOLDEN_JACKPOT_MAX_BET)
   }`
 
+  const rpsMessage = `## 🪨📄✂️ RPS
+    - **Casino Cut:** ${RPS_CASINO_CUT * 100}%
+    - **Max Bet:** ${
+      RPS_MAX_BET === 0 ? 'No Limit' : formatNumberToReadableString(RPS_MAX_BET)
+    }`
+
+  const blackjackMessage = `## 🃏 Blackjack
+    - **Max Bet:** ${
+      BLACKJACK_MAX_BET === 0
+        ? 'No Limit'
+        : formatNumberToReadableString(BLACKJACK_MAX_BET)
+    }`
+
   const games = [
     diceMessage,
     coinFlipMessage,
     slotMessage,
     lotteryMessage,
-    rpsMessage,
     goldenJackpotMessage,
+    rpsMessage,
+    blackjackMessage,
   ]
 
   return interaction.reply({
