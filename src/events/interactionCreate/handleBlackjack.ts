@@ -22,9 +22,11 @@ export default async (interaction: Interaction, client: Client) => {
 
   try {
     const [type, ids, action] = interaction.customId.split('.')
-    const [gameId, userId, guildId] = ids.split('-')
 
     if (!type || !ids || !action) return
+
+    const [gameId, userId, guildId] = ids.split('-')
+
     if (type !== 'blackjack') return
     if (!gameId || !userId || !guildId) return
 

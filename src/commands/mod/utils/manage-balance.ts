@@ -134,7 +134,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
         })
       }
 
-      const amount = interaction.options.getString('amount', true).toUpperCase()
+      const amount = interaction.options.getString('amount', true)
       const parsedAmount = parseReadableStringToNumber(amount)
       const readableAmount = formatNumberToReadableString(parsedAmount)
 
@@ -210,7 +210,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
         })
       }
 
-      const amount = interaction.options.getString('amount', true).toUpperCase()
+      const amount = interaction.options.getString('amount', true)
       const parsedAmount = parseReadableStringToNumber(amount)
       const readableAmount = formatNumberToReadableString(parsedAmount)
 

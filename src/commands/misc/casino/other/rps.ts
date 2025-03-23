@@ -134,7 +134,7 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const betAmount = interaction.options.getString('bet', true).toUpperCase()
+    const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const realWinAmount = parsedBetAmount * (1 - RPS_CASINO_CUT)

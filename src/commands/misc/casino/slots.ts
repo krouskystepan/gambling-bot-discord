@@ -81,7 +81,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (configReply) return
 
     const spins = interaction.options.getInteger('spins') || 1
-    const betAmount = interaction.options.getString('bet', true).toUpperCase()
+    const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
