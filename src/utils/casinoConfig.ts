@@ -30,7 +30,7 @@ export const WEIGHTED_SYMBOLS = Object.entries(SYMBOL_WEIGHTS).flatMap(
 export const SLOT_MAX_BET = 0 // 1000
 
 // Lottery
-export const LOTTERY_MAX_SIMULATE_ENTRIES = 10_000_000
+export const LOTTERY_MAX_SIMULATE_ENTRIES = 500_000
 export const LOTTERY_MAX_BET = 0 // 1000
 export const LOTTERY_MULTIPLIERS = {
   5: 1000,
