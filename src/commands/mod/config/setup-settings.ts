@@ -299,7 +299,7 @@ export async function run({ interaction }: SlashCommandProps) {
               '- `k` for thousands (e.g., `10k` = 10 000)',
               '- `m` for millions (e.g., `2m` = 2 000 000)',
               '- `b` for billions (e.g., `1b` = 1 000 000 000)',
-              '- `*` for custom values under 1 000 (e.g., `*500` = 500)',
+              '- `*` for custom values (e.g., `*500` = 500, `*1250` = 1250)',
               '',
               '- `:` for object keys (e.g. `key:value`, `🔔🔔🔔:3` = Mult for value `🔔🔔🔔` is `3x`, `4:2` = Mult for number `4` is `2x`)',
             ].join('\n')
