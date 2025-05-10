@@ -17,7 +17,6 @@ import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from '../../../../utils/utils'
-import { RPS_CASINO_CUT, RPS_MAX_BET } from '../../../../utils/casinoConfig'
 
 const choices = [
   {
@@ -108,7 +107,7 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     )
 
-    if (configReply) return
+    if (!configReply) return
 
     if (interaction.user.id === targetDiscordUser.id) {
       return interaction.reply({
@@ -137,7 +136,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
-    const realWinAmount = parsedBetAmount * (1 - RPS_CASINO_CUT)
+    const realWinAmount = parsedBetAmount * (1 - configReply.rps.casinoCut)
 
     if (isNaN(parsedBetAmount)) {
       return interaction.reply({
@@ -163,13 +162,33 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (RPS_MAX_BET > 0 && parsedBetAmount > RPS_MAX_BET) {
+    if (
+      configReply.rps.maxBet > 0 &&
+      parsedBetAmount > configReply.rps.maxBet
+    ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              RPS_MAX_BET
+              configReply.rps.maxBet
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (
+      configReply.rps.minBet > 0 &&
+      parsedBetAmount < configReply.rps.minBet
+    ) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Below Minimum Bet',
+            `The minimum bet is **$${formatNumberToReadableString(
+              configReply.rps.minBet
             )}**.`
           ),
         ],

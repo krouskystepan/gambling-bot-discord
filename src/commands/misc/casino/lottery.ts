@@ -12,10 +12,6 @@ import {
   checkChannelConfiguration,
 } from '../../../utils/utils'
 import { drawLottery } from '../../../utils/casinoHelpers'
-import {
-  LOTTERY_MULTIPLIERS,
-  LOTTERY_MAX_BET,
-} from '../../../utils/casinoConfig'
 
 export const data: CommandData = {
   name: 'lottery',
@@ -88,7 +84,7 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     )
 
-    if (configReply) return
+    if (!configReply) return
 
     const entries = interaction.options.getInteger('entries') || 1
     const betAmount = interaction.options.getString('bet', true)
@@ -120,13 +116,33 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (LOTTERY_MAX_BET > 0 && parsedBetAmount > LOTTERY_MAX_BET) {
+    if (
+      configReply.lottery.maxBet > 0 &&
+      parsedBetAmount > configReply.lottery.maxBet
+    ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              LOTTERY_MAX_BET
+              configReply.lottery.maxBet
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (
+      configReply.lottery.minBet > 0 &&
+      parsedBetAmount < configReply.lottery.minBet
+    ) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Below Minimum Bet',
+            `The minimum bet is **$${formatNumberToReadableString(
+              configReply.lottery.minBet
             )}**.`
           ),
         ],
@@ -186,7 +202,8 @@ export async function run({ interaction }: SlashCommandProps) {
       const matchedNumbers = userNumbers.filter((n) =>
         lotteryNumbers.includes(n)
       ).length
-      const winnings = parsedBetAmount * LOTTERY_MULTIPLIERS[matchedNumbers]
+      const winnings =
+        parsedBetAmount * configReply.lottery.winMultiplier[matchedNumbers]
 
       results.push(
         `**${resultString}** | ${

@@ -12,7 +12,6 @@ import {
   formatNumberToReadableString,
   checkUserRegistration,
 } from '../../../utils/utils'
-import { SLOT_MAX_BET, SLOT_MULTIPLIERS } from '../../../utils/casinoConfig'
 
 export const data: CommandData = {
   name: 'slots',
@@ -78,7 +77,7 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     )
 
-    if (configReply) return
+    if (!configReply) return
 
     const spins = interaction.options.getInteger('spins') || 1
     const betAmount = interaction.options.getString('bet', true)
@@ -110,13 +109,33 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (SLOT_MAX_BET > 0 && parsedBetAmount > SLOT_MAX_BET) {
+    if (
+      configReply.slot.maxBet > 0 &&
+      parsedBetAmount > configReply.slot.maxBet
+    ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              SLOT_MAX_BET
+              configReply.slot.maxBet
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (
+      configReply.slot.minBet > 0 &&
+      parsedBetAmount < configReply.slot.minBet
+    ) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Below Minimum Bet',
+            `The minimum bet is **$${formatNumberToReadableString(
+              configReply.slot.minBet
             )}**.`
           ),
         ],
@@ -145,8 +164,9 @@ export async function run({ interaction }: SlashCommandProps) {
     let results: string[] = []
 
     for (let i = 0; i < spins; i++) {
-      const resultString = spinSlot()
-      const winnings = (SLOT_MULTIPLIERS[resultString] || 0) * parsedBetAmount
+      const resultString = spinSlot(configReply.slot)
+      const winnings =
+        (configReply.slot.winMultiplier[resultString] || 0) * parsedBetAmount
       const isWin = winnings > 0
 
       results.push(

@@ -1,12 +1,15 @@
 import { Card } from './blackjackUtils'
-import { GOLDEN_JACKPOT_ONE_IN_CHANCE, WEIGHTED_SYMBOLS } from './casinoConfig'
 
-export function spinSlot() {
-  return (
-    WEIGHTED_SYMBOLS[Math.floor(Math.random() * WEIGHTED_SYMBOLS.length)] +
-    WEIGHTED_SYMBOLS[Math.floor(Math.random() * WEIGHTED_SYMBOLS.length)] +
-    WEIGHTED_SYMBOLS[Math.floor(Math.random() * WEIGHTED_SYMBOLS.length)]
+export function spinSlot(slotConfig: {
+  symbolWeights: Record<string, number>
+}): string {
+  const weightedSymbols = Object.entries(slotConfig.symbolWeights).flatMap(
+    ([symbol, weight]) => Array(weight).fill(symbol)
   )
+  const spin = () =>
+    weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)]
+
+  return spin() + spin() + spin()
 }
 
 export function rollDice() {
@@ -23,8 +26,10 @@ export function drawLottery() {
     .slice(0, 5)
 }
 
-export function drawGoldenJackpot() {
-  return Math.floor(Math.random() * GOLDEN_JACKPOT_ONE_IN_CHANCE) + 1
+export function drawGoldenJackpot(goldenJackpotConfig: {
+  oneInChance: number
+}) {
+  return Math.floor(Math.random() * goldenJackpotConfig.oneInChance) + 1
 }
 
 export function drawNextCard(deck: Card[], cardIndex: number): Card {

@@ -11,19 +11,13 @@ import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from '../../../utils/utils'
-import {
-  GOLDEN_JACKPOT_MULTIPLIER,
-  LOTTERY_MAX_BET,
-} from '../../../utils/casinoConfig'
 import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
 
-const GOLDEN_JACKPOT_MAX_ENTRIES = 200
+const GOLDEN_JACKPOT_MAX_ENTRIES = 100
 
 export const data: CommandData = {
   name: 'goldenjackpot',
-  description: `Try your luck at the Golden Jackpot ${formatNumberToReadableString(
-    GOLDEN_JACKPOT_MULTIPLIER
-  )}x!`,
+  description: `Try your luck at the Golden Jackpot HUGEx!`,
   options: [
     {
       name: 'bet',
@@ -81,7 +75,7 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     )
 
-    if (configReply) return
+    if (!configReply) return
 
     const entries = interaction.options.getInteger('entries') || 1
     const betAmount = interaction.options.getString('bet', true)
@@ -124,13 +118,33 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (LOTTERY_MAX_BET > 0 && parsedBetAmount > LOTTERY_MAX_BET) {
+    if (
+      configReply.goldenJackpot.maxBet > 0 &&
+      parsedBetAmount > configReply.goldenJackpot.maxBet
+    ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              LOTTERY_MAX_BET
+              configReply.goldenJackpot.maxBet
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (
+      configReply.goldenJackpot.minBet > 0 &&
+      parsedBetAmount < configReply.goldenJackpot.minBet
+    ) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Below Minimum Bet',
+            `The minimum bet is **$${formatNumberToReadableString(
+              configReply.goldenJackpot.minBet
             )}**.`
           ),
         ],
@@ -159,10 +173,10 @@ export async function run({ interaction }: SlashCommandProps) {
     let results: string[] = []
 
     for (let i = 0; i < entries; i++) {
-      const jackpotNumber = drawGoldenJackpot()
+      const jackpotNumber = drawGoldenJackpot(configReply.goldenJackpot)
       const isJackpot = jackpotNumber === 1
       const winnings = isJackpot
-        ? parsedBetAmount * GOLDEN_JACKPOT_MULTIPLIER
+        ? parsedBetAmount * configReply.goldenJackpot.winMultiplier
         : 0
 
       if (isJackpot) {

@@ -6,12 +6,9 @@ import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
-import {
-  GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES,
-  GOLDEN_JACKPOT_MULTIPLIER,
-  GOLDEN_JACKPOT_ONE_IN_CHANCE,
-} from '../../../utils/casinoConfig'
 import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
+import GuildConfiguration from '../../../models/GuildConfiguration'
+import { GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES } from '../../../utils/defaultConfig'
 
 export const data: CommandData = {
   name: 'simulate-goldenjackpot',
@@ -66,6 +63,14 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
+    const config = await GuildConfiguration.findOne({
+      guildId: interaction.guildId,
+    })
+
+    const settings = config?.casinoSettings
+
+    if (!settings) return
+
     await interaction.deferReply()
 
     let totalBet = 0
@@ -110,11 +115,11 @@ export async function run({ interaction }: SlashCommandProps) {
 
     for (let i = 1; i <= entries; i++) {
       totalBet += bet
-      const jackpotNumber = drawGoldenJackpot()
+      const jackpotNumber = drawGoldenJackpot(settings.goldenJackpot)
       let winnings = 0
 
       if (jackpotNumber === 1) {
-        winnings = bet * GOLDEN_JACKPOT_MULTIPLIER
+        winnings = bet * settings.goldenJackpot.winMultiplier
         wins++
 
         currentLosingStreak = 0
@@ -144,7 +149,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const rtp = (totalWinnings / totalBet) * 100
 
     const winDetails = `**1** in **${formatNumberWithSpaces(
-      GOLDEN_JACKPOT_ONE_IN_CHANCE
+      settings.goldenJackpot.oneInChance
     )}**`
 
     const winLossesDetails =
@@ -156,7 +161,7 @@ export async function run({ interaction }: SlashCommandProps) {
       `💀 Longest losing streak: **${biggestLosingStreak}**`
 
     const multipliersDetails = `**${formatNumberWithSpaces(
-      GOLDEN_JACKPOT_MULTIPLIER
+      settings.goldenJackpot.winMultiplier
     )}x**`
 
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)

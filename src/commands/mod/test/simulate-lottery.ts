@@ -1,9 +1,5 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType } from 'discord.js'
-import {
-  LOTTERY_MULTIPLIERS,
-  LOTTERY_MAX_SIMULATE_ENTRIES,
-} from '../../../utils/casinoConfig'
 import { createBetEmbed } from '../../../utils/createEmbed'
 import { drawLottery } from '../../../utils/casinoHelpers'
 import {
@@ -11,6 +7,8 @@ import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
+import GuildConfiguration from '../../../models/GuildConfiguration'
+import { LOTTERY_MAX_SIMULATE_ENTRIES } from '../../../utils/defaultConfig'
 
 export const data: CommandData = {
   name: 'simulate-lottery',
@@ -64,6 +62,14 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
+    const config = await GuildConfiguration.findOne({
+      guildId: interaction.guildId,
+    })
+
+    const settings = config?.casinoSettings
+
+    if (!settings) return
+
     await interaction.deferReply()
 
     let totalBet = 0
@@ -117,9 +123,9 @@ export async function run({ interaction }: SlashCommandProps) {
       const matchedNumbers = userNumbers.filter((n: number) =>
         lotteryNumbers.includes(n)
       ).length
-      winnings = bet * LOTTERY_MULTIPLIERS[matchedNumbers]
+      winnings = bet * settings.lottery.winMultiplier[matchedNumbers]
 
-      if (LOTTERY_MULTIPLIERS[matchedNumbers]) {
+      if (settings.lottery.winMultiplier[matchedNumbers]) {
         wins++
         winCounts[matchedNumbers] = (winCounts[matchedNumbers] || 0) + 1
 
@@ -165,7 +171,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const multipliersDetails = Array.from(
       { length: 6 },
-      (_, i) => `${i}: **${LOTTERY_MULTIPLIERS[i]}**x`
+      (_, i) => `${i}: **${settings.lottery.winMultiplier[i]}**x`
     ).join('\n')
 
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)

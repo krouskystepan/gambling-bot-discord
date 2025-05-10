@@ -5,7 +5,6 @@ import {
   createErrorEmbed,
   createInfoEmbed,
 } from '../../../utils/createEmbed'
-import { DICE_MAX_BET, DICE_WIN_MULTIPLIER } from '../../../utils/casinoConfig'
 import {
   checkChannelConfiguration,
   parseReadableStringToNumber,
@@ -88,7 +87,7 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     )
 
-    if (configReply) return
+    if (!configReply) return
 
     const rolls = interaction.options.getInteger('rolls') || 1
     const side = interaction.options.getInteger('side', true)
@@ -121,13 +120,33 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (DICE_MAX_BET > 0 && parsedBetAmount > DICE_MAX_BET) {
+    if (
+      configReply.dice.maxBet > 0 &&
+      parsedBetAmount > configReply.dice.maxBet
+    ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              DICE_MAX_BET
+              configReply.dice.maxBet
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (
+      configReply.dice.minBet > 0 &&
+      parsedBetAmount < configReply.dice.minBet
+    ) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Below Minimum Bet',
+            `The minimum bet is **$${formatNumberToReadableString(
+              configReply.dice.minBet
             )}**.`
           ),
         ],
@@ -159,7 +178,9 @@ export async function run({ interaction }: SlashCommandProps) {
       const dice = rollDice()
       const resultString = `${dice}`
       const win = side === dice
-      const winnings = win ? parsedBetAmount * DICE_WIN_MULTIPLIER : 0
+      const winnings = win
+        ? parsedBetAmount * configReply.dice.winMultiplier
+        : 0
 
       results.push(
         `**${resultString}** | ${win ? '🎉' : '❌'} | ${

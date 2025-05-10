@@ -6,11 +6,9 @@ import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
-import {
-  COINFLIP_WIN_MULTIPLIER,
-  COINFLIP_MAX_SIMULATE_FLIPS,
-} from '../../../utils/casinoConfig'
 import { flipCoin } from '../../../utils/casinoHelpers'
+import { COINFLIP_MAX_SIMULATE_FLIPS } from '../../../utils/defaultConfig'
+import GuildConfiguration from '../../../models/GuildConfiguration'
 
 export const data: CommandData = {
   name: 'simulate-coin-flip',
@@ -58,6 +56,14 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
+    const config = await GuildConfiguration.findOne({
+      guildId: interaction.guildId,
+    })
+
+    const settings = config?.casinoSettings
+
+    if (!settings) return
+
     await interaction.deferReply()
 
     let totalBet = 0
@@ -105,7 +111,7 @@ export async function run({ interaction }: SlashCommandProps) {
       let winnings = 0
 
       if (coinFlip === 'heads') {
-        winnings = bet * COINFLIP_WIN_MULTIPLIER
+        winnings = bet * settings.coinflip.winMultiplier
         wins++
 
         currentLosingStreak = 0
@@ -142,7 +148,7 @@ export async function run({ interaction }: SlashCommandProps) {
       `🔥 Longest winning streak: **${biggestWinningStreak}**\n` +
       `💀 Longest losing streak: **${biggestLosingStreak}**`
 
-    const multipliersDetails = `**${COINFLIP_WIN_MULTIPLIER}x**`
+    const multipliersDetails = `**${settings?.coinflip.winMultiplier}x**`
 
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 

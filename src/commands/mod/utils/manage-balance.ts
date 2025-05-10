@@ -113,7 +113,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
       }
     )
 
-    if (configReply) return
+    if (!configReply) return
 
     const options = interaction.options as CommandInteractionOptionResolver
 

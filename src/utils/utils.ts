@@ -7,6 +7,7 @@ import {
 } from 'discord.js'
 import User from '../models/User'
 import { createErrorEmbed } from './createEmbed'
+import defaultCasinoSettings from './defaultConfig'
 
 export const connectToDatabase = async () => {
   try {
@@ -31,7 +32,7 @@ export const checkChannelConfiguration = async (
     notSet: string
     notAllowed: string
   }
-): Promise<boolean> => {
+) => {
   try {
     let guildConfiguration = await GuildConfiguration.findOne({
       guildId: interaction.guildId,
@@ -40,8 +41,12 @@ export const checkChannelConfiguration = async (
     if (!guildConfiguration) {
       guildConfiguration = new GuildConfiguration({
         guildId: interaction.guildId,
+        casinoSettings: defaultCasinoSettings,
       })
 
+      await guildConfiguration.save()
+    } else if (!guildConfiguration.casinoSettings) {
+      guildConfiguration.casinoSettings = defaultCasinoSettings
       await guildConfiguration.save()
     }
 
@@ -50,7 +55,7 @@ export const checkChannelConfiguration = async (
         embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
         flags: MessageFlags.Ephemeral,
       })
-      return true
+      return false
     }
 
     if (!guildConfiguration[channelType].includes(interaction.channelId)) {
@@ -65,13 +70,13 @@ export const checkChannelConfiguration = async (
         ],
         flags: MessageFlags.Ephemeral,
       })
-      return true
+      return false
     }
 
-    return false
+    return guildConfiguration.casinoSettings
   } catch (error) {
     console.error('Error checking channel configuration:', error)
-    return true
+    return false
   }
 }
 

@@ -6,11 +6,9 @@ import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
-import {
-  DICE_MAX_SIMULATE_ROLLS,
-  DICE_WIN_MULTIPLIER,
-} from '../../../utils/casinoConfig'
 import { rollDice } from '../../../utils/casinoHelpers'
+import GuildConfiguration from '../../../models/GuildConfiguration'
+import { DICE_MAX_SIMULATE_ROLLS } from '../../../utils/defaultConfig'
 
 export const data: CommandData = {
   name: 'simulate-dice',
@@ -58,6 +56,14 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
+    const config = await GuildConfiguration.findOne({
+      guildId: interaction.guildId,
+    })
+
+    const settings = config?.casinoSettings
+
+    if (!settings) return
+
     await interaction.deferReply()
 
     let totalBet = 0
@@ -105,7 +111,7 @@ export async function run({ interaction }: SlashCommandProps) {
       let winnings = 0
 
       if (diceRoll === 6) {
-        winnings = bet * DICE_WIN_MULTIPLIER
+        winnings = bet * settings.dice.winMultiplier
         wins++
 
         currentLosingStreak = 0
@@ -142,7 +148,7 @@ export async function run({ interaction }: SlashCommandProps) {
       `🔥 Longest winning streak: **${biggestWinningStreak}**\n` +
       `💀 Longest losing streak: **${biggestLosingStreak}**`
 
-    const multipliersDetails = `**${DICE_WIN_MULTIPLIER}x**`
+    const multipliersDetails = `**${settings.dice.winMultiplier}x**`
 
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 

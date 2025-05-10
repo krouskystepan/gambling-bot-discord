@@ -1,31 +1,17 @@
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
-import {
-  BLACKJACK_MAX_BET,
-  COINFLIP_MAX_BET,
-  COINFLIP_MAX_SIMULATE_FLIPS,
-  COINFLIP_WIN_MULTIPLIER,
-  DICE_MAX_BET,
-  DICE_MAX_SIMULATE_ROLLS,
-  DICE_WIN_MULTIPLIER,
-  GOLDEN_JACKPOT_MAX_BET,
-  GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES,
-  GOLDEN_JACKPOT_MULTIPLIER,
-  GOLDEN_JACKPOT_ONE_IN_CHANCE,
-  LOTTERY_MAX_BET,
-  LOTTERY_MAX_SIMULATE_ENTRIES,
-  LOTTERY_MULTIPLIERS,
-  RPS_CASINO_CUT,
-  RPS_MAX_BET,
-  SLOT_MAX_BET,
-  SLOT_MAX_SIMULATE_SPINS,
-  SLOT_MULTIPLIERS,
-  SYMBOL_WEIGHTS,
-} from '../../../utils/casinoConfig'
 import { ApplicationCommandOptionType } from 'discord.js'
 import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
+import {
+  DICE_MAX_SIMULATE_ROLLS,
+  COINFLIP_MAX_SIMULATE_FLIPS,
+  SLOT_MAX_SIMULATE_SPINS,
+  LOTTERY_MAX_SIMULATE_ENTRIES,
+  GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES,
+} from '../../../utils/defaultConfig'
+import GuildConfiguration from '../../../models/GuildConfiguration'
 
 export const data: CommandData = {
   name: 'casino-info',
@@ -49,6 +35,14 @@ export const options: CommandOptions = {
 }
 
 export async function run({ interaction }: SlashCommandProps) {
+  const config = await GuildConfiguration.findOne({
+    guildId: interaction.guildId,
+  })
+
+  const settings = config?.casinoSettings
+
+  if (!settings) return
+
   const isAdmin = interaction.options.getBoolean('admin') ?? false
 
   const diceMessage = `## 🎲 Dice
@@ -59,11 +53,16 @@ export async function run({ interaction }: SlashCommandProps) {
           )}`
         : ''
     }
-    - **Multiplier:** ${DICE_WIN_MULTIPLIER}x
+    - **Multiplier:** ${settings.dice.winMultiplier}x
     - **Max Bet:** ${
-      DICE_MAX_BET === 0
+      settings.dice.maxBet === 0
         ? 'No Limit'
-        : formatNumberToReadableString(DICE_MAX_BET)
+        : formatNumberToReadableString(settings.dice.maxBet)
+    }
+    - **Min Bet:** ${
+      settings.dice.minBet === 0
+        ? 'No Limit'
+        : formatNumberToReadableString(settings.dice.minBet)
     }`
 
   const coinFlipMessage = `## 🪙 Coin Flip
@@ -74,11 +73,16 @@ export async function run({ interaction }: SlashCommandProps) {
           )}`
         : ''
     }
-    - **Multiplier:** ${COINFLIP_WIN_MULTIPLIER}x
+    - **Multiplier:** ${settings.coinflip.winMultiplier}x
     - **Max Bet:** ${
-      COINFLIP_MAX_BET === 0
+      settings.coinflip.maxBet === 0
         ? 'No Limit'
-        : formatNumberToReadableString(COINFLIP_MAX_BET)
+        : formatNumberToReadableString(settings.coinflip.maxBet)
+    }
+    - **Min Bet:** ${
+      settings.coinflip.minBet === 0
+        ? 'No Limit'
+        : formatNumberToReadableString(settings.coinflip.minBet)
     }`
 
   const slotMessage = `## 🎰 Slots
@@ -88,17 +92,24 @@ export async function run({ interaction }: SlashCommandProps) {
 - **Max Simulate Spins:** ${formatNumberToReadableString(
             SLOT_MAX_SIMULATE_SPINS
           )}
-- **Symbol Weights:** \n${Object.entries(SYMBOL_WEIGHTS)
+- **Symbol Weights:** \n${Object.entries(settings.slot.symbolWeights)
             .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
             .join('\n')}
           `
         : ''
     }
-- **Multipliers:** \n${Object.entries(SLOT_MULTIPLIERS)
+- **Multipliers:** \n${Object.entries(settings.slot.winMultiplier)
     .map(([symbol, multiplier]) => `  - ${symbol}: ${multiplier}x`)
     .join('\n')}
 - **Max Bet:** ${
-    SLOT_MAX_BET === 0 ? 'No Limit' : formatNumberToReadableString(SLOT_MAX_BET)
+    settings.slot.maxBet === 0
+      ? 'No Limit'
+      : formatNumberToReadableString(settings.slot.maxBet)
+  }
+- **Min Bet:** ${
+    settings.slot.minBet === 0
+      ? 'No Limit'
+      : formatNumberToReadableString(settings.slot.minBet)
   }`
 
   const lotteryMessage = `## 🎟️ Lottery
@@ -109,13 +120,18 @@ export async function run({ interaction }: SlashCommandProps) {
           )}`
         : ''
     }
-    - **Multipliers:** \n${Object.entries(LOTTERY_MULTIPLIERS)
+    - **Multipliers:** \n${Object.entries(settings.lottery.winMultiplier)
       .map(([symbol, multiplier]) => ` - ${symbol}: ${multiplier}x`)
       .join('\n')}
     - **Max Bet:** ${
-      LOTTERY_MAX_BET === 0
+      settings.lottery.maxBet === 0
         ? 'No Limit'
-        : formatNumberToReadableString(LOTTERY_MAX_BET)
+        : formatNumberToReadableString(settings.lottery.maxBet)
+    }
+    - **Min Bet:** ${
+      settings.lottery.minBet === 0
+        ? 'No Limit'
+        : formatNumberToReadableString(settings.lottery.minBet)
     }`
 
   const goldenJackpotMessage = `## 🤑 Golden Jackpot
@@ -125,28 +141,47 @@ export async function run({ interaction }: SlashCommandProps) {
             GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES
           )}
 - **One in Chance:** 1 in ${formatNumberWithSpaces(
-            GOLDEN_JACKPOT_ONE_IN_CHANCE
+            settings.goldenJackpot.oneInChance
           )}`
         : ''
     }
-- **Multiplier:** ${formatNumberWithSpaces(GOLDEN_JACKPOT_MULTIPLIER)}x
+- **Multiplier:** ${formatNumberWithSpaces(
+    settings.goldenJackpot.winMultiplier
+  )}x
 - **Max Bet:** ${
-    GOLDEN_JACKPOT_MAX_BET === 0
+    settings.goldenJackpot.maxBet === 0
       ? 'No Limit'
-      : formatNumberToReadableString(GOLDEN_JACKPOT_MAX_BET)
+      : formatNumberToReadableString(settings.goldenJackpot.maxBet)
+  }
+- **Min Bet:** ${
+    settings.goldenJackpot.minBet === 0
+      ? 'No Limit'
+      : formatNumberToReadableString(settings.goldenJackpot.minBet)
   }`
 
   const rpsMessage = `## 🪨📄✂️ RPS
-    - **Casino Cut:** ${RPS_CASINO_CUT * 100}%
+    - **Casino Cut:** ${settings.rps.casinoCut * 100}%
     - **Max Bet:** ${
-      RPS_MAX_BET === 0 ? 'No Limit' : formatNumberToReadableString(RPS_MAX_BET)
+      settings.rps.maxBet === 0
+        ? 'No Limit'
+        : formatNumberToReadableString(settings.rps.maxBet)
+    }
+    - **Min Bet:** ${
+      settings.rps.minBet === 0
+        ? 'No Limit'
+        : formatNumberToReadableString(settings.rps.minBet)
     }`
 
   const blackjackMessage = `## 🃏 Blackjack
     - **Max Bet:** ${
-      BLACKJACK_MAX_BET === 0
+      settings.blackjack.maxBet === 0
         ? 'No Limit'
-        : formatNumberToReadableString(BLACKJACK_MAX_BET)
+        : formatNumberToReadableString(settings.blackjack.maxBet)
+    }
+    - **Min Bet:** ${
+      settings.blackjack.minBet === 0
+        ? 'No Limit'
+        : formatNumberToReadableString(settings.blackjack.minBet)
     }`
 
   const games = [

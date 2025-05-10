@@ -1,4 +1,5 @@
 import { Schema, model, Document } from 'mongoose'
+import defaultCasinoSettings from '../utils/defaultConfig'
 
 export type GuildConfiguration = Document & {
   guildId: string
@@ -9,6 +10,7 @@ export type GuildConfiguration = Document & {
   adminChannelIds: string[]
   casinoChannelIds: string[]
   predictionChannelIds: string[]
+  casinoSettings: typeof defaultCasinoSettings
 }
 
 const guildConfigurationSchema = new Schema<GuildConfiguration>({
@@ -39,6 +41,10 @@ const guildConfigurationSchema = new Schema<GuildConfiguration>({
   predictionChannelIds: {
     type: [String],
     default: [],
+  },
+  casinoSettings: {
+    type: Schema.Types.Mixed,
+    default: defaultCasinoSettings,
   },
 })
 

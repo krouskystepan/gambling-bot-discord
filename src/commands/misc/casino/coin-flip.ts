@@ -6,10 +6,6 @@ import {
   createInfoEmbed,
 } from '../../../utils/createEmbed'
 import {
-  COINFLIP_MAX_BET,
-  COINFLIP_WIN_MULTIPLIER,
-} from '../../../utils/casinoConfig'
-import {
   checkChannelConfiguration,
   parseReadableStringToNumber,
   formatNumberToReadableString,
@@ -91,7 +87,7 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     )
 
-    if (configReply) return
+    if (!configReply) return
 
     const flips = interaction.options.getInteger('flips') || 1
     const side = interaction.options.getString('side', true)
@@ -124,13 +120,33 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (COINFLIP_MAX_BET > 0 && parsedBetAmount > COINFLIP_MAX_BET) {
+    if (
+      configReply.coinflip.maxBet > 0 &&
+      parsedBetAmount > configReply.coinflip.maxBet
+    ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              COINFLIP_MAX_BET
+              configReply.coinflip.maxBet
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (
+      configReply.coinflip.minBet > 0 &&
+      parsedBetAmount < configReply.coinflip.minBet
+    ) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Below Minimum Bet',
+            `The minimum bet is **$${formatNumberToReadableString(
+              configReply.coinflip.minBet
             )}**.`
           ),
         ],
@@ -162,7 +178,9 @@ export async function run({ interaction }: SlashCommandProps) {
     for (let i = 0; i < flips; i++) {
       const flipResult = flipCoin()
       const win = side === flipResult
-      const winnings = win ? parsedBetAmount * COINFLIP_WIN_MULTIPLIER : 0
+      const winnings = win
+        ? parsedBetAmount * configReply.dice.winMultiplier
+        : 0
 
       results.push(
         `**${flipResult === 'heads' ? 'H' : 'T'}** | ${win ? '🎉' : '❌'} | ${

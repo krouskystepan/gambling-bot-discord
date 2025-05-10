@@ -25,7 +25,6 @@ import {
   parseReadableStringToNumber,
   formatNumberToReadableString,
 } from '../../../../utils/utils'
-import { BLACKJACK_MAX_BET } from '../../../../utils/casinoConfig'
 
 export const data: CommandData = {
   name: 'blackjack',
@@ -74,7 +73,7 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     )
 
-    if (configReply) return
+    if (!configReply) return
 
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
@@ -104,13 +103,33 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (BLACKJACK_MAX_BET > 0 && parsedBetAmount > BLACKJACK_MAX_BET) {
+    if (
+      configReply.blackjack.maxBet > 0 &&
+      parsedBetAmount > configReply.blackjack.maxBet
+    ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              BLACKJACK_MAX_BET
+              configReply.blackjack.maxBet
+            )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (
+      configReply.blackjack.minBet > 0 &&
+      parsedBetAmount < configReply.blackjack.minBet
+    ) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Below Minimum Bet',
+            `The minimum bet is **$${formatNumberToReadableString(
+              configReply.blackjack.minBet
             )}**.`
           ),
         ],

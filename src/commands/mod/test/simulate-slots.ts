@@ -1,10 +1,5 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType } from 'discord.js'
-import {
-  SLOT_MAX_SIMULATE_SPINS,
-  SLOT_MULTIPLIERS,
-  SYMBOL_WEIGHTS,
-} from '../../../utils/casinoConfig'
 import { createBetEmbed } from '../../../utils/createEmbed'
 import { spinSlot } from '../../../utils/casinoHelpers'
 import {
@@ -12,6 +7,8 @@ import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
+import { SLOT_MAX_SIMULATE_SPINS } from '../../../utils/defaultConfig'
+import GuildConfiguration from '../../../models/GuildConfiguration'
 
 export const data: CommandData = {
   name: 'simulate-slots',
@@ -72,6 +69,14 @@ export const options: CommandOptions = {
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
+    const config = await GuildConfiguration.findOne({
+      guildId: interaction.guildId,
+    })
+
+    const settings = config?.casinoSettings
+
+    if (!settings) return
+
     await interaction.deferReply()
 
     let totalBet = 0
@@ -118,11 +123,11 @@ export async function run({ interaction }: SlashCommandProps) {
 
     for (let i = 1; i <= spins; i++) {
       totalBet += bet
-      const resultString = spinSlot()
+      const resultString = spinSlot(settings.slot)
       let winnings = 0
 
-      if (SLOT_MULTIPLIERS[resultString]) {
-        winnings = bet * SLOT_MULTIPLIERS[resultString]
+      if (settings.slot.winMultiplier[resultString]) {
+        winnings = bet * settings.slot.winMultiplier[resultString]
         wins++
         winCounts[resultString] = (winCounts[resultString] || 0) + 1
 
@@ -166,11 +171,11 @@ export async function run({ interaction }: SlashCommandProps) {
       )
       .join('\n')
 
-    const multipliersDetails = Object.entries(SLOT_MULTIPLIERS)
+    const multipliersDetails = Object.entries(settings.slot.winMultiplier)
       .map(([symbol, multiplier]) => `${symbol}: **${multiplier}**x`)
       .join('\n')
 
-    const symbolWeightsDetails = Object.entries(SYMBOL_WEIGHTS)
+    const symbolWeightsDetails = Object.entries(settings.slot.symbolWeights)
       .map(([symbol, weight]) => `${symbol}: **${weight}**`)
       .join('\n')
 
