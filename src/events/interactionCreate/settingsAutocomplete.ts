@@ -1,15 +1,6 @@
 import { Interaction, Client } from 'discord.js'
 import GuildConfiguration from '../../models/GuildConfiguration'
-
-const readableValues = [
-  { name: 'Maximum Bet Amount', value: 'maxBet' },
-  { name: 'Minimum Bet Amount', value: 'minBet' },
-  { name: 'Win Percentage (%)', value: 'winPercentage' },
-  { name: 'Win Multiplier/s (x)', value: 'winMultiplier' },
-  { name: 'Casino House Cut (%)', value: 'casinoCut' },
-  { name: 'One-In Chance (e.g. 1 in 10,000)', value: 'oneInChance' },
-  // { name: 'Symbol Weights (Slots)', value: 'symbolWeights' },
-]
+import { readableGameValueNames } from '../../utils/defaultConfig'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isAutocomplete()) return
@@ -31,7 +22,7 @@ export default async (interaction: Interaction, client: Client) => {
 
   const settingKeys = Object.keys(gameSettings)
 
-  const filteredChoices = readableValues
+  const filteredChoices = readableGameValueNames
     .filter((val) => settingKeys.includes(val.value))
     .filter((val) =>
       val.name.toLowerCase().startsWith(focusedValue.toLowerCase())

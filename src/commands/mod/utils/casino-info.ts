@@ -92,24 +92,24 @@ export async function run({ interaction }: SlashCommandProps) {
 - **Max Simulate Spins:** ${formatNumberToReadableString(
             SLOT_MAX_SIMULATE_SPINS
           )}
-- **Symbol Weights:** \n${Object.entries(settings.slot.symbolWeights)
+- **Symbol Weights:** \n${Object.entries(settings.slots.symbolWeights)
             .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
             .join('\n')}
           `
         : ''
     }
-- **Multipliers:** \n${Object.entries(settings.slot.winMultiplier)
+- **Multipliers:** \n${Object.entries(settings.slots.winMultipliers)
     .map(([symbol, multiplier]) => `  - ${symbol}: ${multiplier}x`)
     .join('\n')}
 - **Max Bet:** ${
-    settings.slot.maxBet === 0
+    settings.slots.maxBet === 0
       ? 'No Limit'
-      : formatNumberToReadableString(settings.slot.maxBet)
+      : formatNumberToReadableString(settings.slots.maxBet)
   }
 - **Min Bet:** ${
-    settings.slot.minBet === 0
+    settings.slots.minBet === 0
       ? 'No Limit'
-      : formatNumberToReadableString(settings.slot.minBet)
+      : formatNumberToReadableString(settings.slots.minBet)
   }`
 
   const lotteryMessage = `## 🎟️ Lottery
@@ -120,7 +120,7 @@ export async function run({ interaction }: SlashCommandProps) {
           )}`
         : ''
     }
-    - **Multipliers:** \n${Object.entries(settings.lottery.winMultiplier)
+    - **Multipliers:** \n${Object.entries(settings.lottery.winMultipliers)
       .map(([symbol, multiplier]) => ` - ${symbol}: ${multiplier}x`)
       .join('\n')}
     - **Max Bet:** ${

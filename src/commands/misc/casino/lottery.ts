@@ -203,7 +203,7 @@ export async function run({ interaction }: SlashCommandProps) {
         lotteryNumbers.includes(n)
       ).length
       const winnings =
-        parsedBetAmount * configReply.lottery.winMultiplier[matchedNumbers]
+        parsedBetAmount * configReply.lottery.winMultipliers[matchedNumbers]
 
       results.push(
         `**${resultString}** | ${
@@ -232,8 +232,8 @@ export async function run({ interaction }: SlashCommandProps) {
           isWin
             ? '🎟️ **Win!** 🎉'
             : isLoss
-            ? '🎟️ **Better Luck Next Time...** ❌'
-            : '🎟️ **Not Bad...** 👀',
+              ? '🎟️ **Better Luck Next Time...** ❌'
+              : '🎟️ **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
             `Your numbers: **${userNumbers

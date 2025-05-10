@@ -4,6 +4,16 @@ export const SLOT_MAX_SIMULATE_SPINS = 50_000_000
 export const LOTTERY_MAX_SIMULATE_ENTRIES = 500_000
 export const GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES = 100_000_000
 
+export const readableGameValueNames = [
+  { name: 'Maximum Bet Amount', value: 'maxBet' },
+  { name: 'Minimum Bet Amount', value: 'minBet' },
+  { name: 'Win Multiplier (x)', value: 'winMultiplier' },
+  { name: 'Win Multipliers (x)', value: 'winMultipliers' },
+  { name: 'Casino House Cut (%)', value: 'casinoCut' },
+  { name: 'One-In Chance (e.g. 1 in 10,000)', value: 'oneInChance' },
+  { name: 'Symbol Weights', value: 'symbolWeights' },
+]
+
 const defaultCasinoSettings = {
   dice: {
     winMultiplier: 5,
@@ -15,8 +25,8 @@ const defaultCasinoSettings = {
     maxBet: 0,
     minBet: 0,
   },
-  slot: {
-    winMultiplier: {
+  slots: {
+    winMultipliers: {
       '🍒🍒🍒': 5,
       '🍋🍋🍋': 10,
       '🍉🍉🍉': 20,
@@ -34,7 +44,7 @@ const defaultCasinoSettings = {
     minBet: 0,
   },
   lottery: {
-    winMultiplier: {
+    winMultipliers: {
       5: 1000,
       4: 125,
       3: 25,

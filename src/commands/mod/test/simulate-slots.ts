@@ -123,11 +123,11 @@ export async function run({ interaction }: SlashCommandProps) {
 
     for (let i = 1; i <= spins; i++) {
       totalBet += bet
-      const resultString = spinSlot(settings.slot)
+      const resultString = spinSlot(settings.slots)
       let winnings = 0
 
-      if (settings.slot.winMultiplier[resultString]) {
-        winnings = bet * settings.slot.winMultiplier[resultString]
+      if (settings.slots.winMultipliers[resultString]) {
+        winnings = bet * settings.slots.winMultipliers[resultString]
         wins++
         winCounts[resultString] = (winCounts[resultString] || 0) + 1
 
@@ -171,11 +171,11 @@ export async function run({ interaction }: SlashCommandProps) {
       )
       .join('\n')
 
-    const multipliersDetails = Object.entries(settings.slot.winMultiplier)
+    const multipliersDetails = Object.entries(settings.slots.winMultipliers)
       .map(([symbol, multiplier]) => `${symbol}: **${multiplier}**x`)
       .join('\n')
 
-    const symbolWeightsDetails = Object.entries(settings.slot.symbolWeights)
+    const symbolWeightsDetails = Object.entries(settings.slots.symbolWeights)
       .map(([symbol, weight]) => `${symbol}: **${weight}**`)
       .join('\n')
 

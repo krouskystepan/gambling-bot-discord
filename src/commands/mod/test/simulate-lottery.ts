@@ -123,9 +123,9 @@ export async function run({ interaction }: SlashCommandProps) {
       const matchedNumbers = userNumbers.filter((n: number) =>
         lotteryNumbers.includes(n)
       ).length
-      winnings = bet * settings.lottery.winMultiplier[matchedNumbers]
+      winnings = bet * settings.lottery.winMultipliers[matchedNumbers]
 
-      if (settings.lottery.winMultiplier[matchedNumbers]) {
+      if (settings.lottery.winMultipliers[matchedNumbers]) {
         wins++
         winCounts[matchedNumbers] = (winCounts[matchedNumbers] || 0) + 1
 
@@ -171,7 +171,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const multipliersDetails = Array.from(
       { length: 6 },
-      (_, i) => `${i}: **${settings.lottery.winMultiplier[i]}**x`
+      (_, i) => `${i}: **${settings.lottery.winMultipliers[i]}**x`
     ).join('\n')
 
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)

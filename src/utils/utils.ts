@@ -130,3 +130,7 @@ export const parseReadableStringToNumber = (readableString: string): number => {
 export const formatNumberWithSpaces = (num: number): string => {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
+
+export const formatNumberToPercentage = (num: number): string => {
+  return (num * 100).toFixed(2) + '%'
+}
