@@ -59,6 +59,24 @@ export const data: CommandData = {
       name: 'reset',
       description: 'Reset the casino settings to default values.',
       type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'game',
+          description: 'Game to reset',
+          type: ApplicationCommandOptionType.String,
+          required: false,
+          choices: [
+            { name: 'All', value: 'all' },
+            { name: 'Dice', value: 'dice' },
+            { name: 'Coinflip', value: 'coinflip' },
+            { name: 'Slots', value: 'slots' },
+            { name: 'Lottery', value: 'lottery' },
+            { name: 'RPS', value: 'rps' },
+            { name: 'Golden Jackpot', value: 'goldenJackpot' },
+            { name: 'Blackjack', value: 'blackjack' },
+          ],
+        },
+      ],
     },
     // Add factory reset option
     // Add force add new game option after new update
@@ -309,19 +327,42 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (subCommand === 'reset') {
-      guildConfiguration.casinoSettings = defaultCasinoSettings
+      const game = options.getString('game')
 
-      await guildConfiguration.save()
+      if (game === 'all') {
+        guildConfiguration.casinoSettings = defaultCasinoSettings
 
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Casino Settings Reset',
-            'The casino settings have been reset to the default values. Use command `/casino-info` to view the current settings.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
+        guildConfiguration.markModified('casinoSettings')
+        await guildConfiguration.save()
+
+        return await interaction.reply({
+          embeds: [
+            createSuccessEmbed(
+              'Casino Settings Reset',
+              'All casino settings have been reset to default values.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      if (game) {
+        guildConfiguration.casinoSettings[game] =
+          defaultCasinoSettings[game as keyof typeof defaultCasinoSettings]
+
+        guildConfiguration.markModified('casinoSettings')
+        await guildConfiguration.save()
+
+        return await interaction.reply({
+          embeds: [
+            createSuccessEmbed(
+              'Casino Settings Reset',
+              `The casino settings for **${game.toUpperCase()}** have been reset to default values.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
     }
   } catch (error) {
     console.error('Error running the command:', error)
