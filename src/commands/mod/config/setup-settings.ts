@@ -1,7 +1,6 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import {
   ApplicationCommandOptionType,
-  ChannelType,
   CommandInteractionOptionResolver,
   MessageFlags,
 } from 'discord.js'
@@ -161,7 +160,12 @@ export async function run({ interaction }: SlashCommandProps) {
           embeds: [
             createSuccessEmbed(
               'Casino Settings Updated',
-              `The setting **${readableGameValueNames.find((value) => value.value === key)?.name}** for **${game.toUpperCase()}** has been updated to **${formatNumberToPercentage(valueAsNumber)}**.`
+              `The setting **${
+                readableGameValueNames.find((value) => value.value === key)
+                  ?.name
+              }** for **${game.toUpperCase()}** has been updated to **${formatNumberToPercentage(
+                valueAsNumber
+              )}**.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
@@ -181,7 +185,10 @@ export async function run({ interaction }: SlashCommandProps) {
           embeds: [
             createSuccessEmbed(
               'Casino Settings Updated',
-              `The setting **${readableGameValueNames.find((value) => value.value === key)?.name}** for **${game.toUpperCase()}** has been updated to **${valueAsNumber}x**.`
+              `The setting **${
+                readableGameValueNames.find((value) => value.value === key)
+                  ?.name
+              }** for **${game.toUpperCase()}** has been updated to **${valueAsNumber}x**.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
@@ -297,7 +304,10 @@ export async function run({ interaction }: SlashCommandProps) {
           embeds: [
             createSuccessEmbed(
               'Casino Settings Updated',
-              `The setting **${readableGameValueNames.find((value) => value.value === key)?.name}** for **${game.toUpperCase()}** has been updated: **Multiplier for value ${objKey} is now ${valueAsNumber}x**.`
+              `The setting **${
+                readableGameValueNames.find((value) => value.value === key)
+                  ?.name
+              }** for **${game.toUpperCase()}** has been updated: **Multiplier for value ${objKey} is now ${valueAsNumber}x**.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
