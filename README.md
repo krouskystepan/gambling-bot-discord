@@ -183,7 +183,7 @@ Display information about a role.
 Get information about a user.
 
 ```
-/money-manager amount:250k
+/money-manager
 ```
 
 Create an embed for manage balance.
