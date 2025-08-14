@@ -25,6 +25,12 @@ Withdraw money from your account.
 ### CASINO
 
 ```
+/blackjack bet:10k
+```
+
+Play blackjack.
+
+```
 /rps player:@user bet:10k
 ```
 
@@ -142,6 +148,20 @@ Manage ATM actions and log channels.
 
   - Remove a channel for ATM logs using its ID (transaction logs).
 
+```
+/setup-settings
+```
+
+Edit bot settings
+
+- `edit game:Dice key:Maximum Bet Amount value:10k`
+
+  - Edit settings for individual game.
+
+- `reset game:Dice`
+
+  - Reset settings to default value (you can reset all settings too).
+
 ### UTILS
 
 ```
@@ -163,10 +183,18 @@ Display information about a role.
 Get information about a user.
 
 ```
-/give-balance amount:250k
+/money-manager amount:250k
 ```
 
-Create an embed for giving money.
+Create an embed for manage balance.
+
+- `give-balance amount:100k`
+
+  - Create an embed for giving money.
+
+- `reset-balance `
+
+  - Create an embed for reseting money.
 
 ```
 /manage-balance
