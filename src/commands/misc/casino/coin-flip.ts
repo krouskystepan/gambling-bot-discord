@@ -121,15 +121,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.coinflip.maxBet > 0 &&
-      parsedBetAmount > configReply.coinflip.maxBet
+      configReply.casinoSettings.coinflip.maxBet > 0 &&
+      parsedBetAmount > configReply.casinoSettings.coinflip.maxBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              configReply.coinflip.maxBet
+              configReply.casinoSettings.coinflip.maxBet
             )}**.`
           ),
         ],
@@ -138,15 +138,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.coinflip.minBet > 0 &&
-      parsedBetAmount < configReply.coinflip.minBet
+      configReply.casinoSettings.coinflip.minBet > 0 &&
+      parsedBetAmount < configReply.casinoSettings.coinflip.minBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Below Minimum Bet',
             `The minimum bet is **$${formatNumberToReadableString(
-              configReply.coinflip.minBet
+              configReply.casinoSettings.coinflip.minBet
             )}**.`
           ),
         ],
@@ -179,7 +179,7 @@ export async function run({ interaction }: SlashCommandProps) {
       const flipResult = flipCoin()
       const win = side === flipResult
       const winnings = win
-        ? parsedBetAmount * configReply.dice.winMultiplier
+        ? parsedBetAmount * configReply.casinoSettings.dice.winMultiplier
         : 0
 
       results.push(

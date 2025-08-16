@@ -110,15 +110,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.slots.maxBet > 0 &&
-      parsedBetAmount > configReply.slots.maxBet
+      configReply.casinoSettings.slots.maxBet > 0 &&
+      parsedBetAmount > configReply.casinoSettings.slots.maxBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              configReply.slots.maxBet
+              configReply.casinoSettings.slots.maxBet
             )}**.`
           ),
         ],
@@ -127,15 +127,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.slots.minBet > 0 &&
-      parsedBetAmount < configReply.slots.minBet
+      configReply.casinoSettings.slots.minBet > 0 &&
+      parsedBetAmount < configReply.casinoSettings.slots.minBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Below Minimum Bet',
             `The minimum bet is **$${formatNumberToReadableString(
-              configReply.slots.minBet
+              configReply.casinoSettings.slots.minBet
             )}**.`
           ),
         ],
@@ -164,9 +164,10 @@ export async function run({ interaction }: SlashCommandProps) {
     let results: string[] = []
 
     for (let i = 0; i < spins; i++) {
-      const resultString = spinSlot(configReply.slots)
+      const resultString = spinSlot(configReply.casinoSettings.slots)
       const winnings =
-        (configReply.slots.winMultipliers[resultString] || 0) * parsedBetAmount
+        (configReply.casinoSettings.slots.winMultipliers[resultString] || 0) *
+        parsedBetAmount
       const isWin = winnings > 0
 
       results.push(
@@ -192,8 +193,8 @@ export async function run({ interaction }: SlashCommandProps) {
           isWin
             ? '🎰 **Win!** 🎉'
             : isLoss
-              ? '🎰 **Better Luck Next Time...** ❌'
-              : '🎰 **Not Bad...** 👀',
+            ? '🎰 **Better Luck Next Time...** ❌'
+            : '🎰 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
             `🕹 **Spin Results:**\n${results.join('\n')}\n\n` +

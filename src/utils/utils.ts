@@ -73,7 +73,7 @@ export const checkChannelConfiguration = async (
       return false
     }
 
-    return guildConfiguration.casinoSettings
+    return guildConfiguration
   } catch (error) {
     console.error('Error checking channel configuration:', error)
     return false

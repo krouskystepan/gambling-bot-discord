@@ -99,6 +99,20 @@ Unregister a user (delete from DB).
 ### CONFIG
 
 ```
+/setup-manager
+```
+
+Manage the manager role.
+
+- `set role:@role`
+
+  - Set the manager role.
+
+- `remove`
+
+  - Remove the manager role.
+
+```
 /setup-admin
 ```
 

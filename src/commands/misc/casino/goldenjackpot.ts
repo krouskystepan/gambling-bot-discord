@@ -119,15 +119,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.goldenJackpot.maxBet > 0 &&
-      parsedBetAmount > configReply.goldenJackpot.maxBet
+      configReply.casinoSettings.goldenJackpot.maxBet > 0 &&
+      parsedBetAmount > configReply.casinoSettings.goldenJackpot.maxBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              configReply.goldenJackpot.maxBet
+              configReply.casinoSettings.goldenJackpot.maxBet
             )}**.`
           ),
         ],
@@ -136,15 +136,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.goldenJackpot.minBet > 0 &&
-      parsedBetAmount < configReply.goldenJackpot.minBet
+      configReply.casinoSettings.goldenJackpot.minBet > 0 &&
+      parsedBetAmount < configReply.casinoSettings.goldenJackpot.minBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Below Minimum Bet',
             `The minimum bet is **$${formatNumberToReadableString(
-              configReply.goldenJackpot.minBet
+              configReply.casinoSettings.goldenJackpot.minBet
             )}**.`
           ),
         ],
@@ -173,10 +173,13 @@ export async function run({ interaction }: SlashCommandProps) {
     let results: string[] = []
 
     for (let i = 0; i < entries; i++) {
-      const jackpotNumber = drawGoldenJackpot(configReply.goldenJackpot)
+      const jackpotNumber = drawGoldenJackpot(
+        configReply.casinoSettings.goldenJackpot
+      )
       const isJackpot = jackpotNumber === 1
       const winnings = isJackpot
-        ? parsedBetAmount * configReply.goldenJackpot.winMultiplier
+        ? parsedBetAmount *
+          configReply.casinoSettings.goldenJackpot.winMultiplier
         : 0
 
       if (isJackpot) {

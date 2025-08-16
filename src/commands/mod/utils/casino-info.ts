@@ -58,6 +58,7 @@ export async function run({ interaction }: SlashCommandProps) {
   })
 
   const settings = config?.casinoSettings
+
   if (!settings) return
 
   const isAdmin = interaction.options.getBoolean('admin') ?? false

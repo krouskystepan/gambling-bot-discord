@@ -104,15 +104,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.blackjack.maxBet > 0 &&
-      parsedBetAmount > configReply.blackjack.maxBet
+      configReply.casinoSettings.blackjack.maxBet > 0 &&
+      parsedBetAmount > configReply.casinoSettings.blackjack.maxBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              configReply.blackjack.maxBet
+              configReply.casinoSettings.blackjack.maxBet
             )}**.`
           ),
         ],
@@ -121,15 +121,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.blackjack.minBet > 0 &&
-      parsedBetAmount < configReply.blackjack.minBet
+      configReply.casinoSettings.blackjack.minBet > 0 &&
+      parsedBetAmount < configReply.casinoSettings.blackjack.minBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Below Minimum Bet',
             `The minimum bet is **$${formatNumberToReadableString(
-              configReply.blackjack.minBet
+              configReply.casinoSettings.blackjack.minBet
             )}**.`
           ),
         ],

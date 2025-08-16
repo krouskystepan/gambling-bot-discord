@@ -96,7 +96,6 @@ export const data: CommandData = {
 }
 
 export const options: CommandOptions = {
-  userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
 }
@@ -108,12 +107,35 @@ export async function run({ interaction, client }: SlashCommandProps) {
       'adminChannelIds',
       {
         notSet:
-          'This server has not been configured for admin commands yet. Set it up using `/setup-manage`.',
+          'This server has not been configured for admin commands yet. Set it up using `/setup-admin` and `/setup-manager` .',
         notAllowed: `This channel is not configured for admin commands. Try one of these channels:`,
       }
     )
 
     if (!configReply) return
+
+    const member = await interaction.guild?.members.fetch(interaction.user.id)
+
+    const hasAdmin = member?.permissions.has('Administrator')
+    const hasManager =
+      configReply.managerRoleId &&
+      member?.roles.cache.has(configReply.managerRoleId)
+
+    if (!hasAdmin && !hasManager) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Permission Denied',
+            `You need to be an **Administrator** or have the ${
+              configReply.managerRoleId
+                ? `<@&${configReply.managerRoleId}>`
+                : '**Manager role**'
+            } to use this command.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
 
     const options = interaction.options as CommandInteractionOptionResolver
 

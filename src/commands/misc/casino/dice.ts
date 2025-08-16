@@ -121,15 +121,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.dice.maxBet > 0 &&
-      parsedBetAmount > configReply.dice.maxBet
+      configReply.casinoSettings.dice.maxBet > 0 &&
+      parsedBetAmount > configReply.casinoSettings.dice.maxBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              configReply.dice.maxBet
+              configReply.casinoSettings.dice.maxBet
             )}**.`
           ),
         ],
@@ -138,15 +138,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.dice.minBet > 0 &&
-      parsedBetAmount < configReply.dice.minBet
+      configReply.casinoSettings.dice.minBet > 0 &&
+      parsedBetAmount < configReply.casinoSettings.dice.minBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Below Minimum Bet',
             `The minimum bet is **$${formatNumberToReadableString(
-              configReply.dice.minBet
+              configReply.casinoSettings.dice.minBet
             )}**.`
           ),
         ],
@@ -179,7 +179,7 @@ export async function run({ interaction }: SlashCommandProps) {
       const resultString = `${dice}`
       const win = side === dice
       const winnings = win
-        ? parsedBetAmount * configReply.dice.winMultiplier
+        ? parsedBetAmount * configReply.casinoSettings.dice.winMultiplier
         : 0
 
       results.push(

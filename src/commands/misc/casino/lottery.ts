@@ -117,15 +117,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.lottery.maxBet > 0 &&
-      parsedBetAmount > configReply.lottery.maxBet
+      configReply.casinoSettings.lottery.maxBet > 0 &&
+      parsedBetAmount > configReply.casinoSettings.lottery.maxBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              configReply.lottery.maxBet
+              configReply.casinoSettings.lottery.maxBet
             )}**.`
           ),
         ],
@@ -134,15 +134,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.lottery.minBet > 0 &&
-      parsedBetAmount < configReply.lottery.minBet
+      configReply.casinoSettings.lottery.minBet > 0 &&
+      parsedBetAmount < configReply.casinoSettings.lottery.minBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Below Minimum Bet',
             `The minimum bet is **$${formatNumberToReadableString(
-              configReply.lottery.minBet
+              configReply.casinoSettings.lottery.minBet
             )}**.`
           ),
         ],
@@ -203,7 +203,8 @@ export async function run({ interaction }: SlashCommandProps) {
         lotteryNumbers.includes(n)
       ).length
       const winnings =
-        parsedBetAmount * configReply.lottery.winMultipliers[matchedNumbers]
+        parsedBetAmount *
+        configReply.casinoSettings.lottery.winMultipliers[matchedNumbers]
 
       results.push(
         `**${resultString}** | ${
@@ -232,8 +233,8 @@ export async function run({ interaction }: SlashCommandProps) {
           isWin
             ? '🎟️ **Win!** 🎉'
             : isLoss
-              ? '🎟️ **Better Luck Next Time...** ❌'
-              : '🎟️ **Not Bad...** 👀',
+            ? '🎟️ **Better Luck Next Time...** ❌'
+            : '🎟️ **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
             `Your numbers: **${userNumbers

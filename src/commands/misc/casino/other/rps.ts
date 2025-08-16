@@ -136,7 +136,8 @@ export async function run({ interaction }: SlashCommandProps) {
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
-    const realWinAmount = parsedBetAmount * (1 - configReply.rps.casinoCut)
+    const realWinAmount =
+      parsedBetAmount * (1 - configReply.casinoSettings.rps.casinoCut)
 
     if (isNaN(parsedBetAmount)) {
       return interaction.reply({
@@ -163,15 +164,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.rps.maxBet > 0 &&
-      parsedBetAmount > configReply.rps.maxBet
+      configReply.casinoSettings.rps.maxBet > 0 &&
+      parsedBetAmount > configReply.casinoSettings.rps.maxBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **$${formatNumberToReadableString(
-              configReply.rps.maxBet
+              configReply.casinoSettings.rps.maxBet
             )}**.`
           ),
         ],
@@ -180,15 +181,15 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (
-      configReply.rps.minBet > 0 &&
-      parsedBetAmount < configReply.rps.minBet
+      configReply.casinoSettings.rps.minBet > 0 &&
+      parsedBetAmount < configReply.casinoSettings.rps.minBet
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Below Minimum Bet',
             `The minimum bet is **$${formatNumberToReadableString(
-              configReply.rps.minBet
+              configReply.casinoSettings.rps.minBet
             )}**.`
           ),
         ],
