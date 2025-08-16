@@ -40,6 +40,28 @@ const formatBet = (label: string, value: number) => {
   }`
 }
 
+const formatRoom = (
+  label: string,
+  ids: string[] | null | undefined,
+  fallback = 'No rooms'
+) => {
+  return `- **${label}**: ${
+    ids && ids.length ? ids.map((id) => `<#${id}>`).join(', ') : fallback
+  }`
+}
+
+const formatAtmRooms = (
+  label: string,
+  ids?: { actions?: string; logs?: string } | null
+) => {
+  if (!ids) return `- **${label}**: No rooms`
+
+  const actions = ids.actions ? `<#${ids.actions}>` : 'No channel'
+  const logs = ids.logs ? `<#${ids.logs}>` : 'No channel'
+
+  return `- **${label}**\n  - Actions: ${actions}\n  - Logs: ${logs}`
+}
+
 const renderSection = (
   title: string,
   baseLines: string[],
@@ -154,6 +176,11 @@ export async function run({ interaction }: SlashCommandProps) {
     renderSection('🃏 Blackjack', [
       formatBet('Max Bet', settings.blackjack.maxBet),
       formatBet('Min Bet', settings.blackjack.minBet),
+    ]),
+    renderSection('⚙️ Rooms', [
+      formatAtmRooms('ATM Rooms', config.atmChannelIds),
+      formatRoom('Gambling Rooms', config.casinoChannelIds),
+      formatRoom('Admin Rooms', config.adminChannelIds),
     ]),
   ]
 
