@@ -45,9 +45,10 @@ const formatRoom = (
   ids: string[] | null | undefined,
   fallback = 'No rooms'
 ) => {
-  return `- **${label}**: ${
-    ids && ids.length ? ids.map((id) => `<#${id}>`).join(', ') : fallback
-  }`
+  if (!ids || !ids.length) return `- **${label}**: ${fallback}`
+
+  const formattedIds = ids.map((id) => `  - <#${id}> (${id})`).join('\n')
+  return `- **${label}**:\n${formattedIds}`
 }
 
 const formatAtmRooms = (
@@ -56,10 +57,16 @@ const formatAtmRooms = (
 ) => {
   if (!ids) return `- **${label}**: No rooms`
 
-  const actions = ids.actions ? `<#${ids.actions}>` : 'No channel'
-  const logs = ids.logs ? `<#${ids.logs}>` : 'No channel'
+  const actions = ids.actions
+    ? `<#${ids.actions}> (${ids.actions})`
+    : 'No channel'
+  const logs = ids.logs ? `<#${ids.logs}> (${ids.logs})` : 'No channel'
 
   return `- **${label}**\n  - Actions: ${actions}\n  - Logs: ${logs}`
+}
+
+const formatRole = (label: string, id?: string | null) => {
+  return `- **${label}:** ${id ? `<@&${id}> (${id})` : 'No role'}`
 }
 
 const renderSection = (
@@ -177,10 +184,11 @@ export async function run({ interaction }: SlashCommandProps) {
       formatBet('Max Bet', settings.blackjack.maxBet),
       formatBet('Min Bet', settings.blackjack.minBet),
     ]),
-    renderSection('⚙️ Rooms', [
+    renderSection('⚙️ Server Config', [
       formatAtmRooms('ATM Rooms', config.atmChannelIds),
       formatRoom('Gambling Rooms', config.casinoChannelIds),
       formatRoom('Admin Rooms', config.adminChannelIds),
+      formatRole('Manager Role', config.managerRoleId),
     ]),
   ]
 
