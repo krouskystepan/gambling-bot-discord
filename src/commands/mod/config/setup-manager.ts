@@ -15,7 +15,7 @@ export const data: CommandData = {
   description: 'Manage the manager role.',
   options: [
     {
-      name: 'set',
+      name: 'set-role',
       description: 'Set the manager role.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
@@ -29,8 +29,16 @@ export const data: CommandData = {
     },
     {
       name: 'remove',
-      description: 'Remove the manager role.',
+      description: 'Remove the manager role using its ID.',
       type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'role-id',
+          description: 'The ID of the role you want to remove.',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+        },
+      ],
     },
   ],
   dm_permission: false,
@@ -57,7 +65,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const options = interaction.options as CommandInteractionOptionResolver
     const subcommand = options.getSubcommand()
 
-    if (subcommand === 'set') {
+    if (subcommand === 'set-role') {
       const role = options.getRole('role', true)
 
       guildConfiguration.managerRoleId = role.id
@@ -74,12 +82,14 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (subcommand === 'remove') {
-      if (!guildConfiguration.managerRoleId) {
+      const roleId = options.getString('role-id', true)
+
+      if (guildConfiguration.managerRoleId !== roleId) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
               'Manager Role Setup - Remove',
-              'No manager role is currently set.'
+              `Role with ID ${roleId} is not set as manager role.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
@@ -93,7 +103,7 @@ export async function run({ interaction }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'Manager Role Setup - Remove',
-            `The manager role has been successfully removed.`
+            `Manager role with ID ${roleId} has been successfully removed.`
           ),
         ],
       })

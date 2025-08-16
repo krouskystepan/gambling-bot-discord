@@ -54,4 +54,6 @@ const BlackjackGameSchema = new Schema<BlackjackGame>({
   ],
 })
 
+BlackjackGameSchema.index({ userId: 1, guildId: 1 }, { unique: true })
+
 export default model<BlackjackGame>('BlackjackGame', BlackjackGameSchema)

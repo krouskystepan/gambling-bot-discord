@@ -12,6 +12,7 @@ import {
   GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES,
 } from '../../../utils/defaultConfig'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import VipRoom from '../../../models/VipRoom'
 
 export const data: CommandData = {
   name: 'casino-info',
@@ -40,7 +41,7 @@ const formatBet = (label: string, value: number) => {
   }`
 }
 
-const formatRoom = (
+const formatRooms = (
   label: string,
   ids: string[] | null | undefined,
   fallback = 'No rooms'
@@ -49,6 +50,16 @@ const formatRoom = (
 
   const formattedIds = ids.map((id) => `  - <#${id}> (${id})`).join('\n')
   return `- **${label}**:\n${formattedIds}`
+}
+
+const formatCategory = (
+  label: string,
+  id: string,
+  fallback = 'No category'
+) => {
+  if (!id) return `- **${label}**: ${fallback}`
+
+  return ` - **${label}**: <#${id}> (${id})`
 }
 
 const formatAtmRooms = (
@@ -85,6 +96,12 @@ export async function run({ interaction }: SlashCommandProps) {
   const config = await GuildConfiguration.findOne({
     guildId: interaction.guildId,
   })
+
+  const vipRooms = await VipRoom.find(
+    { guildId: interaction.guildId },
+    { channelId: 1, _id: 0 }
+  )
+  const vipChannelIds = vipRooms.map((room) => room.channelId)
 
   const settings = config?.casinoSettings
 
@@ -186,9 +203,14 @@ export async function run({ interaction }: SlashCommandProps) {
     ]),
     renderSection('⚙️ Server Config', [
       formatAtmRooms('ATM Rooms', config.atmChannelIds),
-      formatRoom('Gambling Rooms', config.casinoChannelIds),
-      formatRoom('Admin Rooms', config.adminChannelIds),
+      formatRooms('Gambling Rooms', config.casinoChannelIds),
+      formatRooms('Admin Rooms', config.adminChannelIds),
+      '',
       formatRole('Manager Role', config.managerRoleId),
+      '',
+      formatRooms('VIP Rooms', vipChannelIds),
+      formatRole('VIP Role', config.vipSettings.roleId),
+      formatCategory('VIP Category', config.vipSettings.categoryId),
     ]),
   ]
 

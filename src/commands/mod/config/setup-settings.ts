@@ -77,8 +77,6 @@ export const data: CommandData = {
         },
       ],
     },
-    // Add factory reset option
-    // Add force add new game option after new update
   ],
   dm_permission: false,
 }

@@ -8,6 +8,7 @@ import {
 import User from '../models/User'
 import { createErrorEmbed } from './createEmbed'
 import defaultCasinoSettings from './defaultConfig'
+import VipRoom from '../models/VipRoom'
 
 export const connectToDatabase = async () => {
   try {
@@ -43,14 +44,25 @@ export const checkChannelConfiguration = async (
         guildId: interaction.guildId,
         casinoSettings: defaultCasinoSettings,
       })
-
       await guildConfiguration.save()
     } else if (!guildConfiguration.casinoSettings) {
       guildConfiguration.casinoSettings = defaultCasinoSettings
       await guildConfiguration.save()
     }
 
-    if (!guildConfiguration[channelType].length) {
+    let allowedChannelIds: string[] = guildConfiguration[channelType] || []
+
+    if (channelType === 'casinoChannelIds') {
+      const activeVipRooms = await VipRoom.find({
+        guildId: interaction.guildId,
+        expiresAt: { $gt: new Date() },
+      })
+      allowedChannelIds = allowedChannelIds.concat(
+        activeVipRooms.map((vip) => vip.channelId)
+      )
+    }
+
+    if (!allowedChannelIds.length) {
       await interaction.reply({
         embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
         flags: MessageFlags.Ephemeral,
@@ -58,12 +70,12 @@ export const checkChannelConfiguration = async (
       return false
     }
 
-    if (!guildConfiguration[channelType].includes(interaction.channelId)) {
+    if (!allowedChannelIds.includes(interaction.channelId)) {
       await interaction.reply({
         embeds: [
           createErrorEmbed(
             'Error - Incorrect Channel',
-            `${messages.notAllowed} ${guildConfiguration[channelType]
+            `${messages.notAllowed} ${allowedChannelIds
               .map((id) => `<#${id}>`)
               .join(', ')}.`
           ),
@@ -133,4 +145,43 @@ export const formatNumberWithSpaces = (num: number): string => {
 
 export const formatNumberToPercentage = (num: number): string => {
   return (num * 100).toFixed(2) + '%'
+}
+
+export const parseTimeToSeconds = (time: string): number => {
+  const regex = /(\d+)([dw])/gi
+  let totalSeconds = 0
+
+  const sanitizedTime = time.replace(/\s+/g, '')
+
+  const matches = sanitizedTime.match(regex)
+
+  if (!matches) {
+    throw new Error(
+      'Invalid format. Use a format like "1d", "2d", or "1w". Minimum duration is 1 day.'
+    )
+  }
+
+  matches.forEach((match) => {
+    const value = parseInt(match.slice(0, -1), 10)
+    const unit = match.slice(-1).toLowerCase()
+
+    switch (unit) {
+      case 'd':
+        totalSeconds += value * 86400
+        break
+      case 'w':
+        totalSeconds += value * 604800
+        break
+      default:
+        throw new Error(
+          'Invalid unit. Only "d" (days) and "w" (weeks) are allowed.'
+        )
+    }
+  })
+
+  if (totalSeconds < 86400) {
+    throw new Error('VIP duration must be at least 1 day.')
+  }
+
+  return totalSeconds
 }
