@@ -1,5 +1,6 @@
-import { Client, TextChannel, PermissionsBitField } from 'discord.js'
+import { Client, TextChannel } from 'discord.js'
 import VipRoom from '../../models/VipRoom'
+import GuildConfiguration from '../../models/GuildConfiguration'
 import { createInfoEmbed } from '../../utils/createEmbed'
 
 export default async (client: Client) => {
@@ -21,6 +22,7 @@ export default async (client: Client) => {
         await channel.permissionOverwrites
           .edit(room.userId, {
             SendMessages: false,
+            ViewChannel: false,
           })
           .catch(() => null)
       }
@@ -30,16 +32,26 @@ export default async (client: Client) => {
           embeds: [
             createInfoEmbed(
               'VIP Channel Expired',
-              '⏰ Your VIP time has expired. You no longer have permission to send messages in this channel.'
+              '⏰ Your VIP time has expired. You no longer have access to this channel.'
             ),
           ],
         })
         .catch(() => null)
 
+      const guildConfig = await GuildConfiguration.findOne({
+        guildId: room.guildId,
+      })
+      if (guildConfig?.vipSettings?.roleId && room.userId) {
+        const member = await guild.members.fetch(room.userId).catch(() => null)
+        if (member) {
+          await member.roles
+            .remove(guildConfig.vipSettings.roleId, 'VIP expired')
+            .catch(() => null)
+        }
+      }
+
       await VipRoom.deleteOne({ _id: room._id })
-      console.log(
-        `VIP channel ${room.channelId} expired: write access removed.`
-      )
+      console.log(`VIP channel ${room.channelId} expired.`)
     }
   }, 60_000)
 }
