@@ -162,9 +162,13 @@ export async function run({ interaction }: SlashCommandProps) {
       const categoryId = guildConfiguration.vipSettings.categoryId
       const vipRoleId = guildConfiguration.vipSettings.roleId
 
+      const now = new Date()
+      const day = now.getDate().toString().padStart(2, '0')
+      const month = (now.getMonth() + 1).toString().padStart(2, '0')
+
       const channel = await guild.channels.create({
-        name: `vip-${interaction.user.username}`,
-        type: 0, // GUILD_TEXT
+        name: `vip-${interaction.user.username}-${day}-${month}`,
+        type: 0, // TEXT
         parent: categoryId,
       })
 
@@ -185,9 +189,9 @@ export async function run({ interaction }: SlashCommandProps) {
         ],
       })
 
-      await vipChannelCreatedMsg.pin()
-
       await channel.send(`Welcome to your VIP channel, ${interaction.user}! 🎉`)
+
+      await vipChannelCreatedMsg.pin()
 
       const member = await guild.members.fetch(interaction.user.id)
       await member.roles.add(vipRoleId, 'VIP purchased via /vip buy')
@@ -200,7 +204,6 @@ export async function run({ interaction }: SlashCommandProps) {
       })
       await vip.save()
 
-      // odečteme peníze z účtu
       user.balance -= totalPrice
       await user.save()
 
