@@ -31,6 +31,20 @@ export const data: CommandData = {
         },
       ],
     },
+
+    {
+      name: 'extend',
+      description: 'Extend your current VIP duration.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'duration',
+          description: 'Extra duration to add (e.g., 2d, 1w)',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+        },
+      ],
+    },
     {
       name: 'info',
       description: 'Show VIP info, price and how long you can afford it.',
@@ -122,13 +136,27 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       const durationInput = interaction.options.getString('duration', true)
-      const durationSeconds = parseTimeToSeconds(durationInput)
-      if (!durationSeconds || durationSeconds < 86400) {
+
+      if (!/^(\d+[dw])+$/i.test(durationInput)) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed(
-              'Error - Invalid Duration',
-              'Invalid format or less than 1 day (1d).'
+            createInfoEmbed(
+              'Error - Invalid Format',
+              'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const durationSeconds = parseTimeToSeconds(durationInput)
+
+      if (durationSeconds < 86400) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Error - Duration Too Short',
+              'The duration must be at least 1 day (1d).'
             ),
           ],
           flags: MessageFlags.Ephemeral,
@@ -179,8 +207,9 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const expiresAt = new Date(Date.now() + durationMs)
       const vipChannelCreatedMsg = await channel.send({
+        content: `Welcome to your VIP channel, ${interaction.user}! 🎉`,
         embeds: [
-          createInfoEmbed(
+          createSuccessEmbed(
             'VIP Channel Ready',
             `Your channel <#${channel.id}> is valid until <t:${Math.floor(
               expiresAt.getTime() / 1000
@@ -188,8 +217,6 @@ export async function run({ interaction }: SlashCommandProps) {
           ),
         ],
       })
-
-      await channel.send(`Welcome to your VIP channel, ${interaction.user}! 🎉`)
 
       await vipChannelCreatedMsg.pin()
 
@@ -217,6 +244,118 @@ export async function run({ interaction }: SlashCommandProps) {
               )}**.`
           ),
         ],
+      })
+    }
+
+    if (subcommand === 'extend') {
+      const existingVip = await VipRoom.findOne({
+        userId: interaction.user.id,
+        guildId: interaction.guildId!,
+        expiresAt: { $gt: new Date() },
+      })
+
+      if (!existingVip) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'VIP Not Active',
+              'You do not currently have an active VIP to extend.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const durationInput = interaction.options.getString('duration', true)
+
+      if (!/^(\d+[dw])+$/i.test(durationInput)) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Invalid Format',
+              'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const durationSeconds = parseTimeToSeconds(durationInput)
+
+      if (durationSeconds < 86400) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Duration Too Short',
+              'The duration must be at least 1 day (1d).'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const durationDays = durationSeconds / 86400
+      const totalPrice = durationDays * pricePerDay
+      const affordableDays = Math.floor(user.balance / pricePerDay)
+
+      if (user.balance < totalPrice) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Insufficient Funds',
+              `You cannot afford to extend VIP for ${durationDays} day(s).\n` +
+                `Your balance: **$${formatNumberToReadableString(
+                  user.balance
+                )}**\n` +
+                `You can afford VIP for up to **${affordableDays} day(s)**.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      existingVip.expiresAt = new Date(
+        existingVip.expiresAt.getTime() + durationSeconds * 1000
+      )
+      await existingVip.save()
+
+      user.balance -= totalPrice
+      await user.save()
+
+      const vipChannel = await interaction.guild!.channels.fetch(
+        existingVip.channelId
+      )
+
+      if (vipChannel?.isTextBased()) {
+        const extendMsg = await vipChannel.send({
+          embeds: [
+            createSuccessEmbed(
+              'VIP Channel Extended',
+              `Your VIP has been extended!\n` +
+                `New expiry: <t:${Math.floor(
+                  existingVip.expiresAt.getTime() / 1000
+                )}:f>`
+            ),
+          ],
+        })
+
+        await extendMsg.pin()
+      }
+
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'VIP Extended',
+            `Your VIP has been extended by **${durationDays} day(s)**.\n` +
+              `New expiry: <t:${Math.floor(
+                existingVip.expiresAt.getTime() / 1000
+              )}:f>\n` +
+              `You have been charged **$${formatNumberToReadableString(
+                totalPrice
+              )}**.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
       })
     }
   } catch (error) {

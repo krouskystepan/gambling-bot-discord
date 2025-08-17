@@ -148,39 +148,30 @@ export const formatNumberToPercentage = (num: number): string => {
 }
 
 export const parseTimeToSeconds = (time: string): number => {
-  const regex = /(\d+)([dw])/gi
+  const regex = /(\d+)([hdw])/gi
   let totalSeconds = 0
 
   const sanitizedTime = time.replace(/\s+/g, '')
 
   const matches = sanitizedTime.match(regex)
 
-  if (!matches) {
-    throw new Error(
-      'Invalid format. Use a format like "1d", "2d", or "1w". Minimum duration is 1 day.'
-    )
-  }
+  if (matches) {
+    matches.forEach((match) => {
+      const value = parseInt(match.slice(0, -1), 10)
+      const unit = match.slice(-1).toLowerCase()
 
-  matches.forEach((match) => {
-    const value = parseInt(match.slice(0, -1), 10)
-    const unit = match.slice(-1).toLowerCase()
-
-    switch (unit) {
-      case 'd':
-        totalSeconds += value * 86400
-        break
-      case 'w':
-        totalSeconds += value * 604800
-        break
-      default:
-        throw new Error(
-          'Invalid unit. Only "d" (days) and "w" (weeks) are allowed.'
-        )
-    }
-  })
-
-  if (totalSeconds < 86400) {
-    throw new Error('VIP duration must be at least 1 day.')
+      switch (unit) {
+        case 'h':
+          totalSeconds += value * 3600
+          break
+        case 'd':
+          totalSeconds += value * 86400
+          break
+        case 'w':
+          totalSeconds += value * 604800
+          break
+      }
+    })
   }
 
   return totalSeconds

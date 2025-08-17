@@ -209,6 +209,11 @@ export async function run({ interaction }: SlashCommandProps) {
       formatRole('Manager Role', config.managerRoleId),
       '',
       formatRooms('VIP Rooms', vipChannelIds),
+      `- **VIP Price Per Day:** ${
+        config.vipSettings.pricePerDay === 0
+          ? 'Not Set'
+          : `$${formatNumberToReadableString(config.vipSettings.pricePerDay)}`
+      }`,
       formatRole('VIP Role', config.vipSettings.roleId),
       formatCategory('VIP Category', config.vipSettings.categoryId),
     ]),
