@@ -141,7 +141,7 @@ export async function run({ interaction }: SlashCommandProps) {
         return interaction.reply({
           embeds: [
             createInfoEmbed(
-              'Error - Invalid Format',
+              'Invalid Input - Invalid Format',
               'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'
             ),
           ],
@@ -155,7 +155,7 @@ export async function run({ interaction }: SlashCommandProps) {
         return interaction.reply({
           embeds: [
             createInfoEmbed(
-              'Error - Duration Too Short',
+              'Invalid Input - Duration Too Short',
               'The duration must be at least 1 day (1d).'
             ),
           ],
@@ -328,13 +328,13 @@ export async function run({ interaction }: SlashCommandProps) {
 
       if (vipChannel?.isTextBased()) {
         const extendMsg = await vipChannel.send({
+          content: `Your VIP has been extended, ${interaction.user}! 🎉`,
           embeds: [
             createSuccessEmbed(
               'VIP Channel Extended',
-              `Your VIP has been extended!\n` +
-                `New expiry: <t:${Math.floor(
-                  existingVip.expiresAt.getTime() / 1000
-                )}:f>`
+              `New expiry: <t:${Math.floor(
+                existingVip.expiresAt.getTime() / 1000
+              )}:f>`
             ),
           ],
         })
