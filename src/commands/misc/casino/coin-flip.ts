@@ -179,7 +179,7 @@ export async function run({ interaction }: SlashCommandProps) {
       const flipResult = flipCoin()
       const win = side === flipResult
       const winnings = win
-        ? parsedBetAmount * configReply.casinoSettings.dice.winMultiplier
+        ? parsedBetAmount * configReply.casinoSettings.coinflip.winMultiplier
         : 0
 
       results.push(
