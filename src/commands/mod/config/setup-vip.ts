@@ -273,10 +273,5 @@ export async function run({ interaction }: SlashCommandProps) {
     }
   } catch (error) {
     console.error('Error running /setup-vip:', error)
-    if (interaction.replied || interaction.deferred) return
-    return interaction.reply({
-      embeds: [createErrorEmbed('Internal Error', 'Something went wrong.')],
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

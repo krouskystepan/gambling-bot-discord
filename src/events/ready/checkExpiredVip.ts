@@ -22,13 +22,13 @@ export default async (client: Client) => {
         await channel.permissionOverwrites
           .edit(room.userId, {
             SendMessages: false,
-            ViewChannel: false,
           })
           .catch(() => null)
       }
 
       await channel
         .send({
+          content: `<@${room.userId}>`,
           embeds: [
             createInfoEmbed(
               'VIP Channel Expired',

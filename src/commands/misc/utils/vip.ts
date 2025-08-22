@@ -1,5 +1,9 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
-import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
+import {
+  ApplicationCommandOptionType,
+  ChannelType,
+  MessageFlags,
+} from 'discord.js'
 import VipRoom from '../../../models/VipRoom'
 import User from '../../../models/User'
 import GuildConfiguration from '../../../models/GuildConfiguration'
@@ -196,7 +200,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const channel = await guild.channels.create({
         name: `vip-${interaction.user.username}-${day}-${month}`,
-        type: 0, // TEXT
+        type: ChannelType.GuildText,
         parent: categoryId,
       })
 
@@ -360,9 +364,5 @@ export async function run({ interaction }: SlashCommandProps) {
     }
   } catch (error) {
     console.error('Error running /vip:', error)
-    return interaction.reply({
-      embeds: [createErrorEmbed('Internal Error', 'Something went wrong.')],
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

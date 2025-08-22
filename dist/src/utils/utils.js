@@ -1,0 +1,105 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.formatNumberWithSpaces = exports.parseReadableStringToNumber = exports.formatNumberToReadableString = exports.checkUserRegistration = exports.checkChannelConfiguration = exports.connectToDatabase = void 0;
+const mongoose_1 = require("mongoose");
+const GuildConfiguration_1 = require("../models/GuildConfiguration");
+const discord_js_1 = require("discord.js");
+const User_1 = require("../models/User");
+const createEmbed_1 = require("./createEmbed");
+const connectToDatabase = async () => {
+    try {
+        if (!process.env.MONGO_URI)
+            throw new Error('MONGO_URI is not defined');
+        mongoose_1.default.set('strictQuery', false);
+        await mongoose_1.default.connect(process.env.MONGO_URI);
+        console.log('✅ Connected to the database');
+    }
+    catch (error) {
+        console.error('Error connecting to the database:', error);
+    }
+};
+exports.connectToDatabase = connectToDatabase;
+const checkChannelConfiguration = async (interaction, channelType, messages) => {
+    try {
+        let guildConfiguration = await GuildConfiguration_1.default.findOne({
+            guildId: interaction.guildId,
+        });
+        if (!guildConfiguration) {
+            guildConfiguration = new GuildConfiguration_1.default({
+                guildId: interaction.guildId,
+            });
+        }
+        if (!guildConfiguration[channelType].length) {
+            await interaction.reply({
+                embeds: [(0, createEmbed_1.createErrorEmbed)('Error - Not Configured', messages.notSet)],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+            return true;
+        }
+        if (!guildConfiguration[channelType].includes(interaction.channelId)) {
+            await interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createErrorEmbed)('Error - Incorrect Channel', `${messages.notAllowed} ${guildConfiguration[channelType]
+                        .map((id) => `<#${id}>`)
+                        .join(', ')}.`),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+            return true;
+        }
+        return false;
+    }
+    catch (error) {
+        console.error('Error checking channel configuration:', error);
+        return true;
+    }
+};
+exports.checkChannelConfiguration = checkChannelConfiguration;
+const checkUserRegistration = async (userId, guildId) => {
+    return await User_1.default.findOne({ userId, guildId });
+};
+exports.checkUserRegistration = checkUserRegistration;
+const formatNumberToReadableString = (number) => {
+    const absNumber = Math.abs(number);
+    let formatted;
+    if (absNumber >= 1_000_000_000) {
+        formatted =
+            (absNumber / 1_000_000_000).toFixed(absNumber % 1_000_000_000 === 0 ? 0 : 2) + 'B';
+    }
+    else if (absNumber >= 1_000_000) {
+        formatted =
+            (absNumber / 1_000_000).toFixed(absNumber % 1_000_000 === 0 ? 0 : 2) + 'M';
+    }
+    else if (absNumber >= 1_000) {
+        formatted =
+            (absNumber / 1_000).toFixed(absNumber % 1_000 === 0 ? 0 : 2) + 'k';
+    }
+    else {
+        formatted = absNumber.toString();
+    }
+    return number < 0 ? `-${formatted}` : formatted;
+};
+exports.formatNumberToReadableString = formatNumberToReadableString;
+const parseReadableStringToNumber = (readableString) => {
+    const normalizedString = readableString.toUpperCase();
+    if (!/^[-]?[0-9.]+[BMK]?$/.test(normalizedString)) {
+        return NaN;
+    }
+    if (normalizedString.endsWith('B')) {
+        return parseFloat(normalizedString.slice(0, -1)) * 1_000_000_000;
+    }
+    else if (normalizedString.endsWith('M')) {
+        return parseFloat(normalizedString.slice(0, -1)) * 1_000_000;
+    }
+    else if (normalizedString.endsWith('K')) {
+        return parseFloat(normalizedString.slice(0, -1)) * 1_000;
+    }
+    else {
+        return parseFloat(normalizedString);
+    }
+};
+exports.parseReadableStringToNumber = parseReadableStringToNumber;
+const formatNumberWithSpaces = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
+exports.formatNumberWithSpaces = formatNumberWithSpaces;

@@ -1,0 +1,159 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.options = exports.data = void 0;
+exports.run = run;
+const discord_js_1 = require("discord.js");
+const createEmbed_1 = require("../../../../utils/createEmbed");
+const blackjackUtils_1 = require("../../../../utils/blackjackUtils");
+const BlackjackGame_1 = require("../../../../models/BlackjackGame");
+const casinoHelpers_1 = require("../../../../utils/casinoHelpers");
+const utils_1 = require("../../../../utils/utils");
+exports.data = {
+    name: 'blackjack',
+    description: 'Start a game of blackjack. You can hit, stand, or double down.',
+    options: [
+        {
+            name: 'bet',
+            description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
+            type: discord_js_1.ApplicationCommandOptionType.String,
+            required: true,
+        },
+    ],
+    dm_permission: false,
+};
+exports.options = {
+    deleted: false,
+};
+async function run({ interaction }) {
+    try {
+        const user = await (0, utils_1.checkUserRegistration)(interaction.user.id, interaction.guildId);
+        if (!user) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'You are not registered yet.\nUse the `/register` command to register.'),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'casinoChannelIds', {
+            notSet: 'This server has not been configured for betting commands yet.\nSet it up using `/setup-casino`.',
+            notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
+        });
+        if (!configReply)
+            return;
+        const betAmount = interaction.options.getString('bet', true);
+        const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmount);
+        const readableBetAmount = (0, utils_1.formatNumberToReadableString)(parsedBetAmount);
+        if (isNaN(parsedBetAmount)) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Not a number', 'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        if (parsedBetAmount <= 0) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Non-positive number', 'The number you provided must be greater than 0.\nPlease enter a positive value.'),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        if (configReply.casinoSettings.blackjack.maxBet > 0 &&
+            parsedBetAmount > configReply.casinoSettings.blackjack.maxBet) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Above Maximum Bet', `The maximum bet is **$${(0, utils_1.formatNumberToReadableString)(configReply.casinoSettings.blackjack.maxBet)}**.`),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        if (configReply.casinoSettings.blackjack.minBet > 0 &&
+            parsedBetAmount < configReply.casinoSettings.blackjack.minBet) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Below Minimum Bet', `The minimum bet is **$${(0, utils_1.formatNumberToReadableString)(configReply.casinoSettings.blackjack.minBet)}**.`),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        if (user.balance < parsedBetAmount) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createInfoEmbed)('Insufficient Funds', `You don't have enough money to place this bet.\nYour current balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        await interaction.deferReply();
+        user.balance -= parsedBetAmount;
+        await user.save();
+        const shuffledDeck = (0, blackjackUtils_1.shuffleDeck)(blackjackUtils_1.DECK);
+        const playerCards = [
+            (0, casinoHelpers_1.drawNextCard)(shuffledDeck, 0),
+            (0, casinoHelpers_1.drawNextCard)(shuffledDeck, 1),
+        ];
+        const dealerCards = [
+            (0, casinoHelpers_1.drawNextCard)(shuffledDeck, 2),
+            (0, casinoHelpers_1.drawNextCard)(shuffledDeck, 3),
+        ];
+        const playerTotal = (0, blackjackUtils_1.calculateHandValue)(playerCards);
+        const dealerTotal = (0, blackjackUtils_1.calculateHandValue)(dealerCards);
+        const playerHasBlackjack = playerCards.length === 2 && playerTotal === 21;
+        const dealerHasBlackjack = dealerCards.length === 2 && dealerTotal === 21;
+        let resultId;
+        if (playerHasBlackjack || dealerHasBlackjack) {
+            if (playerHasBlackjack && dealerHasBlackjack) {
+                resultId = 'BBJ';
+                user.balance += parsedBetAmount;
+            }
+            else if (playerHasBlackjack) {
+                user.balance += parsedBetAmount * 2.5;
+                resultId = 'PBJ';
+            }
+            else if (dealerHasBlackjack) {
+                resultId = 'DBJ';
+            }
+            await user.save();
+            return interaction.editReply({
+                embeds: [
+                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId),
+                ],
+            });
+        }
+        const message = await interaction.fetchReply();
+        const game = new BlackjackGame_1.default({
+            gameId: message.id,
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            betAmount: parsedBetAmount,
+            deck: shuffledDeck,
+            playerCards,
+            dealerCards,
+        });
+        await game.save();
+        const hitButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.hit`)
+            .setLabel('Hit')
+            .setStyle(discord_js_1.ButtonStyle.Success);
+        const standButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.stand`)
+            .setLabel('Stand')
+            .setStyle(discord_js_1.ButtonStyle.Danger);
+        const doubleButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.double`)
+            .setLabel('Double')
+            .setStyle(discord_js_1.ButtonStyle.Primary);
+        const row = new discord_js_1.ActionRowBuilder().addComponents(hitButton, standButton, doubleButton);
+        interaction.editReply({
+            embeds: [
+                (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, undefined, true),
+            ],
+            components: [row],
+        });
+    }
+    catch (error) {
+        console.error('Error running the command:', error);
+    }
+}

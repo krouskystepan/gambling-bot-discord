@@ -115,11 +115,9 @@ export async function run({ interaction, client }: SlashCommandProps) {
     if (!configReply) return
 
     const member = await interaction.guild?.members.fetch(interaction.user.id)
-
     const hasAdmin = member?.permissions.has('Administrator')
-    const hasManager =
-      configReply.managerRoleId &&
-      member?.roles.cache.has(configReply.managerRoleId)
+    const managerRoleId = configReply.vipSettings.roleId
+    const hasManager = managerRoleId && member?.roles.cache.has(managerRoleId)
 
     if (!hasAdmin && !hasManager) {
       return interaction.reply({
@@ -127,9 +125,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
           createErrorEmbed(
             'Permission Denied',
             `You need to be an **Administrator** or have the ${
-              configReply.managerRoleId
-                ? `<@&${configReply.managerRoleId}>`
-                : '**Manager role**'
+              managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
             } to use this command.`
           ),
         ],
