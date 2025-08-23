@@ -75,6 +75,23 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (!configReply) return
 
+    const existingGame = await BlackjackGame.findOne({
+      guildId: interaction.guild?.id,
+      userId: interaction.user.id,
+    })
+
+    if (existingGame) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Blackjack Already Active',
+            `You already have an active Blackjack game running! 🃏`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
