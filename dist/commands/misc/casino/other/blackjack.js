@@ -41,6 +41,18 @@ async function run({ interaction }) {
         });
         if (!configReply)
             return;
+        const existingGame = await BlackjackGame_1.default.findOne({
+            guildId: interaction.guild?.id,
+            userId: interaction.user.id,
+        });
+        if (existingGame) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createErrorEmbed)('Blackjack Already Active', `You already have an active Blackjack game running! 🃏`),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
         const betAmount = interaction.options.getString('bet', true);
         const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmount);
         const readableBetAmount = (0, utils_1.formatNumberToReadableString)(parsedBetAmount);
