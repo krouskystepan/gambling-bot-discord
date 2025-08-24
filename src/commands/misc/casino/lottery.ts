@@ -26,7 +26,7 @@ export const data: CommandData = {
     {
       name: 'numbers',
       description:
-        'Pick 5 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38, 49).',
+        'Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -171,20 +171,20 @@ export async function run({ interaction }: SlashCommandProps) {
     const userNumbers = numbersInput.split(',').map((n) => parseFloat(n.trim()))
 
     if (
-      userNumbers.length !== 5 ||
+      userNumbers.length !== 4 ||
       userNumbers.some(
         (n) =>
           !Number.isInteger(n) ||
           n < 1 ||
           n > 50 ||
-          new Set(userNumbers).size !== 5
+          new Set(userNumbers).size !== 4
       )
     ) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Invalid Numbers',
-            'Pick 5 unique whole numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38, 49).'
+            'Pick 5 unique whole numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).'
           ),
         ],
         flags: MessageFlags.Ephemeral,

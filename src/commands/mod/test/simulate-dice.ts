@@ -52,6 +52,7 @@ export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
+  devOnly: true,
 }
 
 export async function run({ interaction }: SlashCommandProps) {

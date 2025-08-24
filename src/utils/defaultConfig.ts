@@ -1,8 +1,11 @@
 export const DICE_MAX_SIMULATE_ROLLS = 100_000_000
 export const COINFLIP_MAX_SIMULATE_FLIPS = 200_000_000
 export const SLOT_MAX_SIMULATE_SPINS = 50_000_000
-export const LOTTERY_MAX_SIMULATE_ENTRIES = 500_000
+export const LOTTERY_MAX_SIMULATE_ENTRIES = 999999500_000
 export const GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES = 100_000_000
+
+export const LOTTERY_TOTAL_NUMBERS = 40
+export const LOTTERY_NUM_TO_DRAW = 4
 
 export const readableGameValueNames = [
   { name: 'Maximum Bet Amount', value: 'maxBet' },
@@ -45,11 +48,10 @@ const defaultCasinoSettings = {
   },
   lottery: {
     winMultipliers: {
-      5: 1000,
-      4: 125,
-      3: 25,
-      2: 4,
-      1: 0,
+      4: 100,
+      3: 40,
+      2: 10,
+      1: 1,
       0: 0,
     },
     maxBet: 0,

@@ -44,12 +44,6 @@ export const data: CommandData = {
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
-    {
-      name: 'multipliers',
-      description: 'Displays multipliers.',
-      type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
   ],
   dm_permission: false,
 }
@@ -58,6 +52,7 @@ export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
+  devOnly: true,
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -101,7 +96,6 @@ export async function run({ interaction }: SlashCommandProps) {
     const details = interaction.options.getBoolean('details')
     const winsLosses = interaction.options.getBoolean('wins-losses-count')
     const winLossesSeries = interaction.options.getBoolean('win-losses-series')
-    const multipliers = interaction.options.getBoolean('multipliers')
 
     await interaction.editReply(
       `Simulating **${formatNumberToReadableString(
@@ -113,7 +107,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const startTime = performance.now()
 
-    const userNumbers = [1, 2, 3, 4, 5]
+    const userNumbers = [6, 13, 22, 34]
 
     for (let i = 1; i <= entries; i++) {
       totalBet += bet
@@ -169,11 +163,6 @@ export async function run({ interaction }: SlashCommandProps) {
       )
       .join('\n')
 
-    const multipliersDetails = Array.from(
-      { length: 6 },
-      (_, i) => `${i}: **${settings.lottery.winMultipliers[i]}**x`
-    ).join('\n')
-
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 
     const embed = createBetEmbed(
@@ -189,7 +178,6 @@ export async function run({ interaction }: SlashCommandProps) {
         (winsLosses ? `${winLossesDetails}\n\n` : '') +
         (winLossesSeries ? `${winLossesSeriesDetails}\n\n` : '') +
         (details ? `Win details:\n${winDetails || 'No wins'}\n\n` : '') +
-        (multipliers ? `Multipliers:\n${multipliersDetails}\n\n` : '') +
         `All entries took: **${totalTime}s**`
     )
 

@@ -45,18 +45,6 @@ export const data: CommandData = {
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
-    {
-      name: 'multipliers',
-      description: 'Displays multipliers.',
-      type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
-    {
-      name: 'weights',
-      description: 'Displays symbol weights.',
-      type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
   ],
   dm_permission: false,
 }
@@ -65,6 +53,7 @@ export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
+  devOnly: true,
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -108,8 +97,6 @@ export async function run({ interaction }: SlashCommandProps) {
     const details = interaction.options.getBoolean('details')
     const winsLosses = interaction.options.getBoolean('wins-losses-count')
     const winLossesSeries = interaction.options.getBoolean('win-losses-series')
-    const multipliers = interaction.options.getBoolean('multipliers')
-    const weights = interaction.options.getBoolean('weights')
 
     await interaction.editReply(
       `Simulating **${formatNumberToReadableString(
@@ -171,14 +158,6 @@ export async function run({ interaction }: SlashCommandProps) {
       )
       .join('\n')
 
-    const multipliersDetails = Object.entries(settings.slots.winMultipliers)
-      .map(([symbol, multiplier]) => `${symbol}: **${multiplier}**x`)
-      .join('\n')
-
-    const symbolWeightsDetails = Object.entries(settings.slots.symbolWeights)
-      .map(([symbol, weight]) => `${symbol}: **${weight}**`)
-      .join('\n')
-
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 
     const embed = createBetEmbed(
@@ -192,8 +171,6 @@ export async function run({ interaction }: SlashCommandProps) {
         (winsLosses ? `${winLossesDetails}\n\n` : '') +
         (winLossesSeries ? `${winLossesSeriesDetails}\n\n` : '') +
         (details ? `Win details:\n${winDetails || 'No wins'}\n\n` : '') +
-        (multipliers ? `Multipliers:\n${multipliersDetails}\n\n` : '') +
-        (weights ? `Symbol weights:\n${symbolWeightsDetails}\n\n` : '') +
         `All spins took: **${totalTime}s**`
     )
 

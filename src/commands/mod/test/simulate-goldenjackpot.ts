@@ -45,12 +45,6 @@ export const data: CommandData = {
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
-    {
-      name: 'multipliers',
-      description: 'Displays multipliers.',
-      type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
   ],
   dm_permission: false,
 }
@@ -59,6 +53,7 @@ export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
+  devOnly: true,
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -100,7 +95,6 @@ export async function run({ interaction }: SlashCommandProps) {
     )
     const winsLosses = interaction.options.getBoolean('wins-losses-count')
     const winLossesSeries = interaction.options.getBoolean('win-losses-series')
-    const multipliers = interaction.options.getBoolean('multipliers')
     const details = interaction.options.getBoolean('details')
 
     await interaction.editReply(
@@ -160,10 +154,6 @@ export async function run({ interaction }: SlashCommandProps) {
       `🔥 Longest winning streak: **${biggestWinningStreak}**\n` +
       `💀 Longest losing streak: **${biggestLosingStreak}**`
 
-    const multipliersDetails = `**${formatNumberWithSpaces(
-      settings.goldenJackpot.winMultiplier
-    )}x**`
-
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 
     const embed = createBetEmbed(
@@ -179,7 +169,6 @@ export async function run({ interaction }: SlashCommandProps) {
         (winsLosses ? `${winLossesDetails}\n\n` : '') +
         (winLossesSeries ? `${winLossesSeriesDetails}\n\n` : '') +
         (details ? `Details: ${winDetails}\n\n` : '') +
-        (multipliers ? `Multiplier: ${multipliersDetails}\n\n` : '') +
         `All entries took: **${totalTime}s**`
     )
 

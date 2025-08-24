@@ -4,7 +4,7 @@ import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
-import {
+import defaultCasinoSettings, {
   DICE_MAX_SIMULATE_ROLLS,
   COINFLIP_MAX_SIMULATE_FLIPS,
   SLOT_MAX_SIMULATE_SPINS,
@@ -13,6 +13,7 @@ import {
 } from '../../../utils/defaultConfig'
 import GuildConfiguration from '../../../models/GuildConfiguration'
 import VipRoom from '../../../models/VipRoom'
+import { calculateRTP } from '../../../utils/rtpCalcHelper'
 
 export const data: CommandData = {
   name: 'casino-info',
@@ -33,6 +34,10 @@ export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
+}
+
+const formatRTP = (rtp: number) => {
+  return `- **RTP:** ${(rtp * 100).toFixed(2)}%`
 }
 
 const formatBet = (label: string, value: number) => {
@@ -117,11 +122,7 @@ export async function run({ interaction }: SlashCommandProps) {
         formatBet('Max Bet', settings.dice.maxBet),
         formatBet('Min Bet', settings.dice.minBet),
       ],
-      [
-        `- **Max Simulate Rolls:** ${formatNumberToReadableString(
-          DICE_MAX_SIMULATE_ROLLS
-        )}`,
-      ],
+      [formatRTP(calculateRTP('dice', settings.dice))],
       isAdmin
     ),
     renderSection(
@@ -131,11 +132,7 @@ export async function run({ interaction }: SlashCommandProps) {
         formatBet('Max Bet', settings.coinflip.maxBet),
         formatBet('Min Bet', settings.coinflip.minBet),
       ],
-      [
-        `- **Max Simulate Flips:** ${formatNumberToReadableString(
-          COINFLIP_MAX_SIMULATE_FLIPS
-        )}`,
-      ],
+      [formatRTP(calculateRTP('coinflip', settings.coinflip))],
       isAdmin
     ),
     renderSection(
@@ -148,9 +145,7 @@ export async function run({ interaction }: SlashCommandProps) {
         formatBet('Min Bet', settings.slots.minBet),
       ],
       [
-        `- **Max Simulate Spins:** ${formatNumberToReadableString(
-          SLOT_MAX_SIMULATE_SPINS
-        )}`,
+        formatRTP(calculateRTP('slots', settings.slots)),
         `- **Symbol Weights:** \n${Object.entries(settings.slots.symbolWeights)
           .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
           .join('\n')}`,
@@ -166,11 +161,7 @@ export async function run({ interaction }: SlashCommandProps) {
         formatBet('Max Bet', settings.lottery.maxBet),
         formatBet('Min Bet', settings.lottery.minBet),
       ],
-      [
-        `- **Max Simulate Entries:** ${formatNumberToReadableString(
-          LOTTERY_MAX_SIMULATE_ENTRIES
-        )}`,
-      ],
+      [formatRTP(calculateRTP('lottery', settings.lottery))],
       isAdmin
     ),
     renderSection(
@@ -183,40 +174,54 @@ export async function run({ interaction }: SlashCommandProps) {
         formatBet('Min Bet', settings.goldenJackpot.minBet),
       ],
       [
-        `- **Max Simulate Entries:** ${formatNumberToReadableString(
-          GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES
-        )}`,
+        formatRTP(calculateRTP('goldenJackpot', settings.goldenJackpot)),
         `- **One in Chance:** 1 in ${formatNumberWithSpaces(
           settings.goldenJackpot.oneInChance
         )}`,
       ],
       isAdmin
     ),
-    renderSection('🪨📄✂️ RPS', [
-      `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
-      formatBet('Max Bet', settings.rps.maxBet),
-      formatBet('Min Bet', settings.rps.minBet),
-    ]),
-    renderSection('🃏 Blackjack', [
-      formatBet('Max Bet', settings.blackjack.maxBet),
-      formatBet('Min Bet', settings.blackjack.minBet),
-    ]),
-    renderSection('⚙️ Server Config', [
-      formatAtmRooms('ATM Rooms', config.atmChannelIds),
-      formatRooms('Gambling Rooms', config.casinoChannelIds),
-      formatRooms('Admin Rooms', config.adminChannelIds),
-      '',
-      formatRole('Manager Role', config.managerRoleId),
-      '',
-      formatRooms('VIP Rooms', vipChannelIds),
-      `- **VIP Price Per Day:** ${
-        config.vipSettings.pricePerDay === 0
-          ? 'Not Set'
-          : `$${formatNumberToReadableString(config.vipSettings.pricePerDay)}`
-      }`,
-      formatRole('VIP Role', config.vipSettings.roleId),
-      formatCategory('VIP Category', config.vipSettings.categoryId),
-    ]),
+    renderSection(
+      '🪨📄✂️ RPS',
+      [
+        `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
+        formatBet('Max Bet', settings.rps.maxBet),
+        formatBet('Min Bet', settings.rps.minBet),
+      ],
+      [formatRTP(calculateRTP('rps', settings.rps))],
+      isAdmin
+    ),
+    renderSection(
+      '🃏 Blackjack',
+      [
+        formatBet('Max Bet', settings.blackjack.maxBet),
+        formatBet('Min Bet', settings.blackjack.minBet),
+      ],
+      [formatRTP(calculateRTP('blackjack', settings.blackjack))],
+      isAdmin
+    ),
+    renderSection(
+      '⚙️ Server Config',
+      [
+        formatRole('VIP Role', config.vipSettings.roleId),
+        `- **VIP Price Per Day:** ${
+          config.vipSettings.pricePerDay === 0
+            ? 'Not Set'
+            : `$${formatNumberToReadableString(config.vipSettings.pricePerDay)}`
+        }`,
+        '',
+        formatRole('Manager Role', config.managerRoleId),
+      ],
+      [
+        formatAtmRooms('ATM Rooms', config.atmChannelIds),
+        formatRooms('Gambling Rooms', config.casinoChannelIds),
+        formatRooms('Admin Rooms', config.adminChannelIds),
+        formatRooms('VIP Active Rooms', vipChannelIds),
+        '',
+        formatCategory('VIP Category', config.vipSettings.categoryId),
+      ],
+      isAdmin
+    ),
   ]
 
   return interaction.reply({
