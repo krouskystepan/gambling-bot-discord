@@ -209,6 +209,13 @@ export async function run({ interaction }: SlashCommandProps) {
             ? 'Not Set'
             : `$${formatNumberToReadableString(config.vipSettings.pricePerDay)}`
         }`,
+        `- **VIP Create Price:** ${
+          config.vipSettings.pricePerCreate === 0
+            ? 'Not Set'
+            : `$${formatNumberToReadableString(
+                config.vipSettings.pricePerCreate
+              )}`
+        }`,
         '',
         formatRole('Manager Role', config.managerRoleId),
       ],

@@ -1,33 +1,40 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.spinSlot = spinSlot;
-exports.rollDice = rollDice;
-exports.flipCoin = flipCoin;
-exports.drawLottery = drawLottery;
-exports.drawGoldenJackpot = drawGoldenJackpot;
-exports.drawNextCard = drawNextCard;
-function spinSlot(slotConfig) {
+exports.drawNextCard = exports.drawGoldenJackpot = exports.drawLottery = exports.flipCoin = exports.rollDice = exports.spinSlot = void 0;
+const defaultConfig_1 = require("./defaultConfig");
+const spinSlot = (slotConfig) => {
     const weightedSymbols = Object.entries(slotConfig.symbolWeights).flatMap(([symbol, weight]) => Array(weight).fill(symbol));
     const spin = () => weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)];
     return spin() + spin() + spin();
-}
-function rollDice() {
+};
+exports.spinSlot = spinSlot;
+const rollDice = () => {
     return Math.floor(Math.random() * 6) + 1;
-}
-function flipCoin() {
+};
+exports.rollDice = rollDice;
+const flipCoin = () => {
     return Math.random() < 0.5 ? 'heads' : 'tails';
-}
-function drawLottery() {
-    return Array.from({ length: 50 }, (_, i) => i + 1)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 5);
-}
-function drawGoldenJackpot(goldenJackpotConfig) {
+};
+exports.flipCoin = flipCoin;
+const drawLottery = () => {
+    const pool = Array.from({ length: defaultConfig_1.LOTTERY_TOTAL_NUMBERS }, (_, i) => i + 1);
+    const result = [];
+    for (let i = 0; i < defaultConfig_1.LOTTERY_NUM_TO_DRAW; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        result.push(pool[idx]);
+        pool.splice(idx, 1);
+    }
+    return result;
+};
+exports.drawLottery = drawLottery;
+const drawGoldenJackpot = (goldenJackpotConfig) => {
     return Math.floor(Math.random() * goldenJackpotConfig.oneInChance) + 1;
-}
-function drawNextCard(deck, cardIndex) {
+};
+exports.drawGoldenJackpot = drawGoldenJackpot;
+const drawNextCard = (deck, cardIndex) => {
     if (cardIndex >= deck.length) {
         cardIndex = 0;
     }
     return deck[cardIndex];
-}
+};
+exports.drawNextCard = drawNextCard;

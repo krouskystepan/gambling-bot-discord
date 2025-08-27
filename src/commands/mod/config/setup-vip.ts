@@ -59,26 +59,26 @@ export const data: CommandData = {
       type: ApplicationCommandOptionType.Subcommand,
     },
     {
-      name: 'remove-channel',
-      description: 'Remove a specific VIP channel by ID.',
-      type: ApplicationCommandOptionType.Subcommand,
-      options: [
-        {
-          name: 'channel-id',
-          description: 'The ID of the VIP channel to remove.',
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-    },
-    {
-      name: 'set-price',
+      name: 'set-price-per-day',
       description: 'Set the price per day for VIP access.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'price',
           description: 'Price per day in your currency.',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+        },
+      ],
+    },
+    {
+      name: 'set-create-price',
+      description: 'Set the one-time price for creating a VIP room.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'price',
+          description: 'One-time price in your currency.',
           type: ApplicationCommandOptionType.String,
           required: true,
         },
@@ -192,46 +192,7 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (subcommand === 'remove-channel') {
-      const channelId = options.getString('channel-id', true)
-
-      const vipRoom = await VipRoom.findOne({
-        guildId: interaction.guildId,
-        channelId,
-      })
-
-      if (!vipRoom) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'VIP Setup - Remove Channel',
-              `Channel with ID \`${channelId}\` is not registered as a VIP room.`
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      await VipRoom.deleteOne({ _id: vipRoom._id })
-
-      const channel = await interaction
-        .guild!.channels.fetch(channelId)
-        .catch(() => null)
-      if (channel) {
-        await channel.delete().catch(() => null)
-      }
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'VIP Setup - Remove Channel',
-            `VIP channel with ID \`${channelId}\` has been removed.`
-          ),
-        ],
-      })
-    }
-
-    if (subcommand === 'set-price') {
+    if (subcommand === 'set-price-per-day') {
       const price = options.getString('price', true)
       const parsedBetAmount = parseReadableStringToNumber(price)
 
@@ -265,8 +226,49 @@ export async function run({ interaction }: SlashCommandProps) {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Set Price',
+            'VIP Setup - Set Price Per Day',
             `Price per day for VIP access has been set to **${price}**.`
+          ),
+        ],
+      })
+    }
+
+    if (subcommand === 'set-create-price') {
+      const price = options.getString('price', true)
+      const parsedBetAmount = parseReadableStringToNumber(price)
+
+      if (isNaN(parsedBetAmount)) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Not a number',
+              'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      if (parsedBetAmount < 0) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Negative number',
+              'The number you provided cannot be negative.\nPlease enter 0 or a positive value.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      guildConfiguration.vipSettings.pricePerCreate = parsedBetAmount
+      await guildConfiguration.save()
+
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'VIP Setup - Set Create Price',
+            `Creation fee for VIP rooms has been set to **${price}**.`
           ),
         ],
       })

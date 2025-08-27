@@ -55,11 +55,10 @@ async function run({ interaction }) {
             guildId: interaction.guildId,
         });
         if (!guildConfiguration?.vipSettings.categoryId ||
-            !guildConfiguration?.vipSettings.roleId ||
             guildConfiguration.vipSettings.pricePerDay === 0) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('VIP Not Configured', 'VIP category, role or price is not set yet. Please contact administrator.'),
+                    (0, createEmbed_1.createErrorEmbed)('VIP Not Configured', 'VIP category or price is not set yet. Please contact administrator.'),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
@@ -78,13 +77,17 @@ async function run({ interaction }) {
         }
         const subcommand = interaction.options.getSubcommand();
         const pricePerDay = guildConfiguration.vipSettings.pricePerDay;
+        const pricePerCreate = guildConfiguration.vipSettings.pricePerCreate;
         if (subcommand === 'info') {
             const maxDays = Math.floor(user.balance / pricePerDay);
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('VIP Info', `Price per day: **$${(0, utils_1.formatNumberToReadableString)(pricePerDay)}**\n` +
+                    (0, createEmbed_1.createInfoEmbed)('VIP Info', (pricePerCreate > 0
+                        ? `Price per create: **$${(0, utils_1.formatNumberToReadableString)(pricePerCreate)}**\n`
+                        : '') +
+                        `Price per day: **$${(0, utils_1.formatNumberToReadableString)(pricePerDay)}**\n\n` +
                         `Your balance: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**\n` +
-                        `You can afford VIP for up to **${maxDays} day(s)**.\n`),
+                        `You can afford VIP for up to **${maxDays} day(s)** (excluding creation fee).`),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
@@ -122,14 +125,20 @@ async function run({ interaction }) {
                 });
             }
             const durationDays = durationSeconds / 86400;
-            const totalPrice = durationDays * pricePerDay;
+            let totalPrice = durationDays * pricePerDay;
+            if (pricePerCreate > 0) {
+                totalPrice += pricePerCreate;
+            }
             const affordableDays = Math.floor(user.balance / pricePerDay);
             if (user.balance < totalPrice) {
                 return interaction.reply({
                     embeds: [
                         (0, createEmbed_1.createInfoEmbed)('Insufficient Funds', `You cannot afford VIP for ${durationDays} day(s).\n` +
                             `Your balance: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**\n` +
-                            `You can afford VIP for up to **${affordableDays} day(s)**.`),
+                            (pricePerCreate > 0
+                                ? `Creation fee: **$${(0, utils_1.formatNumberToReadableString)(pricePerCreate)}**\n`
+                                : '') +
+                            `You can afford VIP for up to **${affordableDays} day(s)** (excluding creation fee).`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
@@ -173,7 +182,10 @@ async function run({ interaction }) {
             return interaction.editReply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('VIP Purchased', `Your VIP room <#${channel.id}> has been created for **${durationDays} day(s)**.\n` +
-                        `You have been charged **$${(0, utils_1.formatNumberToReadableString)(totalPrice)}**.`),
+                        `You have been charged **$${(0, utils_1.formatNumberToReadableString)(totalPrice)}**.` +
+                        (pricePerCreate > 0
+                            ? ` (including a creation fee of **$${(0, utils_1.formatNumberToReadableString)(pricePerCreate)}**)`
+                            : '')),
                 ],
             });
         }

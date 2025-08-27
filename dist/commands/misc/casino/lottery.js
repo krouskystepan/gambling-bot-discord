@@ -18,7 +18,7 @@ exports.data = {
         },
         {
             name: 'numbers',
-            description: 'Pick 5 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38, 49).',
+            description: 'Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).',
             type: discord_js_1.ApplicationCommandOptionType.String,
             required: true,
         },
@@ -111,14 +111,14 @@ async function run({ interaction }) {
         }
         const numbersInput = interaction.options.getString('numbers', true);
         const userNumbers = numbersInput.split(',').map((n) => parseFloat(n.trim()));
-        if (userNumbers.length !== 5 ||
+        if (userNumbers.length !== 4 ||
             userNumbers.some((n) => !Number.isInteger(n) ||
                 n < 1 ||
                 n > 50 ||
-                new Set(userNumbers).size !== 5)) {
+                new Set(userNumbers).size !== 4)) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Invalid Numbers', 'Pick 5 unique whole numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38, 49).'),
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Invalid Numbers', 'Pick 5 unique whole numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).'),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });

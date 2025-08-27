@@ -1,11 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.readableGameValueNames = exports.GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES = exports.LOTTERY_MAX_SIMULATE_ENTRIES = exports.SLOT_MAX_SIMULATE_SPINS = exports.COINFLIP_MAX_SIMULATE_FLIPS = exports.DICE_MAX_SIMULATE_ROLLS = void 0;
+exports.readableGameValueNames = exports.LOTTERY_NUM_TO_DRAW = exports.LOTTERY_TOTAL_NUMBERS = exports.GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES = exports.LOTTERY_MAX_SIMULATE_ENTRIES = exports.SLOT_MAX_SIMULATE_SPINS = exports.COINFLIP_MAX_SIMULATE_FLIPS = exports.DICE_MAX_SIMULATE_ROLLS = void 0;
 exports.DICE_MAX_SIMULATE_ROLLS = 100_000_000;
 exports.COINFLIP_MAX_SIMULATE_FLIPS = 200_000_000;
 exports.SLOT_MAX_SIMULATE_SPINS = 50_000_000;
-exports.LOTTERY_MAX_SIMULATE_ENTRIES = 500_000;
+exports.LOTTERY_MAX_SIMULATE_ENTRIES = 999999500_000;
 exports.GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES = 100_000_000;
+exports.LOTTERY_TOTAL_NUMBERS = 40;
+exports.LOTTERY_NUM_TO_DRAW = 4;
 exports.readableGameValueNames = [
     { name: 'Maximum Bet Amount', value: 'maxBet' },
     { name: 'Minimum Bet Amount', value: 'minBet' },
@@ -46,11 +48,10 @@ const defaultCasinoSettings = {
     },
     lottery: {
         winMultipliers: {
-            5: 1000,
-            4: 125,
-            3: 25,
-            2: 4,
-            1: 0,
+            4: 100,
+            3: 40,
+            2: 10,
+            1: 1,
             0: 0,
         },
         maxBet: 0,

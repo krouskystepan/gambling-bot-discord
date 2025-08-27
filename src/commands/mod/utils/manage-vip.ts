@@ -55,6 +55,25 @@ export const data: CommandData = {
         },
       ],
     },
+    {
+      name: 'extend-room',
+      description: 'Extend a user’s VIP room.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'user',
+          description: 'The user whose VIP room should be extended.',
+          type: ApplicationCommandOptionType.User,
+          required: true,
+        },
+        {
+          name: 'duration',
+          description: 'Extra duration to add (e.g., 2d, 1w)',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+        },
+      ],
+    },
   ],
 }
 
@@ -312,6 +331,105 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'VIP Removed',
             `The VIP of <@${targetedUser.id}> has been removed.\nChannel <#${existingVip.channelId}> is no longer accessible for them.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (subcommand === 'extend-room') {
+      const targetedUser = interaction.options.getUser('user', true)
+      const durationInput = interaction.options.getString('duration', true)
+
+      if (targetedUser.bot) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Bot user',
+              'You cannot extend VIP for bots.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const existingVip = await VipRoom.findOne({
+        userId: targetedUser.id,
+        guildId: interaction.guildId!,
+        expiresAt: { $gt: new Date() },
+      })
+
+      if (!existingVip) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'VIP Not Active',
+              `User <@${targetedUser.id}> does not currently have an active VIP room.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      if (!/^(\d+[dw])+$/i.test(durationInput)) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Invalid Format',
+              'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const durationSeconds = parseTimeToSeconds(durationInput)
+      if (durationSeconds < 86400) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Duration Too Short',
+              'The duration must be at least 1 day (1d).'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      existingVip.expiresAt = new Date(
+        existingVip.expiresAt.getTime() + durationSeconds * 1000
+      )
+      await existingVip.save()
+
+      const vipChannel = await interaction
+        .guild!.channels.fetch(existingVip.channelId)
+        .catch(() => null)
+
+      if (vipChannel?.isTextBased()) {
+        const extendMsg = await vipChannel.send({
+          content: `<@${targetedUser.id}>`,
+          embeds: [
+            createSuccessEmbed(
+              'VIP Channel Extended',
+              `Your VIP now expires on <t:${Math.floor(
+                existingVip.expiresAt.getTime() / 1000
+              )}:f>.`
+            ),
+          ],
+        })
+        await extendMsg.pin()
+      }
+
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'VIP Extended',
+            `The VIP of <@${targetedUser.id}> has been extended by **${
+              durationSeconds / 86400
+            } day(s)**.\n` +
+              `New expiry: <t:${Math.floor(
+                existingVip.expiresAt.getTime() / 1000
+              )}:f>`
           ),
         ],
         flags: MessageFlags.Ephemeral,

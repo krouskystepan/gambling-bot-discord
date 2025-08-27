@@ -69,14 +69,13 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (
       !guildConfiguration?.vipSettings.categoryId ||
-      !guildConfiguration?.vipSettings.roleId ||
       guildConfiguration.vipSettings.pricePerDay === 0
     ) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
             'VIP Not Configured',
-            'VIP category, role or price is not set yet. Please contact administrator.'
+            'VIP category or price is not set yet. Please contact administrator.'
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -101,6 +100,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const subcommand = interaction.options.getSubcommand()
     const pricePerDay = guildConfiguration.vipSettings.pricePerDay
+    const pricePerCreate = guildConfiguration.vipSettings.pricePerCreate
 
     if (subcommand === 'info') {
       const maxDays = Math.floor(user.balance / pricePerDay)
@@ -108,13 +108,18 @@ export async function run({ interaction }: SlashCommandProps) {
         embeds: [
           createInfoEmbed(
             'VIP Info',
-            `Price per day: **$${formatNumberToReadableString(
-              pricePerDay
-            )}**\n` +
+            (pricePerCreate > 0
+              ? `Price per create: **$${formatNumberToReadableString(
+                  pricePerCreate
+                )}**\n`
+              : '') +
+              `Price per day: **$${formatNumberToReadableString(
+                pricePerDay
+              )}**\n\n` +
               `Your balance: **$${formatNumberToReadableString(
                 user.balance
               )}**\n` +
-              `You can afford VIP for up to **${maxDays} day(s)**.\n`
+              `You can afford VIP for up to **${maxDays} day(s)** (excluding creation fee).`
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -168,7 +173,12 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       const durationDays = durationSeconds / 86400
-      const totalPrice = durationDays * pricePerDay
+      let totalPrice = durationDays * pricePerDay
+
+      if (pricePerCreate > 0) {
+        totalPrice += pricePerCreate
+      }
+
       const affordableDays = Math.floor(user.balance / pricePerDay)
 
       if (user.balance < totalPrice) {
@@ -180,7 +190,12 @@ export async function run({ interaction }: SlashCommandProps) {
                 `Your balance: **$${formatNumberToReadableString(
                   user.balance
                 )}**\n` +
-                `You can afford VIP for up to **${affordableDays} day(s)**.`
+                (pricePerCreate > 0
+                  ? `Creation fee: **$${formatNumberToReadableString(
+                      pricePerCreate
+                    )}**\n`
+                  : '') +
+                `You can afford VIP for up to **${affordableDays} day(s)** (excluding creation fee).`
             ),
           ],
           flags: MessageFlags.Ephemeral,
@@ -245,7 +260,12 @@ export async function run({ interaction }: SlashCommandProps) {
             `Your VIP room <#${channel.id}> has been created for **${durationDays} day(s)**.\n` +
               `You have been charged **$${formatNumberToReadableString(
                 totalPrice
-              )}**.`
+              )}**.` +
+              (pricePerCreate > 0
+                ? ` (including a creation fee of **$${formatNumberToReadableString(
+                    pricePerCreate
+                  )}**)`
+                : '')
           ),
         ],
       })

@@ -42,18 +42,6 @@ exports.data = {
             type: discord_js_1.ApplicationCommandOptionType.Boolean,
             required: false,
         },
-        {
-            name: 'multipliers',
-            description: 'Displays multipliers.',
-            type: discord_js_1.ApplicationCommandOptionType.Boolean,
-            required: false,
-        },
-        {
-            name: 'weights',
-            description: 'Displays symbol weights.',
-            type: discord_js_1.ApplicationCommandOptionType.Boolean,
-            required: false,
-        },
     ],
     dm_permission: false,
 };
@@ -61,6 +49,7 @@ exports.options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
     deleted: false,
+    devOnly: true,
 };
 async function run({ interaction }) {
     try {
@@ -90,8 +79,6 @@ async function run({ interaction }) {
         const details = interaction.options.getBoolean('details');
         const winsLosses = interaction.options.getBoolean('wins-losses-count');
         const winLossesSeries = interaction.options.getBoolean('win-losses-series');
-        const multipliers = interaction.options.getBoolean('multipliers');
-        const weights = interaction.options.getBoolean('weights');
         await interaction.editReply(`Simulating **${(0, utils_1.formatNumberToReadableString)(spins)}** spins with a bet of **$${(0, utils_1.formatNumberToReadableString)(bet)}**. Please wait...`);
         const startTime = performance.now();
         for (let i = 1; i <= spins; i++) {
@@ -131,12 +118,6 @@ async function run({ interaction }) {
             .sort((a, b) => b[1] - a[1])
             .map(([symbol, count]) => `${symbol}: **${(0, utils_1.formatNumberWithSpaces)(count)}**x`)
             .join('\n');
-        const multipliersDetails = Object.entries(settings.slots.winMultipliers)
-            .map(([symbol, multiplier]) => `${symbol}: **${multiplier}**x`)
-            .join('\n');
-        const symbolWeightsDetails = Object.entries(settings.slots.symbolWeights)
-            .map(([symbol, weight]) => `${symbol}: **${weight}**`)
-            .join('\n');
         const totalTime = ((endTime - startTime) / 1000).toFixed(2);
         const embed = (0, createEmbed_1.createBetEmbed)(`🎰 Slot Simulation - ${(0, utils_1.formatNumberToReadableString)(spins)} spins`, profitOrLoss >= 0 ? 'Green' : 'Red', `Total bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n` +
             `Total: **$${(0, utils_1.formatNumberToReadableString)(totalWinnings)}**\n` +
@@ -146,8 +127,6 @@ async function run({ interaction }) {
             (winsLosses ? `${winLossesDetails}\n\n` : '') +
             (winLossesSeries ? `${winLossesSeriesDetails}\n\n` : '') +
             (details ? `Win details:\n${winDetails || 'No wins'}\n\n` : '') +
-            (multipliers ? `Multipliers:\n${multipliersDetails}\n\n` : '') +
-            (weights ? `Symbol weights:\n${symbolWeightsDetails}\n\n` : '') +
             `All spins took: **${totalTime}s**`);
         await interaction.editReply({
             content: `Simulation completed.`,

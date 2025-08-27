@@ -45,6 +45,25 @@ exports.data = {
                 },
             ],
         },
+        {
+            name: 'extend-room',
+            description: 'Extend a user’s VIP room.',
+            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: 'user',
+                    description: 'The user whose VIP room should be extended.',
+                    type: discord_js_1.ApplicationCommandOptionType.User,
+                    required: true,
+                },
+                {
+                    name: 'duration',
+                    description: 'Extra duration to add (e.g., 2d, 1w)',
+                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    required: true,
+                },
+            ],
+        },
     ],
 };
 exports.options = {
@@ -222,6 +241,69 @@ async function run({ interaction }) {
             return interaction.reply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('VIP Removed', `The VIP of <@${targetedUser.id}> has been removed.\nChannel <#${existingVip.channelId}> is no longer accessible for them.`),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        if (subcommand === 'extend-room') {
+            const targetedUser = interaction.options.getUser('user', true);
+            const durationInput = interaction.options.getString('duration', true);
+            if (targetedUser.bot) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Bot user', 'You cannot extend VIP for bots.'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            const existingVip = await VipRoom_1.default.findOne({
+                userId: targetedUser.id,
+                guildId: interaction.guildId,
+                expiresAt: { $gt: new Date() },
+            });
+            if (!existingVip) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('VIP Not Active', `User <@${targetedUser.id}> does not currently have an active VIP room.`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            if (!/^(\d+[dw])+$/i.test(durationInput)) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Invalid Format', 'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            const durationSeconds = (0, utils_1.parseTimeToSeconds)(durationInput);
+            if (durationSeconds < 86400) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Duration Too Short', 'The duration must be at least 1 day (1d).'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            existingVip.expiresAt = new Date(existingVip.expiresAt.getTime() + durationSeconds * 1000);
+            await existingVip.save();
+            const vipChannel = await interaction
+                .guild.channels.fetch(existingVip.channelId)
+                .catch(() => null);
+            if (vipChannel?.isTextBased()) {
+                const extendMsg = await vipChannel.send({
+                    content: `<@${targetedUser.id}>`,
+                    embeds: [
+                        (0, createEmbed_1.createSuccessEmbed)('VIP Channel Extended', `Your VIP now expires on <t:${Math.floor(existingVip.expiresAt.getTime() / 1000)}:f>.`),
+                    ],
+                });
+                await extendMsg.pin();
+            }
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createSuccessEmbed)('VIP Extended', `The VIP of <@${targetedUser.id}> has been extended by **${durationSeconds / 86400} day(s)**.\n` +
+                        `New expiry: <t:${Math.floor(existingVip.expiresAt.getTime() / 1000)}:f>`),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });

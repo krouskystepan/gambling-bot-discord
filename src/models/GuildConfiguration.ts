@@ -16,6 +16,7 @@ export type GuildConfiguration = Document & {
     roleId: string
     categoryId: string
     pricePerDay: number
+    pricePerCreate: number
   }
 }
 
@@ -66,6 +67,10 @@ const guildConfigurationSchema = new Schema<GuildConfiguration>({
       default: '',
     },
     pricePerDay: {
+      type: Number,
+      default: 0,
+    },
+    pricePerCreate: {
       type: Number,
       default: 0,
     },

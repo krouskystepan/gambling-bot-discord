@@ -4,7 +4,6 @@ exports.options = exports.data = void 0;
 exports.run = run;
 const discord_js_1 = require("discord.js");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const VipRoom_1 = require("../../../models/VipRoom");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
 exports.data = {
@@ -49,26 +48,26 @@ exports.data = {
             type: discord_js_1.ApplicationCommandOptionType.Subcommand,
         },
         {
-            name: 'remove-channel',
-            description: 'Remove a specific VIP channel by ID.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
-            options: [
-                {
-                    name: 'channel-id',
-                    description: 'The ID of the VIP channel to remove.',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
-                    required: true,
-                },
-            ],
-        },
-        {
-            name: 'set-price',
+            name: 'set-price-per-day',
             description: 'Set the price per day for VIP access.',
             type: discord_js_1.ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'price',
                     description: 'Price per day in your currency.',
+                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    required: true,
+                },
+            ],
+        },
+        {
+            name: 'set-create-price',
+            description: 'Set the one-time price for creating a VIP room.',
+            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: 'price',
+                    description: 'One-time price in your currency.',
                     type: discord_js_1.ApplicationCommandOptionType.String,
                     required: true,
                 },
@@ -151,34 +150,7 @@ async function run({ interaction }) {
                 ],
             });
         }
-        if (subcommand === 'remove-channel') {
-            const channelId = options.getString('channel-id', true);
-            const vipRoom = await VipRoom_1.default.findOne({
-                guildId: interaction.guildId,
-                channelId,
-            });
-            if (!vipRoom) {
-                return interaction.reply({
-                    embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('VIP Setup - Remove Channel', `Channel with ID \`${channelId}\` is not registered as a VIP room.`),
-                    ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-            }
-            await VipRoom_1.default.deleteOne({ _id: vipRoom._id });
-            const channel = await interaction
-                .guild.channels.fetch(channelId)
-                .catch(() => null);
-            if (channel) {
-                await channel.delete().catch(() => null);
-            }
-            return interaction.reply({
-                embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('VIP Setup - Remove Channel', `VIP channel with ID \`${channelId}\` has been removed.`),
-                ],
-            });
-        }
-        if (subcommand === 'set-price') {
+        if (subcommand === 'set-price-per-day') {
             const price = options.getString('price', true);
             const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(price);
             if (isNaN(parsedBetAmount)) {
@@ -201,7 +173,34 @@ async function run({ interaction }) {
             await guildConfiguration.save();
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('VIP Setup - Set Price', `Price per day for VIP access has been set to **${price}**.`),
+                    (0, createEmbed_1.createSuccessEmbed)('VIP Setup - Set Price Per Day', `Price per day for VIP access has been set to **${price}**.`),
+                ],
+            });
+        }
+        if (subcommand === 'set-create-price') {
+            const price = options.getString('price', true);
+            const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(price);
+            if (isNaN(parsedBetAmount)) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Not a number', 'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            if (parsedBetAmount < 0) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Negative number', 'The number you provided cannot be negative.\nPlease enter 0 or a positive value.'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            guildConfiguration.vipSettings.pricePerCreate = parsedBetAmount;
+            await guildConfiguration.save();
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createSuccessEmbed)('VIP Setup - Set Create Price', `Creation fee for VIP rooms has been set to **${price}**.`),
                 ],
             });
         }

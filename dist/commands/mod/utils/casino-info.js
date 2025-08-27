@@ -4,9 +4,9 @@ exports.options = exports.data = void 0;
 exports.run = run;
 const discord_js_1 = require("discord.js");
 const utils_1 = require("../../../utils/utils");
-const defaultConfig_1 = require("../../../utils/defaultConfig");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const VipRoom_1 = require("../../../models/VipRoom");
+const rtpCalcHelper_1 = require("../../../utils/rtpCalcHelper");
 exports.data = {
     name: 'casino-info',
     description: 'Get information about the casino.',
@@ -24,6 +24,9 @@ exports.options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
     deleted: false,
+};
+const formatRTP = (rtp) => {
+    return `- **RTP:** ${(rtp * 100).toFixed(2)}%`;
 };
 const formatBet = (label, value) => {
     return `- **${label}:** ${value === 0 ? 'No Limit' : (0, utils_1.formatNumberToReadableString)(value)}`;
@@ -73,16 +76,12 @@ async function run({ interaction }) {
             `- **Multiplier:** ${settings.dice.winMultiplier}x`,
             formatBet('Max Bet', settings.dice.maxBet),
             formatBet('Min Bet', settings.dice.minBet),
-        ], [
-            `- **Max Simulate Rolls:** ${(0, utils_1.formatNumberToReadableString)(defaultConfig_1.DICE_MAX_SIMULATE_ROLLS)}`,
-        ], isAdmin),
+        ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('dice', settings.dice))], isAdmin),
         renderSection('🪙 Coin Flip', [
             `- **Multiplier:** ${settings.coinflip.winMultiplier}x`,
             formatBet('Max Bet', settings.coinflip.maxBet),
             formatBet('Min Bet', settings.coinflip.minBet),
-        ], [
-            `- **Max Simulate Flips:** ${(0, utils_1.formatNumberToReadableString)(defaultConfig_1.COINFLIP_MAX_SIMULATE_FLIPS)}`,
-        ], isAdmin),
+        ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('coinflip', settings.coinflip))], isAdmin),
         renderSection('🎰 Slots', [
             `- **Multipliers:** \n${Object.entries(settings.slots.winMultipliers)
                 .map(([symbol, multiplier]) => `  - ${symbol}: ${multiplier}x`)
@@ -90,7 +89,7 @@ async function run({ interaction }) {
             formatBet('Max Bet', settings.slots.maxBet),
             formatBet('Min Bet', settings.slots.minBet),
         ], [
-            `- **Max Simulate Spins:** ${(0, utils_1.formatNumberToReadableString)(defaultConfig_1.SLOT_MAX_SIMULATE_SPINS)}`,
+            formatRTP((0, rtpCalcHelper_1.calculateRTP)('slots', settings.slots)),
             `- **Symbol Weights:** \n${Object.entries(settings.slots.symbolWeights)
                 .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
                 .join('\n')}`,
@@ -101,40 +100,42 @@ async function run({ interaction }) {
                 .join('\n')}`,
             formatBet('Max Bet', settings.lottery.maxBet),
             formatBet('Min Bet', settings.lottery.minBet),
-        ], [
-            `- **Max Simulate Entries:** ${(0, utils_1.formatNumberToReadableString)(defaultConfig_1.LOTTERY_MAX_SIMULATE_ENTRIES)}`,
-        ], isAdmin),
+        ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('lottery', settings.lottery))], isAdmin),
         renderSection('🤑 Golden Jackpot', [
             `- **Multiplier:** ${(0, utils_1.formatNumberWithSpaces)(settings.goldenJackpot.winMultiplier)}x`,
             formatBet('Max Bet', settings.goldenJackpot.maxBet),
             formatBet('Min Bet', settings.goldenJackpot.minBet),
         ], [
-            `- **Max Simulate Entries:** ${(0, utils_1.formatNumberToReadableString)(defaultConfig_1.GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES)}`,
+            formatRTP((0, rtpCalcHelper_1.calculateRTP)('goldenJackpot', settings.goldenJackpot)),
             `- **One in Chance:** 1 in ${(0, utils_1.formatNumberWithSpaces)(settings.goldenJackpot.oneInChance)}`,
         ], isAdmin),
         renderSection('🪨📄✂️ RPS', [
             `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
             formatBet('Max Bet', settings.rps.maxBet),
             formatBet('Min Bet', settings.rps.minBet),
-        ]),
+        ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('rps', settings.rps))], isAdmin),
         renderSection('🃏 Blackjack', [
             formatBet('Max Bet', settings.blackjack.maxBet),
             formatBet('Min Bet', settings.blackjack.minBet),
-        ]),
+        ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('blackjack', settings.blackjack))], isAdmin),
         renderSection('⚙️ Server Config', [
-            formatAtmRooms('ATM Rooms', config.atmChannelIds),
-            formatRooms('Gambling Rooms', config.casinoChannelIds),
-            formatRooms('Admin Rooms', config.adminChannelIds),
-            '',
-            formatRole('Manager Role', config.managerRoleId),
-            '',
-            formatRooms('VIP Rooms', vipChannelIds),
+            formatRole('VIP Role', config.vipSettings.roleId),
             `- **VIP Price Per Day:** ${config.vipSettings.pricePerDay === 0
                 ? 'Not Set'
                 : `$${(0, utils_1.formatNumberToReadableString)(config.vipSettings.pricePerDay)}`}`,
-            formatRole('VIP Role', config.vipSettings.roleId),
+            `- **VIP Create Price:** ${config.vipSettings.pricePerCreate === 0
+                ? 'Not Set'
+                : `$${(0, utils_1.formatNumberToReadableString)(config.vipSettings.pricePerCreate)}`}`,
+            '',
+            formatRole('Manager Role', config.managerRoleId),
+        ], [
+            formatAtmRooms('ATM Rooms', config.atmChannelIds),
+            formatRooms('Gambling Rooms', config.casinoChannelIds),
+            formatRooms('Admin Rooms', config.adminChannelIds),
+            formatRooms('VIP Active Rooms', vipChannelIds),
+            '',
             formatCategory('VIP Category', config.vipSettings.categoryId),
-        ]),
+        ], isAdmin),
     ];
     return interaction.reply({
         content: `# ${isAdmin ? 'Admin' : ''} Casino Information\n${games.join('\n\n')}`,

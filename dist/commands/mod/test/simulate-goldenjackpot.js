@@ -42,12 +42,6 @@ exports.data = {
             type: discord_js_1.ApplicationCommandOptionType.Boolean,
             required: false,
         },
-        {
-            name: 'multipliers',
-            description: 'Displays multipliers.',
-            type: discord_js_1.ApplicationCommandOptionType.Boolean,
-            required: false,
-        },
     ],
     dm_permission: false,
 };
@@ -55,6 +49,7 @@ exports.options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
     deleted: false,
+    devOnly: true,
 };
 async function run({ interaction }) {
     try {
@@ -82,7 +77,6 @@ async function run({ interaction }) {
         const bet = (0, utils_1.parseReadableStringToNumber)(interaction.options.getString('bet', true));
         const winsLosses = interaction.options.getBoolean('wins-losses-count');
         const winLossesSeries = interaction.options.getBoolean('win-losses-series');
-        const multipliers = interaction.options.getBoolean('multipliers');
         const details = interaction.options.getBoolean('details');
         await interaction.editReply(`Simulating **${(0, utils_1.formatNumberToReadableString)(entries)}** entries with a bet of **$${(0, utils_1.formatNumberToReadableString)(bet)}**. Please wait...`);
         const startTime = performance.now();
@@ -119,7 +113,6 @@ async function run({ interaction }) {
             `❌ Losses: **${(0, utils_1.formatNumberWithSpaces)(losses)}**`;
         const winLossesSeriesDetails = `🔥 Longest winning streak: **${biggestWinningStreak}**\n` +
             `💀 Longest losing streak: **${biggestLosingStreak}**`;
-        const multipliersDetails = `**${(0, utils_1.formatNumberWithSpaces)(settings.goldenJackpot.winMultiplier)}x**`;
         const totalTime = ((endTime - startTime) / 1000).toFixed(2);
         const embed = (0, createEmbed_1.createBetEmbed)(`🤑 GoldenJackpot Simulation - ${(0, utils_1.formatNumberToReadableString)(entries)} entries`, profitOrLoss >= 0 ? 'Green' : 'Red', `Total bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n` +
             `Total: **$${(0, utils_1.formatNumberToReadableString)(totalWinnings)}**\n` +
@@ -129,7 +122,6 @@ async function run({ interaction }) {
             (winsLosses ? `${winLossesDetails}\n\n` : '') +
             (winLossesSeries ? `${winLossesSeriesDetails}\n\n` : '') +
             (details ? `Details: ${winDetails}\n\n` : '') +
-            (multipliers ? `Multiplier: ${multipliersDetails}\n\n` : '') +
             `All entries took: **${totalTime}s**`);
         await interaction.editReply({
             content: `Simulation completed.`,
