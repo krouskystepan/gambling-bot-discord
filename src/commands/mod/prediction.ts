@@ -170,7 +170,7 @@ export async function run({ interaction }: SlashCommandProps) {
             .join('\n')
         )
         .setFooter({ text: `ID: ${messageReply.id}` })
-        .setColor(Colors.Green)
+        .setColor(Colors.Yellow)
         .setTimestamp()
 
       const row = new ActionRowBuilder<ButtonBuilder>()
@@ -434,7 +434,7 @@ export async function run({ interaction }: SlashCommandProps) {
           const embed = message.embeds[0]?.toJSON() || {}
           const editedEmbed = {
             ...embed,
-            color: Colors.DarkGreen,
+            color: Colors.Green,
             title: embed.title,
           }
           await message.edit({
@@ -492,7 +492,7 @@ export async function run({ interaction }: SlashCommandProps) {
           const embed = message.embeds[0]?.toJSON() || {}
           const editedEmbed = {
             ...embed,
-            color: 0x9b59b6,
+            color: Colors.Red,
             title: `${embed.title}`,
           }
           await message.edit({

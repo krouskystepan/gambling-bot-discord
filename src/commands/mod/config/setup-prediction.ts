@@ -71,14 +71,25 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'add') {
       const channel = interaction.options.getChannel('channel', true)
 
-      guildConfiguration.predictionChannelIds.push(channel.id)
+      if (guildConfiguration.predictionChannelIds.includes(channel.id)) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Prediction Channel Setup - Add',
+              `Channel ${channel} is already configured for using predictions.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
 
+      guildConfiguration.predictionChannelIds.push(channel.id)
       await guildConfiguration.save()
 
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Admin Channel Setup - Add',
+            'Prediction Channel Setup - Add',
             `Channel ${channel} has been successfully set for using predictions.`
           ),
         ],

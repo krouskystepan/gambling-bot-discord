@@ -6,7 +6,10 @@ import {
   MessageFlags,
 } from 'discord.js'
 import GuildConfiguration from '../../../models/GuildConfiguration'
-import { createSuccessEmbed } from '../../../utils/createEmbed'
+import {
+  createErrorEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-casino',
@@ -69,8 +72,19 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'add') {
       const channel = interaction.options.getChannel('channel', true)
 
-      guildConfiguration.casinoChannelIds.push(channel.id)
+      if (guildConfiguration.casinoChannelIds.includes(channel.id)) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Casino Channel Setup - Add',
+              `The channel ${channel} is already configured for casino betting commands.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
 
+      guildConfiguration.casinoChannelIds.push(channel.id)
       await guildConfiguration.save()
 
       return interaction.reply({
@@ -89,7 +103,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (!guildConfiguration.casinoChannelIds.includes(channelId)) {
         return interaction.reply({
           embeds: [
-            createSuccessEmbed(
+            createErrorEmbed(
               'Casino Channel Setup - Remove',
               `The channel with ID ${channelId} is not set up for casino betting commands.`
             ),

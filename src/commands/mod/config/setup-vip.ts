@@ -112,15 +112,28 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (subcommand === 'add-category') {
       const category = options.getChannel('category')
-      guildConfiguration.vipSettings.categoryId = category!.id
+      if (!category) return
+
+      if (guildConfiguration.vipSettings.categoryId === category.id) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'VIP Setup - Add Category',
+              `Category <#${category.id}> is already set for VIP rooms.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      guildConfiguration.vipSettings.categoryId = category.id
       await guildConfiguration.save()
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
             'VIP Setup - Add Category',
-            `Category <#${
-              category!.id
-            }> has been successfully set for VIP rooms.`
+            `Category <#${category.id}> has been successfully set for VIP rooms.`
           ),
         ],
       })
@@ -154,13 +167,28 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (subcommand === 'add-role') {
       const role = options.getRole('role')
-      guildConfiguration.vipSettings.roleId = role!.id
+      if (!role) return
+
+      if (guildConfiguration.vipSettings.roleId === role.id) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'VIP Setup - Add Role',
+              `Role <@&${role.id}> is already set as VIP role.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      guildConfiguration.vipSettings.roleId = role.id
       await guildConfiguration.save()
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
             'VIP Setup - Add Role',
-            `Role <@&${role!.id}> has been successfully set as VIP role.`
+            `Role <@&${role.id}> has been successfully set as VIP role.`
           ),
         ],
       })

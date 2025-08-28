@@ -68,6 +68,18 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'set-role') {
       const role = options.getRole('role', true)
 
+      if (guildConfiguration.managerRoleId === role.id) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Manager Role Setup - Set',
+              `The manager role is already set to ${role}.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
       guildConfiguration.managerRoleId = role.id
       await guildConfiguration.save()
 

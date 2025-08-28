@@ -72,8 +72,19 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'add') {
       const channel = interaction.options.getChannel('channel', true)
 
-      guildConfiguration.adminChannelIds.push(channel.id)
+      if (guildConfiguration.adminChannelIds.includes(channel.id)) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Admin Channel Setup - Add',
+              `Channel ${channel} is already configured for admin commands.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
 
+      guildConfiguration.adminChannelIds.push(channel.id)
       await guildConfiguration.save()
 
       return interaction.reply({

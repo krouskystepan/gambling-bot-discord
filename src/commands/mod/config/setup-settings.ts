@@ -15,6 +15,18 @@ import {
   parseReadableStringToNumber,
 } from '../../../utils/utils'
 
+const GAMES = [
+  { name: 'All', value: 'all' },
+  { name: 'Dice', value: 'dice' },
+  { name: 'Coinflip', value: 'coinflip' },
+  { name: 'Slots', value: 'slots' },
+  { name: 'Lottery', value: 'lottery' },
+  { name: 'RPS', value: 'rps' },
+  { name: 'Golden Jackpot', value: 'goldenJackpot' },
+  { name: 'Blackjack', value: 'blackjack' },
+  { name: 'Prediction', value: 'prediction' },
+]
+
 export const data: CommandData = {
   name: 'setup-settings',
   description: 'Manage the casino settings (max, min bets and win %).',
@@ -29,15 +41,7 @@ export const data: CommandData = {
           description: 'Game to configure',
           type: ApplicationCommandOptionType.String,
           required: true,
-          choices: [
-            { name: 'Dice', value: 'dice' },
-            { name: 'Coinflip', value: 'coinflip' },
-            { name: 'Slots', value: 'slots' },
-            { name: 'Lottery', value: 'lottery' },
-            { name: 'RPS', value: 'rps' },
-            { name: 'Golden Jackpot', value: 'goldenJackpot' },
-            { name: 'Blackjack', value: 'blackjack' },
-          ],
+          choices: GAMES,
         },
         {
           name: 'key',
@@ -64,16 +68,7 @@ export const data: CommandData = {
           description: 'Game to reset',
           type: ApplicationCommandOptionType.String,
           required: false,
-          choices: [
-            { name: 'All', value: 'all' },
-            { name: 'Dice', value: 'dice' },
-            { name: 'Coinflip', value: 'coinflip' },
-            { name: 'Slots', value: 'slots' },
-            { name: 'Lottery', value: 'lottery' },
-            { name: 'RPS', value: 'rps' },
-            { name: 'Golden Jackpot', value: 'goldenJackpot' },
-            { name: 'Blackjack', value: 'blackjack' },
-          ],
+          choices: GAMES,
         },
       ],
     },

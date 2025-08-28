@@ -193,6 +193,10 @@ export async function run({ interaction }: SlashCommandProps) {
       [formatRTP(calculateRTP('blackjack', settings.blackjack))],
       isAdmin
     ),
+    renderSection('👀 Prediction', [
+      formatBet('Max Bet', settings.prediction.maxBet),
+      formatBet('Min Bet', settings.prediction.minBet),
+    ]),
     renderSection(
       '⚙️ Server Config',
       [
@@ -215,6 +219,7 @@ export async function run({ interaction }: SlashCommandProps) {
       [
         formatAtmRooms('ATM Rooms', config.atmChannelIds),
         formatRooms('Gambling Rooms', config.casinoChannelIds),
+        formatRooms('Prediction Rooms', config.predictionChannelIds),
         formatRooms('Admin Rooms', config.adminChannelIds),
         formatRooms('VIP Active Rooms', vipChannelIds),
         '',

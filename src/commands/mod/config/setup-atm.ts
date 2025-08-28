@@ -101,8 +101,19 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'add-actions') {
       const channel = interaction.options.getChannel('channel', true)
 
-      guildConfiguration.atmChannelIds.actions = channel.id
+      if (guildConfiguration.atmChannelIds?.actions === channel.id) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'ATM Actions Channel Setup - Add',
+              `Channel ${channel} is already set for ATM transactions.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
 
+      guildConfiguration.atmChannelIds.actions = channel.id
       await guildConfiguration.save()
 
       return interaction.reply({
@@ -147,8 +158,19 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'add-logs') {
       const channel = interaction.options.getChannel('channel', true)
 
-      guildConfiguration.atmChannelIds.logs = channel.id
+      if (guildConfiguration.atmChannelIds?.logs === channel.id) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'ATM Logs Channel Setup - Add',
+              `Channel ${channel} is already set for ATM logs.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
 
+      guildConfiguration.atmChannelIds.logs = channel.id
       await guildConfiguration.save()
 
       return interaction.reply({
