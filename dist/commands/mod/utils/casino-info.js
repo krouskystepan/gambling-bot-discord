@@ -118,6 +118,10 @@ async function run({ interaction }) {
             formatBet('Max Bet', settings.blackjack.maxBet),
             formatBet('Min Bet', settings.blackjack.minBet),
         ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('blackjack', settings.blackjack))], isAdmin),
+        renderSection('👀 Prediction', [
+            formatBet('Max Bet', settings.prediction.maxBet),
+            formatBet('Min Bet', settings.prediction.minBet),
+        ]),
         renderSection('⚙️ Server Config', [
             formatRole('VIP Role', config.vipSettings.roleId),
             `- **VIP Price Per Day:** ${config.vipSettings.pricePerDay === 0
@@ -131,6 +135,7 @@ async function run({ interaction }) {
         ], [
             formatAtmRooms('ATM Rooms', config.atmChannelIds),
             formatRooms('Gambling Rooms', config.casinoChannelIds),
+            formatRooms('Prediction Rooms', config.predictionChannelIds),
             formatRooms('Admin Rooms', config.adminChannelIds),
             formatRooms('VIP Active Rooms', vipChannelIds),
             '',

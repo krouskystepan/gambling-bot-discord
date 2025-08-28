@@ -57,6 +57,14 @@ async function run({ interaction }) {
         const subcommand = options.getSubcommand();
         if (subcommand === 'set-role') {
             const role = options.getRole('role', true);
+            if (guildConfiguration.managerRoleId === role.id) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('Manager Role Setup - Set', `The manager role is already set to ${role}.`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
             guildConfiguration.managerRoleId = role.id;
             await guildConfiguration.save();
             return interaction.reply({

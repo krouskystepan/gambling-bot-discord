@@ -58,11 +58,19 @@ async function run({ interaction }) {
         const subcommand = options.getSubcommand();
         if (subcommand === 'add') {
             const channel = interaction.options.getChannel('channel', true);
+            if (guildConfiguration.predictionChannelIds.includes(channel.id)) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('Prediction Channel Setup - Add', `Channel ${channel} is already configured for using predictions.`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
             guildConfiguration.predictionChannelIds.push(channel.id);
             await guildConfiguration.save();
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Admin Channel Setup - Add', `Channel ${channel} has been successfully set for using predictions.`),
+                    (0, createEmbed_1.createSuccessEmbed)('Prediction Channel Setup - Add', `Channel ${channel} has been successfully set for using predictions.`),
                 ],
             });
         }

@@ -96,6 +96,16 @@ async function run({ interaction }) {
         const subcommand = options.getSubcommand();
         if (subcommand === 'add-category') {
             const category = options.getChannel('category');
+            if (!category)
+                return;
+            if (guildConfiguration.vipSettings.categoryId === category.id) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('VIP Setup - Add Category', `Category <#${category.id}> is already set for VIP rooms.`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
             guildConfiguration.vipSettings.categoryId = category.id;
             await guildConfiguration.save();
             return interaction.reply({
@@ -124,6 +134,16 @@ async function run({ interaction }) {
         }
         if (subcommand === 'add-role') {
             const role = options.getRole('role');
+            if (!role)
+                return;
+            if (guildConfiguration.vipSettings.roleId === role.id) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('VIP Setup - Add Role', `Role <@&${role.id}> is already set as VIP role.`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
             guildConfiguration.vipSettings.roleId = role.id;
             await guildConfiguration.save();
             return interaction.reply({

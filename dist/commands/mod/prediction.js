@@ -134,7 +134,7 @@ async function run({ interaction }) {
                 .map((c) => `- **${c.choiceName}** — ${c.odds}x`)
                 .join('\n'))
                 .setFooter({ text: `ID: ${messageReply.id}` })
-                .setColor(discord_js_1.Colors.Green)
+                .setColor(discord_js_1.Colors.Yellow)
                 .setTimestamp();
             const row = new discord_js_1.ActionRowBuilder();
             choicesArray.forEach((c) => {
@@ -312,7 +312,7 @@ async function run({ interaction }) {
                     const embed = message.embeds[0]?.toJSON() || {};
                     const editedEmbed = {
                         ...embed,
-                        color: discord_js_1.Colors.DarkGreen,
+                        color: discord_js_1.Colors.Green,
                         title: embed.title,
                     };
                     await message.edit({
@@ -353,7 +353,7 @@ async function run({ interaction }) {
                     const embed = message.embeds[0]?.toJSON() || {};
                     const editedEmbed = {
                         ...embed,
-                        color: 0x9b59b6,
+                        color: discord_js_1.Colors.Red,
                         title: `${embed.title}`,
                     };
                     await message.edit({

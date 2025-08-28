@@ -58,6 +58,14 @@ async function run({ interaction }) {
         const subcommand = options.getSubcommand();
         if (subcommand === 'add') {
             const channel = interaction.options.getChannel('channel', true);
+            if (guildConfiguration.casinoChannelIds.includes(channel.id)) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('Casino Channel Setup - Add', `The channel ${channel} is already configured for casino betting commands.`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
             guildConfiguration.casinoChannelIds.push(channel.id);
             await guildConfiguration.save();
             return interaction.reply({
@@ -71,7 +79,7 @@ async function run({ interaction }) {
             if (!guildConfiguration.casinoChannelIds.includes(channelId)) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createSuccessEmbed)('Casino Channel Setup - Remove', `The channel with ID ${channelId} is not set up for casino betting commands.`),
+                        (0, createEmbed_1.createErrorEmbed)('Casino Channel Setup - Remove', `The channel with ID ${channelId} is not set up for casino betting commands.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });

@@ -7,6 +7,17 @@ const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const defaultConfig_1 = require("../../../utils/defaultConfig");
 const utils_1 = require("../../../utils/utils");
+const GAMES = [
+    { name: 'All', value: 'all' },
+    { name: 'Dice', value: 'dice' },
+    { name: 'Coinflip', value: 'coinflip' },
+    { name: 'Slots', value: 'slots' },
+    { name: 'Lottery', value: 'lottery' },
+    { name: 'RPS', value: 'rps' },
+    { name: 'Golden Jackpot', value: 'goldenJackpot' },
+    { name: 'Blackjack', value: 'blackjack' },
+    { name: 'Prediction', value: 'prediction' },
+];
 exports.data = {
     name: 'setup-settings',
     description: 'Manage the casino settings (max, min bets and win %).',
@@ -21,15 +32,7 @@ exports.data = {
                     description: 'Game to configure',
                     type: discord_js_1.ApplicationCommandOptionType.String,
                     required: true,
-                    choices: [
-                        { name: 'Dice', value: 'dice' },
-                        { name: 'Coinflip', value: 'coinflip' },
-                        { name: 'Slots', value: 'slots' },
-                        { name: 'Lottery', value: 'lottery' },
-                        { name: 'RPS', value: 'rps' },
-                        { name: 'Golden Jackpot', value: 'goldenJackpot' },
-                        { name: 'Blackjack', value: 'blackjack' },
-                    ],
+                    choices: GAMES,
                 },
                 {
                     name: 'key',
@@ -56,16 +59,7 @@ exports.data = {
                     description: 'Game to reset',
                     type: discord_js_1.ApplicationCommandOptionType.String,
                     required: false,
-                    choices: [
-                        { name: 'All', value: 'all' },
-                        { name: 'Dice', value: 'dice' },
-                        { name: 'Coinflip', value: 'coinflip' },
-                        { name: 'Slots', value: 'slots' },
-                        { name: 'Lottery', value: 'lottery' },
-                        { name: 'RPS', value: 'rps' },
-                        { name: 'Golden Jackpot', value: 'goldenJackpot' },
-                        { name: 'Blackjack', value: 'blackjack' },
-                    ],
+                    choices: GAMES,
                 },
             ],
         },
