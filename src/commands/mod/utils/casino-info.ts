@@ -4,13 +4,6 @@ import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
 } from '../../../utils/utils'
-import defaultCasinoSettings, {
-  DICE_MAX_SIMULATE_ROLLS,
-  COINFLIP_MAX_SIMULATE_FLIPS,
-  SLOT_MAX_SIMULATE_SPINS,
-  LOTTERY_MAX_SIMULATE_ENTRIES,
-  GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES,
-} from '../../../utils/defaultConfig'
 import GuildConfiguration from '../../../models/GuildConfiguration'
 import VipRoom from '../../../models/VipRoom'
 import { calculateRTP } from '../../../utils/rtpCalcHelper'

@@ -72,5 +72,9 @@ const defaultCasinoSettings = {
         maxBet: 0,
         minBet: 0,
     },
+    prediction: {
+        maxBet: 0,
+        minBet: 0,
+    },
 };
 exports.default = defaultCasinoSettings;

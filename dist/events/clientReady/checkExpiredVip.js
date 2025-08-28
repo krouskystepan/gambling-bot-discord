@@ -5,6 +5,7 @@ const VipRoom_1 = require("../../models/VipRoom");
 const GuildConfiguration_1 = require("../../models/GuildConfiguration");
 const createEmbed_1 = require("../../utils/createEmbed");
 exports.default = async (client) => {
+    console.log('👀 VIP Room listener started');
     setInterval(async () => {
         const now = new Date();
         const expiredRooms = await VipRoom_1.default.find({ expiresAt: { $lte: now } });

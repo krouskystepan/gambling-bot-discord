@@ -1,8 +1,8 @@
-import { Interaction, Client } from 'discord.js'
-import GuildConfiguration from '../../models/GuildConfiguration'
-import { readableGameValueNames } from '../../utils/defaultConfig'
+import { AutocompleteInteraction, Client } from 'discord.js'
+import GuildConfiguration from '../../../models/GuildConfiguration'
+import { readableGameValueNames } from '../../../utils/defaultConfig'
 
-export default async (interaction: Interaction, client: Client) => {
+export default async (interaction: AutocompleteInteraction, client: Client) => {
   if (!interaction.isAutocomplete()) return
   if (interaction.commandName !== 'setup-settings') return
 

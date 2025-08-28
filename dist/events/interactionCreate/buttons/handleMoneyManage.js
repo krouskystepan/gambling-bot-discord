@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const discord_js_1 = require("discord.js");
-const User_1 = require("../../models/User");
-const utils_1 = require("../../utils/utils");
-const GuildConfiguration_1 = require("../../models/GuildConfiguration");
-const createEmbed_1 = require("../../utils/createEmbed");
+const User_1 = require("../../../models/User");
+const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
+const createEmbed_1 = require("../../../utils/createEmbed");
+const utils_1 = require("../../../utils/utils");
 exports.default = async (interaction, client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;

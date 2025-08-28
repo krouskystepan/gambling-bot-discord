@@ -3,21 +3,26 @@ import {
   ApplicationCommandOptionType,
   ChannelType,
   CommandInteractionOptionResolver,
+  MessageFlags,
 } from 'discord.js'
-import GuildConfiguration from '../src/models/GuildConfiguration'
+import GuildConfiguration from '../../../models/GuildConfiguration'
+import {
+  createErrorEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-prediction',
-  description: 'Správa kanálů pro předpovědi.',
+  description: 'Manage channels for predictions.',
   options: [
     {
       name: 'add',
-      description: 'Nastav kanál pro používání předpovědí.',
+      description: 'Set a channel for using predictions.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel',
-          description: 'Kanál, který chceš nastavit pro používání předpovědí.',
+          description: 'The channel you want to set up for using predictions.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
           required: true,
@@ -26,12 +31,13 @@ export const data: CommandData = {
     },
     {
       name: 'remove',
-      description: 'Odeber kanál pro používání předpovědí skrze ID.',
+      description: 'Remove a channel for using predictions by ID.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel-id',
-          description: 'ID kanálu, který chceš odebrat z používání předpovědí.',
+          description:
+            'The ID of the channel you want to remove from using predictions.',
           type: ApplicationCommandOptionType.String,
           required: true,
         },
@@ -60,7 +66,6 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     const options = interaction.options as CommandInteractionOptionResolver
-
     const subcommand = options.getSubcommand()
 
     if (subcommand === 'add') {
@@ -71,17 +76,28 @@ export async function run({ interaction }: SlashCommandProps) {
       await guildConfiguration.save()
 
       return interaction.reply({
-        content: `Kanál ${channel} byl úspěšně nastaven pro používání předpovědí.`,
+        embeds: [
+          createSuccessEmbed(
+            'Admin Channel Setup - Add',
+            `Channel ${channel} has been successfully set for using predictions.`
+          ),
+        ],
       })
     }
 
     if (subcommand === 'remove') {
       const channelId = options.getString('channel-id', true)
 
-      if (!guildConfiguration.predictionChannelIds.includes(channelId)) {
-        return await interaction.reply(
-          `Kanál s ID ${channelId} není nastavený pro předpovědi.`
-        )
+      if (!guildConfiguration.adminChannelIds.includes(channelId)) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Admin Channel Setup - Remove',
+              `Channel with ID ${channelId} is not set for predictions.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
       }
 
       guildConfiguration.predictionChannelIds =
@@ -89,9 +105,14 @@ export async function run({ interaction }: SlashCommandProps) {
 
       await guildConfiguration.save()
 
-      return interaction.reply(
-        `Kanál s ID ${channelId} byl úspěšně odebrán z používání předpovědí.`
-      )
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'Admin Channel Setup - Remove',
+            `Channel with ID ${channelId} has been successfully removed from using predictions.`
+          ),
+        ],
+      })
     }
   } catch (error) {
     console.error('Error running the command:', error)

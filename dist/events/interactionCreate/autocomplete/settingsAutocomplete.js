@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const GuildConfiguration_1 = require("../../models/GuildConfiguration");
-const defaultConfig_1 = require("../../utils/defaultConfig");
+const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
+const defaultConfig_1 = require("../../../utils/defaultConfig");
 exports.default = async (interaction, client) => {
     if (!interaction.isAutocomplete())
         return;

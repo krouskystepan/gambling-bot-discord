@@ -6,10 +6,10 @@ import {
   MessageFlags,
   TextChannel,
 } from 'discord.js'
-import User from '../../models/User'
-import { formatNumberToReadableString } from '../../utils/utils'
-import GuildConfiguration from '../../models/GuildConfiguration'
-import { createErrorEmbed } from '../../utils/createEmbed'
+import User from '../../../models/User'
+import GuildConfiguration from '../../../models/GuildConfiguration'
+import { createErrorEmbed } from '../../../utils/createEmbed'
+import { formatNumberToReadableString } from '../../../utils/utils'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return

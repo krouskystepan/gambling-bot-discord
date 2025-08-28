@@ -4,6 +4,8 @@ import GuildConfiguration from '../../models/GuildConfiguration'
 import { createInfoEmbed } from '../../utils/createEmbed'
 
 export default async (client: Client) => {
+  console.log('👀 VIP Room listener started')
+
   setInterval(async () => {
     const now = new Date()
     const expiredRooms = await VipRoom.find({ expiresAt: { $lte: now } })

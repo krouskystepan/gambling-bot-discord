@@ -6,16 +6,16 @@ import {
   Interaction,
   MessageFlags,
 } from 'discord.js'
-import { createErrorEmbed, createInfoEmbed } from '../../utils/createEmbed'
-import BlackjackGame from '../../models/BlackjackGame'
-import { drawNextCard } from '../../utils/casinoHelpers'
+import User from '../../../models/User'
+import BlackjackGame from '../../../models/BlackjackGame'
 import {
   calculateHandValue,
-  createBlackjackEmbed,
   revealDealerCards,
-} from '../../utils/blackjackUtils'
-import { formatNumberToReadableString } from '../../utils/utils'
-import User from '../../models/User'
+  createBlackjackEmbed,
+} from '../../../utils/blackjackUtils'
+import { drawNextCard } from '../../../utils/casinoHelpers'
+import { createInfoEmbed, createErrorEmbed } from '../../../utils/createEmbed'
+import { formatNumberToReadableString } from '../../../utils/utils'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
