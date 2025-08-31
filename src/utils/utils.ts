@@ -50,7 +50,24 @@ export const checkChannelConfiguration = async (
       await guildConfiguration.save()
     }
 
-    let allowedChannelIds: string[] = guildConfiguration[channelType] || []
+    let allowedChannelIds: string[] = []
+
+    if (channelType === 'predictionChannelIds') {
+      const actionsChannel = guildConfiguration.predictionChannelIds.actions
+      const logsChannel = guildConfiguration.predictionChannelIds.logs
+
+      if (!actionsChannel || !logsChannel) {
+        await interaction.reply({
+          embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
+          flags: MessageFlags.Ephemeral,
+        })
+        return false
+      }
+
+      allowedChannelIds = [actionsChannel]
+    } else {
+      allowedChannelIds = guildConfiguration[channelType] || []
+    }
 
     if (channelType === 'casinoChannelIds') {
       const activeVipRooms = await VipRoom.find({

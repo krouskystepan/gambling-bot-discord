@@ -13,9 +13,21 @@ export const data: CommandData = {
   description: 'Get information about the casino.',
   options: [
     {
+      name: 'games',
+      description: 'Show information about casino games',
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
+      name: 'config',
+      description: 'Show server casino configuration',
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
       name: 'admin',
       description:
-        'Get information about the casino administrators (contains sensitive information).',
+        'Show administrator-only information (contains sensitive data)',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -57,19 +69,27 @@ const formatCategory = (
 ) => {
   if (!id) return `- **${label}**: ${fallback}`
 
-  return ` - **${label}**: <#${id}> (${id})`
+  return `- **${label}**: <#${id}> (${id})`
 }
 
-const formatAtmRooms = (
+const formatMultipleRooms = (
   label: string,
-  ids?: { actions?: string; logs?: string } | null
+  ids?: { actions?: string | string[]; logs?: string | string[] } | null
 ) => {
   if (!ids) return `- **${label}**: No rooms`
 
-  const actions = ids.actions
-    ? `<#${ids.actions}> (${ids.actions})`
-    : 'No channel'
-  const logs = ids.logs ? `<#${ids.logs}> (${ids.logs})` : 'No channel'
+  const formatField = (value?: string | string[]) => {
+    if (!value || (Array.isArray(value) && value.length === 0))
+      return 'No channel'
+    return Array.isArray(value)
+      ? value.map((id) => `<#${id}> (${id})`).join(', ')
+      : value.trim() === ''
+      ? 'No channel'
+      : `<#${value}> (${value})`
+  }
+
+  const actions = formatField(ids.actions)
+  const logs = formatField(ids.logs)
 
   return `- **${label}**\n  - Actions: ${actions}\n  - Logs: ${logs}`
 }
@@ -94,6 +114,7 @@ export async function run({ interaction }: SlashCommandProps) {
   const config = await GuildConfiguration.findOne({
     guildId: interaction.guildId,
   })
+  if (!config?.casinoSettings) return
 
   const vipRooms = await VipRoom.find(
     { guildId: interaction.guildId },
@@ -101,137 +122,155 @@ export async function run({ interaction }: SlashCommandProps) {
   )
   const vipChannelIds = vipRooms.map((room) => room.channelId)
 
-  const settings = config?.casinoSettings
+  const settings = config.casinoSettings
 
-  if (!settings) return
+  console.log(config.predictionChannelIds)
 
-  const isAdmin = interaction.options.getBoolean('admin') ?? false
+  const showGames = interaction.options.getBoolean('games') ?? true
+  const showConfig = interaction.options.getBoolean('config') ?? true
+  const showAdmin = interaction.options.getBoolean('admin') ?? false
 
-  const games = [
-    renderSection(
-      '🎲 Dice',
-      [
-        `- **Multiplier:** ${settings.dice.winMultiplier}x`,
-        formatBet('Max Bet', settings.dice.maxBet),
-        formatBet('Min Bet', settings.dice.minBet),
-      ],
-      [formatRTP(calculateRTP('dice', settings.dice))],
-      isAdmin
-    ),
-    renderSection(
-      '🪙 Coin Flip',
-      [
-        `- **Multiplier:** ${settings.coinflip.winMultiplier}x`,
-        formatBet('Max Bet', settings.coinflip.maxBet),
-        formatBet('Min Bet', settings.coinflip.minBet),
-      ],
-      [formatRTP(calculateRTP('coinflip', settings.coinflip))],
-      isAdmin
-    ),
-    renderSection(
-      '🎰 Slots',
-      [
-        `- **Multipliers:** \n${Object.entries(settings.slots.winMultipliers)
-          .map(([symbol, multiplier]) => `  - ${symbol}: ${multiplier}x`)
-          .join('\n')}`,
-        formatBet('Max Bet', settings.slots.maxBet),
-        formatBet('Min Bet', settings.slots.minBet),
-      ],
-      [
-        formatRTP(calculateRTP('slots', settings.slots)),
-        `- **Symbol Weights:** \n${Object.entries(settings.slots.symbolWeights)
-          .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
-          .join('\n')}`,
-      ],
-      isAdmin
-    ),
-    renderSection(
-      '🎟️ Lottery',
-      [
-        `- **Multipliers:** \n${Object.entries(settings.lottery.winMultipliers)
-          .map(([symbol, multiplier]) => `  - ${symbol}: ${multiplier}x`)
-          .join('\n')}`,
-        formatBet('Max Bet', settings.lottery.maxBet),
-        formatBet('Min Bet', settings.lottery.minBet),
-      ],
-      [formatRTP(calculateRTP('lottery', settings.lottery))],
-      isAdmin
-    ),
-    renderSection(
-      '🤑 Golden Jackpot',
-      [
-        `- **Multiplier:** ${formatNumberWithSpaces(
-          settings.goldenJackpot.winMultiplier
-        )}x`,
-        formatBet('Max Bet', settings.goldenJackpot.maxBet),
-        formatBet('Min Bet', settings.goldenJackpot.minBet),
-      ],
-      [
-        formatRTP(calculateRTP('goldenJackpot', settings.goldenJackpot)),
-        `- **One in Chance:** 1 in ${formatNumberWithSpaces(
-          settings.goldenJackpot.oneInChance
-        )}`,
-      ],
-      isAdmin
-    ),
-    renderSection(
-      '🪨📄✂️ RPS',
-      [
-        `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
-        formatBet('Max Bet', settings.rps.maxBet),
-        formatBet('Min Bet', settings.rps.minBet),
-      ],
-      [formatRTP(calculateRTP('rps', settings.rps))],
-      isAdmin
-    ),
-    renderSection(
-      '🃏 Blackjack',
-      [
-        formatBet('Max Bet', settings.blackjack.maxBet),
-        formatBet('Min Bet', settings.blackjack.minBet),
-      ],
-      [formatRTP(calculateRTP('blackjack', settings.blackjack))],
-      isAdmin
-    ),
-    renderSection('👀 Prediction', [
-      formatBet('Max Bet', settings.prediction.maxBet),
-      formatBet('Min Bet', settings.prediction.minBet),
-    ]),
-    renderSection(
-      '⚙️ Server Config',
-      [
-        formatRole('VIP Role', config.vipSettings.roleId),
-        `- **VIP Price Per Day:** ${
-          config.vipSettings.pricePerDay === 0
-            ? 'Not Set'
-            : `$${formatNumberToReadableString(config.vipSettings.pricePerDay)}`
-        }`,
-        `- **VIP Create Price:** ${
-          config.vipSettings.pricePerCreate === 0
-            ? 'Not Set'
-            : `$${formatNumberToReadableString(
-                config.vipSettings.pricePerCreate
-              )}`
-        }`,
-        '',
-        formatRole('Manager Role', config.managerRoleId),
-      ],
-      [
-        formatAtmRooms('ATM Rooms', config.atmChannelIds),
-        formatRooms('Gambling Rooms', config.casinoChannelIds),
-        formatRooms('Prediction Rooms', config.predictionChannelIds),
-        formatRooms('Admin Rooms', config.adminChannelIds),
-        formatRooms('VIP Active Rooms', vipChannelIds),
-        '',
-        formatCategory('VIP Category', config.vipSettings.categoryId),
-      ],
-      isAdmin
-    ),
-  ]
+  const sections: string[] = []
 
-  return interaction.reply({
-    content: `# ${isAdmin ? 'Admin' : ''} Casino Information\n${games.join(
-      '\n\n'
-    )}`,
-  })
+  if (showGames) {
+    sections.push(
+      renderSection(
+        '🎲 Dice',
+        [
+          `- **Multiplier:** ${settings.dice.winMultiplier}x`,
+          formatBet('Max Bet', settings.dice.maxBet),
+          formatBet('Min Bet', settings.dice.minBet),
+        ],
+        [formatRTP(calculateRTP('dice', settings.dice))],
+        showAdmin
+      ),
+      renderSection(
+        '🪙 Coin Flip',
+        [
+          `- **Multiplier:** ${settings.coinflip.winMultiplier}x`,
+          formatBet('Max Bet', settings.coinflip.maxBet),
+          formatBet('Min Bet', settings.coinflip.minBet),
+        ],
+        [formatRTP(calculateRTP('coinflip', settings.coinflip))],
+        showAdmin
+      ),
+      renderSection(
+        '🎰 Slots',
+        [
+          `- **Multipliers:** \n${Object.entries(settings.slots.winMultipliers)
+            .map(([symbol, multiplier]) => `  - ${symbol}: ${multiplier}x`)
+            .join('\n')}`,
+          formatBet('Max Bet', settings.slots.maxBet),
+          formatBet('Min Bet', settings.slots.minBet),
+        ],
+        [
+          formatRTP(calculateRTP('slots', settings.slots)),
+          `- **Symbol Weights:** \n${Object.entries(
+            settings.slots.symbolWeights
+          )
+            .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
+            .join('\n')}`,
+        ],
+        showAdmin
+      ),
+      renderSection(
+        '🎟️ Lottery',
+        [
+          `- **Multipliers:** \n${Object.entries(
+            settings.lottery.winMultipliers
+          )
+            .map(([symbol, multiplier]) => `  - ${symbol}: ${multiplier}x`)
+            .join('\n')}`,
+          formatBet('Max Bet', settings.lottery.maxBet),
+          formatBet('Min Bet', settings.lottery.minBet),
+        ],
+        [formatRTP(calculateRTP('lottery', settings.lottery))],
+        showAdmin
+      ),
+      renderSection(
+        '🤑 Golden Jackpot',
+        [
+          `- **Multiplier:** ${formatNumberWithSpaces(
+            settings.goldenJackpot.winMultiplier
+          )}x`,
+          formatBet('Max Bet', settings.goldenJackpot.maxBet),
+          formatBet('Min Bet', settings.goldenJackpot.minBet),
+        ],
+        [
+          formatRTP(calculateRTP('goldenJackpot', settings.goldenJackpot)),
+          `- **One in Chance:** 1 in ${formatNumberWithSpaces(
+            settings.goldenJackpot.oneInChance
+          )}`,
+        ],
+        showAdmin
+      ),
+      renderSection(
+        '🪨📄✂️ RPS',
+        [
+          `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
+          formatBet('Max Bet', settings.rps.maxBet),
+          formatBet('Min Bet', settings.rps.minBet),
+        ],
+        [formatRTP(calculateRTP('rps', settings.rps))],
+        showAdmin
+      ),
+      renderSection(
+        '🃏 Blackjack',
+        [
+          formatBet('Max Bet', settings.blackjack.maxBet),
+          formatBet('Min Bet', settings.blackjack.minBet),
+        ],
+        [formatRTP(calculateRTP('blackjack', settings.blackjack))],
+        showAdmin
+      ),
+      renderSection('👀 Prediction', [
+        formatBet('Max Bet', settings.prediction.maxBet),
+        formatBet('Min Bet', settings.prediction.minBet),
+      ])
+    )
+  }
+
+  if (showConfig) {
+    sections.push(
+      renderSection(
+        '⚙️ Server Config',
+        [
+          formatRole('VIP Role', config.vipSettings.roleId),
+          `- **VIP Price Per Day:** ${
+            config.vipSettings.pricePerDay === 0
+              ? 'Not Set'
+              : `$${formatNumberToReadableString(
+                  config.vipSettings.pricePerDay
+                )}`
+          }`,
+          `- **VIP Create Price:** ${
+            config.vipSettings.pricePerCreate === 0
+              ? 'Not Set'
+              : `$${formatNumberToReadableString(
+                  config.vipSettings.pricePerCreate
+                )}`
+          }`,
+          '',
+          formatRole('Manager Role', config.managerRoleId),
+        ],
+        [
+          formatMultipleRooms('ATM Rooms', config.atmChannelIds),
+          formatMultipleRooms('Prediction Rooms', config.predictionChannelIds),
+          formatRooms('Gambling Rooms', config.casinoChannelIds),
+          formatRooms('Admin Rooms', config.adminChannelIds),
+          formatRooms('VIP Active Rooms', vipChannelIds),
+          '',
+          formatCategory('VIP Category', config.vipSettings.categoryId),
+        ],
+        showAdmin
+      )
+    )
+  }
+
+  const content =
+    sections.length > 0
+      ? `# Casino Information\n${sections.join('\n\n')}`
+      : `# Casino Information\n- No information selected.`
+
+  return interaction.reply({ content })
 }

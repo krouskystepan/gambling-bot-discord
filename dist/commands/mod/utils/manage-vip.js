@@ -80,7 +80,7 @@ async function run({ interaction }) {
             return;
         const member = await interaction.guild?.members.fetch(interaction.user.id);
         const hasAdmin = member?.permissions.has('Administrator');
-        const managerRoleId = configReply.vipSettings.roleId;
+        const managerRoleId = configReply.managerRoleId;
         const hasManager = managerRoleId && member?.roles.cache.has(managerRoleId);
         if (!hasAdmin && !hasManager) {
             return interaction.reply({

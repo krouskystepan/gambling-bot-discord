@@ -37,7 +37,22 @@ const checkChannelConfiguration = async (interaction, channelType, messages) => 
             guildConfiguration.casinoSettings = defaultConfig_1.default;
             await guildConfiguration.save();
         }
-        let allowedChannelIds = guildConfiguration[channelType] || [];
+        let allowedChannelIds = [];
+        if (channelType === 'predictionChannelIds') {
+            const actionsChannel = guildConfiguration.predictionChannelIds.actions;
+            const logsChannel = guildConfiguration.predictionChannelIds.logs;
+            if (!actionsChannel || !logsChannel) {
+                await interaction.reply({
+                    embeds: [(0, createEmbed_1.createErrorEmbed)('Error - Not Configured', messages.notSet)],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return false;
+            }
+            allowedChannelIds = [actionsChannel];
+        }
+        else {
+            allowedChannelIds = guildConfiguration[channelType] || [];
+        }
         if (channelType === 'casinoChannelIds') {
             const activeVipRooms = await VipRoom_1.default.find({
                 guildId: interaction.guildId,

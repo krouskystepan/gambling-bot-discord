@@ -97,7 +97,6 @@ export const data: CommandData = {
 }
 
 export const options: CommandOptions = {
-  userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
 }
@@ -115,6 +114,25 @@ export async function run({ interaction }: SlashCommandProps) {
     )
 
     if (!configReply) return
+
+    const member = await interaction.guild?.members.fetch(interaction.user.id)
+    const hasAdmin = member?.permissions.has('Administrator')
+    const managerRoleId = configReply.managerRoleId
+    const hasManager = managerRoleId && member?.roles.cache.has(managerRoleId)
+
+    if (!hasAdmin && !hasManager) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Permission Denied',
+            `You need to be an **Administrator** or have the ${
+              managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
+            } to use this command.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
 
     const options = interaction.options as CommandInteractionOptionResolver
     const subcommand = options.getSubcommand()
@@ -274,12 +292,12 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (subcommand === 'payout') {
-      if (!configReply?.atmChannelIds.logs) {
+      if (!configReply?.predictionChannelIds.logs) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
               'Error - Logs Not Set Up',
-              'ATM logs are not configured yet.\nPlease complete the setup.'
+              'Prediction logs are not configured yet.\nPlease complete the setup.'
             ),
           ],
           flags: MessageFlags.Ephemeral,
@@ -347,7 +365,7 @@ export async function run({ interaction }: SlashCommandProps) {
       await prediction.save()
 
       const logChannel = interaction.client.channels.cache.get(
-        configReply.atmChannelIds.logs
+        configReply.predictionChannelIds.logs
       ) as TextChannel
 
       if (!logChannel) {

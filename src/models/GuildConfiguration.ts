@@ -9,7 +9,10 @@ export type GuildConfiguration = Document & {
   }
   adminChannelIds: string[]
   casinoChannelIds: string[]
-  predictionChannelIds: string[]
+  predictionChannelIds: {
+    actions: string
+    logs: string
+  }
   managerRoleId: string
   casinoSettings: typeof defaultCasinoSettings
   vipSettings: {
@@ -46,8 +49,14 @@ const guildConfigurationSchema = new Schema<GuildConfiguration>({
     default: [],
   },
   predictionChannelIds: {
-    type: [String],
-    default: [],
+    actions: {
+      type: [String],
+      default: [],
+    },
+    logs: {
+      type: String,
+      default: '',
+    },
   },
   managerRoleId: {
     type: String,

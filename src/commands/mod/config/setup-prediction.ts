@@ -13,16 +13,16 @@ import {
 
 export const data: CommandData = {
   name: 'setup-prediction',
-  description: 'Manage channels for predictions.',
+  description: 'Manage channels for predictions (actions & logs).',
   options: [
     {
-      name: 'add',
-      description: 'Set a channel for using predictions.',
+      name: 'add-actions',
+      description: 'Add a channel where predictions can be used.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel',
-          description: 'The channel you want to set up for using predictions.',
+          description: 'The channel to add for prediction actions.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
           required: true,
@@ -30,14 +30,41 @@ export const data: CommandData = {
       ],
     },
     {
-      name: 'remove',
-      description: 'Remove a channel for using predictions by ID.',
+      name: 'remove-actions',
+      description: 'Remove a channel from prediction actions.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel-id',
           description:
-            'The ID of the channel you want to remove from using predictions.',
+            'The ID of the channel to remove from prediction actions.',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+        },
+      ],
+    },
+    {
+      name: 'add-logs',
+      description: 'Set a channel for prediction logs (results).',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'channel',
+          description: 'The channel to set as prediction logs.',
+          type: ApplicationCommandOptionType.Channel,
+          channel_types: [ChannelType.GuildText],
+          required: true,
+        },
+      ],
+    },
+    {
+      name: 'remove-logs',
+      description: 'Remove the prediction logs channel.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'channel-id',
+          description: 'The ID of the channel to remove from prediction logs.',
           type: ApplicationCommandOptionType.String,
           required: true,
         },
@@ -68,59 +95,114 @@ export async function run({ interaction }: SlashCommandProps) {
     const options = interaction.options as CommandInteractionOptionResolver
     const subcommand = options.getSubcommand()
 
-    if (subcommand === 'add') {
-      const channel = interaction.options.getChannel('channel', true)
+    if (subcommand === 'add-actions') {
+      const channel = options.getChannel('channel', true)
 
-      if (guildConfiguration.predictionChannelIds.includes(channel.id)) {
+      if (guildConfiguration.predictionChannelIds.actions === channel.id) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Channel Setup - Add',
-              `Channel ${channel} is already configured for using predictions.`
+              'Prediction Channel Setup - Add Actions',
+              `Channel ${channel} is already set for prediction actions.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
         })
       }
 
-      guildConfiguration.predictionChannelIds.push(channel.id)
+      // Assign single channel instead of push
+      guildConfiguration.predictionChannelIds.actions = channel.id
       await guildConfiguration.save()
 
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Prediction Channel Setup - Add',
-            `Channel ${channel} has been successfully set for using predictions.`
+            'Prediction Channel Setup - Add Actions',
+            `Channel ${channel} has been successfully set for prediction actions.`
           ),
         ],
       })
     }
 
-    if (subcommand === 'remove') {
+    if (subcommand === 'remove-actions') {
       const channelId = options.getString('channel-id', true)
 
-      if (!guildConfiguration.adminChannelIds.includes(channelId)) {
+      if (guildConfiguration.predictionChannelIds.actions !== channelId) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Admin Channel Setup - Remove',
-              `Channel with ID ${channelId} is not set for predictions.`
+              'Prediction Channel Setup - Remove Actions',
+              `Channel with ID ${channelId} is not set for prediction actions.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
         })
       }
 
-      guildConfiguration.predictionChannelIds =
-        guildConfiguration.predictionChannelIds.filter((id) => id !== channelId)
-
+      guildConfiguration.predictionChannelIds.actions = ''
       await guildConfiguration.save()
 
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Admin Channel Setup - Remove',
-            `Channel with ID ${channelId} has been successfully removed from using predictions.`
+            'Prediction Channel Setup - Remove Actions',
+            `Channel with ID ${channelId} has been removed from prediction actions.`
+          ),
+        ],
+      })
+    }
+
+    if (subcommand === 'add-logs') {
+      const channel = options.getChannel('channel', true)
+
+      if (guildConfiguration.predictionChannelIds.logs === channel.id) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Prediction Channel Setup - Add Logs',
+              `Channel ${channel} is already set for prediction logs.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      guildConfiguration.predictionChannelIds.logs = channel.id
+      await guildConfiguration.save()
+
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'Prediction Channel Setup - Add Logs',
+            `Channel ${channel} has been successfully set for prediction logs.`
+          ),
+        ],
+      })
+    }
+
+    if (subcommand === 'remove-logs') {
+      const channelId = options.getString('channel-id', true)
+
+      if (guildConfiguration.predictionChannelIds.logs !== channelId) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Prediction Channel Setup - Remove Logs',
+              `Channel with ID ${channelId} is not set for prediction logs.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      guildConfiguration.predictionChannelIds.logs = ''
+      await guildConfiguration.save()
+
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'Prediction Channel Setup - Remove Logs',
+            `Channel with ID ${channelId} has been removed from prediction logs.`
           ),
         ],
       })

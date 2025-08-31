@@ -83,7 +83,6 @@ exports.data = {
     dm_permission: false,
 };
 exports.options = {
-    userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
     deleted: false,
 };
@@ -95,6 +94,18 @@ async function run({ interaction }) {
         });
         if (!configReply)
             return;
+        const member = await interaction.guild?.members.fetch(interaction.user.id);
+        const hasAdmin = member?.permissions.has('Administrator');
+        const managerRoleId = configReply.managerRoleId;
+        const hasManager = managerRoleId && member?.roles.cache.has(managerRoleId);
+        if (!hasAdmin && !hasManager) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createErrorEmbed)('Permission Denied', `You need to be an **Administrator** or have the ${managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'} to use this command.`),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         if (subcommand === 'create') {
@@ -209,10 +220,10 @@ async function run({ interaction }) {
             });
         }
         if (subcommand === 'payout') {
-            if (!configReply?.atmChannelIds.logs) {
+            if (!configReply?.predictionChannelIds.logs) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Error - Logs Not Set Up', 'ATM logs are not configured yet.\nPlease complete the setup.'),
+                        (0, createEmbed_1.createErrorEmbed)('Error - Logs Not Set Up', 'Prediction logs are not configured yet.\nPlease complete the setup.'),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
@@ -253,7 +264,7 @@ async function run({ interaction }) {
             }
             prediction.status = 'paid';
             await prediction.save();
-            const logChannel = interaction.client.channels.cache.get(configReply.atmChannelIds.logs);
+            const logChannel = interaction.client.channels.cache.get(configReply.predictionChannelIds.logs);
             if (!logChannel) {
                 console.error('Log channel not found!');
             }
