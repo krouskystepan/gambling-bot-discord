@@ -124,8 +124,6 @@ export async function run({ interaction }: SlashCommandProps) {
 
   const settings = config.casinoSettings
 
-  console.log(config.predictionChannelIds)
-
   const showGames = interaction.options.getBoolean('games') ?? true
   const showConfig = interaction.options.getBoolean('config') ?? true
   const showAdmin = interaction.options.getBoolean('admin') ?? false

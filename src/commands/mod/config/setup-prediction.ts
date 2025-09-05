@@ -77,7 +77,7 @@ export const data: CommandData = {
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  deleted: false,
+  deleted: true,
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -110,7 +110,6 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      // Assign single channel instead of push
       guildConfiguration.predictionChannelIds.actions = channel.id
       await guildConfiguration.save()
 

@@ -29,7 +29,7 @@ export const data: CommandData = {
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  deleted: false,
+  deleted: true,
 }
 
 export async function run({ interaction, client }: SlashCommandProps) {

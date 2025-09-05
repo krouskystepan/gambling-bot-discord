@@ -50,8 +50,8 @@ const guildConfigurationSchema = new Schema<GuildConfiguration>({
   },
   predictionChannelIds: {
     actions: {
-      type: [String],
-      default: [],
+      type: String,
+      default: '',
     },
     logs: {
       type: String,
