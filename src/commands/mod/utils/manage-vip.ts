@@ -89,7 +89,7 @@ export async function run({ interaction }: SlashCommandProps) {
       'adminChannelIds',
       {
         notSet:
-          'This server has not been configured for admin commands yet. Set it up using `/setup-admin` and `/setup-manager` .',
+          'This server has not been configured for admin commands yet.\nSet it up using web dashboard.',
         notAllowed: `This channel is not configured for admin commands. Try one of these channels:`,
       }
     )

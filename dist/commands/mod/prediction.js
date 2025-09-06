@@ -89,7 +89,7 @@ exports.options = {
 async function run({ interaction }) {
     try {
         const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'predictionChannelIds', {
-            notSet: 'This server has not been configured for predictions yet.\nSet it up using `/setup-prediction`.',
+            notSet: 'This server has not been configured for predictions yet.\nSet it up using web dashboard.',
             notAllowed: `This channel is not configured for prediction command.\nTry one of these channels:`,
         });
         if (!configReply)

@@ -72,7 +72,7 @@ export async function run({ interaction }: SlashCommandProps) {
       'casinoChannelIds',
       {
         notSet:
-          'This server has not been configured for betting commands yet.\nSet it up using `/setup-casino`.',
+          'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
         notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
       }
     )

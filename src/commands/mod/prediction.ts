@@ -108,7 +108,7 @@ export async function run({ interaction }: SlashCommandProps) {
       'predictionChannelIds',
       {
         notSet:
-          'This server has not been configured for predictions yet.\nSet it up using `/setup-prediction`.',
+          'This server has not been configured for predictions yet.\nSet it up using web dashboard.',
         notAllowed: `This channel is not configured for prediction command.\nTry one of these channels:`,
       }
     )

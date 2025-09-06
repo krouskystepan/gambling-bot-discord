@@ -50,7 +50,7 @@ async function run({ interaction }) {
             });
         }
         const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'casinoChannelIds', {
-            notSet: 'This server has not been configured for betting commands yet.\nSet it up using `/setup-casino`.',
+            notSet: 'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
             notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
         });
         if (!configReply)
