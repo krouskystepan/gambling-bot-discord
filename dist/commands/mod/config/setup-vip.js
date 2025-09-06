@@ -79,7 +79,7 @@ exports.data = {
 exports.options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: false,
+    deleted: true,
 };
 async function run({ interaction }) {
     try {

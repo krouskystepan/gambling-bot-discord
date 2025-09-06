@@ -29,8 +29,8 @@ const guildConfigurationSchema = new mongoose_1.Schema({
     },
     predictionChannelIds: {
         actions: {
-            type: [String],
-            default: [],
+            type: String,
+            default: '',
         },
         logs: {
             type: String,

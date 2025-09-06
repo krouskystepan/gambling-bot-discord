@@ -89,7 +89,6 @@ async function run({ interaction }) {
     const vipRooms = await VipRoom_1.default.find({ guildId: interaction.guildId }, { channelId: 1, _id: 0 });
     const vipChannelIds = vipRooms.map((room) => room.channelId);
     const settings = config.casinoSettings;
-    console.log(config.predictionChannelIds);
     const showGames = interaction.options.getBoolean('games') ?? true;
     const showConfig = interaction.options.getBoolean('config') ?? true;
     const showAdmin = interaction.options.getBoolean('admin') ?? false;

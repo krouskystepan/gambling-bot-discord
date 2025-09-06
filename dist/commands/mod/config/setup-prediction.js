@@ -69,7 +69,7 @@ exports.data = {
 exports.options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: false,
+    deleted: true,
 };
 async function run({ interaction }) {
     try {
@@ -93,7 +93,6 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            // Assign single channel instead of push
             guildConfiguration.predictionChannelIds.actions = channel.id;
             await guildConfiguration.save();
             return interaction.reply({
