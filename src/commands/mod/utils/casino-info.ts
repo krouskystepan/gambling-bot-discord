@@ -255,7 +255,7 @@ export async function run({ interaction }: SlashCommandProps) {
           formatMultipleRooms('ATM Rooms', config.atmChannelIds),
           formatMultipleRooms('Prediction Rooms', config.predictionChannelIds),
           formatRooms('Gambling Rooms', config.casinoChannelIds),
-          formatRooms('Admin Rooms', config.adminChannelIds),
+          formatRooms('Admin Rooms', [config.adminChannelIds]),
           formatRooms('VIP Active Rooms', vipChannelIds),
           '',
           formatCategory('VIP Category', config.vipSettings.categoryId),

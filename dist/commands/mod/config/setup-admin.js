@@ -58,7 +58,7 @@ async function run({ interaction }) {
         const subcommand = options.getSubcommand();
         if (subcommand === 'add') {
             const channel = interaction.options.getChannel('channel', true);
-            if (guildConfiguration.adminChannelIds.includes(channel.id)) {
+            if (guildConfiguration.adminChannelIds === channel.id) {
                 return interaction.reply({
                     embeds: [
                         (0, createEmbed_1.createErrorEmbed)('Admin Channel Setup - Add', `Channel ${channel} is already configured for admin commands.`),
@@ -66,7 +66,7 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            guildConfiguration.adminChannelIds.push(channel.id);
+            guildConfiguration.adminChannelIds = channel.id;
             await guildConfiguration.save();
             return interaction.reply({
                 embeds: [
@@ -76,7 +76,7 @@ async function run({ interaction }) {
         }
         if (subcommand === 'remove') {
             const channelId = options.getString('channel-id', true);
-            if (!guildConfiguration.adminChannelIds.includes(channelId)) {
+            if (guildConfiguration.adminChannelIds !== channelId) {
                 return interaction.reply({
                     embeds: [
                         (0, createEmbed_1.createErrorEmbed)('Admin Channel Setup - Remove', `Channel with ID ${channelId} is not set for admin commands.`),
@@ -84,8 +84,7 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            guildConfiguration.adminChannelIds =
-                guildConfiguration.adminChannelIds.filter((id) => id !== channelId);
+            guildConfiguration.adminChannelIds = '';
             await guildConfiguration.save();
             return interaction.reply({
                 embeds: [

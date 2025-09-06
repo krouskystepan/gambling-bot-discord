@@ -20,8 +20,8 @@ const guildConfigurationSchema = new mongoose_1.Schema({
         },
     },
     adminChannelIds: {
-        type: [String],
-        default: [],
+        type: String,
+        default: '',
     },
     casinoChannelIds: {
         type: [String],

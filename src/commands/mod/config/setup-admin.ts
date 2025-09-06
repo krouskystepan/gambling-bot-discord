@@ -72,7 +72,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'add') {
       const channel = interaction.options.getChannel('channel', true)
 
-      if (guildConfiguration.adminChannelIds.includes(channel.id)) {
+      if (guildConfiguration.adminChannelIds === channel.id) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
@@ -84,7 +84,7 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      guildConfiguration.adminChannelIds.push(channel.id)
+      guildConfiguration.adminChannelIds = channel.id
       await guildConfiguration.save()
 
       return interaction.reply({
@@ -100,7 +100,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'remove') {
       const channelId = options.getString('channel-id', true)
 
-      if (!guildConfiguration.adminChannelIds.includes(channelId)) {
+      if (guildConfiguration.adminChannelIds !== channelId) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
@@ -112,9 +112,7 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      guildConfiguration.adminChannelIds =
-        guildConfiguration.adminChannelIds.filter((id) => id !== channelId)
-
+      guildConfiguration.adminChannelIds = ''
       await guildConfiguration.save()
 
       return interaction.reply({

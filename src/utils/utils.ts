@@ -65,6 +65,10 @@ export const checkChannelConfiguration = async (
       }
 
       allowedChannelIds = [actionsChannel]
+    } else if (channelType === 'adminChannelIds') {
+      allowedChannelIds = guildConfiguration.adminChannelIds
+        ? [guildConfiguration.adminChannelIds]
+        : []
     } else {
       allowedChannelIds = guildConfiguration[channelType] || []
     }

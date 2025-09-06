@@ -7,7 +7,7 @@ export type GuildConfiguration = Document & {
     actions: string
     logs: string
   }
-  adminChannelIds: string[]
+  adminChannelIds: string
   casinoChannelIds: string[]
   predictionChannelIds: {
     actions: string
@@ -41,8 +41,8 @@ const guildConfigurationSchema = new Schema<GuildConfiguration>({
     },
   },
   adminChannelIds: {
-    type: [String],
-    default: [],
+    type: String,
+    default: '',
   },
   casinoChannelIds: {
     type: [String],
