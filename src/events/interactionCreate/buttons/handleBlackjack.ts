@@ -251,6 +251,9 @@ export default async (interaction: Interaction, client: Client) => {
         })
       }
 
+      user.balance -= game.betAmount
+      await user.save()
+
       const drawnCard = drawNextCard(game.deck, gameIndex)
 
       game.playerCards.push(drawnCard)
