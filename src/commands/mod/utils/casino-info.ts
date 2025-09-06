@@ -42,7 +42,7 @@ export const options: CommandOptions = {
 }
 
 const formatRTP = (rtp: number) => {
-  return `- **RTP:** ${(rtp * 100).toFixed(2)}%`
+  return `- **RTP:** ${rtp.toFixed(2)}%`
 }
 
 const formatBet = (label: string, value: number) => {

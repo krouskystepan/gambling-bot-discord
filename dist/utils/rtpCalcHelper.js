@@ -13,26 +13,33 @@ const combination = (n, k) => {
     return result;
 };
 const calculateRTP = (game, settings) => {
+    const toNumber = (val) => {
+        if (typeof val === 'string')
+            return parseFloat(val) || 0;
+        if (typeof val === 'number')
+            return val;
+        return 0;
+    };
     switch (game) {
         case 'dice': {
-            const winChance = 1 / 6;
-            return winChance * settings.winMultiplier;
+            const { winMultiplier } = settings;
+            return (1 / 6) * toNumber(winMultiplier) * 100;
         }
         case 'coinflip': {
-            const winChance = 0.5;
-            return winChance * settings.winMultiplier;
+            const { winMultiplier } = settings;
+            return 0.5 * toNumber(winMultiplier) * 100;
         }
         case 'slots': {
             const { symbolWeights, winMultipliers } = settings;
-            const totalWeight = Object.values(symbolWeights).reduce((a, b) => a + b, 0);
+            const totalWeight = Object.values(symbolWeights).reduce((a, b) => a + toNumber(b), 0);
             let rtp = 0;
             for (const [symbol, weight] of Object.entries(symbolWeights)) {
-                const probability = Math.pow(weight / totalWeight, 3);
+                const probability = Math.pow(toNumber(weight) / totalWeight, 3);
                 const combo = symbol + symbol + symbol;
-                const multiplier = winMultipliers[combo] ?? 0;
+                const multiplier = toNumber(winMultipliers[combo] ?? 0);
                 rtp += probability * multiplier;
             }
-            return rtp;
+            return rtp * 100;
         }
         case 'lottery': {
             const { winMultipliers } = settings;
@@ -43,27 +50,26 @@ const calculateRTP = (game, settings) => {
                 const favorable = combination(userPicks, k) *
                     combination(defaultConfig_1.LOTTERY_TOTAL_NUMBERS - userPicks, drawnNumbers - k);
                 const probability = favorable / combination(defaultConfig_1.LOTTERY_TOTAL_NUMBERS, drawnNumbers);
-                const multiplier = winMultipliers[k] ?? 0;
+                const multiplier = toNumber(winMultipliers[k] ?? 0);
                 rtp += probability * multiplier;
             }
-            return rtp;
+            return rtp * 100;
         }
         case 'rps': {
             const { casinoCut } = settings;
-            return 1 - casinoCut;
+            return (1 - toNumber(casinoCut)) * 100;
         }
         case 'goldenJackpot': {
             const { winMultiplier, oneInChance } = settings;
-            return (1 / oneInChance) * winMultiplier;
+            return (toNumber(winMultiplier) / toNumber(oneInChance)) * 100;
         }
-        case 'blackjack': {
-            // Blackjack RTP depends on strategy and rules.
-            // In an infinite deck model, without splits and with basic strategy:
-            // ~99.3–99.5%. We return 0.994 as the average.
-            return 0.994;
-        }
+        case 'blackjack':
+            return 99.4;
+        case 'prediction':
+            return 0;
         default:
-            throw new Error(`RTP for ${game} not implemented`);
+            console.warn(`RTP for ${game} not implemented`);
+            return 0;
     }
 };
 exports.calculateRTP = calculateRTP;

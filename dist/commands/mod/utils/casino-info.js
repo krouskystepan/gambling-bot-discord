@@ -38,7 +38,7 @@ exports.options = {
     deleted: false,
 };
 const formatRTP = (rtp) => {
-    return `- **RTP:** ${(rtp * 100).toFixed(2)}%`;
+    return `- **RTP:** ${rtp.toFixed(2)}%`;
 };
 const formatBet = (label, value) => {
     return `- **${label}:** ${value === 0 ? 'No Limit' : (0, utils_1.formatNumberToReadableString)(value)}`;
