@@ -87,11 +87,17 @@ async function run({ interaction, client }) {
             });
         }
         const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
+        const member = interaction.member;
+        const displayName = member?.displayName ||
+            interaction.user.globalName ||
+            interaction.user.username;
+        const managerRole = guildConfiguration.managerRoleId;
         logChannel
             .send({
+            content: `${managerRole ? `<@&${guildConfiguration.managerRoleId}>` : ''}`,
             embeds: [
                 new discord_js_1.EmbedBuilder()
-                    .setTitle('ATM - Deposit')
+                    .setTitle(`ATM - Deposit by by ${displayName} (${interaction.user.username})`)
                     .setColor('Green')
                     .setDescription(`<@${interaction.user.id}> has deposited **$${readableAmount}** from account **${account}**.`),
             ],

@@ -159,12 +159,17 @@ export async function run({ interaction, client }: SlashCommandProps) {
       interaction.user.globalName ||
       interaction.user.username
 
+    const managerRole = guildConfiguration.managerRoleId
+
     logChannel
       .send({
+        content: `${
+          managerRole ? `<@&${guildConfiguration.managerRoleId}>` : ''
+        }`,
         embeds: [
           new EmbedBuilder()
             .setTitle(
-              `Withdrawal by ${displayName} (${interaction.user.username})`
+              `ATM - Withdrawal by ${displayName} (${interaction.user.username})`
             )
             .setColor('Red')
             .setDescription(

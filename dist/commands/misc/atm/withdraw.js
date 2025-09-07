@@ -101,11 +101,13 @@ async function run({ interaction, client }) {
         const displayName = member?.displayName ||
             interaction.user.globalName ||
             interaction.user.username;
+        const managerRole = guildConfiguration.managerRoleId;
         logChannel
             .send({
+            content: `${managerRole ? `<@&${guildConfiguration.managerRoleId}>` : ''}`,
             embeds: [
                 new discord_js_1.EmbedBuilder()
-                    .setTitle(`Withdrawal by ${displayName} (${interaction.user.username})`)
+                    .setTitle(`ATM - Withdrawal by ${displayName} (${interaction.user.username})`)
                     .setColor('Red')
                     .setDescription(`<@${interaction.user.id}> has withdrawn **$${readableAmount}** into account **${account}**.`),
             ],

@@ -135,11 +135,24 @@ export async function run({ interaction, client }: SlashCommandProps) {
       guildConfiguration.atmChannelIds.logs
     ) as TextChannel
 
+    const member = interaction.member as GuildMember | null
+    const displayName =
+      member?.displayName ||
+      interaction.user.globalName ||
+      interaction.user.username
+
+    const managerRole = guildConfiguration.managerRoleId
+
     logChannel
       .send({
+        content: `${
+          managerRole ? `<@&${guildConfiguration.managerRoleId}>` : ''
+        }`,
         embeds: [
           new EmbedBuilder()
-            .setTitle('ATM - Deposit')
+            .setTitle(
+              `ATM - Deposit by by ${displayName} (${interaction.user.username})`
+            )
             .setColor('Green')
             .setDescription(
               `<@${interaction.user.id}> has deposited **$${readableAmount}** from account **${account}**.`
