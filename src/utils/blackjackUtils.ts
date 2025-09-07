@@ -76,7 +76,8 @@ export const revealDealerCards = async (
   gameIndex: number,
   user: User,
   guildId: string,
-  gameId: string
+  gameId: string,
+  showBalnce: boolean
 ) => {
   await message.edit({
     embeds: [
@@ -86,7 +87,9 @@ export const revealDealerCards = async (
         dealerTotal,
         playerCards,
         playerTotal,
-        'DRAWING'
+        'DRAWING',
+        false,
+        0
       ),
     ],
     components: [],
@@ -109,7 +112,9 @@ export const revealDealerCards = async (
           dealerTotal,
           playerCards,
           playerTotal,
-          'DRAWING'
+          'DRAWING',
+          false,
+          0
         ),
       ],
       components: [],
@@ -147,7 +152,9 @@ export const revealDealerCards = async (
         dealerTotal,
         playerCards,
         playerTotal,
-        resultId
+        resultId,
+        showBalnce,
+        user.balance
       ),
     ],
     components: [],
@@ -175,6 +182,8 @@ export const createBlackjackEmbed = (
   playerCards: Card[],
   playerTotal: number,
   resultId: BJResults,
+  showBalance: boolean,
+  userBalance: number,
   dealerVisibleOneCard: boolean = false
 ) => {
   const dealerHandText = dealerVisibleOneCard
@@ -233,18 +242,27 @@ export const createBlackjackEmbed = (
       break
   }
 
-  return createBetEmbed(
-    '🃏 Blackjack',
-    color,
-    [
-      `💵 Total Bet: **$${bet}**`,
-      `**Dealer's Hand:**\n${dealerHandText}`,
-      `**Your Hand:**\n${playerCards
-        .map((c) => `${c.label}${c.suite}`)
-        .join(' ')} (**${playerTotal}**)`,
-      resultText ? `**Result**\n${resultText}` : undefined,
-    ]
-      .filter(Boolean)
-      .join('\n\n')
-  )
+  const sections = [
+    `💵 Total Bet: **$${bet}**`,
+    `**Dealer's Hand:**\n${dealerHandText}`,
+    `**Your Hand:**\n${playerCards
+      .map((c) => `${c.label}${c.suite}`)
+      .join(' ')} (**${playerTotal}**)`,
+  ]
+
+  if (resultText) {
+    let resultSection = `**Result**\n${resultText}`
+    if (showBalance) {
+      resultSection += `\n🏦 Balance: **$${formatNumberToReadableString(
+        userBalance
+      )}**`
+    }
+    sections.push(resultSection)
+  } else if (showBalance) {
+    sections.push(
+      `🏦 Balance: **$${formatNumberToReadableString(userBalance)}**`
+    )
+  }
+
+  return createBetEmbed('🃏 Blackjack', color, sections.join('\n\n'))
 }

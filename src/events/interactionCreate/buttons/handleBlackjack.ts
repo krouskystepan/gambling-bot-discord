@@ -21,7 +21,8 @@ export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
 
   try {
-    const [type, ids, action] = interaction.customId.split('.')
+    const [type, ids, action, showBalanceString] =
+      interaction.customId.split('.')
 
     if (!type || !ids || !action) return
 
@@ -29,6 +30,8 @@ export default async (interaction: Interaction, client: Client) => {
 
     if (type !== 'blackjack') return
     if (!gameId || !userId || !guildId) return
+
+    const showBalance = showBalanceString === 'true'
 
     if (userId !== interaction.user.id) {
       return interaction.reply({
@@ -100,7 +103,8 @@ export default async (interaction: Interaction, client: Client) => {
         gameIndex,
         user,
         guildId,
-        gameId
+        gameId,
+        showBalance
       )
 
       return interaction.followUp({
@@ -121,12 +125,16 @@ export default async (interaction: Interaction, client: Client) => {
 
       if (game.playerCards.length <= 3) {
         const hitButton = new ButtonBuilder()
-          .setCustomId(`blackjack.${gameId}-${userId}-${guildId}.hit`)
+          .setCustomId(
+            `blackjack.${gameId}-${userId}-${guildId}.hit.${showBalance}`
+          )
           .setLabel('Hit')
           .setStyle(ButtonStyle.Success)
 
         const standButton = new ButtonBuilder()
-          .setCustomId(`blackjack.${gameId}-${userId}-${guildId}.stand`)
+          .setCustomId(
+            `blackjack.${gameId}-${userId}-${guildId}.stand.${showBalance}`
+          )
           .setLabel('Stand')
           .setStyle(ButtonStyle.Danger)
 
@@ -159,7 +167,9 @@ export default async (interaction: Interaction, client: Client) => {
               dealerTotal,
               game.playerCards,
               playerTotal,
-              'PB'
+              'PB',
+              showBalance,
+              user.balance
             ),
           ],
           components: [],
@@ -185,7 +195,8 @@ export default async (interaction: Interaction, client: Client) => {
           gameIndex + 1,
           user,
           guildId,
-          gameId
+          gameId,
+          showBalance
         )
 
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
@@ -210,6 +221,8 @@ export default async (interaction: Interaction, client: Client) => {
             game.playerCards,
             playerTotal,
             undefined,
+            false,
+            0,
             true
           ),
         ],
@@ -271,7 +284,9 @@ export default async (interaction: Interaction, client: Client) => {
               dealerTotal,
               game.playerCards,
               playerTotal,
-              'PB'
+              'PB',
+              showBalance,
+              user.balance
             ),
           ],
           components: [],
@@ -294,7 +309,8 @@ export default async (interaction: Interaction, client: Client) => {
         gameIndex + 1,
         user,
         guildId,
-        gameId
+        gameId,
+        showBalance
       )
 
       return interaction.followUp({

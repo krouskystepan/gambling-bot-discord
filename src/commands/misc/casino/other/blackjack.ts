@@ -36,6 +36,13 @@ export const data: CommandData = {
       type: ApplicationCommandOptionType.String,
       required: true,
     },
+    {
+      name: 'show-balance',
+      description:
+        'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
   ],
   dm_permission: false,
 }
@@ -95,6 +102,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
+    const showBalance = interaction.options.getBoolean('show-balance') || false
 
     if (isNaN(parsedBetAmount)) {
       return interaction.reply({
@@ -212,7 +220,9 @@ export async function run({ interaction }: SlashCommandProps) {
             dealerTotal,
             playerCards,
             playerTotal,
-            resultId!
+            resultId!,
+            showBalance,
+            user.balance
           ),
         ],
       })
@@ -234,21 +244,21 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const hitButton = new ButtonBuilder()
       .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.hit`
+        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.hit.${showBalance}`
       )
       .setLabel('Hit')
       .setStyle(ButtonStyle.Success)
 
     const standButton = new ButtonBuilder()
       .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.stand`
+        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.stand.${showBalance}`
       )
       .setLabel('Stand')
       .setStyle(ButtonStyle.Danger)
 
     const doubleButton = new ButtonBuilder()
       .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.double`
+        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.double.${showBalance}`
       )
       .setLabel('Double')
       .setStyle(ButtonStyle.Primary)
@@ -268,6 +278,8 @@ export async function run({ interaction }: SlashCommandProps) {
           playerCards,
           playerTotal,
           undefined,
+          false,
+          0,
           true
         ),
       ],

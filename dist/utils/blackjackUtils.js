@@ -50,10 +50,10 @@ const calculateHandValue = (cards) => {
     return total;
 };
 exports.calculateHandValue = calculateHandValue;
-const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerCards, playerTotal, deck, gameIndex, user, guildId, gameId) => {
+const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerCards, playerTotal, deck, gameIndex, user, guildId, gameId, showBalnce) => {
     await message.edit({
         embeds: [
-            (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, 'DRAWING'),
+            (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, 'DRAWING', false, 0),
         ],
         components: [],
     });
@@ -65,7 +65,7 @@ const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerC
         gameIndex++;
         await message.edit({
             embeds: [
-                (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, 'DRAWING'),
+                (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, 'DRAWING', false, 0),
             ],
             components: [],
         });
@@ -93,14 +93,14 @@ const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerC
     }
     await message.edit({
         embeds: [
-            (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, resultId),
+            (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalnce, user.balance),
         ],
         components: [],
     });
     await BlackjackGame_1.default.findOneAndDelete({ userId: user.userId, guildId, gameId });
 };
 exports.revealDealerCards = revealDealerCards;
-const createBlackjackEmbed = (bet, dealerCards, dealerTotal, playerCards, playerTotal, resultId, dealerVisibleOneCard = false) => {
+const createBlackjackEmbed = (bet, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, userBalance, dealerVisibleOneCard = false) => {
     const dealerHandText = dealerVisibleOneCard
         ? `${dealerCards[0].label}${dealerCards[0].suite} ??`
         : `${dealerCards
@@ -147,15 +147,23 @@ const createBlackjackEmbed = (bet, dealerCards, dealerTotal, playerCards, player
             resultText = '';
             break;
     }
-    return (0, createEmbed_1.createBetEmbed)('🃏 Blackjack', color, [
+    const sections = [
         `💵 Total Bet: **$${bet}**`,
         `**Dealer's Hand:**\n${dealerHandText}`,
         `**Your Hand:**\n${playerCards
             .map((c) => `${c.label}${c.suite}`)
             .join(' ')} (**${playerTotal}**)`,
-        resultText ? `**Result**\n${resultText}` : undefined,
-    ]
-        .filter(Boolean)
-        .join('\n\n'));
+    ];
+    if (resultText) {
+        let resultSection = `**Result**\n${resultText}`;
+        if (showBalance) {
+            resultSection += `\n🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(userBalance)}**`;
+        }
+        sections.push(resultSection);
+    }
+    else if (showBalance) {
+        sections.push(`🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(userBalance)}**`);
+    }
+    return (0, createEmbed_1.createBetEmbed)('🃏 Blackjack', color, sections.join('\n\n'));
 };
 exports.createBlackjackEmbed = createBlackjackEmbed;

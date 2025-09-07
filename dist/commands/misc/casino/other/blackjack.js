@@ -18,6 +18,12 @@ exports.data = {
             type: discord_js_1.ApplicationCommandOptionType.String,
             required: true,
         },
+        {
+            name: 'show-balance',
+            description: 'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
+            type: discord_js_1.ApplicationCommandOptionType.Boolean,
+            required: false,
+        },
     ],
     dm_permission: false,
 };
@@ -56,6 +62,7 @@ async function run({ interaction }) {
         const betAmount = interaction.options.getString('bet', true);
         const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmount);
         const readableBetAmount = (0, utils_1.formatNumberToReadableString)(parsedBetAmount);
+        const showBalance = interaction.options.getBoolean('show-balance') || false;
         if (isNaN(parsedBetAmount)) {
             return interaction.reply({
                 embeds: [
@@ -130,7 +137,7 @@ async function run({ interaction }) {
             await user.save();
             return interaction.editReply({
                 embeds: [
-                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId),
+                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, user.balance),
                 ],
             });
         }
@@ -146,21 +153,21 @@ async function run({ interaction }) {
         });
         await game.save();
         const hitButton = new discord_js_1.ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.hit`)
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.hit.${showBalance}`)
             .setLabel('Hit')
             .setStyle(discord_js_1.ButtonStyle.Success);
         const standButton = new discord_js_1.ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.stand`)
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.stand.${showBalance}`)
             .setLabel('Stand')
             .setStyle(discord_js_1.ButtonStyle.Danger);
         const doubleButton = new discord_js_1.ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.double`)
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.double.${showBalance}`)
             .setLabel('Double')
             .setStyle(discord_js_1.ButtonStyle.Primary);
         const row = new discord_js_1.ActionRowBuilder().addComponents(hitButton, standButton, doubleButton);
         interaction.editReply({
             embeds: [
-                (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, undefined, true),
+                (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, undefined, false, 0, true),
             ],
             components: [row],
         });
