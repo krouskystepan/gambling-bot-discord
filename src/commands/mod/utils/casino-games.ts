@@ -29,10 +29,10 @@ const formatCommand = (
     .join(' ')
 
   let output = `**How to use:**\n`
-  output += `- /${command} ${required}`
+  output += `- \`/${command} ${required}\``
 
   if (optional) {
-    output += `\n- /${command} ${required} ${optional}`
+    output += `\n- \`/${command} ${required} ${optional}\``
   }
 
   return output
@@ -104,6 +104,7 @@ export async function run({ interaction }: SlashCommandProps) {
       '🃏 Blackjack',
       formatCommand('blackjack', [
         { name: 'bet', example: '2000', required: true },
+        { name: 'show-balance', example: 'true', required: false },
       ])
     ),
   ]
