@@ -5,7 +5,10 @@ import {
   parseReadableStringToNumber,
 } from '../../../utils/utils'
 import {
+  ActionRowBuilder,
   ApplicationCommandOptionType,
+  ButtonBuilder,
+  ButtonStyle,
   EmbedBuilder,
   GuildMember,
   MessageFlags,
@@ -143,26 +146,41 @@ export async function run({ interaction, client }: SlashCommandProps) {
 
     const managerRole = guildConfiguration.managerRoleId
 
-    logChannel
-      .send({
-        content: `${
-          managerRole ? `<@&${guildConfiguration.managerRoleId}>` : ''
-        }`,
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(
-              `ATM - Deposit by by ${displayName} (${interaction.user.username})`
-            )
-            .setColor('Green')
-            .setDescription(
-              `<@${interaction.user.id}> has deposited **$${readableAmount}** from account **${account}**.`
-            ),
-        ],
-      })
-      .then((message) => {
-        message.react('✅')
-      })
-      .catch(console.error)
+    const logMessage = await logChannel.send({
+      content: `${managerRole ? `<@&${managerRole}>` : ''}`,
+      embeds: [
+        new EmbedBuilder()
+          .setTitle(
+            `ATM - Deposit by ${displayName} (${interaction.user.username})`
+          )
+          .setColor('Green')
+          .setDescription(
+            `<@${interaction.user.id}> has deposited **$${readableAmount}** from account **${account}**.`
+          ),
+      ],
+      components: [],
+    })
+
+    const approveButton = new ButtonBuilder()
+      .setCustomId(
+        `atm.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
+      )
+      .setLabel('Approve')
+      .setStyle(ButtonStyle.Success)
+
+    const rejectButton = new ButtonBuilder()
+      .setCustomId(
+        `atm.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
+      )
+      .setLabel('Reject')
+      .setStyle(ButtonStyle.Danger)
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      approveButton,
+      rejectButton
+    )
+
+    await logMessage.edit({ components: [row] })
 
     return interaction.reply({
       embeds: [

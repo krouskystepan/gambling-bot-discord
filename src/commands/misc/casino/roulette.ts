@@ -6,15 +6,16 @@ import {
   createInfoEmbed,
 } from '../../../utils/createEmbed'
 import {
-  checkUserRegistration,
+  checkChannelConfiguration,
   parseReadableStringToNumber,
   formatNumberToReadableString,
-  checkChannelConfiguration,
+  checkUserRegistration,
 } from '../../../utils/utils'
 import { spinRouletteWheel } from '../../../utils/casinoHelpers'
 import {
   AMERICAN_NUMBERS,
   calculateRouletteWin,
+  getRouletteColor,
   RouletteBet,
   RouletteBetType,
 } from '../../../utils/rouletteUtils'
@@ -25,7 +26,7 @@ export const data: CommandData = {
   options: [
     {
       name: 'bet',
-      description: 'Your bet amount (e.g., 100, 1k, 5k).',
+      description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -49,12 +50,29 @@ export const data: CommandData = {
       type: ApplicationCommandOptionType.String,
       required: true,
     },
+    {
+      name: 'spins',
+      description: 'Number of spins.',
+      type: ApplicationCommandOptionType.Integer,
+      required: false,
+      choices: Array.from({ length: 20 }, (_, i) => ({
+        name: (i + 1).toString(),
+        value: i + 1,
+      })),
+    },
+    {
+      name: 'show-balance',
+      description:
+        'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
   ],
   dm_permission: false,
 }
 
 export const options: CommandOptions = {
-  deleted: true,
+  deleted: false,
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -64,26 +82,41 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction.guildId!
     )
 
-    if (!user)
+    if (!user) {
       return interaction.reply({
-        embeds: [createErrorEmbed('Not Registered', 'Use `/register` first.')],
+        embeds: [
+          createErrorEmbed(
+            'Error - Not registered',
+            'You are not registered yet.\nUse the `/register` command to register.'
+          ),
+        ],
         flags: MessageFlags.Ephemeral,
       })
+    }
 
     const configReply = await checkChannelConfiguration(
       interaction,
       'casinoChannelIds',
       {
-        notSet: 'Casino not configured yet.',
-        notAllowed: 'This channel is not allowed.',
+        notSet:
+          'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
+        notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
       }
     )
     if (!configReply) return
 
-    const betAmountStr = interaction.options.getString('bet', true)
-    const betAmount = parseReadableStringToNumber(betAmountStr)
+    const spins = interaction.options.getInteger('spins') || 1
+    const betType = interaction.options.getString(
+      'type',
+      true
+    ) as RouletteBetType
+    const betValue = interaction.options.getString('value', true)
+    const betAmount = interaction.options.getString('bet', true)
+    const parsedBetAmount = parseReadableStringToNumber(betAmount)
+    const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
+    const showBalance = interaction.options.getBoolean('show-balance')
 
-    if (isNaN(betAmount)) {
+    if (isNaN(parsedBetAmount)) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
@@ -95,7 +128,7 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (betAmount <= 0) {
+    if (parsedBetAmount <= 0) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
@@ -107,32 +140,31 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (betAmount > user.balance)
+    const totalBet = parsedBetAmount * spins
+    if (user.balance < totalBet) {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
             'Insufficient Funds',
-            `Your balance is $${formatNumberToReadableString(
+            `You don't have enough money to place this bet for ${spins} spins (you need **$${formatNumberToReadableString(
+              totalBet
+            )}**).\nYour current balance is **$${formatNumberToReadableString(
               user.balance
-            )}, cannot bet $${formatNumberToReadableString(betAmount)}`
+            )}**.`
           ),
         ],
         flags: MessageFlags.Ephemeral,
       })
+    }
 
-    const betType = interaction.options.getString(
-      'type',
-      true
-    ) as RouletteBetType
-    const betValue = interaction.options.getString('value', true)
-
+    // ✅ validate bet value depending on betType
     switch (betType) {
       case 'number':
         if (!AMERICAN_NUMBERS.includes(betValue))
           return interaction.reply({
             embeds: [
               createInfoEmbed(
-                'Invalid Input - Invalid Number',
+                'Invalid Number',
                 'Choose a valid number: 0, 00, or 1–36'
               ),
             ],
@@ -142,24 +174,14 @@ export async function run({ interaction }: SlashCommandProps) {
       case 'color':
         if (!['red', 'black'].includes(betValue.toLowerCase()))
           return interaction.reply({
-            embeds: [
-              createInfoEmbed(
-                'Invalid Input - Invalid Color',
-                'Choose red or black'
-              ),
-            ],
+            embeds: [createInfoEmbed('Invalid Color', 'Choose red or black')],
             flags: MessageFlags.Ephemeral,
           })
         break
       case 'parity':
         if (!['even', 'odd'].includes(betValue.toLowerCase()))
           return interaction.reply({
-            embeds: [
-              createInfoEmbed(
-                'Invalid Input - Invalid Parity',
-                'Choose even or odd'
-              ),
-            ],
+            embeds: [createInfoEmbed('Invalid Parity', 'Choose even or odd')],
             flags: MessageFlags.Ephemeral,
           })
         break
@@ -168,7 +190,7 @@ export async function run({ interaction }: SlashCommandProps) {
           return interaction.reply({
             embeds: [
               createInfoEmbed(
-                'Invalid Input - Invalid Range',
+                'Invalid Range',
                 'Choose low (1–18) or high (19–36)'
               ),
             ],
@@ -180,7 +202,7 @@ export async function run({ interaction }: SlashCommandProps) {
           return interaction.reply({
             embeds: [
               createInfoEmbed(
-                'Invalid Input - Invalid Dozen',
+                'Invalid Dozen',
                 'Choose 1 (1–12), 2 (13–24), or 3 (25–36)'
               ),
             ],
@@ -190,51 +212,73 @@ export async function run({ interaction }: SlashCommandProps) {
       case 'column':
         if (!['1', '2', '3'].includes(betValue))
           return interaction.reply({
-            embeds: [
-              createInfoEmbed(
-                'Invalid Input - Invalid Column',
-                'Choose 1, 2, or 3'
-              ),
-            ],
+            embeds: [createInfoEmbed('Invalid Column', 'Choose 1, 2, or 3')],
             flags: MessageFlags.Ephemeral,
           })
         break
     }
 
-    const rouletteBet: RouletteBet = { type: betType, value: betValue }
-    const result = spinRouletteWheel()
-    const winnings = calculateRouletteWin(rouletteBet, result, betAmount)
+    let totalNet = 0
+    let results: string[] = []
 
-    user.balance += winnings - betAmount
+    for (let i = 0; i < spins; i++) {
+      const result = spinRouletteWheel()
+      let displayResult = result
+      if (/^\d+$/.test(result)) {
+        const num = parseInt(result, 10)
+        displayResult = num.toString().padStart(2, '0')
+      }
+      const color = getRouletteColor(result)
+      const rouletteBet: RouletteBet = { type: betType, value: betValue }
+      const winnings = calculateRouletteWin(
+        rouletteBet,
+        result,
+        parsedBetAmount
+      )
+      const net = winnings - parsedBetAmount
+
+      results.push(
+        `**${color} ${displayResult}** | ${
+          net > 0 ? '🎉' : net < 0 ? '❌' : '—'
+        } | ${
+          net > 0
+            ? `**+$${formatNumberToReadableString(net)}**`
+            : net < 0
+            ? `**-$${readableBetAmount}**`
+            : `**$0**`
+        }`
+      )
+
+      totalNet += net
+    }
+
+    user.balance += totalNet
     await user.save()
 
-    const isWin = winnings > 0
-    const isLoss = winnings < 0
-
-    const showBalance = true
+    const isWin = totalNet > 0
+    const isLoss = totalNet < 0
 
     return interaction.reply({
       embeds: [
         createBetEmbed(
           isWin
-            ? '🔄 **Win!** 🎉'
+            ? '🎰 **Win!** 🎉'
             : isLoss
-            ? '🔄 **Better Luck Next Time...** ❌'
-            : '🔄 **Not Bad...** 👀',
+            ? '🎰 **Better Luck Next Time...** ❌'
+            : '🎰 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-          `💵 Total Bet: **$${formatNumberToReadableString(betAmount)}**\n\n` +
-            `🔄 Bet Type: **${betType}** | Value: **${betValue}**\n` +
-            `🟢 Result: **${result}**\n` +
+          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+            `🎲 **Spin Results:**\n${results.join('\n')}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(winnings)}**\n` +
+            } **$${formatNumberToReadableString(totalNet)}**\n` +
             (showBalance
               ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
               : '')
         ),
       ],
     })
-  } catch (err) {
-    console.error('Roulette command error:', err)
+  } catch (error) {
+    console.error('Error running the command:', error)
   }
 }

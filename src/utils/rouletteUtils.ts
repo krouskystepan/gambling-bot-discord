@@ -70,3 +70,13 @@ export function calculateRouletteWin(
       return Number(bet.value) === col ? amount * PAYOUTS.column : 0
   }
 }
+
+export function getRouletteColor(number: string): string {
+  if (number === '0' || number === '00') return '🟢'
+
+  const num = parseInt(number, 10)
+  if (RED_NUMBERS.has(num)) return '🔴'
+  if (BLACK_NUMBERS.has(num)) return '⚫'
+
+  return '❓ Unknown'
+}

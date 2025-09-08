@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AMERICAN_NUMBERS = void 0;
 exports.calculateRouletteWin = calculateRouletteWin;
+exports.getRouletteColor = getRouletteColor;
 exports.AMERICAN_NUMBERS = [
     '0',
     '00',
@@ -59,4 +60,14 @@ function calculateRouletteWin(bet, result, amount) {
             const col = ((Number(result) - 1) % 3) + 1;
             return Number(bet.value) === col ? amount * PAYOUTS.column : 0;
     }
+}
+function getRouletteColor(number) {
+    if (number === '0' || number === '00')
+        return '🟢';
+    const num = parseInt(number, 10);
+    if (RED_NUMBERS.has(num))
+        return '🔴';
+    if (BLACK_NUMBERS.has(num))
+        return '⚫';
+    return '❓ Unknown';
 }

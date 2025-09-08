@@ -1,7 +1,6 @@
 import {
   Client,
   EmbedBuilder,
-  GuildMember,
   Interaction,
   MessageFlags,
   TextChannel,
