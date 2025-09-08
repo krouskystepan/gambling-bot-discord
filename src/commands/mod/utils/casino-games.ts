@@ -7,6 +7,8 @@ export const data: CommandData = {
 }
 
 export const options: CommandOptions = {
+  userPermissions: ['Administrator'],
+  botPermissions: ['Administrator'],
   deleted: false,
 }
 
@@ -77,7 +79,7 @@ export async function run({ interaction }: SlashCommandProps) {
       '🎟️ Lottery',
       formatCommand('lottery', [
         { name: 'bet', example: '1000', required: true },
-        { name: 'numbers', example: '5,4,3,2,10', required: true },
+        { name: 'numbers', example: '5,4,3,10', required: true },
         { name: 'entries', example: '10', required: false },
         { name: 'show-balance', example: 'true', required: false },
       ])

@@ -8,6 +8,8 @@ exports.data = {
     dm_permission: false,
 };
 exports.options = {
+    userPermissions: ['Administrator'],
+    botPermissions: ['Administrator'],
     deleted: false,
 };
 const formatCommand = (command, params) => {
@@ -50,7 +52,7 @@ async function run({ interaction }) {
         ])),
         renderSection('🎟️ Lottery', formatCommand('lottery', [
             { name: 'bet', example: '1000', required: true },
-            { name: 'numbers', example: '5,4,3,2,10', required: true },
+            { name: 'numbers', example: '5,4,3,10', required: true },
             { name: 'entries', example: '10', required: false },
             { name: 'show-balance', example: 'true', required: false },
         ])),

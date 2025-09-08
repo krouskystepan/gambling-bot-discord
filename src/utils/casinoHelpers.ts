@@ -1,11 +1,12 @@
 import { Card } from './blackjackUtils'
 import { LOTTERY_TOTAL_NUMBERS, LOTTERY_NUM_TO_DRAW } from './defaultConfig'
+import { AMERICAN_NUMBERS } from './rouletteUtils'
 
 export const spinSlot = (slotConfig: {
   symbolWeights: Record<string, number>
 }): string => {
   const weightedSymbols = Object.entries(slotConfig.symbolWeights).flatMap(
-    ([symbol, weight]) => Array(weight).fill(symbol)
+    ([symbol, weight]) => Array(Number(weight)).fill(symbol)
   )
   const spin = () =>
     weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)]
@@ -38,6 +39,11 @@ export const drawGoldenJackpot = (goldenJackpotConfig: {
   oneInChance: number
 }) => {
   return Math.floor(Math.random() * goldenJackpotConfig.oneInChance) + 1
+}
+
+export const spinRouletteWheel = (): string => {
+  const index = Math.floor(Math.random() * AMERICAN_NUMBERS.length)
+  return AMERICAN_NUMBERS[index]
 }
 
 export const drawNextCard = (deck: Card[], cardIndex: number): Card => {
