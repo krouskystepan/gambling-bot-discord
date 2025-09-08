@@ -66,6 +66,16 @@ exports.default = async (interaction, client) => {
                                 });
                             }
                         }
+                        if (!guildConfig?.transactionChannelId)
+                            return;
+                        const transactionChannel = (await client.channels.fetch(guildConfig?.transactionChannelId));
+                        if (transactionChannel) {
+                            transactionChannel.send({
+                                embeds: [
+                                    (0, createEmbed_1.createSuccessEmbed)('ATM - Admin Deposit via Automated Action', `Manager <@${interaction.user.id}> successfully added **$${(0, utils_1.formatNumberToReadableString)(parsedAmount)}** to <@${userId}>.\nTheir new balance is now: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`),
+                                ],
+                            });
+                        }
                     }
                     catch (err) {
                         console.error('Failed to remove buttons from log message', err);

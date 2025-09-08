@@ -104,11 +104,11 @@ export async function run({ interaction, client }: SlashCommandProps) {
   try {
     const configReply = await checkChannelConfiguration(
       interaction,
-      'adminChannelIds',
+      'transactionChannelId',
       {
         notSet:
-          'This server has not been configured for admin commands yet.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for admin commands. Try one of these channels:`,
+          'This server has not been configured for transactions yet.\nSet it up using web dashboard.',
+        notAllowed: `This channel is not configured for transactions. Try one of these channels:`,
       }
     )
 

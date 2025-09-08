@@ -72,9 +72,9 @@ exports.options = {
 };
 async function run({ interaction }) {
     try {
-        const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'adminChannelIds', {
-            notSet: 'This server has not been configured for admin commands yet.\nSet it up using web dashboard.',
-            notAllowed: `This channel is not configured for admin commands. Try one of these channels:`,
+        const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'transactionChannelId', {
+            notSet: 'This server has not been configured for transactions.\nSet it up using web dashboard.',
+            notAllowed: `This channel is not configured for transactions. Try one of these channels:`,
         });
         if (!configReply)
             return;

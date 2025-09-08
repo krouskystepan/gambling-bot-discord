@@ -50,9 +50,9 @@ const checkChannelConfiguration = async (interaction, channelType, messages) => 
             }
             allowedChannelIds = [actionsChannel];
         }
-        else if (channelType === 'adminChannelIds') {
-            allowedChannelIds = guildConfiguration.adminChannelIds
-                ? [guildConfiguration.adminChannelIds]
+        else if (channelType === 'transactionChannelId') {
+            allowedChannelIds = guildConfiguration.transactionChannelId
+                ? [guildConfiguration.transactionChannelId]
                 : [];
         }
         else {

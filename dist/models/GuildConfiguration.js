@@ -19,7 +19,7 @@ const guildConfigurationSchema = new mongoose_1.Schema({
             default: '',
         },
     },
-    adminChannelIds: {
+    transactionChannelId: {
         type: String,
         default: '',
     },

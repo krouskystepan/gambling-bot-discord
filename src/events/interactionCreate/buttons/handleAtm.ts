@@ -12,7 +12,10 @@ import {
 import User from '../../../models/User'
 import { formatNumberToReadableString } from '../../../utils/utils'
 import GuildConfiguration from '../../../models/GuildConfiguration'
-import { createErrorEmbed } from '../../../utils/createEmbed'
+import {
+  createErrorEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -98,6 +101,29 @@ export default async (interaction: Interaction, client: Client) => {
                   components: [],
                 })
               }
+            }
+
+            if (!guildConfig?.transactionChannelId) return
+
+            const transactionChannel = (await client.channels.fetch(
+              guildConfig?.transactionChannelId
+            )) as TextChannel
+
+            if (transactionChannel) {
+              transactionChannel.send({
+                embeds: [
+                  createSuccessEmbed(
+                    'ATM - Admin Deposit via Automated Action',
+                    `Manager <@${
+                      interaction.user.id
+                    }> successfully added **$${formatNumberToReadableString(
+                      parsedAmount
+                    )}** to <@${userId}>.\nTheir new balance is now: **$${formatNumberToReadableString(
+                      user.balance
+                    )}**.`
+                  ),
+                ],
+              })
             }
           } catch (err) {
             console.error('Failed to remove buttons from log message', err)

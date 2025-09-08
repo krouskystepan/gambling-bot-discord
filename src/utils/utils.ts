@@ -23,7 +23,7 @@ export const connectToDatabase = async () => {
 
 type ChannelType =
   | 'casinoChannelIds'
-  | 'adminChannelIds'
+  | 'transactionChannelId'
   | 'predictionChannelIds'
 
 export const checkChannelConfiguration = async (
@@ -65,9 +65,9 @@ export const checkChannelConfiguration = async (
       }
 
       allowedChannelIds = [actionsChannel]
-    } else if (channelType === 'adminChannelIds') {
-      allowedChannelIds = guildConfiguration.adminChannelIds
-        ? [guildConfiguration.adminChannelIds]
+    } else if (channelType === 'transactionChannelId') {
+      allowedChannelIds = guildConfiguration.transactionChannelId
+        ? [guildConfiguration.transactionChannelId]
         : []
     } else {
       allowedChannelIds = guildConfiguration[channelType] || []
