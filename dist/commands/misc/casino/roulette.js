@@ -57,7 +57,7 @@ exports.data = {
     dm_permission: false,
 };
 exports.options = {
-    deleted: false,
+    deleted: true,
 };
 async function run({ interaction }) {
     try {
