@@ -250,7 +250,7 @@ export default async (interaction: Interaction, client: Client) => {
 
       if (!user) return
 
-      if (betAmount > user.balance) {
+      if (game.betAmount > user.balance) {
         return interaction.followUp({
           embeds: [
             createInfoEmbed(

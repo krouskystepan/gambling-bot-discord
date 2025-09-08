@@ -132,7 +132,7 @@ exports.default = async (interaction, client) => {
             const betAmount = game.betAmount * 2;
             if (!user)
                 return;
-            if (betAmount > user.balance) {
+            if (game.betAmount > user.balance) {
                 return interaction.followUp({
                     embeds: [
                         (0, createEmbed_1.createInfoEmbed)('Insufficient balance', `You don't have enough money to place this bet.\nYour current balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`),
