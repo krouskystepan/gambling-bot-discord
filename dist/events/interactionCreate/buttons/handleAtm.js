@@ -41,7 +41,7 @@ exports.default = async (interaction, client) => {
         if (action === 'approve') {
             if (confirm === '_') {
                 const confirmButton = new discord_js_1.ButtonBuilder()
-                    .setCustomId(`atm.approve.confirm.${interaction.user.id}-${messageId}.${parsedAmount}`)
+                    .setCustomId(`atm.approve.confirm.${userId}-${messageId}.${parsedAmount}`)
                     .setLabel('Confirm Deposit')
                     .setStyle(discord_js_1.ButtonStyle.Success);
                 const row = new discord_js_1.ActionRowBuilder().addComponents(confirmButton);
@@ -80,7 +80,7 @@ exports.default = async (interaction, client) => {
         if (action === 'reject') {
             if (confirm === '_') {
                 const confirmButton = new discord_js_1.ButtonBuilder()
-                    .setCustomId(`atm.reject.confirm.${interaction.user.id}-${messageId}.${parsedAmount}`)
+                    .setCustomId(`atm.reject.confirm.${userId}-${messageId}.${parsedAmount}`)
                     .setLabel('Confirm Reject')
                     .setStyle(discord_js_1.ButtonStyle.Danger);
                 const row = new discord_js_1.ActionRowBuilder().addComponents(confirmButton);

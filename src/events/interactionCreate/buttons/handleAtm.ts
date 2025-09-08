@@ -64,7 +64,7 @@ export default async (interaction: Interaction, client: Client) => {
       if (confirm === '_') {
         const confirmButton = new ButtonBuilder()
           .setCustomId(
-            `atm.approve.confirm.${interaction.user.id}-${messageId}.${parsedAmount}`
+            `atm.approve.confirm.${userId}-${messageId}.${parsedAmount}`
           )
           .setLabel('Confirm Deposit')
           .setStyle(ButtonStyle.Success)
@@ -117,7 +117,7 @@ export default async (interaction: Interaction, client: Client) => {
       if (confirm === '_') {
         const confirmButton = new ButtonBuilder()
           .setCustomId(
-            `atm.reject.confirm.${interaction.user.id}-${messageId}.${parsedAmount}`
+            `atm.reject.confirm.${userId}-${messageId}.${parsedAmount}`
           )
           .setLabel('Confirm Reject')
           .setStyle(ButtonStyle.Danger)
