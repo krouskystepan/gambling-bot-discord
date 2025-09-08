@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const discord_js_1 = require("discord.js");
 const User_1 = require("../../../models/User");
 const utils_1 = require("../../../utils/utils");
+const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
+const createEmbed_1 = require("../../../utils/createEmbed");
 exports.default = async (interaction, client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;
@@ -15,6 +17,20 @@ exports.default = async (interaction, client) => {
         const [userId, messageId] = details.split('-');
         if (!userId || !messageId)
             return;
+        const member = await interaction.guild?.members.fetch(interaction.user.id);
+        const guildConfig = await GuildConfiguration_1.default.findOne({
+            guildId: interaction.guildId,
+        });
+        const managerRoleId = guildConfig?.managerRoleId;
+        if (!member?.roles.cache.has(managerRoleId || '') &&
+            !member?.permissions.has(discord_js_1.PermissionsBitField.Flags.Administrator)) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createErrorEmbed)('Permission Denied', `You need to be an **Administrator** or have the ${managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'} to use this command.`),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
         const user = await User_1.default.findOne({
             userId,
             guildId: interaction.guildId,
@@ -45,7 +61,7 @@ exports.default = async (interaction, client) => {
                             const logMessage = await logChannel.messages.fetch(messageId);
                             if (logMessage) {
                                 await logMessage.edit({
-                                    content: 'Approved ✅',
+                                    content: `Approved by <@${interaction.user.id}>✅`,
                                     components: [],
                                 });
                             }
@@ -82,7 +98,7 @@ exports.default = async (interaction, client) => {
                             const logMessage = await logChannel.messages.fetch(messageId);
                             if (logMessage) {
                                 await logMessage.edit({
-                                    content: 'Rejected ❌',
+                                    content: `Rejected by <@${interaction.user.id}> ❌`,
                                     components: [],
                                 });
                             }

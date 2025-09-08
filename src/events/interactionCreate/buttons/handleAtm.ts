@@ -6,10 +6,13 @@ import {
   EmbedBuilder,
   Interaction,
   MessageFlags,
+  PermissionsBitField,
   TextChannel,
 } from 'discord.js'
 import User from '../../../models/User'
 import { formatNumberToReadableString } from '../../../utils/utils'
+import GuildConfiguration from '../../../models/GuildConfiguration'
+import { createErrorEmbed } from '../../../utils/createEmbed'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -24,6 +27,29 @@ export default async (interaction: Interaction, client: Client) => {
     const [userId, messageId] = details.split('-')
 
     if (!userId || !messageId) return
+
+    const member = await interaction.guild?.members.fetch(interaction.user.id)
+    const guildConfig = await GuildConfiguration.findOne({
+      guildId: interaction.guildId,
+    })
+    const managerRoleId = guildConfig?.managerRoleId
+
+    if (
+      !member?.roles.cache.has(managerRoleId || '') &&
+      !member?.permissions.has(PermissionsBitField.Flags.Administrator)
+    ) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Permission Denied',
+            `You need to be an **Administrator** or have the ${
+              managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
+            } to use this command.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
 
     const user = await User.findOne({
       userId,
@@ -68,7 +94,7 @@ export default async (interaction: Interaction, client: Client) => {
               const logMessage = await logChannel.messages.fetch(messageId)
               if (logMessage) {
                 await logMessage.edit({
-                  content: 'Approved ✅',
+                  content: `Approved by <@${interaction.user.id}>✅`,
                   components: [],
                 })
               }
@@ -118,7 +144,7 @@ export default async (interaction: Interaction, client: Client) => {
               const logMessage = await logChannel.messages.fetch(messageId)
               if (logMessage) {
                 await logMessage.edit({
-                  content: 'Rejected ❌',
+                  content: `Rejected by <@${interaction.user.id}> ❌`,
                   components: [],
                 })
               }
