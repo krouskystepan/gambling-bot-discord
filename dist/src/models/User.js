@@ -7,6 +7,7 @@ const UserSchema = new mongoose_1.Schema({
     balance: { type: Number, default: 0 },
     amountGambled: { type: Number, default: 0 },
     milestoneUnlocked: { type: Number, default: 0 },
+    milestoneProgress: { type: Number, default: 0 },
 }, { timestamps: true });
 UserSchema.index({ userId: 1, guildId: 1 }, { unique: true });
 exports.default = (0, mongoose_1.model)('User', UserSchema);

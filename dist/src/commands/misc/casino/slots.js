@@ -67,6 +67,7 @@ async function run({ interaction }) {
         const totalBet = parsedBetAmount * spins;
         user.balance -= totalBet;
         user.amountGambled += totalBet;
+        user.milestoneProgress += totalBet;
         await user.save();
         let totalWinnings = 0;
         let liveResult = 0;

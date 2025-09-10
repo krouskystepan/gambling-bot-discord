@@ -247,23 +247,26 @@ async function checkMilestones(interaction, user, guildId) {
         threshold = Math.floor(threshold * multiplierThreshold);
         reward = Math.floor(reward * multiplierReward);
     }
+    let lastUnlocked = user.milestoneUnlocked ?? 0;
     const unlocked = [];
-    const lastUnlocked = user.milestoneUnlocked ?? 0;
     for (const m of milestones) {
-        if (m.threshold > lastUnlocked && user.amountGambled >= m.threshold) {
-            unlocked.push(m);
+        if (m.threshold > lastUnlocked) {
+            const progress = user.amountGambled - lastUnlocked;
+            if (progress >= m.threshold - lastUnlocked) {
+                unlocked.push(m);
+                lastUnlocked = m.threshold;
+            }
+            break;
         }
     }
     if (unlocked.length) {
-        const maxThreshold = unlocked[unlocked.length - 1].threshold;
         const totalReward = unlocked.reduce((sum, m) => sum + m.reward, 0);
-        user.milestoneUnlocked = maxThreshold;
+        user.milestoneUnlocked = lastUnlocked;
         user.balance += totalReward;
         await user.save();
         const milestoneMessages = unlocked
             .map((m) => `🎉 Unlocked milestone **${(0, exports.formatNumberToReadableString)(m.threshold)}** → +**$${(0, exports.formatNumberToReadableString)(m.reward)}**`)
             .join('\n');
-        // ✅ Jen pokud interakce podporuje followUp
         if (interaction.isChatInputCommand() ||
             interaction.isButton() ||
             interaction.isStringSelectMenu() ||
@@ -276,6 +279,7 @@ async function checkMilestones(interaction, user, guildId) {
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
+        // Transaction channel
         if (guildConf.transactionChannelId) {
             const channel = interaction.guild?.channels.cache.get(guildConf.transactionChannelId);
             if (channel?.isTextBased()) {

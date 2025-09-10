@@ -6,6 +6,7 @@ export type UserDoc = Document & {
   balance: number
   amountGambled: number
   milestoneUnlocked: number
+  milestoneProgress: number
   createdAt: Date
   updatedAt: Date
 }
@@ -17,6 +18,7 @@ const UserSchema = new Schema<UserDoc>(
     balance: { type: Number, default: 0 },
     amountGambled: { type: Number, default: 0 },
     milestoneUnlocked: { type: Number, default: 0 },
+    milestoneProgress: { type: Number, default: 0 },
   },
   { timestamps: true }
 )

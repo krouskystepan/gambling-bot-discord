@@ -59,11 +59,11 @@ exports.default = async (interaction, client) => {
             if (!user)
                 return;
             await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(game.betAmount), message, dealerCards, dealerTotal, playerCards, playerTotal, deck, gameIndex, user, guildId, gameId, showBalance);
-            interaction.followUp({
+            return interaction.followUp({
                 content: 'You have stood.',
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
-            return await (0, utils_1.checkMilestones)(interaction, user, interaction.guildId);
+            // await checkMilestones(interaction, user, interaction.guildId!)
         }
         if (action === 'hit') {
             await interaction.deferUpdate();
@@ -99,20 +99,20 @@ exports.default = async (interaction, client) => {
                     components: [],
                 });
                 await BlackjackGame_1.default.findOneAndDelete({ userId, guildId, gameId });
-                interaction.followUp({
+                return interaction.followUp({
                     content: 'You have busted.',
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
-                return await (0, utils_1.checkMilestones)(interaction, user, interaction.guildId);
+                // await checkMilestones(interaction, user, interaction.guildId!)
             }
             if (playerTotal === 21) {
                 await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(game.betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance);
                 await BlackjackGame_1.default.findOneAndDelete({ userId, guildId, gameId });
-                interaction.followUp({
+                return interaction.followUp({
                     content: 'You have hit.',
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
-                return await (0, utils_1.checkMilestones)(interaction, user, interaction.guildId);
+                // await checkMilestones(interaction, user, interaction.guildId!)
             }
             await BlackjackGame_1.default.findOneAndUpdate({ userId, guildId, gameId }, { playerCards: game.playerCards, deck: game.deck });
             await message.edit({
@@ -157,18 +157,18 @@ exports.default = async (interaction, client) => {
                     ],
                     components: [],
                 });
-                interaction.followUp({
+                return interaction.followUp({
                     content: 'You have busted.',
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
-                return await (0, utils_1.checkMilestones)(interaction, user, interaction.guildId);
+                // await checkMilestones(interaction, user, interaction.guildId!)
             }
             await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance);
-            interaction.followUp({
+            return interaction.followUp({
                 content: 'You have doubled down.',
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
-            return await (0, utils_1.checkMilestones)(interaction, user, interaction.guildId);
+            // await checkMilestones(interaction, user, interaction.guildId!)
         }
     }
     catch (error) {

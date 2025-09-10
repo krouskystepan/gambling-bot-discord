@@ -306,7 +306,6 @@ export async function checkMilestones(
   guildId: string
 ) {
   const guildConf = await GuildConfiguration.findOne({ guildId })
-
   if (!guildConf) return
 
   const guildMilestonesDoc = await Milestone.findOne({ guildId })
@@ -316,31 +315,31 @@ export async function checkMilestones(
     guildMilestonesDoc
 
   const milestones: { threshold: number; reward: number }[] = []
-
   let threshold = baseThreshold
   let reward = baseReward
-
   while (threshold <= 1_000_000_000) {
     milestones.push({ threshold, reward })
     threshold = Math.floor(threshold * multiplierThreshold)
     reward = Math.floor(reward * multiplierReward)
   }
 
+  let lastUnlocked = user.milestoneUnlocked ?? 0
   const unlocked: { threshold: number; reward: number }[] = []
 
-  const lastUnlocked = user.milestoneUnlocked ?? 0
-
   for (const m of milestones) {
-    if (m.threshold > lastUnlocked && user.amountGambled >= m.threshold) {
-      unlocked.push(m)
+    if (m.threshold > lastUnlocked) {
+      const progress = user.amountGambled - lastUnlocked
+      if (progress >= m.threshold - lastUnlocked) {
+        unlocked.push(m)
+        lastUnlocked = m.threshold
+      }
+      break
     }
   }
 
   if (unlocked.length) {
-    const maxThreshold = unlocked[unlocked.length - 1].threshold
     const totalReward = unlocked.reduce((sum, m) => sum + m.reward, 0)
-
-    user.milestoneUnlocked = maxThreshold
+    user.milestoneUnlocked = lastUnlocked
     user.balance += totalReward
     await user.save()
 
@@ -353,7 +352,6 @@ export async function checkMilestones(
       )
       .join('\n')
 
-    // ✅ Jen pokud interakce podporuje followUp
     if (
       interaction.isChatInputCommand() ||
       interaction.isButton() ||
@@ -369,6 +367,7 @@ export async function checkMilestones(
       })
     }
 
+    // Transaction channel
     if (guildConf.transactionChannelId) {
       const channel = interaction.guild?.channels.cache.get(
         guildConf.transactionChannelId

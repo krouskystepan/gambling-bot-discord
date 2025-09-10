@@ -117,6 +117,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     user.balance -= parsedBetAmount
     user.amountGambled += parsedBetAmount
+    user.milestoneProgress += parsedBetAmount
     await user.save()
 
     const shuffledDeck = shuffleDeck(DECK)
@@ -150,7 +151,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       await user.save()
 
-      interaction.editReply({
+      return interaction.editReply({
         embeds: [
           createBlackjackEmbed(
             readableBetAmount,
@@ -165,7 +166,7 @@ export async function run({ interaction }: SlashCommandProps) {
         ],
       })
 
-      return await checkMilestones(interaction, user, interaction.guildId!)
+      //  await checkMilestones(interaction, user, interaction.guildId!)
     }
 
     const message = await interaction.fetchReply()

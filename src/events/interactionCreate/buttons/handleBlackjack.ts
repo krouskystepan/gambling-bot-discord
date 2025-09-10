@@ -110,12 +110,12 @@ export default async (interaction: Interaction, client: Client) => {
         showBalance
       )
 
-      interaction.followUp({
+      return interaction.followUp({
         content: 'You have stood.',
         flags: MessageFlags.Ephemeral,
       })
 
-      return await checkMilestones(interaction, user, interaction.guildId!)
+      // await checkMilestones(interaction, user, interaction.guildId!)
     }
 
     if (action === 'hit') {
@@ -182,12 +182,12 @@ export default async (interaction: Interaction, client: Client) => {
 
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
 
-        interaction.followUp({
+        return interaction.followUp({
           content: 'You have busted.',
           flags: MessageFlags.Ephemeral,
         })
 
-        return await checkMilestones(interaction, user, interaction.guildId!)
+        // await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       if (playerTotal === 21) {
@@ -208,12 +208,12 @@ export default async (interaction: Interaction, client: Client) => {
 
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
 
-        interaction.followUp({
+        return interaction.followUp({
           content: 'You have hit.',
           flags: MessageFlags.Ephemeral,
         })
 
-        return await checkMilestones(interaction, user, interaction.guildId!)
+        // await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       await BlackjackGame.findOneAndUpdate(
@@ -302,12 +302,12 @@ export default async (interaction: Interaction, client: Client) => {
           components: [],
         })
 
-        interaction.followUp({
+        return interaction.followUp({
           content: 'You have busted.',
           flags: MessageFlags.Ephemeral,
         })
 
-        return await checkMilestones(interaction, user, interaction.guildId!)
+        // await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       await revealDealerCards(
@@ -325,12 +325,12 @@ export default async (interaction: Interaction, client: Client) => {
         showBalance
       )
 
-      interaction.followUp({
+      return interaction.followUp({
         content: 'You have doubled down.',
         flags: MessageFlags.Ephemeral,
       })
 
-      return await checkMilestones(interaction, user, interaction.guildId!)
+      // await checkMilestones(interaction, user, interaction.guildId!)
     }
   } catch (error) {
     console.error('Error in handleBlackjack.ts', error)

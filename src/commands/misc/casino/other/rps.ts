@@ -291,7 +291,9 @@ export async function run({ interaction }: SlashCommandProps) {
     let result = ''
 
     user.amountGambled += parsedBetAmount
+    user.milestoneProgress += parsedBetAmount
     targetUser.amountGambled += parsedBetAmount
+    targetUser.milestoneProgress += parsedBetAmount
 
     if (targetUserChoice?.beats === initialUserChoice?.name) {
       result = `${targetDiscordUser} won and took **$${formatNumberToReadableString(
@@ -330,12 +332,12 @@ export async function run({ interaction }: SlashCommandProps) {
       components: [],
     })
 
-    await checkMilestones(interaction, user, interaction.guildId!)
-    await checkMilestones(
-      targetUserInteraction,
-      targetUser,
-      interaction.guildId!
-    )
+    // await checkMilestones(interaction, user, interaction.guildId!)
+    // await checkMilestones(
+    // targetUserInteraction,
+    // targetUser,
+    // interaction.guildId!
+    // )
   } catch (error) {
     console.error('Error running the command:', error)
   }
