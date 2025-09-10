@@ -13,6 +13,7 @@ exports.data = {
 };
 exports.options = {
     deleted: false,
+    devOnly: true,
 };
 async function run({ interaction }) {
     try {
