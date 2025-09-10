@@ -300,7 +300,12 @@ async function run({ interaction }) {
                 });
             }
             for (const bet of winner.bets) {
-                await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, { $inc: { balance: bet.amount * winner.odds } });
+                await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, {
+                    $inc: {
+                        balance: bet.amount * winner.odds,
+                        netProfit: bet.amount * winner.odds,
+                    },
+                });
             }
             for (const bet of winner.bets) {
                 await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, { $inc: { balance: bet.amount * winner.odds } });

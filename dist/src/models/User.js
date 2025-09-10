@@ -5,7 +5,7 @@ const UserSchema = new mongoose_1.Schema({
     userId: { type: String, required: true },
     guildId: { type: String, required: true },
     balance: { type: Number, default: 0 },
-    amountGambled: { type: Number, default: 0 },
+    netProfit: { type: Number, default: 0 },
     milestoneUnlocked: { type: Number, default: 0 },
     milestoneProgress: { type: Number, default: 0 },
 }, { timestamps: true });

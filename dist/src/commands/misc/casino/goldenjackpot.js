@@ -29,6 +29,12 @@ exports.data = {
             type: discord_js_1.ApplicationCommandOptionType.Boolean,
             required: false,
         },
+        {
+            name: 'skip-animations',
+            description: 'Skip game animations for faster results.',
+            type: discord_js_1.ApplicationCommandOptionType.Boolean,
+            required: false,
+        },
     ],
     dm_permission: false,
 };
@@ -56,6 +62,7 @@ async function run({ interaction }) {
         const betAmount = interaction.options.getString('bet', true);
         const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmount);
         const showBalance = interaction.options.getBoolean('show-balance');
+        const skipAnimations = interaction.options.getBoolean('skip-animations');
         if (entries > GOLDEN_JACKPOT_MAX_ENTRIES || entries < 1) {
             return interaction.reply({
                 embeds: [
@@ -69,8 +76,7 @@ async function run({ interaction }) {
             return;
         const totalBet = parsedBetAmount * entries;
         user.balance -= totalBet;
-        user.amountGambled += totalBet;
-        user.milestoneProgress += totalBet;
+        // user.milestoneProgress += totalBet
         await user.save();
         const initialTickets = entries;
         let totalWinnings = 0;
@@ -105,25 +111,28 @@ async function run({ interaction }) {
             if (isJackpot) {
                 jackpotTries.push(`**JACKPOT!** You won **$${(0, utils_1.formatNumberToReadableString)(winnings)}** on Try **#${tryNumber.toString().padStart(3, '0')}**! 🔥`);
             }
-            let ticketsLeft = initialTickets - tryNumber;
-            if (initialTickets > 10) {
-                ticketsLeft = Math.ceil(ticketsLeft / step) * step;
-            }
-            if (tryNumber % step === 0 || tryNumber === entries) {
-                await interaction.editReply({
-                    embeds: [
-                        (0, createEmbed_1.createBetEmbed)(`🤑 Drawing...`, 'Blue', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
-                            `🎟️ Tickets left: **${ticketsLeft}**\n` +
-                            (jackpotTries.length > 0
-                                ? `\n**🤑 JACKPOT WINS:**\n${jackpotTries.join('\n')}\n`
-                                : '') +
-                            `\n💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`),
-                    ],
-                });
-                await new Promise((res) => setTimeout(res, 1000));
+            if (!skipAnimations) {
+                let ticketsLeft = initialTickets - tryNumber;
+                if (initialTickets > 10) {
+                    ticketsLeft = Math.ceil(ticketsLeft / step) * step;
+                }
+                if (tryNumber % step === 0 || tryNumber === entries) {
+                    await interaction.editReply({
+                        embeds: [
+                            (0, createEmbed_1.createBetEmbed)(`🤑 Drawing...`, 'Blue', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
+                                `🎟️ Tickets left: **${ticketsLeft}**\n` +
+                                (jackpotTries.length > 0
+                                    ? `\n**🤑 JACKPOT WINS:**\n${jackpotTries.join('\n')}\n`
+                                    : '') +
+                                `\n💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`),
+                        ],
+                    });
+                    await new Promise((res) => setTimeout(res, 1000));
+                }
             }
         }
         user.balance += totalWinnings;
+        user.netProfit += liveResult;
         await user.save();
         const isWin = liveResult > 0;
         const isLoss = liveResult < 0;

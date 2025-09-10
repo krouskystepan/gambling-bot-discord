@@ -22,7 +22,6 @@ import {
   parseReadableStringToNumber,
   formatNumberToReadableString,
   checkValidBet,
-  checkMilestones,
 } from '../../../../utils/utils'
 
 export const data: CommandData = {
@@ -116,8 +115,8 @@ export async function run({ interaction }: SlashCommandProps) {
     await interaction.deferReply()
 
     user.balance -= parsedBetAmount
-    user.amountGambled += parsedBetAmount
-    user.milestoneProgress += parsedBetAmount
+    user.netProfit -= parsedBetAmount
+    // user.milestoneProgress += parsedBetAmount
     await user.save()
 
     const shuffledDeck = shuffleDeck(DECK)
@@ -142,8 +141,10 @@ export async function run({ interaction }: SlashCommandProps) {
       if (playerHasBlackjack && dealerHasBlackjack) {
         resultId = 'BBJ'
         user.balance += parsedBetAmount
+        user.netProfit += parsedBetAmount
       } else if (playerHasBlackjack) {
         user.balance += parsedBetAmount * 2.5
+        user.netProfit += parsedBetAmount * 2.5
         resultId = 'PBJ'
       } else if (dealerHasBlackjack) {
         resultId = 'DBJ'

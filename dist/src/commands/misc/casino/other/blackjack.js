@@ -68,8 +68,8 @@ async function run({ interaction }) {
             return;
         await interaction.deferReply();
         user.balance -= parsedBetAmount;
-        user.amountGambled += parsedBetAmount;
-        user.milestoneProgress += parsedBetAmount;
+        user.netProfit -= parsedBetAmount;
+        // user.milestoneProgress += parsedBetAmount
         await user.save();
         const shuffledDeck = (0, blackjackUtils_1.shuffleDeck)(blackjackUtils_1.DECK);
         const playerCards = [
@@ -89,9 +89,11 @@ async function run({ interaction }) {
             if (playerHasBlackjack && dealerHasBlackjack) {
                 resultId = 'BBJ';
                 user.balance += parsedBetAmount;
+                user.netProfit += parsedBetAmount;
             }
             else if (playerHasBlackjack) {
                 user.balance += parsedBetAmount * 2.5;
+                user.netProfit += parsedBetAmount * 2.5;
                 resultId = 'PBJ';
             }
             else if (dealerHasBlackjack) {

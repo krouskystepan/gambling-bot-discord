@@ -7,7 +7,6 @@ import {
 } from '../../../utils/createEmbed'
 import {
   checkChannelConfiguration,
-  checkMilestones,
   checkUserRegistration,
   checkValidBet,
   formatNumberToReadableString,
@@ -37,6 +36,12 @@ export const data: CommandData = {
       name: 'show-balance',
       description:
         'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
+      name: 'skip-animations',
+      description: 'Skip game animations for faster results.',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -83,6 +88,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
+    const skipAnimations = interaction.options.getBoolean('skip-animations')
 
     if (entries > GOLDEN_JACKPOT_MAX_ENTRIES || entries < 1) {
       return interaction.reply({
@@ -110,8 +116,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const totalBet = parsedBetAmount * entries
 
     user.balance -= totalBet
-    user.amountGambled += totalBet
-    user.milestoneProgress += totalBet
+    // user.milestoneProgress += totalBet
     await user.save()
 
     const initialTickets = entries
@@ -163,35 +168,38 @@ export async function run({ interaction }: SlashCommandProps) {
         )
       }
 
-      let ticketsLeft = initialTickets - tryNumber
-      if (initialTickets > 10) {
-        ticketsLeft = Math.ceil(ticketsLeft / step) * step
-      }
+      if (!skipAnimations) {
+        let ticketsLeft = initialTickets - tryNumber
+        if (initialTickets > 10) {
+          ticketsLeft = Math.ceil(ticketsLeft / step) * step
+        }
 
-      if (tryNumber % step === 0 || tryNumber === entries) {
-        await interaction.editReply({
-          embeds: [
-            createBetEmbed(
-              `🤑 Drawing...`,
-              'Blue',
-              `💵 Total Bet: **$${formatNumberToReadableString(
-                totalBet
-              )}**\n\n` +
-                `🎟️ Tickets left: **${ticketsLeft}**\n` +
-                (jackpotTries.length > 0
-                  ? `\n**🤑 JACKPOT WINS:**\n${jackpotTries.join('\n')}\n`
-                  : '') +
-                `\n💰 Total: ${
-                  liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                } **$${formatNumberToReadableString(liveResult)}**`
-            ),
-          ],
-        })
-        await new Promise((res) => setTimeout(res, 1000))
+        if (tryNumber % step === 0 || tryNumber === entries) {
+          await interaction.editReply({
+            embeds: [
+              createBetEmbed(
+                `🤑 Drawing...`,
+                'Blue',
+                `💵 Total Bet: **$${formatNumberToReadableString(
+                  totalBet
+                )}**\n\n` +
+                  `🎟️ Tickets left: **${ticketsLeft}**\n` +
+                  (jackpotTries.length > 0
+                    ? `\n**🤑 JACKPOT WINS:**\n${jackpotTries.join('\n')}\n`
+                    : '') +
+                  `\n💰 Total: ${
+                    liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+                  } **$${formatNumberToReadableString(liveResult)}**`
+              ),
+            ],
+          })
+          await new Promise((res) => setTimeout(res, 1000))
+        }
       }
     }
 
     user.balance += totalWinnings
+    user.netProfit += liveResult
     await user.save()
 
     const isWin = liveResult > 0

@@ -15,10 +15,7 @@ import {
 } from '../../../utils/blackjackUtils'
 import { drawNextCard } from '../../../utils/casinoHelpers'
 import { createInfoEmbed, createErrorEmbed } from '../../../utils/createEmbed'
-import {
-  checkMilestones,
-  formatNumberToReadableString,
-} from '../../../utils/utils'
+import { formatNumberToReadableString } from '../../../utils/utils'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -274,7 +271,7 @@ export default async (interaction: Interaction, client: Client) => {
       }
 
       user.balance -= game.betAmount
-      user.amountGambled += game.betAmount
+      user.netProfit -= game.betAmount
       await user.save()
 
       const drawnCard = drawNextCard(game.deck, gameIndex)

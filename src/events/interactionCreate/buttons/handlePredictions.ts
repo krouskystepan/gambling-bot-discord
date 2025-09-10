@@ -134,7 +134,12 @@ export default async (interaction: Interaction) => {
         guildId: modalInteraction.guildId,
         balance: { $gte: parsedBetAmount },
       },
-      { $inc: { balance: -parsedBetAmount } },
+      {
+        $inc: {
+          balance: -parsedBetAmount,
+          netProfit: -parsedBetAmount,
+        },
+      },
       { new: true }
     )
 

@@ -144,7 +144,7 @@ exports.default = async (interaction, client) => {
                 });
             }
             user.balance -= game.betAmount;
-            user.amountGambled += game.betAmount;
+            user.netProfit -= game.betAmount;
             await user.save();
             const drawnCard = (0, casinoHelpers_1.drawNextCard)(game.deck, gameIndex);
             game.playerCards.push(drawnCard);

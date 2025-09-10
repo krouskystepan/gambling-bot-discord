@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkValidBet = exports.parseTimeToSeconds = exports.formatNumberToPercentage = exports.formatNumberWithSpaces = exports.parseReadableStringToNumber = exports.formatNumberToReadableString = exports.checkUserRegistration = exports.checkChannelConfiguration = exports.connectToDatabase = void 0;
-exports.checkMilestones = checkMilestones;
 const mongoose_1 = require("mongoose");
 const GuildConfiguration_1 = require("../models/GuildConfiguration");
 const discord_js_1 = require("discord.js");
@@ -9,7 +8,6 @@ const User_1 = require("../models//User");
 const createEmbed_1 = require("./createEmbed");
 const defaultConfig_1 = require("./defaultConfig");
 const VipRoom_1 = require("../models/VipRoom");
-const Milestone_1 = require("../models/Milestone");
 const connectToDatabase = async () => {
     try {
         if (!process.env.MONGO_URI)
@@ -231,73 +229,88 @@ const checkValidBet = (interaction, betAmount, maxBet, minBet, userBalance, xTim
     return true;
 };
 exports.checkValidBet = checkValidBet;
-async function checkMilestones(interaction, user, guildId) {
-    const guildConf = await GuildConfiguration_1.default.findOne({ guildId });
-    if (!guildConf)
-        return;
-    const guildMilestonesDoc = await Milestone_1.default.findOne({ guildId });
-    if (!guildMilestonesDoc)
-        return;
-    const { baseThreshold, baseReward, multiplierThreshold, multiplierReward } = guildMilestonesDoc;
-    const milestones = [];
-    let threshold = baseThreshold;
-    let reward = baseReward;
-    while (threshold <= 1_000_000_000) {
-        milestones.push({ threshold, reward });
-        threshold = Math.floor(threshold * multiplierThreshold);
-        reward = Math.floor(reward * multiplierReward);
-    }
-    let lastUnlocked = user.milestoneUnlocked ?? 0;
-    const unlocked = [];
-    for (const m of milestones) {
-        if (m.threshold > lastUnlocked) {
-            const progress = user.amountGambled - lastUnlocked;
-            if (progress >= m.threshold - lastUnlocked) {
-                unlocked.push(m);
-                lastUnlocked = m.threshold;
-            }
-            break;
-        }
-    }
-    if (unlocked.length) {
-        const totalReward = unlocked.reduce((sum, m) => sum + m.reward, 0);
-        user.milestoneUnlocked = lastUnlocked;
-        user.balance += totalReward;
-        await user.save();
-        const milestoneMessages = unlocked
-            .map((m) => `🎉 Unlocked milestone **${(0, exports.formatNumberToReadableString)(m.threshold)}** → +**$${(0, exports.formatNumberToReadableString)(m.reward)}**`)
-            .join('\n');
-        if (interaction.isChatInputCommand() ||
-            interaction.isButton() ||
-            interaction.isStringSelectMenu() ||
-            interaction.isUserSelectMenu() ||
-            interaction.isRoleSelectMenu() ||
-            interaction.isMentionableSelectMenu() ||
-            interaction.isChannelSelectMenu()) {
-            await interaction.followUp({
-                content: `💎 You unlocked new milestones!\n${milestoneMessages}`,
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
-        }
-        // Transaction channel
-        if (guildConf.transactionChannelId) {
-            const channel = interaction.guild?.channels.cache.get(guildConf.transactionChannelId);
-            if (channel?.isTextBased()) {
-                const embed = new discord_js_1.EmbedBuilder()
-                    .setTitle('ATM - Milestone Unlocked!')
-                    .setColor('Orange')
-                    .setDescription(`User <@${user.userId}> just unlocked the following milestone(s):`)
-                    .addFields(unlocked.map((m) => ({
-                    name: `Threshold: ${(0, exports.formatNumberToReadableString)(m.threshold)}`,
-                    value: `Reward: 💰 ${(0, exports.formatNumberToReadableString)(m.reward)}`,
-                    inline: true,
-                })))
-                    .setTimestamp();
-                await channel.send({ embeds: [embed] }).catch(console.error);
-            }
-        }
-    }
-    else {
-        await user.save();
-    }
-}
+// export async function checkMilestones(
+//   interaction: BaseInteraction,
+//   user: UserDoc,
+//   guildId: string
+// ) {
+//   const guildConf = await GuildConfiguration.findOne({ guildId })
+//   if (!guildConf) return
+//   const guildMilestonesDoc = await Milestone.findOne({ guildId })
+//   if (!guildMilestonesDoc) return
+//   const { baseThreshold, baseReward, multiplierThreshold, multiplierReward } =
+//     guildMilestonesDoc
+//   const milestones: { threshold: number; reward: number }[] = []
+//   let threshold = baseThreshold
+//   let reward = baseReward
+//   while (threshold <= 1_000_000_000) {
+//     milestones.push({ threshold, reward })
+//     threshold = Math.floor(threshold * multiplierThreshold)
+//     reward = Math.floor(reward * multiplierReward)
+//   }
+//   let lastUnlocked = user.milestoneUnlocked ?? 0
+//   const unlocked: { threshold: number; reward: number }[] = []
+//   for (const m of milestones) {
+//     if (m.threshold > lastUnlocked) {
+//       const progress = user.amountGambled - lastUnlocked
+//       if (progress >= m.threshold - lastUnlocked) {
+//         unlocked.push(m)
+//         lastUnlocked = m.threshold
+//       }
+//       break
+//     }
+//   }
+//   if (unlocked.length) {
+//     const totalReward = unlocked.reduce((sum, m) => sum + m.reward, 0)
+//     user.milestoneUnlocked = lastUnlocked
+//     user.balance += totalReward
+//     await user.save()
+//     const milestoneMessages = unlocked
+//       .map(
+//         (m) =>
+//           `🎉 Unlocked milestone **${formatNumberToReadableString(
+//             m.threshold
+//           )}** → +**$${formatNumberToReadableString(m.reward)}**`
+//       )
+//       .join('\n')
+//     if (
+//       interaction.isChatInputCommand() ||
+//       interaction.isButton() ||
+//       interaction.isStringSelectMenu() ||
+//       interaction.isUserSelectMenu() ||
+//       interaction.isRoleSelectMenu() ||
+//       interaction.isMentionableSelectMenu() ||
+//       interaction.isChannelSelectMenu()
+//     ) {
+//       await interaction.followUp({
+//         content: `💎 You unlocked new milestones!\n${milestoneMessages}`,
+//         flags: MessageFlags.Ephemeral,
+//       })
+//     }
+//     // Transaction channel
+//     if (guildConf.transactionChannelId) {
+//       const channel = interaction.guild?.channels.cache.get(
+//         guildConf.transactionChannelId
+//       )
+//       if (channel?.isTextBased()) {
+//         const embed = new EmbedBuilder()
+//           .setTitle('ATM - Milestone Unlocked!')
+//           .setColor('Orange')
+//           .setDescription(
+//             `User <@${user.userId}> just unlocked the following milestone(s):`
+//           )
+//           .addFields(
+//             unlocked.map((m) => ({
+//               name: `Threshold: ${formatNumberToReadableString(m.threshold)}`,
+//               value: `Reward: 💰 ${formatNumberToReadableString(m.reward)}`,
+//               inline: true,
+//             }))
+//           )
+//           .setTimestamp()
+//         await channel.send({ embeds: [embed] }).catch(console.error)
+//       }
+//     }
+//   } else {
+//     await user.save()
+//   }
+// }

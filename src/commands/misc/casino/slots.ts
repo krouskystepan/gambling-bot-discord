@@ -8,7 +8,6 @@ import {
   formatNumberToReadableString,
   checkUserRegistration,
   checkValidBet,
-  checkMilestones,
 } from '../../../utils/utils'
 import { slotEmojis, spinSlotEmotes } from '../../../utils/customEmotes'
 
@@ -36,6 +35,12 @@ export const data: CommandData = {
       name: 'show-balance',
       description:
         'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
+      name: 'skip-animations',
+      description: 'Skip game animations for faster results.',
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -83,6 +88,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
+    const skipAnimations = interaction.options.getBoolean('skip-animations')
 
     const isBetValid = checkValidBet(
       interaction,
@@ -98,8 +104,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const totalBet = parsedBetAmount * spins
 
     user.balance -= totalBet
-    user.amountGambled += totalBet
-    user.milestoneProgress += totalBet
+    // user.milestoneProgress += totalBet
     await user.save()
 
     let totalWinnings = 0
@@ -109,23 +114,27 @@ export async function run({ interaction }: SlashCommandProps) {
     await interaction.deferReply({ withResponse: true })
 
     for (let i = 0; i < spins; i++) {
-      await interaction.editReply({
-        embeds: [
-          createBetEmbed(
-            `🎰 Spinning...`,
-            'Blue',
-            `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
-              `🕹 Spin Results:\n${results.join('\n')}${
-                results.length ? '\n' : ''
-              }${spinSlotEmotes[1]}${spinSlotEmotes[2]}${spinSlotEmotes[3]}` +
-              `\n\n💰 Total: ${
-                liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-              } **$${formatNumberToReadableString(liveResult)}**`
-          ),
-        ],
-      })
+      if (!skipAnimations) {
+        await interaction.editReply({
+          embeds: [
+            createBetEmbed(
+              `🎰 Spinning...`,
+              'Blue',
+              `💵 Total Bet: **$${formatNumberToReadableString(
+                totalBet
+              )}**\n\n` +
+                `🕹 Spin Results:\n${results.join('\n')}${
+                  results.length ? '\n' : ''
+                }${spinSlotEmotes[1]}${spinSlotEmotes[2]}${spinSlotEmotes[3]}` +
+                `\n\n💰 Total: ${
+                  liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+                } **$${formatNumberToReadableString(liveResult)}**`
+            ),
+          ],
+        })
 
-      await new Promise((res) => setTimeout(res, 700))
+        await new Promise((res) => setTimeout(res, 700))
+      }
 
       const spinResult = spinSlot({
         symbolWeights: configReply.casinoSettings.slots.symbolWeights,
@@ -154,6 +163,7 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     user.balance += totalWinnings
+    user.netProfit += liveResult
     await user.save()
 
     const isWin = liveResult > 0

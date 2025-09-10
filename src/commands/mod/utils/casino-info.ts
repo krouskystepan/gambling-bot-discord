@@ -46,8 +46,10 @@ const formatRTP = (rtp: number) => {
 }
 
 const formatBet = (label: string, value: number) => {
+  const parsedValue = parseFloat(value as unknown as string)
+
   return `- **${label}:** ${
-    value === 0 ? 'No Limit' : formatNumberToReadableString(value)
+    parsedValue === 0 ? 'No Limit' : formatNumberToReadableString(parsedValue)
   }`
 }
 

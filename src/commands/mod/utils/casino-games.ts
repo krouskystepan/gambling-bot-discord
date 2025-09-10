@@ -53,6 +53,7 @@ export async function run({ interaction }: SlashCommandProps) {
         { name: 'side', example: '2', required: true },
         { name: 'rolls', example: '10', required: false },
         { name: 'show-balance', example: 'true', required: false },
+        { name: 'skip-animations', example: 'true', required: false },
       ])
     ),
 
@@ -63,6 +64,7 @@ export async function run({ interaction }: SlashCommandProps) {
         { name: 'side', example: 'heads', required: true },
         { name: 'flips', example: '10', required: false },
         { name: 'show-balance', example: 'true', required: false },
+        { name: 'skip-animations', example: 'true', required: false },
       ])
     ),
 
@@ -72,6 +74,7 @@ export async function run({ interaction }: SlashCommandProps) {
         { name: 'bet', example: '5000', required: true },
         { name: 'spins', example: '10', required: false },
         { name: 'show-balance', example: 'true', required: false },
+        { name: 'skip-animations', example: 'true', required: false },
       ])
     ),
 
@@ -82,6 +85,7 @@ export async function run({ interaction }: SlashCommandProps) {
         { name: 'numbers', example: '5,4,3,10', required: true },
         { name: 'entries', example: '10', required: false },
         { name: 'show-balance', example: 'true', required: false },
+        { name: 'skip-animations', example: 'true', required: false },
       ])
     ),
 
@@ -91,6 +95,7 @@ export async function run({ interaction }: SlashCommandProps) {
         { name: 'bet', example: '2500', required: true },
         { name: 'entries', example: '100', required: false },
         { name: 'show-balance', example: 'true', required: false },
+        { name: 'skip-animations', example: 'true', required: false },
       ])
     ),
 

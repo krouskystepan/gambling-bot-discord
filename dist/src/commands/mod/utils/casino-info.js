@@ -41,7 +41,8 @@ const formatRTP = (rtp) => {
     return `- **RTP:** ${rtp.toFixed(2)}%`;
 };
 const formatBet = (label, value) => {
-    return `- **${label}:** ${value === 0 ? 'No Limit' : (0, utils_1.formatNumberToReadableString)(value)}`;
+    const parsedValue = parseFloat(value);
+    return `- **${label}:** ${parsedValue === 0 ? 'No Limit' : (0, utils_1.formatNumberToReadableString)(parsedValue)}`;
 };
 const formatRooms = (label, ids, fallback = 'No rooms') => {
     if (!ids || !ids.length)

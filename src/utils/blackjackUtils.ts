@@ -1,10 +1,10 @@
-import { ButtonInteraction, ColorResolvable, Message } from 'discord.js'
+import { ColorResolvable, Message } from 'discord.js'
 import { createBetEmbed } from './createEmbed'
-import BlackjackGame, { BlackjackGameDoc } from '../models/BlackjackGame'
+import BlackjackGame from '../models/BlackjackGame'
 import { drawNextCard } from './casinoHelpers'
 import { type UserDoc } from '../models/User'
 import {
-  checkMilestones,
+  // checkMilestones,
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from './utils'
@@ -130,15 +130,16 @@ export const revealDealerCards = async (
   if (dealerTotal > 21) {
     resultId = 'DB'
     user.balance += betAmount * 2
+    user.netProfit += betAmount * 2
     await user.save()
   } else if (dealerTotal === playerTotal) {
     resultId = 'PUSH'
-
     user.balance += betAmount
+    user.netProfit += betAmount
     await user.save()
   } else if (playerTotal > dealerTotal) {
     resultId = 'PW'
-
+    user.netProfit += betAmount * 2
     user.balance += betAmount * 2
     await user.save()
   } else {

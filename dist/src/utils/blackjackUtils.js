@@ -76,15 +76,18 @@ const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerC
     if (dealerTotal > 21) {
         resultId = 'DB';
         user.balance += betAmount * 2;
+        user.netProfit += betAmount * 2;
         await user.save();
     }
     else if (dealerTotal === playerTotal) {
         resultId = 'PUSH';
         user.balance += betAmount;
+        user.netProfit += betAmount;
         await user.save();
     }
     else if (playerTotal > dealerTotal) {
         resultId = 'PW';
+        user.netProfit += betAmount * 2;
         user.balance += betAmount * 2;
         await user.save();
     }

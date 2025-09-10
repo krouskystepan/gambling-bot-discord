@@ -13,7 +13,7 @@ import {
 } from '../../../../utils/createEmbed'
 import {
   checkChannelConfiguration,
-  checkMilestones,
+  // checkMilestones,
   checkUserRegistration,
   checkValidBet,
   formatNumberToReadableString,
@@ -290,10 +290,8 @@ export async function run({ interaction }: SlashCommandProps) {
 
     let result = ''
 
-    user.amountGambled += parsedBetAmount
-    user.milestoneProgress += parsedBetAmount
-    targetUser.amountGambled += parsedBetAmount
-    targetUser.milestoneProgress += parsedBetAmount
+    // user.milestoneProgress += parsedBetAmount
+    // targetUser.milestoneProgress += parsedBetAmount
 
     if (targetUserChoice?.beats === initialUserChoice?.name) {
       result = `${targetDiscordUser} won and took **$${formatNumberToReadableString(
@@ -301,7 +299,9 @@ export async function run({ interaction }: SlashCommandProps) {
       )}** from ${interaction.user}!`
 
       user.balance -= parsedBetAmount
+      user.netProfit -= parsedBetAmount
       targetUser.balance += realWinAmount
+      targetUser.netProfit += realWinAmount
       await user.save()
       await targetUser.save()
     }
@@ -314,7 +314,9 @@ export async function run({ interaction }: SlashCommandProps) {
       )}** from ${targetDiscordUser}!`
 
       user.balance += realWinAmount
+      user.netProfit += realWinAmount
       targetUser.balance -= parsedBetAmount
+      targetUser.netProfit -= parsedBetAmount
       await user.save()
       await targetUser.save()
     }

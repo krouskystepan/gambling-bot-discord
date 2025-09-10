@@ -54,7 +54,8 @@ async function run({ interaction }) {
             .setTitle('Next Milestone Bonus')
             .setColor('Yellow');
         if (nextMilestone) {
-            const amountToNext = nextMilestone.threshold - user.amountGambled;
+            const amountToNext = nextMilestone.threshold - 0;
+            // const amountToNext = nextMilestone.threshold - user.amountGambled
             const progress = Math.min(((nextMilestone.threshold - amountToNext) / nextMilestone.threshold) *
                 100, 100);
             embed

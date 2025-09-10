@@ -26,7 +26,7 @@ async function run({ interaction }) {
         }
         return interaction.reply({
             embeds: [
-                (0, createEmbed_1.createSuccessEmbed)('ATM - Balance', `Your balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`),
+                (0, createEmbed_1.createSuccessEmbed)('ATM - Balance', `Your balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}** ($${user.balance}).`),
             ],
             flags: discord_js_1.MessageFlags.Ephemeral,
         });

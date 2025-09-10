@@ -43,6 +43,12 @@ exports.data = {
             type: discord_js_1.ApplicationCommandOptionType.Boolean,
             required: false,
         },
+        {
+            name: 'skip-animations',
+            description: 'Skip game animations for faster results.',
+            type: discord_js_1.ApplicationCommandOptionType.Boolean,
+            required: false,
+        },
     ],
     dm_permission: false,
 };
@@ -72,13 +78,13 @@ async function run({ interaction }) {
         const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmount);
         const readableBetAmount = (0, utils_1.formatNumberToReadableString)(parsedBetAmount);
         const showBalance = interaction.options.getBoolean('show-balance');
+        const skipAnimations = interaction.options.getBoolean('skip-animations');
         const isBetValid = (0, utils_1.checkValidBet)(interaction, parsedBetAmount, configReply.casinoSettings.dice.maxBet, configReply.casinoSettings.dice.minBet, user.balance, rolls);
         if (!isBetValid)
             return;
         const totalBet = parsedBetAmount * rolls;
         user.balance -= totalBet;
-        user.amountGambled += totalBet;
-        user.milestoneProgress += totalBet;
+        // user.milestoneProgress += totalBet
         await user.save();
         let totalWinnings = 0;
         let liveResult = 0;
@@ -87,14 +93,16 @@ async function run({ interaction }) {
             withResponse: true,
         });
         for (let i = 0; i < rolls; i++) {
-            await interaction.editReply({
-                embeds: [
-                    (0, createEmbed_1.createBetEmbed)(`🎲 Rolling...`, 'Blue', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
-                        `🎲 **Roll Results:**\n ${[...results, customEmotes_1.rollDiceEmote].join('\n')}` +
-                        `\n\n💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`),
-                ],
-            });
-            await new Promise((res) => setTimeout(res, 700));
+            if (!skipAnimations) {
+                await interaction.editReply({
+                    embeds: [
+                        (0, createEmbed_1.createBetEmbed)(`🎲 Rolling...`, 'Blue', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
+                            `🎲 **Roll Results:**\n${[...results, customEmotes_1.rollDiceEmote].join('\n')}` +
+                            `\n\n💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`),
+                    ],
+                });
+                await new Promise((res) => setTimeout(res, 700));
+            }
             const dice = (0, casinoHelpers_1.rollDice)();
             const win = side === dice;
             const winnings = win
@@ -107,6 +115,7 @@ async function run({ interaction }) {
             liveResult += winnings - parsedBetAmount;
         }
         user.balance += totalWinnings;
+        user.netProfit += liveResult;
         await user.save();
         const isWin = liveResult > 0;
         const isLoss = liveResult < 0;

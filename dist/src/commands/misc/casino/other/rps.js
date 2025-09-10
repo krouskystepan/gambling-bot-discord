@@ -192,21 +192,23 @@ async function run({ interaction }) {
             return;
         const initialUserChoice = choices.find((choice) => choice.name === initialUserInteraction.customId);
         let result = '';
-        user.amountGambled += parsedBetAmount;
-        user.milestoneProgress += parsedBetAmount;
-        targetUser.amountGambled += parsedBetAmount;
-        targetUser.milestoneProgress += parsedBetAmount;
+        // user.milestoneProgress += parsedBetAmount
+        // targetUser.milestoneProgress += parsedBetAmount
         if (targetUserChoice?.beats === initialUserChoice?.name) {
             result = `${targetDiscordUser} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${interaction.user}!`;
             user.balance -= parsedBetAmount;
+            user.netProfit -= parsedBetAmount;
             targetUser.balance += realWinAmount;
+            targetUser.netProfit += realWinAmount;
             await user.save();
             await targetUser.save();
         }
         if (initialUserChoice?.beats === targetUserChoice?.name) {
             result = `${interaction.user} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${targetDiscordUser}!`;
             user.balance += realWinAmount;
+            user.netProfit += realWinAmount;
             targetUser.balance -= parsedBetAmount;
+            targetUser.netProfit -= parsedBetAmount;
             await user.save();
             await targetUser.save();
         }

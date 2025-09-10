@@ -42,7 +42,9 @@ export async function run({ interaction }: SlashCommandProps) {
       embeds: [
         createSuccessEmbed(
           'ATM - Balance',
-          `Your balance is **$${formatNumberToReadableString(user.balance)}**.`
+          `Your balance is **$${formatNumberToReadableString(
+            user.balance
+          )}** ($${user.balance}).`
         ),
       ],
       flags: MessageFlags.Ephemeral,
