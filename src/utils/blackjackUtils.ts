@@ -1,9 +1,10 @@
-import { ColorResolvable, Message } from 'discord.js'
+import { ButtonInteraction, ColorResolvable, Message } from 'discord.js'
 import { createBetEmbed } from './createEmbed'
-import BlackjackGame from '../models/BlackjackGame'
+import BlackjackGame, { BlackjackGameDoc } from '../models/BlackjackGame'
 import { drawNextCard } from './casinoHelpers'
-import { type User } from '../models/User'
+import { type UserDoc } from '../models/User'
 import {
+  checkMilestones,
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from './utils'
@@ -74,7 +75,7 @@ export const revealDealerCards = async (
   playerTotal: number,
   deck: Card[],
   gameIndex: number,
-  user: User,
+  user: UserDoc,
   guildId: string,
   gameId: string,
   showBalnce: boolean

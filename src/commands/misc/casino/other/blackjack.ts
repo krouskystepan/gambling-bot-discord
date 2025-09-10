@@ -6,10 +6,7 @@ import {
   ButtonStyle,
   MessageFlags,
 } from 'discord.js'
-import {
-  createErrorEmbed,
-  createInfoEmbed,
-} from '../../../../utils/createEmbed'
+import { createErrorEmbed } from '../../../../utils/createEmbed'
 import {
   shuffleDeck,
   DECK,
@@ -24,6 +21,8 @@ import {
   checkChannelConfiguration,
   parseReadableStringToNumber,
   formatNumberToReadableString,
+  checkValidBet,
+  checkMilestones,
 } from '../../../../utils/utils'
 
 export const data: CommandData = {
@@ -104,81 +103,20 @@ export async function run({ interaction }: SlashCommandProps) {
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance') || false
 
-    if (isNaN(parsedBetAmount)) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Not a number',
-            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const isBetValid = checkValidBet(
+      interaction,
+      parsedBetAmount,
+      configReply.casinoSettings.blackjack.maxBet,
+      configReply.casinoSettings.blackjack.minBet,
+      user.balance
+    )
 
-    if (parsedBetAmount <= 0) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Non-positive number',
-            'The number you provided must be greater than 0.\nPlease enter a positive value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.blackjack.maxBet > 0 &&
-      parsedBetAmount > configReply.casinoSettings.blackjack.maxBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Above Maximum Bet',
-            `The maximum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.blackjack.maxBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.blackjack.minBet > 0 &&
-      parsedBetAmount < configReply.casinoSettings.blackjack.minBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Below Minimum Bet',
-            `The minimum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.blackjack.minBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (user.balance < parsedBetAmount) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(
-              user.balance
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    if (!isBetValid) return
 
     await interaction.deferReply()
 
     user.balance -= parsedBetAmount
+    user.amountGambled += parsedBetAmount
     await user.save()
 
     const shuffledDeck = shuffleDeck(DECK)
@@ -212,7 +150,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       await user.save()
 
-      return interaction.editReply({
+      interaction.editReply({
         embeds: [
           createBlackjackEmbed(
             readableBetAmount,
@@ -226,6 +164,8 @@ export async function run({ interaction }: SlashCommandProps) {
           ),
         ],
       })
+
+      return await checkMilestones(interaction, user, interaction.guildId!)
     }
 
     const message = await interaction.fetchReply()

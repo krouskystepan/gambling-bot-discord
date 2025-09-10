@@ -1,6 +1,6 @@
 import { Card } from './blackjackUtils'
 import { LOTTERY_TOTAL_NUMBERS, LOTTERY_NUM_TO_DRAW } from './defaultConfig'
-import { AMERICAN_NUMBERS } from './rouletteUtils'
+import { AMERICAN_NUMBERS } from '../../todo/rouletteUtils'
 
 export const spinSlot = (slotConfig: {
   symbolWeights: Record<string, number>

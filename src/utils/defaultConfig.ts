@@ -31,14 +31,14 @@ const defaultCasinoSettings = {
   slots: {
     winMultipliers: {
       '🍒🍒🍒': 5,
-      '🍋🍋🍋': 10,
+      '🫐🫐🫐': 10,
       '🍉🍉🍉': 20,
       '🔔🔔🔔': 50,
       '7️⃣7️⃣7️⃣': 100,
     },
     symbolWeights: {
       '🍒': 35,
-      '🍋': 25,
+      '🫐': 25,
       '🍉': 10,
       '🔔': 4,
       '7️⃣': 2,

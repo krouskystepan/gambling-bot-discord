@@ -18,7 +18,7 @@ import {
   getRouletteColor,
   RouletteBet,
   RouletteBetType,
-} from '../../../utils/rouletteUtils'
+} from '../../../../todo/rouletteUtils'
 
 export const data: CommandData = {
   name: 'roulette',
@@ -55,7 +55,7 @@ export const data: CommandData = {
       description: 'Number of spins.',
       type: ApplicationCommandOptionType.Integer,
       required: false,
-      choices: Array.from({ length: 20 }, (_, i) => ({
+      choices: Array.from({ length: 10 }, (_, i) => ({
         name: (i + 1).toString(),
         value: i + 1,
       })),
@@ -116,46 +116,16 @@ export async function run({ interaction }: SlashCommandProps) {
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
 
-    if (isNaN(parsedBetAmount)) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Not a number',
-            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const isBetValid = checkValidBet(
+      interaction,
+      parsedBetAmount,
+      configReply.casinoSettings.roulette.maxBet,
+      configReply.casinoSettings.roulette.minBet,
+      user.balance,
+      spins
+    )
 
-    if (parsedBetAmount <= 0) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Non-positive number',
-            'The number you provided must be greater than 0.\nPlease enter a positive value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    const totalBet = parsedBetAmount * spins
-    if (user.balance < totalBet) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You don't have enough money to place this bet for ${spins} spins (you need **$${formatNumberToReadableString(
-              totalBet
-            )}**).\nYour current balance is **$${formatNumberToReadableString(
-              user.balance
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    if (!isBetValid) return
 
     // ✅ validate bet value depending on betType
     switch (betType) {

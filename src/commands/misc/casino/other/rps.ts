@@ -13,7 +13,9 @@ import {
 } from '../../../../utils/createEmbed'
 import {
   checkChannelConfiguration,
+  checkMilestones,
   checkUserRegistration,
+  checkValidBet,
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from '../../../../utils/utils'
@@ -139,77 +141,15 @@ export async function run({ interaction }: SlashCommandProps) {
     const realWinAmount =
       parsedBetAmount * (1 - configReply.casinoSettings.rps.casinoCut)
 
-    if (isNaN(parsedBetAmount)) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Not a number',
-            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const isBetValid = checkValidBet(
+      interaction,
+      parsedBetAmount,
+      configReply.casinoSettings.rps.maxBet,
+      configReply.casinoSettings.rps.minBet,
+      user.balance
+    )
 
-    if (parsedBetAmount <= 0) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Non-positive number',
-            'The number you provided must be greater than 0.\nPlease enter a positive value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.rps.maxBet > 0 &&
-      parsedBetAmount > configReply.casinoSettings.rps.maxBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Above Maximum Bet',
-            `The maximum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.rps.maxBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.rps.minBet > 0 &&
-      parsedBetAmount < configReply.casinoSettings.rps.minBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Below Minimum Bet',
-            `The minimum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.rps.minBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (user.balance < parsedBetAmount) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient balance',
-            `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(
-              user.balance
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    if (!isBetValid) return
 
     const embed = createBetEmbed(
       'Rock, paper, scissors!',
@@ -350,6 +290,9 @@ export async function run({ interaction }: SlashCommandProps) {
 
     let result = ''
 
+    user.amountGambled += parsedBetAmount
+    targetUser.amountGambled += parsedBetAmount
+
     if (targetUserChoice?.beats === initialUserChoice?.name) {
       result = `${targetDiscordUser} won and took **$${formatNumberToReadableString(
         realWinAmount
@@ -386,6 +329,13 @@ export async function run({ interaction }: SlashCommandProps) {
       embeds: [embed],
       components: [],
     })
+
+    await checkMilestones(interaction, user, interaction.guildId!)
+    await checkMilestones(
+      targetUserInteraction,
+      targetUser,
+      interaction.guildId!
+    )
   } catch (error) {
     console.error('Error running the command:', error)
   }

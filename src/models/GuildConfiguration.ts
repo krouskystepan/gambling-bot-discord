@@ -1,7 +1,7 @@
 import { Schema, model, Document } from 'mongoose'
 import defaultCasinoSettings from '../utils/defaultConfig'
 
-export type GuildConfiguration = Document & {
+export type GuildConfigurationDoc = Document & {
   guildId: string
   atmChannelIds: {
     actions: string
@@ -23,7 +23,7 @@ export type GuildConfiguration = Document & {
   }
 }
 
-const guildConfigurationSchema = new Schema<GuildConfiguration>({
+const guildConfigurationSchema = new Schema<GuildConfigurationDoc>({
   guildId: {
     type: String,
     required: true,
@@ -86,7 +86,7 @@ const guildConfigurationSchema = new Schema<GuildConfiguration>({
   },
 })
 
-export default model<GuildConfiguration>(
+export default model<GuildConfigurationDoc>(
   'GuildConfiguration',
   guildConfigurationSchema
 )

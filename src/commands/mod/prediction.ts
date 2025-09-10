@@ -41,6 +41,13 @@ export const data: CommandData = {
           type: ApplicationCommandOptionType.String,
           required: true,
         },
+        {
+          name: 'autolock',
+          description:
+            'Optional: Automatically lock this prediction at a specific date & time (DD-MM-YYYY HH:mm)',
+          type: ApplicationCommandOptionType.String,
+          required: false,
+        },
       ],
     },
     {
@@ -140,9 +147,9 @@ export async function run({ interaction }: SlashCommandProps) {
     if (subcommand === 'create') {
       const title = options.getString('title', true)
       const choicesInput = options.getString('choices', true)
+      const autolockInput = options.getString('autolock', false)
 
       const rawChoices = choicesInput.split(',').map((c) => c.trim())
-
       if (rawChoices.length < 2 || rawChoices.length > 3) {
         return interaction.reply({
           embeds: [
@@ -176,8 +183,52 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      await interaction.deferReply()
+      let autolockDate: Date | null = null
+      if (autolockInput) {
+        const dateTimeRegex = /^(\d{1,2})\.(\d{1,2})\.(\d{4}) (\d{2}):(\d{2})$/
+        const match = autolockInput.match(dateTimeRegex)
 
+        if (!match) {
+          return interaction.reply({
+            embeds: [
+              createErrorEmbed(
+                'Invalid Input - Invalid Autolock Date/Time',
+                'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 18:00` or `09.09.2025 18:00`'
+              ),
+            ],
+            flags: MessageFlags.Ephemeral,
+          })
+        }
+
+        const [_, day, month, year, hour, minute] = match.map(Number)
+        autolockDate = new Date(year, month - 1, day, hour, minute)
+
+        if (isNaN(autolockDate.getTime())) {
+          return interaction.reply({
+            embeds: [
+              createErrorEmbed(
+                'Invalid Input - Invalid Autolock Date/Time',
+                'The date/time you provided is invalid.'
+              ),
+            ],
+            flags: MessageFlags.Ephemeral,
+          })
+        }
+
+        if (autolockDate.getTime() <= Date.now()) {
+          return interaction.reply({
+            embeds: [
+              createErrorEmbed(
+                'Invalid Input - Autolock in the Past',
+                'Autolock must be a future date/time. Please provide a date and time that is after now.'
+              ),
+            ],
+            flags: MessageFlags.Ephemeral,
+          })
+        }
+      }
+
+      await interaction.deferReply()
       const messageReply = (await interaction.fetchReply()) as Message
 
       const embed = new EmbedBuilder()
@@ -203,8 +254,12 @@ export async function run({ interaction }: SlashCommandProps) {
         )
       })
 
+      const autolockString = autolockDate
+        ? `\nAuto-Lock: <t:${Math.floor(autolockDate.getTime() / 1000)}:d>`
+        : ''
+
       await interaction.editReply({
-        content: '**Status:** Active',
+        content: '**Status:** Active' + autolockString,
         embeds: [embed],
         components: [row],
       })
@@ -216,6 +271,8 @@ export async function run({ interaction }: SlashCommandProps) {
         creatorId: interaction.user.id,
         title,
         choices: choicesArray,
+        autolock: autolockDate,
+        status: 'active',
       })
     }
 

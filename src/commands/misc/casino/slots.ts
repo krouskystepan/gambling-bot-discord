@@ -1,17 +1,15 @@
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
-import {
-  createBetEmbed,
-  createErrorEmbed,
-  createInfoEmbed,
-} from '../../../utils/createEmbed'
+import { createBetEmbed, createErrorEmbed } from '../../../utils/createEmbed'
 import { spinSlot } from '../../../utils/casinoHelpers'
 import {
   checkChannelConfiguration,
   parseReadableStringToNumber,
   formatNumberToReadableString,
   checkUserRegistration,
+  checkValidBet,
 } from '../../../utils/utils'
+import { slotEmojis, spinSlotEmotes } from '../../../utils/customEmotes'
 
 export const data: CommandData = {
   name: 'slots',
@@ -28,7 +26,7 @@ export const data: CommandData = {
       description: 'Number of spins.',
       type: ApplicationCommandOptionType.Integer,
       required: false,
-      choices: Array.from({ length: 20 }, (_, i) => ({
+      choices: Array.from({ length: 10 }, (_, i) => ({
         name: (i + 1).toString(),
         value: i + 1,
       })),
@@ -85,88 +83,59 @@ export async function run({ interaction }: SlashCommandProps) {
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
 
-    if (isNaN(parsedBetAmount)) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Not a number',
-            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const isBetValid = checkValidBet(
+      interaction,
+      parsedBetAmount,
+      configReply.casinoSettings.slots.maxBet,
+      configReply.casinoSettings.slots.minBet,
+      user.balance,
+      spins
+    )
 
-    if (parsedBetAmount <= 0) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Non-positive number',
-            'The number you provided must be greater than 0.\nPlease enter a positive value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.slots.maxBet > 0 &&
-      parsedBetAmount > configReply.casinoSettings.slots.maxBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Above Maximum Bet',
-            `The maximum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.slots.maxBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.slots.minBet > 0 &&
-      parsedBetAmount < configReply.casinoSettings.slots.minBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Below Minimum Bet',
-            `The minimum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.slots.minBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    if (!isBetValid) return
 
     const totalBet = parsedBetAmount * spins
-    if (user.balance < totalBet) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You don't have enough money to place this bet for ${spins} spins (you need **$${formatNumberToReadableString(
-              totalBet
-            )}**).\nYour current balance is **$${formatNumberToReadableString(
-              user.balance
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+
+    user.balance -= totalBet
+    user.amountGambled += totalBet
+    await user.save()
 
     let totalWinnings = 0
-    let results: string[] = []
+    let liveResult = 0
+    const results: string[] = []
+
+    await interaction.deferReply({ withResponse: true })
 
     for (let i = 0; i < spins; i++) {
-      const resultString = spinSlot(configReply.casinoSettings.slots)
+      await interaction.editReply({
+        embeds: [
+          createBetEmbed(
+            `🎰 Spinning...`,
+            'Blue',
+            `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+              `🕹 Spin Results:\n${results.join('\n')}${
+                results.length ? '\n' : ''
+              }${spinSlotEmotes[1]}${spinSlotEmotes[2]}${spinSlotEmotes[3]}` +
+              `\n\n💰 Total: ${
+                liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+              } **$${formatNumberToReadableString(liveResult)}**`
+          ),
+        ],
+      })
+
+      await new Promise((res) => setTimeout(res, 700))
+
+      const spinResult = spinSlot({
+        symbolWeights: configReply.casinoSettings.slots.symbolWeights,
+      })
+
+      const resultString = spinResult.replace(
+        /🍒|🫐|🍉|🔔|7️⃣/g,
+        (match) => slotEmojis[match]
+      )
+
       const winnings =
-        (configReply.casinoSettings.slots.winMultipliers[resultString] || 0) *
+        (configReply.casinoSettings.slots.winMultipliers[spinResult] || 0) *
         parsedBetAmount
       const isWin = winnings > 0
 
@@ -178,16 +147,17 @@ export async function run({ interaction }: SlashCommandProps) {
         }`
       )
 
-      totalWinnings += winnings - parsedBetAmount
+      totalWinnings += winnings
+      liveResult += winnings - parsedBetAmount
     }
 
     user.balance += totalWinnings
     await user.save()
 
-    const isWin = totalWinnings > 0
-    const isLoss = totalWinnings < 0
+    const isWin = liveResult > 0
+    const isLoss = liveResult < 0
 
-    return interaction.reply({
+    await interaction.editReply({
       embeds: [
         createBetEmbed(
           isWin
@@ -200,11 +170,9 @@ export async function run({ interaction }: SlashCommandProps) {
             `🕹 **Spin Results:**\n${results.join('\n')}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(totalWinnings)}**\n` +
+            } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
-              ? `🏦 Current Balance: **$${formatNumberToReadableString(
-                  user.balance
-                )}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
               : '')
         ),
       ],

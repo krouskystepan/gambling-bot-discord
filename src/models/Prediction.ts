@@ -17,6 +17,7 @@ export type Prediction = Document & {
   title: string
   choices: PredictionOption[]
   status: 'active' | 'ended' | 'paid' | 'canceled'
+  autolock?: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -59,6 +60,11 @@ const PredictionSchema = new Schema<Prediction>(
       type: String,
       enum: ['active', 'ended', 'paid', 'canceled'],
       default: 'active',
+    },
+    autolock: {
+      type: Date,
+      required: false,
+      default: null,
     },
   },
   { timestamps: true }

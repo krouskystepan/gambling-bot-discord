@@ -7,7 +7,9 @@ import {
 } from '../../../utils/createEmbed'
 import {
   checkChannelConfiguration,
+  checkMilestones,
   checkUserRegistration,
+  checkValidBet,
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from '../../../utils/utils'
@@ -94,85 +96,52 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    if (isNaN(parsedBetAmount)) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Not a number',
-            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const isBetValid = checkValidBet(
+      interaction,
+      parsedBetAmount,
+      configReply.casinoSettings.goldenJackpot.maxBet,
+      configReply.casinoSettings.goldenJackpot.minBet,
+      user.balance,
+      entries
+    )
 
-    if (parsedBetAmount <= 0) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Non-positive number',
-            'The number you provided must be greater than 0.\nPlease enter a positive value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.goldenJackpot.maxBet > 0 &&
-      parsedBetAmount > configReply.casinoSettings.goldenJackpot.maxBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Above Maximum Bet',
-            `The maximum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.goldenJackpot.maxBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.goldenJackpot.minBet > 0 &&
-      parsedBetAmount < configReply.casinoSettings.goldenJackpot.minBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Below Minimum Bet',
-            `The minimum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.goldenJackpot.minBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    if (!isBetValid) return
 
     const totalBet = parsedBetAmount * entries
-    if (user.balance < totalBet) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You don't have enough money to place this bet for ${entries} entries (you need **$${formatNumberToReadableString(
-              totalBet
-            )}**).\nYour current balance is **$${formatNumberToReadableString(
-              user.balance
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
 
+    user.balance -= totalBet
+    user.amountGambled += totalBet
+    await user.save()
+
+    const initialTickets = entries
     let totalWinnings = 0
-    let results: string[] = []
+    let liveResult = 0
+    let jackpotTries: string[] = []
+
+    await interaction.deferReply({ withResponse: true })
+
+    await interaction.editReply({
+      embeds: [
+        createBetEmbed(
+          `🤑 Drawing...`,
+          'Blue',
+          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+            `🎟️ Tickets left: **${initialTickets}**\n` +
+            `\n💰 Total: ${
+              liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+            } **$${formatNumberToReadableString(liveResult)}**`
+        ),
+      ],
+    })
+    await new Promise((res) => setTimeout(res, 1000))
+
+    let step = 1
+    if (entries > 50) step = 10
+    else if (entries > 20) step = 5
+    else if (entries > 10) step = 2
 
     for (let i = 0; i < entries; i++) {
+      const tryNumber = i + 1
       const jackpotNumber = drawGoldenJackpot(
         configReply.casinoSettings.goldenJackpot
       )
@@ -182,24 +151,52 @@ export async function run({ interaction }: SlashCommandProps) {
           configReply.casinoSettings.goldenJackpot.winMultiplier
         : 0
 
+      totalWinnings += winnings
+      liveResult += winnings - parsedBetAmount
+
       if (isJackpot) {
-        results.push(
+        jackpotTries.push(
           `**JACKPOT!** You won **$${formatNumberToReadableString(
             winnings
-          )}** on Try **#${(i + 1).toString().padStart(3, '0')}**! 🔥`
+          )}** on Try **#${tryNumber.toString().padStart(3, '0')}**! 🔥`
         )
       }
 
-      totalWinnings += winnings - parsedBetAmount
+      let ticketsLeft = initialTickets - tryNumber
+      if (initialTickets > 10) {
+        ticketsLeft = Math.ceil(ticketsLeft / step) * step
+      }
+
+      if (tryNumber % step === 0 || tryNumber === entries) {
+        await interaction.editReply({
+          embeds: [
+            createBetEmbed(
+              `🤑 Drawing...`,
+              'Blue',
+              `💵 Total Bet: **$${formatNumberToReadableString(
+                totalBet
+              )}**\n\n` +
+                `🎟️ Tickets left: **${ticketsLeft}**\n` +
+                (jackpotTries.length > 0
+                  ? `\n**🤑 JACKPOT WINS:**\n${jackpotTries.join('\n')}\n`
+                  : '') +
+                `\n💰 Total: ${
+                  liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+                } **$${formatNumberToReadableString(liveResult)}**`
+            ),
+          ],
+        })
+        await new Promise((res) => setTimeout(res, 1000))
+      }
     }
 
     user.balance += totalWinnings
     await user.save()
 
-    const isWin = totalWinnings > 0
-    const isLoss = totalWinnings < 0
+    const isWin = liveResult > 0
+    const isLoss = liveResult < 0
 
-    return interaction.reply({
+    await interaction.editReply({
       embeds: [
         createBetEmbed(
           isWin
@@ -210,17 +207,19 @@ export async function run({ interaction }: SlashCommandProps) {
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
             `🤑 **Draw Result:**${
-              isWin ? `\n ${results.join('\n')}` : ' No win'
+              isWin ? `\n ${jackpotTries.join('\n')}` : ' No win'
             }\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(totalWinnings)}**\n` +
+            } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
               ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
               : '')
         ),
       ],
     })
+
+    await checkMilestones(interaction, user, interaction.guildId!)
   } catch (error) {
     console.error('Error running the command:', error)
   }

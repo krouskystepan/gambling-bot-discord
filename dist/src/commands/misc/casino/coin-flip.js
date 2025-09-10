@@ -1,0 +1,129 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.options = exports.data = void 0;
+exports.run = run;
+const discord_js_1 = require("discord.js");
+const createEmbed_1 = require("../../../utils/createEmbed");
+const utils_1 = require("../../../utils/utils");
+const casinoHelpers_1 = require("../../../utils/casinoHelpers");
+const customEmotes_1 = require("../../../utils/customEmotes");
+exports.data = {
+    name: 'coin-flip',
+    description: 'Flip a coin!',
+    options: [
+        {
+            name: 'bet',
+            description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
+            type: discord_js_1.ApplicationCommandOptionType.String,
+            required: true,
+        },
+        {
+            name: 'side',
+            description: 'Choose the coin side.',
+            type: discord_js_1.ApplicationCommandOptionType.String,
+            required: true,
+            choices: [
+                { name: 'Heads', value: 'heads' },
+                { name: 'Tails', value: 'tails' },
+            ],
+        },
+        {
+            name: 'flips',
+            description: 'Number of flips.',
+            type: discord_js_1.ApplicationCommandOptionType.Integer,
+            required: false,
+            choices: Array.from({ length: 10 }, (_, i) => ({
+                name: (i + 1).toString(),
+                value: i + 1,
+            })),
+        },
+        {
+            name: 'show-balance',
+            description: 'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
+            type: discord_js_1.ApplicationCommandOptionType.Boolean,
+            required: false,
+        },
+    ],
+    dm_permission: false,
+};
+exports.options = {
+    deleted: false,
+};
+async function run({ interaction }) {
+    try {
+        const user = await (0, utils_1.checkUserRegistration)(interaction.user.id, interaction.guildId);
+        if (!user) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'You are not registered yet.\nUse the `/register` command to register.'),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'casinoChannelIds', {
+            notSet: 'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
+            notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
+        });
+        if (!configReply)
+            return;
+        const flips = interaction.options.getInteger('flips') || 1;
+        const side = interaction.options.getString('side', true);
+        const betAmount = interaction.options.getString('bet', true);
+        const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmount);
+        const readableBetAmount = (0, utils_1.formatNumberToReadableString)(parsedBetAmount);
+        const showBalance = interaction.options.getBoolean('show-balance');
+        const isBetValid = (0, utils_1.checkValidBet)(interaction, parsedBetAmount, configReply.casinoSettings.coinflip.maxBet, configReply.casinoSettings.coinflip.minBet, user.balance, flips);
+        if (!isBetValid)
+            return;
+        const totalBet = parsedBetAmount * flips;
+        user.balance -= totalBet;
+        user.amountGambled += totalBet;
+        await user.save();
+        let totalWinnings = 0;
+        let liveResult = 0;
+        const results = [];
+        await interaction.deferReply({ withResponse: true });
+        for (let i = 0; i < flips; i++) {
+            await interaction.editReply({
+                embeds: [
+                    (0, createEmbed_1.createBetEmbed)(`🪙 Flipping...`, 'Blue', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
+                        `🪙 **Flip Results:**\n${[...results, customEmotes_1.flipCoinEmote].join('\n')}` +
+                        `\n\n💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`),
+                ],
+            });
+            await new Promise((res) => setTimeout(res, 700));
+            const flipResult = (0, casinoHelpers_1.flipCoin)();
+            const win = side === flipResult;
+            const winnings = win
+                ? parsedBetAmount * configReply.casinoSettings.coinflip.winMultiplier
+                : 0;
+            results.push(`${customEmotes_1.coinEmojis[flipResult]} | ${win ? '🎉' : '❌'} | ${win
+                ? `**+$${(0, utils_1.formatNumberToReadableString)(winnings)}**`
+                : `**-$${readableBetAmount}**`}`);
+            totalWinnings += winnings;
+            liveResult += winnings - parsedBetAmount;
+        }
+        user.balance += totalWinnings;
+        await user.save();
+        const isWin = liveResult > 0;
+        const isLoss = liveResult < 0;
+        await interaction.editReply({
+            embeds: [
+                (0, createEmbed_1.createBetEmbed)(isWin
+                    ? '🪙 **Win!** 🎉'
+                    : isLoss
+                        ? '🪙 **Better Luck Next Time...** ❌'
+                        : '🪙 **Not Bad...** 👀', isWin ? 'Green' : isLoss ? 'Red' : 'Yellow', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
+                    `🪙 **Flip Results:**\n${results.join('\n')}\n\n` +
+                    `💰 Total: ${isWin ? '🟢' : isLoss ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**\n` +
+                    (showBalance
+                        ? `🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**`
+                        : '')),
+            ],
+        });
+        await (0, utils_1.checkMilestones)(interaction, user, interaction.guildId);
+    }
+    catch (error) {
+        console.error('Error running the command:', error);
+    }
+}

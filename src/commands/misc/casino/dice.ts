@@ -1,17 +1,16 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
-import {
-  createBetEmbed,
-  createErrorEmbed,
-  createInfoEmbed,
-} from '../../../utils/createEmbed'
+import { createBetEmbed, createErrorEmbed } from '../../../utils/createEmbed'
 import {
   checkChannelConfiguration,
   parseReadableStringToNumber,
   formatNumberToReadableString,
   checkUserRegistration,
+  checkValidBet,
+  checkMilestones,
 } from '../../../utils/utils'
 import { rollDice } from '../../../utils/casinoHelpers'
+import { rollDiceEmote, diceEmojis } from '../../../utils/customEmotes'
 
 export const data: CommandData = {
   name: 'dice',
@@ -38,7 +37,7 @@ export const data: CommandData = {
       description: 'Number of rolls.',
       type: ApplicationCommandOptionType.Integer,
       required: false,
-      choices: Array.from({ length: 20 }, (_, i) => ({
+      choices: Array.from({ length: 10 }, (_, i) => ({
         name: (i + 1).toString(),
         value: i + 1,
       })),
@@ -96,110 +95,75 @@ export async function run({ interaction }: SlashCommandProps) {
     const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
 
-    if (isNaN(parsedBetAmount)) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Not a number',
-            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const isBetValid = checkValidBet(
+      interaction,
+      parsedBetAmount,
+      configReply.casinoSettings.dice.maxBet,
+      configReply.casinoSettings.dice.minBet,
+      user.balance,
+      rolls
+    )
 
-    if (parsedBetAmount <= 0) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Non-positive number',
-            'The number you provided must be greater than 0.\nPlease enter a positive value.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.dice.maxBet > 0 &&
-      parsedBetAmount > configReply.casinoSettings.dice.maxBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Above Maximum Bet',
-            `The maximum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.dice.maxBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (
-      configReply.casinoSettings.dice.minBet > 0 &&
-      parsedBetAmount < configReply.casinoSettings.dice.minBet
-    ) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Below Minimum Bet',
-            `The minimum bet is **$${formatNumberToReadableString(
-              configReply.casinoSettings.dice.minBet
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    if (!isBetValid) return
 
     const totalBet = parsedBetAmount * rolls
-    if (user.balance < totalBet) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You don't have enough money to place this bet for ${rolls} flips (you need **$${formatNumberToReadableString(
-              totalBet
-            )}**).\nYour current balance is **$${formatNumberToReadableString(
-              user.balance
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+
+    user.balance -= totalBet
+    user.amountGambled += totalBet
+    await user.save()
 
     let totalWinnings = 0
-    let results: string[] = []
+    let liveResult = 0
+    const results: string[] = []
+
+    await interaction.deferReply({
+      withResponse: true,
+    })
 
     for (let i = 0; i < rolls; i++) {
+      await interaction.editReply({
+        embeds: [
+          createBetEmbed(
+            `🎲 Rolling...`,
+            'Blue',
+            `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+              `🎲 **Roll Results:**\n ${[...results, rollDiceEmote].join(
+                '\n'
+              )}` +
+              `\n\n💰 Total: ${
+                liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+              } **$${formatNumberToReadableString(liveResult)}**`
+          ),
+        ],
+      })
+
+      await new Promise((res) => setTimeout(res, 700))
+
       const dice = rollDice()
-      const resultString = `${dice}`
       const win = side === dice
       const winnings = win
         ? parsedBetAmount * configReply.casinoSettings.dice.winMultiplier
         : 0
 
       results.push(
-        `**${resultString}** | ${win ? '🎉' : '❌'} | ${
+        `${diceEmojis[dice]} | ${win ? '🎉' : '❌'} | ${
           win
-            ? `**+$${formatNumberToReadableString(winnings)}**`
-            : `**-$${readableBetAmount}**`
+            ? `+$${formatNumberToReadableString(winnings)}`
+            : `-$${readableBetAmount}`
         }`
       )
 
-      totalWinnings += winnings - parsedBetAmount
+      totalWinnings += winnings
+      liveResult += winnings - parsedBetAmount
     }
 
     user.balance += totalWinnings
     await user.save()
 
-    const isWin = totalWinnings > 0
-    const isLoss = totalWinnings < 0
+    const isWin = liveResult > 0
+    const isLoss = liveResult < 0
 
-    return interaction.reply({
+    await interaction.editReply({
       embeds: [
         createBetEmbed(
           isWin
@@ -212,13 +176,15 @@ export async function run({ interaction }: SlashCommandProps) {
             `🎲 **Roll Results:**\n${results.join('\n')}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(totalWinnings)}**\n` +
+            } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
               ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
               : '')
         ),
       ],
     })
+
+    await checkMilestones(interaction, user, interaction.guildId!)
   } catch (error) {
     console.error('Error running the command:', error)
   }

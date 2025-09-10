@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose'
 import { Card } from '../utils/blackjackUtils'
 
-export interface BlackjackGame {
+export type BlackjackGameDoc = Document & {
   gameId: string
   userId: string
   guildId: string
@@ -11,7 +11,7 @@ export interface BlackjackGame {
   dealerCards: Card[]
 }
 
-const BlackjackGameSchema = new Schema<BlackjackGame>({
+const BlackjackGameSchema = new Schema<BlackjackGameDoc>({
   gameId: {
     type: String,
     required: true,
@@ -56,4 +56,4 @@ const BlackjackGameSchema = new Schema<BlackjackGame>({
 
 BlackjackGameSchema.index({ userId: 1, guildId: 1 }, { unique: true })
 
-export default model<BlackjackGame>('BlackjackGame', BlackjackGameSchema)
+export default model<BlackjackGameDoc>('BlackjackGame', BlackjackGameSchema)

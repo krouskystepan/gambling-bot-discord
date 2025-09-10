@@ -15,7 +15,10 @@ import {
 } from '../../../utils/blackjackUtils'
 import { drawNextCard } from '../../../utils/casinoHelpers'
 import { createInfoEmbed, createErrorEmbed } from '../../../utils/createEmbed'
-import { formatNumberToReadableString } from '../../../utils/utils'
+import {
+  checkMilestones,
+  formatNumberToReadableString,
+} from '../../../utils/utils'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -107,10 +110,12 @@ export default async (interaction: Interaction, client: Client) => {
         showBalance
       )
 
-      return interaction.followUp({
+      interaction.followUp({
         content: 'You have stood.',
         flags: MessageFlags.Ephemeral,
       })
+
+      return await checkMilestones(interaction, user, interaction.guildId!)
     }
 
     if (action === 'hit') {
@@ -177,10 +182,12 @@ export default async (interaction: Interaction, client: Client) => {
 
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
 
-        return interaction.followUp({
+        interaction.followUp({
           content: 'You have busted.',
           flags: MessageFlags.Ephemeral,
         })
+
+        return await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       if (playerTotal === 21) {
@@ -201,10 +208,12 @@ export default async (interaction: Interaction, client: Client) => {
 
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
 
-        return interaction.followUp({
+        interaction.followUp({
           content: 'You have hit.',
           flags: MessageFlags.Ephemeral,
         })
+
+        return await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       await BlackjackGame.findOneAndUpdate(
@@ -265,6 +274,7 @@ export default async (interaction: Interaction, client: Client) => {
       }
 
       user.balance -= game.betAmount
+      user.amountGambled += game.betAmount
       await user.save()
 
       const drawnCard = drawNextCard(game.deck, gameIndex)
@@ -292,10 +302,12 @@ export default async (interaction: Interaction, client: Client) => {
           components: [],
         })
 
-        return interaction.followUp({
+        interaction.followUp({
           content: 'You have busted.',
           flags: MessageFlags.Ephemeral,
         })
+
+        return await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       await revealDealerCards(
@@ -313,10 +325,12 @@ export default async (interaction: Interaction, client: Client) => {
         showBalance
       )
 
-      return interaction.followUp({
+      interaction.followUp({
         content: 'You have doubled down.',
         flags: MessageFlags.Ephemeral,
       })
+
+      return await checkMilestones(interaction, user, interaction.guildId!)
     }
   } catch (error) {
     console.error('Error in handleBlackjack.ts', error)
