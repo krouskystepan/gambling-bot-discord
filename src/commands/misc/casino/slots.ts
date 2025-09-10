@@ -8,6 +8,7 @@ import {
   formatNumberToReadableString,
   checkUserRegistration,
   checkValidBet,
+  checkMilestones,
 } from '../../../utils/utils'
 import { slotEmojis, spinSlotEmotes } from '../../../utils/customEmotes'
 
@@ -178,6 +179,8 @@ export async function run({ interaction }: SlashCommandProps) {
         ),
       ],
     })
+
+    // await checkMilestones(interaction, user, interaction.guildId!)
   } catch (error) {
     console.error('Error running the command:', error)
   }

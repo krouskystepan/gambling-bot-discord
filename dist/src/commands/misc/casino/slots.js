@@ -113,6 +113,7 @@ async function run({ interaction }) {
                         : '')),
             ],
         });
+        // await checkMilestones(interaction, user, interaction.guildId!)
     }
     catch (error) {
         console.error('Error running the command:', error);
