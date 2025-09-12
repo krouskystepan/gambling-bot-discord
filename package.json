@@ -18,6 +18,7 @@
     "mongoose": "^8.18.0"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.20",
     "@types/node": "^22.17.2",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2"

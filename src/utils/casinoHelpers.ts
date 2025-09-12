@@ -1,6 +1,6 @@
 import { Card } from './blackjackUtils'
 import { LOTTERY_TOTAL_NUMBERS, LOTTERY_NUM_TO_DRAW } from './defaultConfig'
-import { AMERICAN_NUMBERS } from '../../todo/rouletteUtils'
+import { MINI_NUMBERS } from './rouletteUtils'
 
 export const spinSlot = (slotConfig: {
   symbolWeights: Record<string, number>
@@ -42,8 +42,9 @@ export const drawGoldenJackpot = (goldenJackpotConfig: {
 }
 
 export const spinRouletteWheel = (): string => {
-  const index = Math.floor(Math.random() * AMERICAN_NUMBERS.length)
-  return AMERICAN_NUMBERS[index]
+  const keys = Object.keys(MINI_NUMBERS)
+  const index = Math.floor(Math.random() * keys.length)
+  return keys[index]
 }
 
 export const drawNextCard = (deck: Card[], cardIndex: number): Card => {

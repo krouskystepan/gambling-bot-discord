@@ -255,7 +255,7 @@ export async function run({ interaction }: SlashCommandProps) {
       })
 
       const autolockString = autolockDate
-        ? `\nAuto-Lock: <t:${Math.floor(autolockDate.getTime() / 1000)}:d>`
+        ? `\nAuto-Lock: <t:${Math.floor(autolockDate.getTime() / 1000)}:f>`
         : ''
 
       await interaction.editReply({
@@ -402,18 +402,6 @@ export async function run({ interaction }: SlashCommandProps) {
           ],
           flags: MessageFlags.Ephemeral,
         })
-      }
-
-      for (const bet of winner.bets) {
-        await User.findOneAndUpdate(
-          { userId: bet.userId, guildId: interaction.guildId },
-          {
-            $inc: {
-              balance: bet.amount * winner.odds,
-              netProfit: bet.amount * winner.odds,
-            },
-          }
-        )
       }
 
       for (const bet of winner.bets) {

@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.drawNextCard = exports.spinRouletteWheel = exports.drawGoldenJackpot = exports.drawLottery = exports.flipCoin = exports.rollDice = exports.spinSlot = void 0;
 const defaultConfig_1 = require("./defaultConfig");
-const rouletteUtils_1 = require("../../todo/rouletteUtils");
+const rouletteUtils_1 = require("./rouletteUtils");
 const spinSlot = (slotConfig) => {
     const weightedSymbols = Object.entries(slotConfig.symbolWeights).flatMap(([symbol, weight]) => Array(Number(weight)).fill(symbol));
     const spin = () => weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)];
@@ -33,8 +33,9 @@ const drawGoldenJackpot = (goldenJackpotConfig) => {
 };
 exports.drawGoldenJackpot = drawGoldenJackpot;
 const spinRouletteWheel = () => {
-    const index = Math.floor(Math.random() * rouletteUtils_1.AMERICAN_NUMBERS.length);
-    return rouletteUtils_1.AMERICAN_NUMBERS[index];
+    const keys = Object.keys(rouletteUtils_1.MINI_NUMBERS);
+    const index = Math.floor(Math.random() * keys.length);
+    return keys[index];
 };
 exports.spinRouletteWheel = spinRouletteWheel;
 const drawNextCard = (deck, cardIndex) => {

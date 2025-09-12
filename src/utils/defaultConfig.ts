@@ -57,6 +57,18 @@ const defaultCasinoSettings = {
     maxBet: 0,
     minBet: 0,
   },
+  roulette: {
+    winMultipliers: {
+      number: 35,
+      color: 1,
+      parity: 1,
+      range: 1,
+      dozen: 2,
+      column: 2,
+    },
+    maxBet: 0,
+    minBet: 0,
+  },
   rps: {
     casinoCut: 0.025,
     maxBet: 0,

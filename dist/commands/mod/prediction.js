@@ -193,7 +193,7 @@ async function run({ interaction }) {
                     .setStyle(discord_js_1.ButtonStyle.Primary));
             });
             const autolockString = autolockDate
-                ? `\nAuto-Lock: <t:${Math.floor(autolockDate.getTime() / 1000)}:d>`
+                ? `\nAuto-Lock: <t:${Math.floor(autolockDate.getTime() / 1000)}:f>`
                 : '';
             await interaction.editReply({
                 content: '**Status:** Active' + autolockString,
@@ -297,14 +297,6 @@ async function run({ interaction }) {
                         (0, createEmbed_1.createErrorEmbed)('Invalid Choice', `The winner "${winnerChoice}" does not exist in this prediction.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-            }
-            for (const bet of winner.bets) {
-                await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, {
-                    $inc: {
-                        balance: bet.amount * winner.odds,
-                        netProfit: bet.amount * winner.odds,
-                    },
                 });
             }
             for (const bet of winner.bets) {
