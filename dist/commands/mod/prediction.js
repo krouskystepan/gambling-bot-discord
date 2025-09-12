@@ -7,6 +7,7 @@ const Prediction_1 = require("../../models/Prediction");
 const createEmbed_1 = require("../../utils/createEmbed");
 const User_1 = require("../../models/User");
 const utils_1 = require("../../utils/utils");
+const luxon_1 = require("luxon");
 exports.data = {
     name: 'prediction',
     description: 'Manage predictions.',
@@ -85,6 +86,20 @@ exports.data = {
                 },
             ],
         },
+        {
+            name: 'check',
+            description: 'Check the status of a prediction.',
+            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: 'prediction-id',
+                    description: 'ID of the prediction to check',
+                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    required: true,
+                    autocomplete: true,
+                },
+            ],
+        },
     ],
     dm_permission: false,
 };
@@ -157,8 +172,10 @@ async function run({ interaction }) {
                     });
                 }
                 const [_, day, month, year, hour, minute] = match.map(Number);
-                autolockDate = new Date(year, month - 1, day, hour, minute);
-                if (isNaN(autolockDate.getTime())) {
+                const dt = luxon_1.DateTime.fromObject({ year, month, day, hour, minute }, 
+                //! Later in db
+                { zone: 'Europe/Prague' });
+                if (!dt.isValid) {
                     return interaction.reply({
                         embeds: [
                             (0, createEmbed_1.createErrorEmbed)('Invalid Input - Invalid Autolock Date/Time', 'The date/time you provided is invalid.'),
@@ -166,7 +183,7 @@ async function run({ interaction }) {
                         flags: discord_js_1.MessageFlags.Ephemeral,
                     });
                 }
-                if (autolockDate.getTime() <= Date.now()) {
+                if (dt.toMillis() <= Date.now()) {
                     return interaction.reply({
                         embeds: [
                             (0, createEmbed_1.createErrorEmbed)('Invalid Input - Autolock in the Past', 'Autolock must be a future date/time. Please provide a date and time that is after now.'),
@@ -174,6 +191,7 @@ async function run({ interaction }) {
                         flags: discord_js_1.MessageFlags.Ephemeral,
                     });
                 }
+                autolockDate = dt.toJSDate();
             }
             await interaction.deferReply();
             const messageReply = (await interaction.fetchReply());
@@ -387,7 +405,10 @@ async function run({ interaction }) {
         }
         if (subcommand === 'cancel') {
             const predictionId = options.getString('prediction-id', true);
-            const prediction = await Prediction_1.default.findOne({ predictionId });
+            const prediction = await Prediction_1.default.findOne({
+                predictionId,
+                status: 'active',
+            });
             if (!prediction) {
                 return interaction.reply({
                     embeds: [
@@ -404,8 +425,10 @@ async function run({ interaction }) {
             await prediction.save();
             const channel = await interaction.client.channels.fetch(prediction.channelId);
             if (channel?.isTextBased()) {
-                const message = await channel.messages.fetch(prediction.predictionId);
-                if (message) {
+                try {
+                    const message = await channel.messages.fetch(prediction.predictionId);
+                    if (!message)
+                        return;
                     const embed = message.embeds[0]?.toJSON() || {};
                     const editedEmbed = {
                         ...embed,
@@ -418,12 +441,58 @@ async function run({ interaction }) {
                         components: [],
                     });
                 }
+                catch { }
             }
             return interaction.reply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('Prediction Canceled', `All bets for **${prediction.title}** have been refunded.`),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        if (subcommand === 'check') {
+            const predictionId = options.getString('prediction-id', true);
+            const prediction = await Prediction_1.default.findOne({ predictionId });
+            if (!prediction) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Found', `No prediction found with ID: ${predictionId}`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            const totalBets = prediction.choices.flatMap((c) => c.bets);
+            const totalBetAmount = totalBets.reduce((acc, b) => acc + b.amount, 0);
+            const choiceSummaries = await Promise.all(prediction.choices.map(async (choice) => {
+                const totalWin = choice.bets.reduce((acc, b) => acc + b.amount * choice.odds, 0);
+                const bettors = await Promise.all(choice.bets.map(async (b) => {
+                    const member = await interaction.guild?.members
+                        .fetch(b.userId)
+                        .catch(() => null);
+                    const username = member ? `<@${member.id}>` : 'Unknown';
+                    return `${username} — Bet: $${(0, utils_1.formatNumberToReadableString)(b.amount)}`;
+                }));
+                return {
+                    name: `Option: ${choice.choiceName} (${choice.odds}x)`,
+                    value: `Bets: ${bettors.length}\n` +
+                        `Total Bet: $${(0, utils_1.formatNumberToReadableString)(choice.bets.reduce((a, b) => a + b.amount, 0))}\n` +
+                        `If Wins → Payout: $${(0, utils_1.formatNumberToReadableString)(totalWin)}\n` +
+                        (bettors.length ? bettors.join('\n') : 'No bets'),
+                    inline: false,
+                };
+            }));
+            const embed = new discord_js_1.EmbedBuilder()
+                .setTitle(`Prediction Status - ${prediction.title}`)
+                .setColor(discord_js_1.Colors.Blurple)
+                .addFields({ name: 'Status', value: prediction.status, inline: true }, {
+                name: 'Total Bets',
+                value: `$${(0, utils_1.formatNumberToReadableString)(totalBetAmount)}`,
+                inline: true,
+            }, ...choiceSummaries)
+                .setFooter({ text: `ID: ${prediction.predictionId}` })
+                .setTimestamp();
+            return interaction.reply({
+                embeds: [embed],
             });
         }
     }

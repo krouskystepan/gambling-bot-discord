@@ -18,6 +18,7 @@ import {
   checkChannelConfiguration,
   formatNumberToReadableString,
 } from '../../utils/utils'
+import { DateTime } from 'luxon'
 
 export const data: CommandData = {
   name: 'prediction',
@@ -93,6 +94,20 @@ export const data: CommandData = {
         {
           name: 'prediction-id',
           description: 'ID of the prediction to cancel',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+          autocomplete: true,
+        },
+      ],
+    },
+    {
+      name: 'check',
+      description: 'Check the status of a prediction.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'prediction-id',
+          description: 'ID of the prediction to check',
           type: ApplicationCommandOptionType.String,
           required: true,
           autocomplete: true,
@@ -201,9 +216,14 @@ export async function run({ interaction }: SlashCommandProps) {
         }
 
         const [_, day, month, year, hour, minute] = match.map(Number)
-        autolockDate = new Date(year, month - 1, day, hour, minute)
 
-        if (isNaN(autolockDate.getTime())) {
+        const dt = DateTime.fromObject(
+          { year, month, day, hour, minute },
+          //! Later in db
+          { zone: 'Europe/Prague' }
+        )
+
+        if (!dt.isValid) {
           return interaction.reply({
             embeds: [
               createErrorEmbed(
@@ -215,7 +235,7 @@ export async function run({ interaction }: SlashCommandProps) {
           })
         }
 
-        if (autolockDate.getTime() <= Date.now()) {
+        if (dt.toMillis() <= Date.now()) {
           return interaction.reply({
             embeds: [
               createErrorEmbed(
@@ -226,6 +246,8 @@ export async function run({ interaction }: SlashCommandProps) {
             flags: MessageFlags.Ephemeral,
           })
         }
+
+        autolockDate = dt.toJSDate()
       }
 
       await interaction.deferReply()
@@ -531,7 +553,10 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (subcommand === 'cancel') {
       const predictionId = options.getString('prediction-id', true)
-      const prediction = await Prediction.findOne({ predictionId })
+      const prediction = await Prediction.findOne({
+        predictionId,
+        status: 'active',
+      })
 
       if (!prediction) {
         return interaction.reply({
@@ -560,20 +585,24 @@ export async function run({ interaction }: SlashCommandProps) {
         prediction.channelId
       )
       if (channel?.isTextBased()) {
-        const message = await channel.messages.fetch(prediction.predictionId)
-        if (message) {
+        try {
+          const message = await channel.messages.fetch(prediction.predictionId)
+
+          if (!message) return
+
           const embed = message.embeds[0]?.toJSON() || {}
           const editedEmbed = {
             ...embed,
             color: Colors.Red,
             title: `${embed.title}`,
           }
+
           await message.edit({
             content: '**Status:** Canceled — All bets refunded',
             embeds: [editedEmbed],
             components: [],
           })
-        }
+        } catch {}
       }
 
       return interaction.reply({
@@ -584,6 +613,78 @@ export async function run({ interaction }: SlashCommandProps) {
           ),
         ],
         flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (subcommand === 'check') {
+      const predictionId = options.getString('prediction-id', true)
+      const prediction = await Prediction.findOne({ predictionId })
+
+      if (!prediction) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Prediction Not Found',
+              `No prediction found with ID: ${predictionId}`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const totalBets = prediction.choices.flatMap((c) => c.bets)
+      const totalBetAmount = totalBets.reduce((acc, b) => acc + b.amount, 0)
+
+      const choiceSummaries = await Promise.all(
+        prediction.choices.map(async (choice) => {
+          const totalWin = choice.bets.reduce(
+            (acc, b) => acc + b.amount * choice.odds,
+            0
+          )
+
+          const bettors = await Promise.all(
+            choice.bets.map(async (b) => {
+              const member = await interaction.guild?.members
+                .fetch(b.userId)
+                .catch(() => null)
+              const username = member ? `<@${member.id}>` : 'Unknown'
+              return `${username} — Bet: $${formatNumberToReadableString(
+                b.amount
+              )}`
+            })
+          )
+
+          return {
+            name: `Option: ${choice.choiceName} (${choice.odds}x)`,
+            value:
+              `Bets: ${bettors.length}\n` +
+              `Total Bet: $${formatNumberToReadableString(
+                choice.bets.reduce((a, b) => a + b.amount, 0)
+              )}\n` +
+              `If Wins → Payout: $${formatNumberToReadableString(totalWin)}\n` +
+              (bettors.length ? bettors.join('\n') : 'No bets'),
+            inline: false,
+          }
+        })
+      )
+
+      const embed = new EmbedBuilder()
+        .setTitle(`Prediction Status - ${prediction.title}`)
+        .setColor(Colors.Blurple)
+        .addFields(
+          { name: 'Status', value: prediction.status, inline: true },
+          {
+            name: 'Total Bets',
+            value: `$${formatNumberToReadableString(totalBetAmount)}`,
+            inline: true,
+          },
+          ...choiceSummaries
+        )
+        .setFooter({ text: `ID: ${prediction.predictionId}` })
+        .setTimestamp()
+
+      return interaction.reply({
+        embeds: [embed],
       })
     }
   } catch (error: any) {

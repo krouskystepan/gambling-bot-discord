@@ -83,4 +83,25 @@ exports.default = async (interaction, client) => {
             value: p.predictionId,
         })));
     }
+    if (subcommand === 'check') {
+        const focusedOption = interaction.options.getFocused(true);
+        const focusedValue = focusedOption.value;
+        const predictions = await Prediction_1.default.find({
+            guildId: interaction.guildId,
+            status: { $in: ['active', 'ended', 'paid'] },
+        }).limit(25);
+        const filtered = predictions.filter((p) => p.title.toLowerCase().includes(focusedValue.toLowerCase()));
+        const formatDate = (date) => {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day}.${month} ${hours}:${minutes}`;
+        };
+        await interaction.respond(filtered.map((p) => ({
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+            value: p.predictionId,
+        })));
+    }
 };
