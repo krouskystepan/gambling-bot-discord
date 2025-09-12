@@ -407,7 +407,12 @@ export async function run({ interaction }: SlashCommandProps) {
       for (const bet of winner.bets) {
         await User.findOneAndUpdate(
           { userId: bet.userId, guildId: interaction.guildId },
-          { $inc: { balance: bet.amount * winner.odds } }
+          {
+            $inc: {
+              balance: bet.amount * winner.odds,
+              netProfit: bet.amount * winner.odds,
+            },
+          }
         )
       }
 
