@@ -493,6 +493,7 @@ async function run({ interaction }) {
                 .setTimestamp();
             return interaction.reply({
                 embeds: [embed],
+                flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
     }

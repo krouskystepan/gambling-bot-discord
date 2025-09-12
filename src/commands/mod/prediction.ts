@@ -685,6 +685,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       return interaction.reply({
         embeds: [embed],
+        flags: MessageFlags.Ephemeral,
       })
     }
   } catch (error: any) {
