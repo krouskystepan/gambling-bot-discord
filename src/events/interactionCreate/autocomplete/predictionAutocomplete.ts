@@ -128,7 +128,7 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
 
     const predictions = await Prediction.find({
       guildId: interaction.guildId,
-      status: { $in: ['active', 'ended', 'paid'] },
+      status: { $in: ['active', 'ended'] },
     }).limit(25)
 
     const filtered = predictions.filter((p) =>

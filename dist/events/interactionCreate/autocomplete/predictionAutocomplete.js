@@ -88,7 +88,7 @@ exports.default = async (interaction, client) => {
         const focusedValue = focusedOption.value;
         const predictions = await Prediction_1.default.find({
             guildId: interaction.guildId,
-            status: { $in: ['active', 'ended', 'paid'] },
+            status: { $in: ['active', 'ended'] },
         }).limit(25);
         const filtered = predictions.filter((p) => p.title.toLowerCase().includes(focusedValue.toLowerCase()));
         const formatDate = (date) => {
