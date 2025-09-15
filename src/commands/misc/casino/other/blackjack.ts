@@ -116,6 +116,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     user.balance -= parsedBetAmount
     user.netProfit -= parsedBetAmount
+    await user.save()
 
     const shuffledDeck = shuffleDeck(DECK)
     const playerCards = [

@@ -69,6 +69,7 @@ async function run({ interaction }) {
         await interaction.deferReply();
         user.balance -= parsedBetAmount;
         user.netProfit -= parsedBetAmount;
+        await user.save();
         const shuffledDeck = (0, blackjackUtils_1.shuffleDeck)(blackjackUtils_1.DECK);
         const playerCards = [
             (0, casinoHelpers_1.drawNextCard)(shuffledDeck, 0),
