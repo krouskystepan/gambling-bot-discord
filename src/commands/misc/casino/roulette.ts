@@ -110,15 +110,6 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       const amount = parseReadableStringToNumber(amountStr)
-      const isBetValid = checkValidBet(
-        interaction,
-        amount,
-        configReply.casinoSettings.roulette.maxBet,
-        configReply.casinoSettings.roulette.minBet,
-        user.balance,
-        spins
-      )
-      if (!isBetValid) return
 
       let type: RouletteBetType
       try {
@@ -152,8 +143,19 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const totalOneBet = bets.reduce((sum, b) => sum + b.amount, 0)
-    const totalBet = totalOneBet * spins
+    const totalOneSpin = bets.reduce((sum, b) => sum + b.amount, 0)
+
+    const isBetValid = checkValidBet(
+      interaction,
+      totalOneSpin,
+      configReply.casinoSettings.roulette.maxBet,
+      configReply.casinoSettings.roulette.minBet,
+      user.balance,
+      spins
+    )
+    if (!isBetValid) return
+
+    const totalBet = totalOneSpin * spins
     user.balance -= totalBet
 
     let totalWinnings = 0
