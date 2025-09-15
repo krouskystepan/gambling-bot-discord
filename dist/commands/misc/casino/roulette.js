@@ -107,8 +107,9 @@ async function run({ interaction }) {
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
-        const totalBet = bets.reduce((sum, b) => sum + b.amount, 0);
-        user.balance -= totalBet * spins;
+        const totalOneBet = bets.reduce((sum, b) => sum + b.amount, 0);
+        const totalBet = totalOneBet * spins;
+        user.balance -= totalBet;
         let totalWinnings = 0;
         let liveResult = 0;
         const results = [];

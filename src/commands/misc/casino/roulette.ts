@@ -152,8 +152,9 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const totalBet = bets.reduce((sum, b) => sum + b.amount, 0)
-    user.balance -= totalBet * spins
+    const totalOneBet = bets.reduce((sum, b) => sum + b.amount, 0)
+    const totalBet = totalOneBet * spins
+    user.balance -= totalBet
 
     let totalWinnings = 0
     let liveResult = 0
