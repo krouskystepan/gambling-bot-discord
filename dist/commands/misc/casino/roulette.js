@@ -108,7 +108,7 @@ async function run({ interaction }) {
             });
         }
         const totalBet = bets.reduce((sum, b) => sum + b.amount, 0);
-        user.balance -= totalBet;
+        user.balance -= totalBet * spins;
         let totalWinnings = 0;
         let liveResult = 0;
         const results = [];
@@ -136,7 +136,8 @@ async function run({ interaction }) {
                     : `❌ | -$${(0, utils_1.formatNumberToReadableString)(bet.amount)}`}`;
             }
             totalWinnings += winnings;
-            liveResult += winnings - totalBet;
+            const totalBetPerSpin = bets.reduce((sum, b) => sum + b.amount, 0);
+            liveResult += winnings - totalBetPerSpin;
             results.push(spinOutput);
         }
         user.balance += totalWinnings;
