@@ -78,9 +78,6 @@ async function run({ interaction }) {
                 });
             }
             const amount = (0, utils_1.parseReadableStringToNumber)(amountStr);
-            const isBetValid = (0, utils_1.checkValidBet)(interaction, amount, configReply.casinoSettings.roulette.maxBet, configReply.casinoSettings.roulette.minBet, user.balance, spins);
-            if (!isBetValid)
-                return;
             let type;
             try {
                 type = (0, rouletteUtils_1.inferTypeFromValue)(rawValue);
@@ -107,8 +104,11 @@ async function run({ interaction }) {
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
-        const totalOneBet = bets.reduce((sum, b) => sum + b.amount, 0);
-        const totalBet = totalOneBet * spins;
+        const totalOneSpin = bets.reduce((sum, b) => sum + b.amount, 0);
+        const isBetValid = (0, utils_1.checkValidBet)(interaction, totalOneSpin, configReply.casinoSettings.roulette.maxBet, configReply.casinoSettings.roulette.minBet, user.balance, spins);
+        if (!isBetValid)
+            return;
+        const totalBet = totalOneSpin * spins;
         user.balance -= totalBet;
         let totalWinnings = 0;
         let liveResult = 0;
