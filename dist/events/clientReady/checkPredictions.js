@@ -7,7 +7,8 @@ exports.default = async (client) => {
     // OLD PREDICTION CLEANUP
     setInterval(async () => {
         const now = new Date();
-        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days
+        // 7 days
+        const oneMonthAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const oldPredictions = await Prediction_1.default.find({
             status: { $in: ['canceled', 'paid'] },
             updatedAt: { $lte: oneMonthAgo },

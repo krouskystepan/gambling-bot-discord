@@ -33,6 +33,7 @@ exports.options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
     deleted: false,
+    devOnly: true,
 };
 async function run({ interaction }) {
     try {

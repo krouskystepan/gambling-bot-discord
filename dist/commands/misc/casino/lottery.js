@@ -92,8 +92,6 @@ async function run({ interaction }) {
         }
         const totalBet = parsedBetAmount * entries;
         user.balance -= totalBet;
-        // user.milestoneProgress += totalBet
-        await user.save();
         let totalWinnings = 0;
         let liveResult = 0;
         const results = [];
@@ -151,7 +149,6 @@ async function run({ interaction }) {
                         : '')),
             ],
         });
-        // await checkMilestones(interaction, user, interaction.guildId!)
     }
     catch (error) {
         console.error('Error running the command:', error);

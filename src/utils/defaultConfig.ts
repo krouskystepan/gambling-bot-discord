@@ -59,12 +59,12 @@ const defaultCasinoSettings = {
   },
   roulette: {
     winMultipliers: {
-      number: 35,
-      color: 1,
-      parity: 1,
-      range: 1,
-      dozen: 2,
-      column: 2,
+      number: 18,
+      color: 2,
+      parity: 1.95,
+      range: 1.95,
+      dozen: 2.85,
+      column: 2.85,
     },
     maxBet: 0,
     minBet: 0,

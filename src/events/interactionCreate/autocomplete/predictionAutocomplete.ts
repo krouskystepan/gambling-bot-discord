@@ -1,14 +1,9 @@
 import { Client, AutocompleteInteraction } from 'discord.js'
 import Prediction from '../../../models/Prediction'
+import { DateTime } from 'luxon'
 
-const formatDate = (date: Date) => {
-  const d = new Date(date)
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const hours = String(d.getHours()).padStart(2, '0')
-  const minutes = String(d.getMinutes()).padStart(2, '0')
-  return `${day}.${month} / ${hours}:${minutes}`
-}
+const formatDate = (date: Date) =>
+  DateTime.fromJSDate(date).setZone('Europe/Prague').toFormat('dd.MM / HH:mm')
 
 export default async (interaction: AutocompleteInteraction, client: Client) => {
   if (!interaction.isAutocomplete()) return
@@ -16,141 +11,108 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
 
   const focusedOption = interaction.options.getFocused(true)
   const subcommand = interaction.options.getSubcommand()
+  const focusedValue = focusedOption.value
+
+  const findPredictions = async (status: string | string[]) => {
+    const query: Record<string, unknown> = {
+      guildId: interaction.guildId,
+      title: { $regex: focusedValue, $options: 'i' },
+    }
+
+    if (Array.isArray(status)) {
+      query.status = { $in: status }
+    } else {
+      query.status = status
+    }
+
+    return await Prediction.find(query).limit(25)
+  }
 
   if (subcommand === 'end') {
-    const focusedValue = focusedOption.value
+    const predictions = await findPredictions('active')
 
-    const predictions = await Prediction.find({
-      guildId: interaction.guildId,
-      status: 'active',
-    }).limit(25)
-
-    const filtered = predictions.filter((p) =>
-      p.title.toLowerCase().includes(focusedValue.toLowerCase())
-    )
-
-    await interaction.respond(
-      filtered.map((p) => ({
-        name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
-          p.createdAt
-        )}`,
-        value: p.predictionId,
-      }))
+    return await interaction.respond(
+      predictions.length > 0
+        ? predictions.map((p) => ({
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
+              p.createdAt
+            )}`,
+            value: p.predictionId,
+          }))
+        : [{ name: 'No predictions found', value: 'none' }]
     )
   }
 
   if (subcommand === 'payout') {
     if (focusedOption.name === 'prediction-id') {
-      const focusedValue = focusedOption.value
-
-      const predictions = await Prediction.find({
-        guildId: interaction.guildId,
-        status: 'ended',
-      }).limit(25)
-
-      const filtered = predictions.filter((p) =>
-        p.title.toLowerCase().includes(focusedValue.toLowerCase())
-      )
+      const predictions = await findPredictions('ended')
 
       return await interaction.respond(
-        filtered.map((p) => ({
-          name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
-            p.createdAt
-          )}`,
-          value: p.predictionId,
-        }))
+        predictions.length > 0
+          ? predictions.map((p) => ({
+              name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
+                p.createdAt
+              )}`,
+              value: p.predictionId,
+            }))
+          : [{ name: 'No predictions found', value: 'none' }]
       )
     }
 
     if (focusedOption.name === 'winner') {
       const predictionId = interaction.options.getString('prediction-id')
-      if (!predictionId) {
-        return await interaction.respond([])
-      }
+      if (!predictionId) return await interaction.respond([])
 
       const prediction = await Prediction.findOne({
         guildId: interaction.guildId,
         predictionId,
       })
-
-      if (!prediction) {
-        return await interaction.respond([])
-      }
+      if (!prediction) return await interaction.respond([])
 
       const filteredChoices = prediction.choices
         .filter((c) =>
-          c.choiceName.toLowerCase().includes(focusedOption.value.toLowerCase())
+          c.choiceName.toLowerCase().includes(focusedValue.toLowerCase())
         )
         .map((c) => ({
           name: `${c.choiceName} (Odds: ${c.odds})`,
           value: c.choiceName,
         }))
 
-      return await interaction.respond(filteredChoices)
+      return await interaction.respond(
+        filteredChoices.length > 0
+          ? filteredChoices
+          : [{ name: 'No choices found', value: 'none' }]
+      )
     }
   }
 
   if (subcommand === 'cancel') {
-    const focusedOption = interaction.options.getFocused(true)
-    const focusedValue = focusedOption.value
+    const predictions = await findPredictions(['active', 'ended'])
 
-    const predictions = await Prediction.find({
-      guildId: interaction.guildId,
-      status: { $in: ['active', 'ended'] },
-    }).limit(25)
-
-    const filtered = predictions.filter((p) =>
-      p.title.toLowerCase().includes(focusedValue.toLowerCase())
-    )
-
-    const formatDate = (date: Date) => {
-      const d = new Date(date)
-      const day = String(d.getDate()).padStart(2, '0')
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const hours = String(d.getHours()).padStart(2, '0')
-      const minutes = String(d.getMinutes()).padStart(2, '0')
-      return `${day}.${month} ${hours}:${minutes}`
-    }
-
-    await interaction.respond(
-      filtered.map((p) => ({
-        name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
-          p.createdAt
-        )}`,
-        value: p.predictionId,
-      }))
+    return await interaction.respond(
+      predictions.length > 0
+        ? predictions.map((p) => ({
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
+              p.createdAt
+            )}`,
+            value: p.predictionId,
+          }))
+        : [{ name: 'No predictions found', value: 'none' }]
     )
   }
 
   if (subcommand === 'check') {
-    const focusedOption = interaction.options.getFocused(true)
-    const focusedValue = focusedOption.value
+    const predictions = await findPredictions(['active', 'ended'])
 
-    const predictions = await Prediction.find({
-      guildId: interaction.guildId,
-      status: { $in: ['active', 'ended'] },
-    }).limit(25)
-
-    const filtered = predictions.filter((p) =>
-      p.title.toLowerCase().includes(focusedValue.toLowerCase())
-    )
-
-    const formatDate = (date: Date) => {
-      const d = new Date(date)
-      const day = String(d.getDate()).padStart(2, '0')
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const hours = String(d.getHours()).padStart(2, '0')
-      const minutes = String(d.getMinutes()).padStart(2, '0')
-      return `${day}.${month} ${hours}:${minutes}`
-    }
-
-    await interaction.respond(
-      filtered.map((p) => ({
-        name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
-          p.createdAt
-        )}`,
-        value: p.predictionId,
-      }))
+    return await interaction.respond(
+      predictions.length > 0
+        ? predictions.map((p) => ({
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
+              p.createdAt
+            )}`,
+            value: p.predictionId,
+          }))
+        : [{ name: 'No predictions found', value: 'none' }]
     )
   }
 }

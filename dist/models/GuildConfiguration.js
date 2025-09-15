@@ -63,5 +63,11 @@ const guildConfigurationSchema = new mongoose_1.Schema({
             default: 0,
         },
     },
+    bonusSettings: {
+        baseReward: { type: Number, default: 0 },
+        streakMultiplier: { type: Number, default: 0 },
+        maxReward: { type: Number, default: 0 },
+        resetOnMax: { type: Boolean, default: false },
+    },
 });
 exports.default = (0, mongoose_1.model)('GuildConfiguration', guildConfigurationSchema);

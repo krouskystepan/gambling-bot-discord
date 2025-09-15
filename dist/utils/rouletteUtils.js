@@ -4,6 +4,7 @@ exports.MINI_NUMBERS = void 0;
 exports.inferTypeFromValue = inferTypeFromValue;
 exports.calculateRouletteWin = calculateRouletteWin;
 exports.getRouletteColor = getRouletteColor;
+exports.getRouletteHelpers = getRouletteHelpers;
 exports.MINI_NUMBERS = {
     '0': 'green',
     '1': 'red',
@@ -43,29 +44,38 @@ function inferTypeFromValue(value) {
 }
 function calculateRouletteWin(bet, result, payouts) {
     const amount = bet.amount;
-    if (result === '0')
-        return 0;
+    const numResult = Number(result);
     switch (bet.type) {
         case 'number':
             return bet.value === result ? amount * payouts.number : 0;
         case 'color':
+            if (result === '0')
+                return 0;
             return exports.MINI_NUMBERS[result] === bet.value.toLowerCase()
                 ? amount * payouts.color
                 : 0;
         case 'parity':
-            const isEven = Number(result) % 2 === 0;
+            if (result === '0')
+                return 0;
+            const isEven = numResult % 2 === 0;
             return bet.value.toLowerCase() === (isEven ? 'even' : 'odd')
                 ? amount * payouts.parity
                 : 0;
         case 'range':
-            const isLow = Number(result) <= 9;
+            if (result === '0')
+                return 0;
+            const isLow = numResult >= 1 && numResult <= 9;
             return bet.value.toLowerCase() === (isLow ? 'low' : 'high')
                 ? amount * payouts.range
                 : 0;
         case 'dozen':
+            if (result === '0')
+                return 0;
             const dozen = Math.ceil(Number(result) / 6);
             return Number(bet.value) === dozen ? amount * payouts.dozen : 0;
         case 'column':
+            if (result === '0')
+                return 0;
             const col = ((Number(result) - 1) % 3) + 1;
             return Number(bet.value) === col ? amount * payouts.column : 0;
     }
@@ -79,4 +89,39 @@ function getRouletteColor(number) {
     if (color === 'black')
         return '⚫';
     return '❓ Unknown';
+}
+function getRouletteHelpers() {
+    const numbers = Object.keys(exports.MINI_NUMBERS).map(Number);
+    const columns = { 1: [], 2: [], 3: [] };
+    numbers.forEach((n) => {
+        if (n === 0)
+            return;
+        const col = ((n - 1) % 3) + 1;
+        columns[col].push(n);
+    });
+    const dozens = { 1: [], 2: [], 3: [] };
+    numbers.forEach((n) => {
+        if (n === 0)
+            return;
+        const dozen = Math.ceil(n / 6);
+        dozens[dozen].push(n);
+    });
+    const numbersTest = '   - 0–36';
+    const colorsTest = '   - red / black';
+    const parityTest = '   - odd / even';
+    const rangesTest = '   - low (1–9) / high (10–18)';
+    const columnsText = Object.keys(columns)
+        .map((k) => `   - C${k} → ${columns[Number(k)].join(', ')}`)
+        .join('\n');
+    const dozensText = Object.keys(dozens)
+        .map((k) => `   - D${k} → ${dozens[Number(k)].join(', ')}`)
+        .join('\n');
+    return [
+        `- **Numbers:**\n${numbersTest}`,
+        `- **Colors:**\n${colorsTest}`,
+        `- **Parity:**\n${parityTest}`,
+        `- **Ranges:**\n${rangesTest}`,
+        `- **Columns:**\n${columnsText}`,
+        `- **Dozens:**\n${dozensText}`,
+    ].join('\n');
 }

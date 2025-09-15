@@ -13,7 +13,6 @@ import {
 } from '../../../../utils/createEmbed'
 import {
   checkChannelConfiguration,
-  // checkMilestones,
   checkUserRegistration,
   checkValidBet,
   formatNumberToReadableString,
@@ -290,9 +289,6 @@ export async function run({ interaction }: SlashCommandProps) {
 
     let result = ''
 
-    // user.milestoneProgress += parsedBetAmount
-    // targetUser.milestoneProgress += parsedBetAmount
-
     if (targetUserChoice?.beats === initialUserChoice?.name) {
       result = `${targetDiscordUser} won and took **$${formatNumberToReadableString(
         realWinAmount
@@ -333,13 +329,6 @@ export async function run({ interaction }: SlashCommandProps) {
       embeds: [embed],
       components: [],
     })
-
-    // await checkMilestones(interaction, user, interaction.guildId!)
-    // await checkMilestones(
-    // targetUserInteraction,
-    // targetUser,
-    // interaction.guildId!
-    // )
   } catch (error) {
     console.error('Error running the command:', error)
   }

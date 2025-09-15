@@ -6,8 +6,8 @@ const UserSchema = new mongoose_1.Schema({
     guildId: { type: String, required: true },
     balance: { type: Number, default: 0 },
     netProfit: { type: Number, default: 0 },
-    milestoneUnlocked: { type: Number, default: 0 },
-    milestoneProgress: { type: Number, default: 0 },
+    lastDailyClaim: { type: Date, default: null },
+    dailyStreak: { type: Number, default: 0 },
 }, { timestamps: true });
 UserSchema.index({ userId: 1, guildId: 1 }, { unique: true });
 exports.default = (0, mongoose_1.model)('User', UserSchema);

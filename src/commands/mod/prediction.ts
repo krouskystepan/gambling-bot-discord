@@ -386,7 +386,10 @@ export async function run({ interaction }: SlashCommandProps) {
       const predictionId = options.getString('prediction-id', true)
       const winnerChoice = options.getString('winner', true)
 
-      const prediction = await Prediction.findOne({ predictionId })
+      const prediction = await Prediction.findOne({
+        guildId: interaction.guildId,
+        predictionId: predictionId,
+      })
       if (!prediction) {
         return interaction.reply({
           embeds: [

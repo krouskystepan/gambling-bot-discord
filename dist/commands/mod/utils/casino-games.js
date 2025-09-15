@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.options = exports.data = void 0;
 exports.run = run;
+const rouletteUtils_1 = require("../../../utils/rouletteUtils");
 exports.data = {
     name: 'casino-games',
     description: 'Show available casino games and how to use them.',
@@ -60,6 +61,20 @@ async function run({ interaction }) {
             { name: 'show-balance', example: 'true', required: false },
             { name: 'skip-animations', example: 'true', required: false },
         ])),
+        renderSection('🌀 Roulette', [
+            formatCommand('roulette', [
+                { name: 'bet', example: '1000', required: true },
+                {
+                    name: 'bets',
+                    example: '100 red, 50 17, 200 d2, 75 c1, 100 low',
+                    required: true,
+                },
+                { name: 'spins', example: '5', required: false },
+                { name: 'show-balance', example: 'true', required: false },
+                { name: 'skip-animations', example: 'true', required: false },
+            ]),
+            (0, rouletteUtils_1.getRouletteHelpers)(),
+        ].join('\n')),
         renderSection('🤑 Golden Jackpot', formatCommand('goldenjackpot', [
             { name: 'bet', example: '2500', required: true },
             { name: 'entries', example: '100', required: false },

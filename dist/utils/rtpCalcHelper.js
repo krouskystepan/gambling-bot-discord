@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.calculateRTP = void 0;
 const defaultConfig_1 = require("./defaultConfig");
-// helper na kombinace
+const rouletteUtils_1 = require("./rouletteUtils");
 const combination = (n, k) => {
     if (k > n)
         return 0;
@@ -54,6 +54,39 @@ const calculateRTP = (game, settings) => {
                 rtp += probability * multiplier;
             }
             return rtp * 100;
+        }
+        case 'roulette': {
+            const { winMultipliers } = settings;
+            const numbers = Object.keys(rouletteUtils_1.MINI_NUMBERS);
+            const totalNumbers = numbers.length;
+            const greenCount = numbers.filter((n) => rouletteUtils_1.MINI_NUMBERS[n] === 'green').length;
+            const numberRTP = (1 / totalNumbers) * toNumber(winMultipliers.number) * 100;
+            const redCount = numbers.filter((n) => rouletteUtils_1.MINI_NUMBERS[n] === 'red').length;
+            const colorRTP = (redCount / totalNumbers) * toNumber(winMultipliers.color) * 100;
+            const evenCount = numbers.filter((n) => parseInt(n) % 2 === 0 && rouletteUtils_1.MINI_NUMBERS[n] !== 'green').length;
+            const parityRTP = (evenCount / (totalNumbers - greenCount)) *
+                toNumber(winMultipliers.parity) *
+                100;
+            const rangeCount = numbers.filter((n) => parseInt(n) >= 1 && parseInt(n) <= 9).length;
+            const rangeRTP = (rangeCount / (totalNumbers - greenCount)) *
+                toNumber(winMultipliers.range) *
+                100;
+            const dozenCount = numbers.filter((n) => parseInt(n) >= 1 && parseInt(n) <= 6).length;
+            const dozenRTP = (dozenCount / (totalNumbers - greenCount)) *
+                toNumber(winMultipliers.dozen) *
+                100;
+            const columnCount = numbers.filter((n) => parseInt(n) % 3 === 1 && rouletteUtils_1.MINI_NUMBERS[n] !== 'green').length;
+            const columnRTP = (columnCount / (totalNumbers - greenCount)) *
+                toNumber(winMultipliers.column) *
+                100;
+            return {
+                number: numberRTP,
+                color: colorRTP,
+                parity: parityRTP,
+                range: rangeRTP,
+                dozen: dozenRTP,
+                column: columnRTP,
+            };
         }
         case 'rps': {
             const { casinoCut } = settings;

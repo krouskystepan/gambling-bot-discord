@@ -69,8 +69,6 @@ async function run({ interaction }) {
         await interaction.deferReply();
         user.balance -= parsedBetAmount;
         user.netProfit -= parsedBetAmount;
-        // user.milestoneProgress += parsedBetAmount
-        await user.save();
         const shuffledDeck = (0, blackjackUtils_1.shuffleDeck)(blackjackUtils_1.DECK);
         const playerCards = [
             (0, casinoHelpers_1.drawNextCard)(shuffledDeck, 0),
@@ -105,7 +103,6 @@ async function run({ interaction }) {
                     (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, user.balance),
                 ],
             });
-            //  await checkMilestones(interaction, user, interaction.guildId!)
         }
         const message = await interaction.fetchReply();
         const game = new BlackjackGame_1.default({

@@ -192,8 +192,6 @@ async function run({ interaction }) {
             return;
         const initialUserChoice = choices.find((choice) => choice.name === initialUserInteraction.customId);
         let result = '';
-        // user.milestoneProgress += parsedBetAmount
-        // targetUser.milestoneProgress += parsedBetAmount
         if (targetUserChoice?.beats === initialUserChoice?.name) {
             result = `${targetDiscordUser} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${interaction.user}!`;
             user.balance -= parsedBetAmount;
@@ -221,12 +219,6 @@ async function run({ interaction }) {
             embeds: [embed],
             components: [],
         });
-        // await checkMilestones(interaction, user, interaction.guildId!)
-        // await checkMilestones(
-        // targetUserInteraction,
-        // targetUser,
-        // interaction.guildId!
-        // )
     }
     catch (error) {
         console.error('Error running the command:', error);

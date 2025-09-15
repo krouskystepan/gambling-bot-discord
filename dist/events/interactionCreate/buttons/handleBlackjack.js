@@ -63,7 +63,6 @@ exports.default = async (interaction, client) => {
                 content: 'You have stood.',
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
-            // await checkMilestones(interaction, user, interaction.guildId!)
         }
         if (action === 'hit') {
             await interaction.deferUpdate();
@@ -103,7 +102,6 @@ exports.default = async (interaction, client) => {
                     content: 'You have busted.',
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
-                // await checkMilestones(interaction, user, interaction.guildId!)
             }
             if (playerTotal === 21) {
                 await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(game.betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance);
@@ -112,7 +110,6 @@ exports.default = async (interaction, client) => {
                     content: 'You have hit.',
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
-                // await checkMilestones(interaction, user, interaction.guildId!)
             }
             await BlackjackGame_1.default.findOneAndUpdate({ userId, guildId, gameId }, { playerCards: game.playerCards, deck: game.deck });
             await message.edit({
@@ -161,14 +158,12 @@ exports.default = async (interaction, client) => {
                     content: 'You have busted.',
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
-                // await checkMilestones(interaction, user, interaction.guildId!)
             }
             await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance);
             return interaction.followUp({
                 content: 'You have doubled down.',
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
-            // await checkMilestones(interaction, user, interaction.guildId!)
         }
     }
     catch (error) {

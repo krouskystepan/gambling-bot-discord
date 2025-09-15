@@ -1,4 +1,5 @@
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+import { getRouletteHelpers } from '../../../utils/rouletteUtils'
 
 export const data: CommandData = {
   name: 'casino-games',
@@ -87,6 +88,24 @@ export async function run({ interaction }: SlashCommandProps) {
         { name: 'show-balance', example: 'true', required: false },
         { name: 'skip-animations', example: 'true', required: false },
       ])
+    ),
+
+    renderSection(
+      '🌀 Roulette',
+      [
+        formatCommand('roulette', [
+          { name: 'bet', example: '1000', required: true },
+          {
+            name: 'bets',
+            example: '100 red, 50 17, 200 d2, 75 c1, 100 low',
+            required: true,
+          },
+          { name: 'spins', example: '5', required: false },
+          { name: 'show-balance', example: 'true', required: false },
+          { name: 'skip-animations', example: 'true', required: false },
+        ]),
+        getRouletteHelpers(),
+      ].join('\n')
     ),
 
     renderSection(

@@ -111,8 +111,6 @@ export default async (interaction: Interaction, client: Client) => {
         content: 'You have stood.',
         flags: MessageFlags.Ephemeral,
       })
-
-      // await checkMilestones(interaction, user, interaction.guildId!)
     }
 
     if (action === 'hit') {
@@ -183,8 +181,6 @@ export default async (interaction: Interaction, client: Client) => {
           content: 'You have busted.',
           flags: MessageFlags.Ephemeral,
         })
-
-        // await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       if (playerTotal === 21) {
@@ -209,8 +205,6 @@ export default async (interaction: Interaction, client: Client) => {
           content: 'You have hit.',
           flags: MessageFlags.Ephemeral,
         })
-
-        // await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       await BlackjackGame.findOneAndUpdate(
@@ -303,8 +297,6 @@ export default async (interaction: Interaction, client: Client) => {
           content: 'You have busted.',
           flags: MessageFlags.Ephemeral,
         })
-
-        // await checkMilestones(interaction, user, interaction.guildId!)
       }
 
       await revealDealerCards(
@@ -326,8 +318,6 @@ export default async (interaction: Interaction, client: Client) => {
         content: 'You have doubled down.',
         flags: MessageFlags.Ephemeral,
       })
-
-      // await checkMilestones(interaction, user, interaction.guildId!)
     }
   } catch (error) {
     console.error('Error in handleBlackjack.ts', error)

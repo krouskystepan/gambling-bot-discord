@@ -96,17 +96,31 @@ export default async (interaction: Interaction) => {
 
     if (!casinoSettings) return
 
+    const targetChoice = targetPrediction.choices.find(
+      (c) => c.choiceName === choiceName
+    )
+
+    if (!targetChoice) return
+
+    const userChoiceTotal = targetChoice.bets
+      .filter((bet) => bet.userId === modalInteraction.user.id)
+      .reduce((sum, bet) => sum + bet.amount, 0)
+
+    const newChoiceTotal = userChoiceTotal + parsedBetAmount
+
     if (
       casinoSettings.prediction.maxBet > 0 &&
-      parsedBetAmount > casinoSettings.prediction.maxBet
+      newChoiceTotal > casinoSettings.prediction.maxBet
     ) {
       return modalInteraction.editReply({
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
-            `The maximum bet is **$${formatNumberToReadableString(
+            `The maximum bet per choice is **$${formatNumberToReadableString(
               casinoSettings.prediction.maxBet
-            )}**.`
+            )}**. You already have **$${formatNumberToReadableString(
+              userChoiceTotal
+            )}** on **${choiceName}**.`
           ),
         ],
       })

@@ -63,11 +63,18 @@ exports.default = async (interaction) => {
         const casinoSettings = guildConfiguration?.casinoSettings;
         if (!casinoSettings)
             return;
+        const targetChoice = targetPrediction.choices.find((c) => c.choiceName === choiceName);
+        if (!targetChoice)
+            return;
+        const userChoiceTotal = targetChoice.bets
+            .filter((bet) => bet.userId === modalInteraction.user.id)
+            .reduce((sum, bet) => sum + bet.amount, 0);
+        const newChoiceTotal = userChoiceTotal + parsedBetAmount;
         if (casinoSettings.prediction.maxBet > 0 &&
-            parsedBetAmount > casinoSettings.prediction.maxBet) {
+            newChoiceTotal > casinoSettings.prediction.maxBet) {
             return modalInteraction.editReply({
                 embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Above Maximum Bet', `The maximum bet is **$${(0, utils_1.formatNumberToReadableString)(casinoSettings.prediction.maxBet)}**.`),
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Above Maximum Bet', `The maximum bet per choice is **$${(0, utils_1.formatNumberToReadableString)(casinoSettings.prediction.maxBet)}**. You already have **$${(0, utils_1.formatNumberToReadableString)(userChoiceTotal)}** on **${choiceName}**.`),
                 ],
             });
         }

@@ -116,8 +116,6 @@ export async function run({ interaction }: SlashCommandProps) {
     const totalBet = parsedBetAmount * entries
 
     user.balance -= totalBet
-    // user.milestoneProgress += totalBet
-    await user.save()
 
     const initialTickets = entries
     let totalWinnings = 0
@@ -227,8 +225,6 @@ export async function run({ interaction }: SlashCommandProps) {
         ),
       ],
     })
-
-    // await checkMilestones(interaction, user, interaction.guildId!)
   } catch (error) {
     console.error('Error running the command:', error)
   }

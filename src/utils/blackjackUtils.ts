@@ -4,7 +4,6 @@ import BlackjackGame from '../models/BlackjackGame'
 import { drawNextCard } from './casinoHelpers'
 import { type UserDoc } from '../models/User'
 import {
-  // checkMilestones,
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from './utils'

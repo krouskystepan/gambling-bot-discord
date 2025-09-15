@@ -291,7 +291,10 @@ async function run({ interaction }) {
             }
             const predictionId = options.getString('prediction-id', true);
             const winnerChoice = options.getString('winner', true);
-            const prediction = await Prediction_1.default.findOne({ predictionId });
+            const prediction = await Prediction_1.default.findOne({
+                guildId: interaction.guildId,
+                predictionId: predictionId,
+            });
             if (!prediction) {
                 return interaction.reply({
                     embeds: [

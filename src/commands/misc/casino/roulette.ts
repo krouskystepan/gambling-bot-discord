@@ -1,10 +1,6 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
-import {
-  createBetEmbed,
-  createErrorEmbed,
-  createInfoEmbed,
-} from '../../../utils/createEmbed'
+import { createBetEmbed, createErrorEmbed } from '../../../utils/createEmbed'
 import {
   checkChannelConfiguration,
   parseReadableStringToNumber,
@@ -23,7 +19,7 @@ import {
 
 export const data: CommandData = {
   name: 'roulette',
-  description: 'Play American roulette with multiple bets!',
+  description: 'Play Mini Roulette with multiple bets!',
   options: [
     {
       name: 'bets',
@@ -36,7 +32,7 @@ export const data: CommandData = {
       description: 'Number of spins.',
       type: ApplicationCommandOptionType.Integer,
       required: false,
-      choices: Array.from({ length: 10 }, (_, i) => ({
+      choices: Array.from({ length: 5 }, (_, i) => ({
         name: (i + 1).toString(),
         value: i + 1,
       })),
@@ -48,13 +44,18 @@ export const data: CommandData = {
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
+    {
+      name: 'skip-animations',
+      description: 'Skip game animations for faster results.',
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
   ],
   dm_permission: false,
 }
 
 export const options: CommandOptions = {
   deleted: false,
-  devOnly: true,
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -63,7 +64,6 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction.user.id,
       interaction.guildId!
     )
-
     if (!user) {
       return interaction.reply({
         embeds: [
@@ -89,17 +89,19 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const spins = interaction.options.getInteger('spins') || 1
     const betsInput = interaction.options.getString('bets', true)
-    const showBalance = interaction.options.getBoolean('show-balance') || false
+    const showBalance = interaction.options.getBoolean('show-balance')
+    const skipAnimations = interaction.options.getBoolean('skip-animations')
 
     const bets: RouletteBet[] = []
 
     for (const betStr of betsInput.split(',')) {
-      const [amountStr, value] = betStr.trim().split(/\s+/)
-      if (!amountStr || !value) {
+      const [amountStr, rawValue] = betStr.trim().split(/\s+/)
+      if (!amountStr || !rawValue) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
-              'Invalid Input - Invalid Bet Format',
+            createBetEmbed(
+              'Invalid Bet Format',
+              'Red',
               `Each bet must be in the format: "<amount> <value>". Invalid: "${betStr.trim()}"`
             ),
           ],
@@ -108,44 +110,41 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       const amount = parseReadableStringToNumber(amountStr)
-
-      // Validate numeric amount
       const isBetValid = checkValidBet(
         interaction,
         amount,
-        // configReply.casinoSettings?.roulette.maxBet || 0,
-        // configReply.casinoSettings?.roulette.minBet || 0,
-        0,
-        0,
+        configReply.casinoSettings.roulette.maxBet,
+        configReply.casinoSettings.roulette.minBet,
         user.balance,
         spins
       )
-
       if (!isBetValid) return
 
       let type: RouletteBetType
       try {
-        type = inferTypeFromValue(value)
+        type = inferTypeFromValue(rawValue)
       } catch (e: any) {
         return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Invalid Bet Value',
-              `Invalid bet value: "${value}"\n${e.message}`
-            ),
-          ],
+          embeds: [createBetEmbed('Invalid Bet Value', 'Red', `${e.message}`)],
           flags: MessageFlags.Ephemeral,
         })
       }
 
-      bets.push({ amount, type, value })
+      let value = rawValue
+      let displayValue = value
+
+      if (type === 'dozen') value = value[1]
+      if (type === 'column') value = value[1]
+
+      bets.push({ amount, type, value, displayValue })
     }
 
     if (bets.length === 0) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
-            'Invalid Input - No Bets Found',
+          createBetEmbed(
+            'No Bets Found',
+            'Red',
             'Please provide at least one valid bet.'
           ),
         ],
@@ -154,66 +153,83 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     const totalBet = bets.reduce((sum, b) => sum + b.amount, 0)
-    let totalNet = 0
-    const resultsMap: Record<string, string[]> = {}
+    user.balance -= totalBet
 
-    // Run spins
+    let totalWinnings = 0
+    let liveResult = 0
+    const results: string[] = []
+
+    await interaction.deferReply({ withResponse: true })
+
     for (let i = 0; i < spins; i++) {
+      if (!skipAnimations) {
+        await interaction.editReply({
+          embeds: [
+            createBetEmbed(
+              '🌀 Spinning...',
+              'Blue',
+              `💵 Total Bet: **$${formatNumberToReadableString(
+                totalBet
+              )}**\n\n` +
+                `🕹 Spin Results:\n${results.join('\n\n')}\n\n` +
+                `💰 Total: ${
+                  liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+                } **$${formatNumberToReadableString(liveResult)}**`
+            ),
+          ],
+        })
+
+        await new Promise((res) => setTimeout(res, 700))
+      }
+
       const spinResult = spinRouletteWheel()
       const color = getRouletteColor(spinResult)
-      const key = `${color} ${spinResult}`
-
-      if (!resultsMap[key]) resultsMap[key] = []
+      let spinOutput = `**${color} ${spinResult}**`
+      let winnings = 0
 
       for (const bet of bets) {
-        const winnings = calculateRouletteWin(
+        const winAmount = calculateRouletteWin(
           bet,
           spinResult,
           configReply.casinoSettings.roulette.winMultipliers
         )
-        const net = winnings - bet.amount
-        totalNet += net
 
-        resultsMap[key].push(
-          `- Bet: $${formatNumberToReadableString(bet.amount)} on ${
-            bet.value
-          } → ${
-            net > 0
-              ? `🎉 +$${formatNumberToReadableString(net)}`
-              : net < 0
-              ? `❌ -$${formatNumberToReadableString(bet.amount)}`
-              : '$0'
-          }`
-        )
+        winnings += winAmount
+        spinOutput += `\n**$${formatNumberToReadableString(bet.amount)}** on ${
+          bet.displayValue ?? bet.value
+        } | ${
+          winAmount > 0
+            ? `🎉 | +$${formatNumberToReadableString(winAmount)}`
+            : `❌ | -$${formatNumberToReadableString(bet.amount)}`
+        }`
       }
+
+      totalWinnings += winnings
+      liveResult += winnings - totalBet
+      results.push(spinOutput)
     }
 
-    // Prepare final results string
-    const results: string[] = []
-    for (const [spin, betsArr] of Object.entries(resultsMap)) {
-      results.push(`${spin}\n${betsArr.join('\n')}`)
-    }
-
-    user.balance += totalNet
+    user.balance += totalWinnings
+    user.netProfit += liveResult
     await user.save()
 
-    const isWin = totalNet > 0
-    const isLoss = totalNet < 0
+    const isWin = liveResult > 0
+    const isLoss = liveResult < 0
 
-    return interaction.reply({
+    await interaction.editReply({
       embeds: [
         createBetEmbed(
           isWin
-            ? '🎰 **Win!** 🎉'
+            ? '🌀 **Win!** 🎉'
             : isLoss
-            ? '🎰 **Better Luck Next Time...** ❌'
-            : '🎰 **Not Bad...** 👀',
+            ? '🌀 **Better Luck Next Time...** ❌'
+            : '🌀 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
-            `🎲 **Spin Results:**\n${results.join('\n\n')}\n\n` +
+            `🕹 **Spin Results:**\n${results.join('\n\n')}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(totalNet)}**\n` +
+            } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
               ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
               : '')
@@ -222,14 +238,5 @@ export async function run({ interaction }: SlashCommandProps) {
     })
   } catch (error) {
     console.error('Error running roulette command:', error)
-    return interaction.reply({
-      embeds: [
-        createErrorEmbed(
-          'Error',
-          'An unexpected error occurred while processing your bet.'
-        ),
-      ],
-      flags: MessageFlags.Ephemeral,
-    })
   }
 }

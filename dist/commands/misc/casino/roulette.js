@@ -9,7 +9,7 @@ const casinoHelpers_1 = require("../../../utils/casinoHelpers");
 const rouletteUtils_1 = require("../../../utils/rouletteUtils");
 exports.data = {
     name: 'roulette',
-    description: 'Play American roulette with multiple bets!',
+    description: 'Play Mini Roulette with multiple bets!',
     options: [
         {
             name: 'bets',
@@ -22,7 +22,7 @@ exports.data = {
             description: 'Number of spins.',
             type: discord_js_1.ApplicationCommandOptionType.Integer,
             required: false,
-            choices: Array.from({ length: 10 }, (_, i) => ({
+            choices: Array.from({ length: 5 }, (_, i) => ({
                 name: (i + 1).toString(),
                 value: i + 1,
             })),
@@ -33,12 +33,17 @@ exports.data = {
             type: discord_js_1.ApplicationCommandOptionType.Boolean,
             required: false,
         },
+        {
+            name: 'skip-animations',
+            description: 'Skip game animations for faster results.',
+            type: discord_js_1.ApplicationCommandOptionType.Boolean,
+            required: false,
+        },
     ],
     dm_permission: false,
 };
 exports.options = {
     deleted: false,
-    devOnly: true,
 };
 async function run({ interaction }) {
     try {
@@ -59,87 +64,95 @@ async function run({ interaction }) {
             return;
         const spins = interaction.options.getInteger('spins') || 1;
         const betsInput = interaction.options.getString('bets', true);
-        const showBalance = interaction.options.getBoolean('show-balance') || false;
+        const showBalance = interaction.options.getBoolean('show-balance');
+        const skipAnimations = interaction.options.getBoolean('skip-animations');
         const bets = [];
         for (const betStr of betsInput.split(',')) {
-            const [amountStr, value] = betStr.trim().split(/\s+/);
-            if (!amountStr || !value) {
+            const [amountStr, rawValue] = betStr.trim().split(/\s+/);
+            if (!amountStr || !rawValue) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Invalid Bet Format', `Each bet must be in the format: "<amount> <value>". Invalid: "${betStr.trim()}"`),
+                        (0, createEmbed_1.createBetEmbed)('Invalid Bet Format', 'Red', `Each bet must be in the format: "<amount> <value>". Invalid: "${betStr.trim()}"`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
             const amount = (0, utils_1.parseReadableStringToNumber)(amountStr);
-            // Validate numeric amount
-            const isBetValid = (0, utils_1.checkValidBet)(interaction, amount, 
-            // configReply.casinoSettings?.roulette.maxBet || 0,
-            // configReply.casinoSettings?.roulette.minBet || 0,
-            0, 0, user.balance, spins);
+            const isBetValid = (0, utils_1.checkValidBet)(interaction, amount, configReply.casinoSettings.roulette.maxBet, configReply.casinoSettings.roulette.minBet, user.balance, spins);
             if (!isBetValid)
                 return;
             let type;
             try {
-                type = (0, rouletteUtils_1.inferTypeFromValue)(value);
+                type = (0, rouletteUtils_1.inferTypeFromValue)(rawValue);
             }
             catch (e) {
                 return interaction.reply({
-                    embeds: [
-                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Invalid Bet Value', `Invalid bet value: "${value}"\n${e.message}`),
-                    ],
+                    embeds: [(0, createEmbed_1.createBetEmbed)('Invalid Bet Value', 'Red', `${e.message}`)],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            bets.push({ amount, type, value });
+            let value = rawValue;
+            let displayValue = value;
+            if (type === 'dozen')
+                value = value[1];
+            if (type === 'column')
+                value = value[1];
+            bets.push({ amount, type, value, displayValue });
         }
         if (bets.length === 0) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - No Bets Found', 'Please provide at least one valid bet.'),
+                    (0, createEmbed_1.createBetEmbed)('No Bets Found', 'Red', 'Please provide at least one valid bet.'),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
         const totalBet = bets.reduce((sum, b) => sum + b.amount, 0);
-        let totalNet = 0;
-        const resultsMap = {};
-        // Run spins
+        user.balance -= totalBet;
+        let totalWinnings = 0;
+        let liveResult = 0;
+        const results = [];
+        await interaction.deferReply({ withResponse: true });
         for (let i = 0; i < spins; i++) {
+            if (!skipAnimations) {
+                await interaction.editReply({
+                    embeds: [
+                        (0, createEmbed_1.createBetEmbed)('🌀 Spinning...', 'Blue', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
+                            `🕹 Spin Results:\n${results.join('\n\n')}\n\n` +
+                            `💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`),
+                    ],
+                });
+                await new Promise((res) => setTimeout(res, 700));
+            }
             const spinResult = (0, casinoHelpers_1.spinRouletteWheel)();
             const color = (0, rouletteUtils_1.getRouletteColor)(spinResult);
-            const key = `${color} ${spinResult}`;
-            if (!resultsMap[key])
-                resultsMap[key] = [];
+            let spinOutput = `**${color} ${spinResult}**`;
+            let winnings = 0;
             for (const bet of bets) {
-                const winnings = (0, rouletteUtils_1.calculateRouletteWin)(bet, spinResult, configReply.casinoSettings.roulette.winMultipliers);
-                const net = winnings - bet.amount;
-                totalNet += net;
-                resultsMap[key].push(`- Bet: $${(0, utils_1.formatNumberToReadableString)(bet.amount)} on ${bet.value} → ${net > 0
-                    ? `🎉 +$${(0, utils_1.formatNumberToReadableString)(net)}`
-                    : net < 0
-                        ? `❌ -$${(0, utils_1.formatNumberToReadableString)(bet.amount)}`
-                        : '$0'}`);
+                const winAmount = (0, rouletteUtils_1.calculateRouletteWin)(bet, spinResult, configReply.casinoSettings.roulette.winMultipliers);
+                winnings += winAmount;
+                spinOutput += `\n**$${(0, utils_1.formatNumberToReadableString)(bet.amount)}** on ${bet.displayValue ?? bet.value} | ${winAmount > 0
+                    ? `🎉 | +$${(0, utils_1.formatNumberToReadableString)(winAmount)}`
+                    : `❌ | -$${(0, utils_1.formatNumberToReadableString)(bet.amount)}`}`;
             }
+            totalWinnings += winnings;
+            liveResult += winnings - totalBet;
+            results.push(spinOutput);
         }
-        // Prepare final results string
-        const results = [];
-        for (const [spin, betsArr] of Object.entries(resultsMap)) {
-            results.push(`${spin}\n${betsArr.join('\n')}`);
-        }
-        user.balance += totalNet;
+        user.balance += totalWinnings;
+        user.netProfit += liveResult;
         await user.save();
-        const isWin = totalNet > 0;
-        const isLoss = totalNet < 0;
-        return interaction.reply({
+        const isWin = liveResult > 0;
+        const isLoss = liveResult < 0;
+        await interaction.editReply({
             embeds: [
                 (0, createEmbed_1.createBetEmbed)(isWin
-                    ? '🎰 **Win!** 🎉'
+                    ? '🌀 **Win!** 🎉'
                     : isLoss
-                        ? '🎰 **Better Luck Next Time...** ❌'
-                        : '🎰 **Not Bad...** 👀', isWin ? 'Green' : isLoss ? 'Red' : 'Yellow', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
-                    `🎲 **Spin Results:**\n${results.join('\n\n')}\n\n` +
-                    `💰 Total: ${isWin ? '🟢' : isLoss ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(totalNet)}**\n` +
+                        ? '🌀 **Better Luck Next Time...** ❌'
+                        : '🌀 **Not Bad...** 👀', isWin ? 'Green' : isLoss ? 'Red' : 'Yellow', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
+                    `🕹 **Spin Results:**\n${results.join('\n\n')}\n\n` +
+                    `💰 Total: ${isWin ? '🟢' : isLoss ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**\n` +
                     (showBalance
                         ? `🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**`
                         : '')),
@@ -148,11 +161,5 @@ async function run({ interaction }) {
     }
     catch (error) {
         console.error('Error running roulette command:', error);
-        return interaction.reply({
-            embeds: [
-                (0, createEmbed_1.createErrorEmbed)('Error', 'An unexpected error occurred while processing your bet.'),
-            ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
-        });
     }
 }

@@ -116,8 +116,6 @@ export async function run({ interaction }: SlashCommandProps) {
 
     user.balance -= parsedBetAmount
     user.netProfit -= parsedBetAmount
-    // user.milestoneProgress += parsedBetAmount
-    await user.save()
 
     const shuffledDeck = shuffleDeck(DECK)
     const playerCards = [
@@ -166,8 +164,6 @@ export async function run({ interaction }: SlashCommandProps) {
           ),
         ],
       })
-
-      //  await checkMilestones(interaction, user, interaction.guildId!)
     }
 
     const message = await interaction.fetchReply()
