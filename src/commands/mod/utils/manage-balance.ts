@@ -42,6 +42,26 @@ export const data: CommandData = {
       ],
     },
     {
+      name: 'bonus',
+      description: 'Give a bonus to a user.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'user',
+          description: 'The user you want to give a bonus to.',
+          type: ApplicationCommandOptionType.User,
+          required: true,
+        },
+        {
+          name: 'amount',
+          description:
+            'The bonus amount to give. (You can also enter 1000, 2.5k, 2M).',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+        },
+      ],
+    },
+    {
       name: 'withdraw',
       description: 'Remove money from a user.',
       type: ApplicationCommandOptionType.Subcommand,
@@ -212,6 +232,81 @@ export async function run({ interaction, client }: SlashCommandProps) {
           createSuccessEmbed(
             'ATM - Admin Deposit',
             `You have successfully added **$${readableAmount}** to <@${
+              user.id
+            }>.\nTheir new balance is now: **$${formatNumberToReadableString(
+              userDocument.balance
+            )}**.`
+          ),
+        ],
+      })
+    }
+
+    if (subcommand === 'bonus') {
+      const user = options.getUser('user', true)
+
+      if (user.bot) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Bot user',
+              'You cannot give a bonus to a bot.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const amount = options.getString('amount', true)
+      const parsedAmount = parseReadableStringToNumber(amount)
+      const readableAmount = formatNumberToReadableString(parsedAmount)
+
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input',
+              'Please enter a valid positive number.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const userDocument = await User.findOne({
+        userId: user.id,
+        guildId: interaction.guildId,
+      })
+
+      if (!userDocument) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Error - Not registered',
+              'This user has not registered yet.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      userDocument.balance += parsedAmount
+      await userDocument.save()
+
+      await Transaction.create({
+        userId: userDocument.userId,
+        guildId: userDocument.guildId,
+        amount: parsedAmount,
+        type: 'bonus',
+        source: 'command',
+        handledBy: interaction.user.id,
+        createdAt: new Date(),
+      })
+
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM - Bonus Given',
+            `You have successfully given **$${readableAmount}** bonus to <@${
               user.id
             }>.\nTheir new balance is now: **$${formatNumberToReadableString(
               userDocument.balance
