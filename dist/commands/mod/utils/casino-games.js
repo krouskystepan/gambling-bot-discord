@@ -63,7 +63,6 @@ async function run({ interaction }) {
         ])),
         renderSection('🌀 Roulette', [
             formatCommand('roulette', [
-                { name: 'bet', example: '1000', required: true },
                 {
                     name: 'bets',
                     example: '100 red, 50 17, 200 d2, 75 c1, 100 low',

@@ -6,6 +6,7 @@ const discord_js_1 = require("discord.js");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
 const casinoHelpers_1 = require("../../../utils/casinoHelpers");
+const Transaction_1 = require("../../../models/Transaction");
 exports.data = {
     name: 'lottery',
     description: 'Play the lottery! Pick 5 numbers and see if you win.',
@@ -73,9 +74,6 @@ async function run({ interaction }) {
         const readableBetAmount = (0, utils_1.formatNumberToReadableString)(parsedBetAmount);
         const showBalance = interaction.options.getBoolean('show-balance');
         const skipAnimations = interaction.options.getBoolean('skip-animations');
-        const isBetValid = (0, utils_1.checkValidBet)(interaction, parsedBetAmount, configReply.casinoSettings.lottery.maxBet, configReply.casinoSettings.lottery.minBet, user.balance, entries);
-        if (!isBetValid)
-            return;
         const numbersInput = interaction.options.getString('numbers', true);
         const userNumbers = numbersInput.split(',').map((n) => parseFloat(n.trim()));
         if (userNumbers.length !== 4 ||
@@ -90,8 +88,21 @@ async function run({ interaction }) {
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
+        const isBetValid = (0, utils_1.checkValidBet)(interaction, parsedBetAmount, configReply.casinoSettings.lottery.maxBet, configReply.casinoSettings.lottery.minBet, user.balance, entries);
+        if (!isBetValid)
+            return;
+        const betId = (0, utils_1.generateBetId)();
         const totalBet = parsedBetAmount * entries;
         user.balance -= totalBet;
+        await Transaction_1.default.create({
+            userId: user.userId,
+            guildId: user.guildId,
+            amount: totalBet,
+            type: 'bet',
+            source: 'casino',
+            betId,
+            createdAt: new Date(),
+        });
         let totalWinnings = 0;
         let liveResult = 0;
         const results = [];
@@ -107,7 +118,7 @@ async function run({ interaction }) {
                                 .map((n) => n.toString().padStart(2, '0'))
                                 .join(', ')}**\n\n` +
                             `🎟️ **Draw Results:**\n${[...results, '🎟️ Drawing...'].join('\n')}\n\n` +
-                            `💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`),
+                            `💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`, betId),
                     ],
                 });
                 await new Promise((res) => setTimeout(res, 700));
@@ -128,8 +139,18 @@ async function run({ interaction }) {
             liveResult += winnings - parsedBetAmount;
         }
         user.balance += totalWinnings;
-        user.netProfit += liveResult;
         await user.save();
+        if (totalWinnings > 0) {
+            await Transaction_1.default.create({
+                userId: user.userId,
+                guildId: user.guildId,
+                amount: totalWinnings,
+                type: 'win',
+                source: 'casino',
+                betId,
+                createdAt: new Date(),
+            });
+        }
         const isWin = liveResult > 0;
         const isLoss = liveResult < 0;
         await interaction.editReply({
@@ -146,7 +167,7 @@ async function run({ interaction }) {
                     `💰 Total: ${isWin ? '🟢' : isLoss ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**\n` +
                     (showBalance
                         ? `🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**`
-                        : '')),
+                        : ''), betId),
             ],
         });
     }

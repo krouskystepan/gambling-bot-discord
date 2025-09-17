@@ -16,6 +16,7 @@ import {
 import { drawNextCard } from '../../../utils/casinoHelpers'
 import { createInfoEmbed, createErrorEmbed } from '../../../utils/createEmbed'
 import { formatNumberToReadableString } from '../../../utils/utils'
+import Transaction from '../../../models/Transaction'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -26,10 +27,10 @@ export default async (interaction: Interaction, client: Client) => {
 
     if (!type || !ids || !action) return
 
-    const [gameId, userId, guildId] = ids.split('-')
+    const [gameId, userId, guildId, betId] = ids.split('-')
 
     if (type !== 'blackjack') return
-    if (!gameId || !userId || !guildId) return
+    if (!gameId || !userId || !guildId || !betId) return
 
     const showBalance = showBalanceString === 'true'
 
@@ -104,7 +105,8 @@ export default async (interaction: Interaction, client: Client) => {
         user,
         guildId,
         gameId,
-        showBalance
+        showBalance,
+        betId
       )
 
       return interaction.followUp({
@@ -126,14 +128,14 @@ export default async (interaction: Interaction, client: Client) => {
       if (game.playerCards.length <= 3) {
         const hitButton = new ButtonBuilder()
           .setCustomId(
-            `blackjack.${gameId}-${userId}-${guildId}.hit.${showBalance}`
+            `blackjack.${gameId}-${userId}-${guildId}-${betId}.hit.${showBalance}`
           )
           .setLabel('Hit')
           .setStyle(ButtonStyle.Success)
 
         const standButton = new ButtonBuilder()
           .setCustomId(
-            `blackjack.${gameId}-${userId}-${guildId}.stand.${showBalance}`
+            `blackjack.${gameId}-${userId}-${guildId}-${betId}.stand.${showBalance}`
           )
           .setLabel('Stand')
           .setStyle(ButtonStyle.Danger)
@@ -169,7 +171,8 @@ export default async (interaction: Interaction, client: Client) => {
               playerTotal,
               'PB',
               showBalance,
-              user.balance
+              user.balance,
+              betId
             ),
           ],
           components: [],
@@ -196,7 +199,8 @@ export default async (interaction: Interaction, client: Client) => {
           user,
           guildId,
           gameId,
-          showBalance
+          showBalance,
+          betId
         )
 
         await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
@@ -223,6 +227,7 @@ export default async (interaction: Interaction, client: Client) => {
             undefined,
             false,
             0,
+            betId,
             true
           ),
         ],
@@ -265,8 +270,17 @@ export default async (interaction: Interaction, client: Client) => {
       }
 
       user.balance -= game.betAmount
-      user.netProfit -= game.betAmount
       await user.save()
+
+      await Transaction.create({
+        userId: user.userId,
+        guildId: user.guildId,
+        amount: game.betAmount,
+        type: 'bet',
+        source: 'casino',
+        betId,
+        createdAt: new Date(),
+      })
 
       const drawnCard = drawNextCard(game.deck, gameIndex)
 
@@ -287,7 +301,8 @@ export default async (interaction: Interaction, client: Client) => {
               playerTotal,
               'PB',
               showBalance,
-              user.balance
+              user.balance,
+              betId
             ),
           ],
           components: [],
@@ -311,7 +326,8 @@ export default async (interaction: Interaction, client: Client) => {
         user,
         guildId,
         gameId,
-        showBalance
+        showBalance,
+        betId
       )
 
       return interaction.followUp({

@@ -10,6 +10,7 @@ import GuildConfiguration from '../../../models/GuildConfiguration'
 import { createErrorEmbed } from '../../../utils/createEmbed'
 import { formatNumberToReadableString } from '../../../utils/utils'
 
+//! DB TRANSACTIONS
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
 

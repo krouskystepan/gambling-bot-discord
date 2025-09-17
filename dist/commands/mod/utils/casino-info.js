@@ -195,7 +195,6 @@ async function run({ interaction }) {
                 formatMultipleRooms('ATM Rooms', config.atmChannelIds),
                 formatMultipleRooms('Prediction Rooms', config.predictionChannelIds),
                 formatRooms('Gambling Rooms', config.casinoChannelIds),
-                formatRooms('Transaction Room', [config.transactionChannelId]),
                 formatRooms('VIP Active Rooms', vipChannelIds),
                 '',
                 formatCategory('VIP Category', config.vipSettings.categoryId),

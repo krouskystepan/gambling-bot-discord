@@ -14,6 +14,7 @@ import {
   formatNumberToReadableString,
 } from '../../../utils/utils'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import Transaction from '../../../models/Transaction'
 
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -33,13 +34,30 @@ export default async (interaction: Interaction) => {
       return await interaction.reply({
         embeds: [
           createInfoEmbed(
-            'Invalid Input - Not active',
+            'Invalid Input - Not Active',
             'This prediction is not active.'
           ),
         ],
         flags: MessageFlags.Ephemeral,
       })
     }
+
+    if (!targetPrediction.choices || targetPrediction.choices.length === 0) {
+      return await interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - No Choices',
+            'This prediction has no choices available.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    const targetChoice = targetPrediction.choices.find(
+      (c) => c.choiceName === choiceName
+    )
+    if (!targetChoice) return
 
     const modal = new ModalBuilder()
       .setTitle(`Place your bet on ${choiceName}.`)
@@ -70,37 +88,29 @@ export default async (interaction: Interaction) => {
       .catch(() => null)
 
     if (!modalInteraction) return
-
     await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral })
 
-    const betAmount = modalInteraction.fields.getTextInputValue(
+    const betAmountInput = modalInteraction.fields.getTextInputValue(
       `bet-${predictionId}-input-${modalInteraction.user.id}`
     )
-    const parsedBetAmount = parseReadableStringToNumber(betAmount)
+    const parsedBetAmount = parseReadableStringToNumber(betAmountInput)
 
     if (isNaN(parsedBetAmount) || parsedBetAmount <= 0) {
       return modalInteraction.editReply({
         embeds: [
           createInfoEmbed(
-            'Invalid Input',
+            'Invalid Input - Non-positive number',
             'Please enter a valid positive number.'
           ),
         ],
       })
     }
 
-    const guildConfiguration = await GuildConfiguration.findOne({
+    const guildConfig = await GuildConfiguration.findOne({
       guildId: interaction.guildId,
     })
-    const casinoSettings = guildConfiguration?.casinoSettings
-
+    const casinoSettings = guildConfig?.casinoSettings
     if (!casinoSettings) return
-
-    const targetChoice = targetPrediction.choices.find(
-      (c) => c.choiceName === choiceName
-    )
-
-    if (!targetChoice) return
 
     const userChoiceTotal = targetChoice.bets
       .filter((bet) => bet.userId === modalInteraction.user.id)
@@ -148,12 +158,7 @@ export default async (interaction: Interaction) => {
         guildId: modalInteraction.guildId,
         balance: { $gte: parsedBetAmount },
       },
-      {
-        $inc: {
-          balance: -parsedBetAmount,
-          netProfit: -parsedBetAmount,
-        },
-      },
+      { $inc: { balance: -parsedBetAmount } },
       { new: true }
     )
 
@@ -167,6 +172,16 @@ export default async (interaction: Interaction) => {
         ],
       })
     }
+
+    await Transaction.create({
+      userId: modalInteraction.user.id,
+      guildId: interaction.guildId,
+      amount: parsedBetAmount,
+      type: 'bet',
+      source: 'casino',
+      betId: predictionId,
+      createdAt: new Date(),
+    })
 
     await Prediction.findOneAndUpdate(
       {

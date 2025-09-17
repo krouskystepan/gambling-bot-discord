@@ -22,7 +22,9 @@ import {
   parseReadableStringToNumber,
   formatNumberToReadableString,
   checkValidBet,
+  generateBetId,
 } from '../../../../utils/utils'
+import Transaction from '../../../../models/Transaction'
 
 export const data: CommandData = {
   name: 'blackjack',
@@ -114,9 +116,20 @@ export async function run({ interaction }: SlashCommandProps) {
 
     await interaction.deferReply()
 
+    const betId = generateBetId()
+
     user.balance -= parsedBetAmount
-    user.netProfit -= parsedBetAmount
     await user.save()
+
+    await Transaction.create({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: parsedBetAmount,
+      type: 'bet',
+      source: 'casino',
+      betId,
+      createdAt: new Date(),
+    })
 
     const shuffledDeck = shuffleDeck(DECK)
     const playerCards = [
@@ -140,11 +153,27 @@ export async function run({ interaction }: SlashCommandProps) {
       if (playerHasBlackjack && dealerHasBlackjack) {
         resultId = 'BBJ'
         user.balance += parsedBetAmount
-        user.netProfit += parsedBetAmount
+        await Transaction.create({
+          userId: user.userId,
+          guildId: user.guildId,
+          amount: parsedBetAmount,
+          type: 'win',
+          source: 'casino',
+          betId,
+          createdAt: new Date(),
+        })
       } else if (playerHasBlackjack) {
-        user.balance += parsedBetAmount * 2.5
-        user.netProfit += parsedBetAmount * 2.5
         resultId = 'PBJ'
+        user.balance += parsedBetAmount * 2.5
+        await Transaction.create({
+          userId: user.userId,
+          guildId: user.guildId,
+          amount: parsedBetAmount * 2.5,
+          type: 'win',
+          source: 'casino',
+          betId,
+          createdAt: new Date(),
+        })
       } else if (dealerHasBlackjack) {
         resultId = 'DBJ'
       }
@@ -161,7 +190,8 @@ export async function run({ interaction }: SlashCommandProps) {
             playerTotal,
             resultId!,
             showBalance,
-            user.balance
+            user.balance,
+            betId
           ),
         ],
       })
@@ -183,21 +213,21 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const hitButton = new ButtonBuilder()
       .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.hit.${showBalance}`
+        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.hit.${showBalance}`
       )
       .setLabel('Hit')
       .setStyle(ButtonStyle.Success)
 
     const standButton = new ButtonBuilder()
       .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.stand.${showBalance}`
+        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.stand.${showBalance}`
       )
       .setLabel('Stand')
       .setStyle(ButtonStyle.Danger)
 
     const doubleButton = new ButtonBuilder()
       .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.double.${showBalance}`
+        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.double.${showBalance}`
       )
       .setLabel('Double')
       .setStyle(ButtonStyle.Primary)
@@ -219,6 +249,7 @@ export async function run({ interaction }: SlashCommandProps) {
           undefined,
           false,
           0,
+          betId,
           true
         ),
       ],

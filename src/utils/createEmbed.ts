@@ -3,13 +3,19 @@ import { ColorResolvable, EmbedBuilder } from 'discord.js'
 export const createBetEmbed = (
   title: string,
   color: ColorResolvable,
-  description: string
+  description: string,
+  id?: string
 ) => {
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setTitle(title)
     .setColor(color)
     .setDescription(description)
-    .setTimestamp()
+
+  if (id) {
+    embed.setFooter({ text: `ID: ${id}` })
+  }
+
+  return embed
 }
 
 export const createSuccessEmbed = (title: string, description: string) => {

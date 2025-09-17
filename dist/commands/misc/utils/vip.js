@@ -8,6 +8,7 @@ const User_1 = require("../../../models/User");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
+const Transaction_1 = require("../../../models/Transaction");
 exports.data = {
     name: 'vip',
     description: 'VIP management commands.',
@@ -179,6 +180,18 @@ async function run({ interaction }) {
             await vip.save();
             user.balance -= totalPrice;
             await user.save();
+            await Transaction_1.default.create({
+                userId: user.userId,
+                guildId: user.guildId,
+                amount: totalPrice,
+                type: 'vip',
+                source: 'system',
+                meta: {
+                    action: 'buy',
+                    durationDays: durationDays,
+                },
+                createdAt: new Date(),
+            });
             return interaction.editReply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('VIP Purchased', `Your VIP room <#${channel.id}> has been created for **${durationDays} day(s)**.\n` +
@@ -238,6 +251,18 @@ async function run({ interaction }) {
             await existingVip.save();
             user.balance -= totalPrice;
             await user.save();
+            await Transaction_1.default.create({
+                userId: user.userId,
+                guildId: user.guildId,
+                amount: totalPrice,
+                type: 'vip',
+                source: 'system',
+                meta: {
+                    action: 'extend',
+                    durationDays: durationDays,
+                },
+                createdAt: new Date(),
+            });
             const vipChannel = await interaction.guild.channels.fetch(existingVip.channelId);
             if (vipChannel?.isTextBased()) {
                 const extendMsg = await vipChannel.send({

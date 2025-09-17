@@ -7,6 +7,7 @@ const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
 const casinoHelpers_1 = require("../../../utils/casinoHelpers");
 const rouletteUtils_1 = require("../../../utils/rouletteUtils");
+const Transaction_1 = require("../../../models/Transaction");
 exports.data = {
     name: 'roulette',
     description: 'Play Mini Roulette with multiple bets!',
@@ -72,7 +73,7 @@ async function run({ interaction }) {
             if (!amountStr || !rawValue) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createBetEmbed)('Invalid Bet Format', 'Red', `Each bet must be in the format: "<amount> <value>". Invalid: "${betStr.trim()}"`),
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Invalid Bet Format', `Each bet must be in the format: "<amount> <value>". Invalid: "${betStr.trim()}"`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
@@ -84,7 +85,9 @@ async function run({ interaction }) {
             }
             catch (e) {
                 return interaction.reply({
-                    embeds: [(0, createEmbed_1.createBetEmbed)('Invalid Bet Value', 'Red', `${e.message}`)],
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Invalid Bet Value', `${e.message}`),
+                    ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
@@ -99,7 +102,7 @@ async function run({ interaction }) {
         if (bets.length === 0) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createBetEmbed)('No Bets Found', 'Red', 'Please provide at least one valid bet.'),
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - No Bets Found', 'Please provide at least one valid bet.'),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
@@ -108,8 +111,18 @@ async function run({ interaction }) {
         const isBetValid = (0, utils_1.checkValidBet)(interaction, totalOneSpin, configReply.casinoSettings.roulette.maxBet, configReply.casinoSettings.roulette.minBet, user.balance, spins);
         if (!isBetValid)
             return;
+        const betId = (0, utils_1.generateBetId)();
         const totalBet = totalOneSpin * spins;
         user.balance -= totalBet;
+        await Transaction_1.default.create({
+            userId: user.userId,
+            guildId: user.guildId,
+            amount: totalBet,
+            type: 'bet',
+            source: 'casino',
+            betId,
+            createdAt: new Date(),
+        });
         let totalWinnings = 0;
         let liveResult = 0;
         const results = [];
@@ -120,7 +133,7 @@ async function run({ interaction }) {
                     embeds: [
                         (0, createEmbed_1.createBetEmbed)('🌀 Spinning...', 'Blue', `💵 Total Bet: **$${(0, utils_1.formatNumberToReadableString)(totalBet)}**\n\n` +
                             `🕹 Spin Results:\n${results.join('\n\n')}\n\n` +
-                            `💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`),
+                            `💰 Total: ${liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**`, betId),
                     ],
                 });
                 await new Promise((res) => setTimeout(res, 700));
@@ -142,8 +155,18 @@ async function run({ interaction }) {
             results.push(spinOutput);
         }
         user.balance += totalWinnings;
-        user.netProfit += liveResult;
         await user.save();
+        if (totalWinnings > 0) {
+            await Transaction_1.default.create({
+                userId: user.userId,
+                guildId: user.guildId,
+                amount: totalWinnings,
+                type: 'win',
+                source: 'casino',
+                betId,
+                createdAt: new Date(),
+            });
+        }
         const isWin = liveResult > 0;
         const isLoss = liveResult < 0;
         await interaction.editReply({
@@ -157,7 +180,7 @@ async function run({ interaction }) {
                     `💰 Total: ${isWin ? '🟢' : isLoss ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**\n` +
                     (showBalance
                         ? `🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**`
-                        : '')),
+                        : ''), betId),
             ],
         });
     }

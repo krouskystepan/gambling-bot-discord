@@ -19,6 +19,7 @@ import {
   formatNumberToReadableString,
 } from '../../utils/utils'
 import { DateTime } from 'luxon'
+import Transaction from '../../models/Transaction'
 
 export const data: CommandData = {
   name: 'prediction',
@@ -430,12 +431,20 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       for (const bet of winner.bets) {
+        await Transaction.create({
+          userId: bet.userId,
+          guildId: interaction.guildId,
+          amount: bet.amount * winner.odds,
+          type: 'win',
+          source: 'casino',
+          betId: prediction.predictionId,
+          createdAt: new Date(),
+        })
         await User.findOneAndUpdate(
           { userId: bet.userId, guildId: interaction.guildId },
           {
             $inc: {
               balance: bet.amount * winner.odds,
-              netProfit: bet.amount * winner.odds,
             },
           }
         )
@@ -558,7 +567,7 @@ export async function run({ interaction }: SlashCommandProps) {
       const predictionId = options.getString('prediction-id', true)
       const prediction = await Prediction.findOne({
         predictionId,
-        status: 'active',
+        status: { $in: ['active', 'ended'] },
       })
 
       if (!prediction) {
@@ -575,6 +584,16 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const allBets = prediction.choices.flatMap((c) => c.bets)
       for (const bet of allBets) {
+        await Transaction.create({
+          userId: bet.userId,
+          guildId: interaction.guildId,
+          amount: bet.amount,
+          type: 'refund',
+          source: 'casino',
+          betId: prediction.predictionId,
+          createdAt: new Date(),
+        })
+
         await User.findOneAndUpdate(
           { userId: bet.userId, guildId: interaction.guildId },
           { $inc: { balance: bet.amount } }

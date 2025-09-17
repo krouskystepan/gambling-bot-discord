@@ -8,6 +8,7 @@ const blackjackUtils_1 = require("../../../../utils/blackjackUtils");
 const BlackjackGame_1 = require("../../../../models/BlackjackGame");
 const casinoHelpers_1 = require("../../../../utils/casinoHelpers");
 const utils_1 = require("../../../../utils/utils");
+const Transaction_1 = require("../../../../models/Transaction");
 exports.data = {
     name: 'blackjack',
     description: 'Start a game of blackjack. You can hit, stand, or double down.',
@@ -67,9 +68,18 @@ async function run({ interaction }) {
         if (!isBetValid)
             return;
         await interaction.deferReply();
+        const betId = (0, utils_1.generateBetId)();
         user.balance -= parsedBetAmount;
-        user.netProfit -= parsedBetAmount;
         await user.save();
+        await Transaction_1.default.create({
+            userId: user.userId,
+            guildId: user.guildId,
+            amount: parsedBetAmount,
+            type: 'bet',
+            source: 'casino',
+            betId,
+            createdAt: new Date(),
+        });
         const shuffledDeck = (0, blackjackUtils_1.shuffleDeck)(blackjackUtils_1.DECK);
         const playerCards = [
             (0, casinoHelpers_1.drawNextCard)(shuffledDeck, 0),
@@ -88,12 +98,28 @@ async function run({ interaction }) {
             if (playerHasBlackjack && dealerHasBlackjack) {
                 resultId = 'BBJ';
                 user.balance += parsedBetAmount;
-                user.netProfit += parsedBetAmount;
+                await Transaction_1.default.create({
+                    userId: user.userId,
+                    guildId: user.guildId,
+                    amount: parsedBetAmount,
+                    type: 'win',
+                    source: 'casino',
+                    betId,
+                    createdAt: new Date(),
+                });
             }
             else if (playerHasBlackjack) {
-                user.balance += parsedBetAmount * 2.5;
-                user.netProfit += parsedBetAmount * 2.5;
                 resultId = 'PBJ';
+                user.balance += parsedBetAmount * 2.5;
+                await Transaction_1.default.create({
+                    userId: user.userId,
+                    guildId: user.guildId,
+                    amount: parsedBetAmount * 2.5,
+                    type: 'win',
+                    source: 'casino',
+                    betId,
+                    createdAt: new Date(),
+                });
             }
             else if (dealerHasBlackjack) {
                 resultId = 'DBJ';
@@ -101,7 +127,7 @@ async function run({ interaction }) {
             await user.save();
             return interaction.editReply({
                 embeds: [
-                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, user.balance),
+                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, user.balance, betId),
                 ],
             });
         }
@@ -117,21 +143,21 @@ async function run({ interaction }) {
         });
         await game.save();
         const hitButton = new discord_js_1.ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.hit.${showBalance}`)
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.hit.${showBalance}`)
             .setLabel('Hit')
             .setStyle(discord_js_1.ButtonStyle.Success);
         const standButton = new discord_js_1.ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.stand.${showBalance}`)
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.stand.${showBalance}`)
             .setLabel('Stand')
             .setStyle(discord_js_1.ButtonStyle.Danger);
         const doubleButton = new discord_js_1.ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}.double.${showBalance}`)
+            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.double.${showBalance}`)
             .setLabel('Double')
             .setStyle(discord_js_1.ButtonStyle.Primary);
         const row = new discord_js_1.ActionRowBuilder().addComponents(hitButton, standButton, doubleButton);
         interaction.editReply({
             embeds: [
-                (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, undefined, false, 0, true),
+                (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, undefined, false, 0, betId, true),
             ],
             components: [row],
         });

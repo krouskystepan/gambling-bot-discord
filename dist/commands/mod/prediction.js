@@ -8,6 +8,7 @@ const createEmbed_1 = require("../../utils/createEmbed");
 const User_1 = require("../../models/User");
 const utils_1 = require("../../utils/utils");
 const luxon_1 = require("luxon");
+const Transaction_1 = require("../../models/Transaction");
 exports.data = {
     name: 'prediction',
     description: 'Manage predictions.',
@@ -321,10 +322,18 @@ async function run({ interaction }) {
                 });
             }
             for (const bet of winner.bets) {
+                await Transaction_1.default.create({
+                    userId: bet.userId,
+                    guildId: interaction.guildId,
+                    amount: bet.amount * winner.odds,
+                    type: 'win',
+                    source: 'casino',
+                    betId: prediction.predictionId,
+                    createdAt: new Date(),
+                });
                 await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, {
                     $inc: {
                         balance: bet.amount * winner.odds,
-                        netProfit: bet.amount * winner.odds,
                     },
                 });
             }
@@ -410,7 +419,7 @@ async function run({ interaction }) {
             const predictionId = options.getString('prediction-id', true);
             const prediction = await Prediction_1.default.findOne({
                 predictionId,
-                status: 'active',
+                status: { $in: ['active', 'ended'] },
             });
             if (!prediction) {
                 return interaction.reply({
@@ -422,6 +431,15 @@ async function run({ interaction }) {
             }
             const allBets = prediction.choices.flatMap((c) => c.bets);
             for (const bet of allBets) {
+                await Transaction_1.default.create({
+                    userId: bet.userId,
+                    guildId: interaction.guildId,
+                    amount: bet.amount,
+                    type: 'refund',
+                    source: 'casino',
+                    betId: prediction.predictionId,
+                    createdAt: new Date(),
+                });
                 await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, { $inc: { balance: bet.amount } });
             }
             prediction.status = 'canceled';

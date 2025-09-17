@@ -103,11 +103,11 @@ async function run({ interaction, client }) {
             components: [],
         });
         const approveButton = new discord_js_1.ButtonBuilder()
-            .setCustomId(`atm.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`)
+            .setCustomId(`atm-deposit.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`)
             .setLabel('Approve')
             .setStyle(discord_js_1.ButtonStyle.Success);
         const rejectButton = new discord_js_1.ButtonBuilder()
-            .setCustomId(`atm.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`)
+            .setCustomId(`atm-deposit.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`)
             .setLabel('Reject')
             .setStyle(discord_js_1.ButtonStyle.Danger);
         const row = new discord_js_1.ActionRowBuilder().addComponents(approveButton, rejectButton);

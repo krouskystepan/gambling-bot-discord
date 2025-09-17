@@ -7,6 +7,7 @@ import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from './utils'
+import Transaction from '../models/Transaction'
 
 export const SUITES = ['♠️', '♣️', '♥️', '♦️'] as const
 export const VALUES = [
@@ -77,7 +78,8 @@ export const revealDealerCards = async (
   user: UserDoc,
   guildId: string,
   gameId: string,
-  showBalnce: boolean
+  showBalnce: boolean,
+  betId: string
 ) => {
   await message.edit({
     embeds: [
@@ -89,7 +91,8 @@ export const revealDealerCards = async (
         playerTotal,
         'DRAWING',
         false,
-        0
+        0,
+        betId
       ),
     ],
     components: [],
@@ -114,7 +117,8 @@ export const revealDealerCards = async (
           playerTotal,
           'DRAWING',
           false,
-          0
+          0,
+          betId
         ),
       ],
       components: [],
@@ -129,17 +133,41 @@ export const revealDealerCards = async (
   if (dealerTotal > 21) {
     resultId = 'DB'
     user.balance += betAmount * 2
-    user.netProfit += betAmount * 2
     await user.save()
+    await Transaction.create({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: betAmount * 2,
+      type: 'win',
+      source: 'casino',
+      betId,
+      createdAt: new Date(),
+    })
   } else if (dealerTotal === playerTotal) {
     resultId = 'PUSH'
     user.balance += betAmount
-    user.netProfit += betAmount
+    await Transaction.create({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: betAmount,
+      type: 'win',
+      source: 'casino',
+      betId,
+      createdAt: new Date(),
+    })
     await user.save()
   } else if (playerTotal > dealerTotal) {
     resultId = 'PW'
-    user.netProfit += betAmount * 2
     user.balance += betAmount * 2
+    await Transaction.create({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: betAmount * 2,
+      type: 'win',
+      source: 'casino',
+      betId,
+      createdAt: new Date(),
+    })
     await user.save()
   } else {
     resultId = 'DW'
@@ -155,7 +183,8 @@ export const revealDealerCards = async (
         playerTotal,
         resultId,
         showBalnce,
-        user.balance
+        user.balance,
+        betId
       ),
     ],
     components: [],
@@ -185,6 +214,7 @@ export const createBlackjackEmbed = (
   resultId: BJResults,
   showBalance: boolean,
   userBalance: number,
+  betId: string,
   dealerVisibleOneCard: boolean = false
 ) => {
   const dealerHandText = dealerVisibleOneCard
@@ -265,5 +295,5 @@ export const createBlackjackEmbed = (
     )
   }
 
-  return createBetEmbed('🃏 Blackjack', color, sections.join('\n\n'))
+  return createBetEmbed('🃏 Blackjack', color, sections.join('\n\n'), betId)
 }

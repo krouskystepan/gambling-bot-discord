@@ -5,7 +5,10 @@ import {
   parseReadableStringToNumber,
 } from '../../../utils/utils'
 import {
+  ActionRowBuilder,
   ApplicationCommandOptionType,
+  ButtonBuilder,
+  ButtonStyle,
   EmbedBuilder,
   GuildMember,
   MessageFlags,
@@ -102,7 +105,6 @@ export async function run({ interaction, client }: SlashCommandProps) {
     }
 
     const account = interaction.options.getString('account', true)
-
     const amount = interaction.options.getString('amount', true)
     const parsedAmount = parseReadableStringToNumber(amount)
     const readableAmount = formatNumberToReadableString(parsedAmount)
@@ -146,7 +148,6 @@ export async function run({ interaction, client }: SlashCommandProps) {
     }
 
     user.balance -= parsedAmount
-
     await user.save()
 
     const logChannel = client.channels.cache.get(
@@ -161,32 +162,47 @@ export async function run({ interaction, client }: SlashCommandProps) {
 
     const managerRole = guildConfiguration.managerRoleId
 
-    logChannel
-      .send({
-        content: `${
-          managerRole ? `<@&${guildConfiguration.managerRoleId}>` : ''
-        }`,
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(
-              `ATM - Withdrawal by ${displayName} (${interaction.user.username})`
-            )
-            .setColor('Red')
-            .setDescription(
-              `<@${interaction.user.id}> has withdrawn **$${readableAmount}** into account **${account}**.`
-            ),
-        ],
-      })
-      .then((message) => {
-        message.react('✅')
-      })
-      .catch(console.error)
+    const logMessage = await logChannel.send({
+      content: managerRole ? `<@&${managerRole}>` : '',
+      embeds: [
+        new EmbedBuilder()
+          .setTitle(
+            `ATM - Withdrawal by ${displayName} (${interaction.user.username})`
+          )
+          .setColor('Red')
+          .setDescription(
+            `<@${interaction.user.id}> wants to withdraw **$${readableAmount}** into account **${account}**.`
+          ),
+      ],
+      components: [],
+    })
+
+    const approveButton = new ButtonBuilder()
+      .setCustomId(
+        `atm-withdraw.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
+      )
+      .setLabel('Approve')
+      .setStyle(ButtonStyle.Success)
+
+    const rejectButton = new ButtonBuilder()
+      .setCustomId(
+        `atm-withdraw.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
+      )
+      .setLabel('Reject')
+      .setStyle(ButtonStyle.Danger)
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      approveButton,
+      rejectButton
+    )
+
+    await logMessage.edit({ components: [row] })
 
     return interaction.reply({
       embeds: [
         createSuccessEmbed(
           'ATM - Withdraw',
-          `You have successfully withdrawn **$${readableAmount}**.\nPlease wait for the transaction to be processed.`
+          `You have requested to withdraw **$${readableAmount}**.\nPlease wait for the transaction to be processed.`
         ),
       ],
       flags: MessageFlags.Ephemeral,

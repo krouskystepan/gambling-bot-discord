@@ -16,8 +16,11 @@ import {
   checkUserRegistration,
   checkValidBet,
   formatNumberToReadableString,
+  generateBetId,
   parseReadableStringToNumber,
 } from '../../../../utils/utils'
+import Transaction from '../../../../models/Transaction'
+import mongoose from 'mongoose'
 
 const choices = [
   {
@@ -150,10 +153,13 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (!isBetValid) return
 
+    const betId = generateBetId()
+
     const embed = createBetEmbed(
       'Rock, paper, scissors!',
       'Yellow',
-      `It’s now ${targetDiscordUser}'s turn!`
+      `It’s now ${targetDiscordUser}'s turn!`,
+      betId
     )
 
     const buttons = choices.map((choice) => {
@@ -289,37 +295,92 @@ export async function run({ interaction }: SlashCommandProps) {
 
     let result = ''
 
+    const transactions: Record<string, unknown>[] = []
+
     if (targetUserChoice?.beats === initialUserChoice?.name) {
+      transactions.push(
+        {
+          userId: user.userId,
+          guildId: user.guildId,
+          amount: parsedBetAmount,
+          type: 'bet',
+          source: 'casino',
+          betId,
+        },
+        {
+          userId: targetUser.userId,
+          guildId: targetUser.guildId,
+          amount: parsedBetAmount,
+          type: 'bet',
+          source: 'casino',
+          betId,
+        },
+        {
+          userId: targetUser.userId,
+          guildId: targetUser.guildId,
+          amount: parsedBetAmount + realWinAmount,
+          type: 'win',
+          source: 'casino',
+          betId,
+        }
+      )
+
+      user.balance -= parsedBetAmount
+      targetUser.balance += realWinAmount
+
       result = `${targetDiscordUser} won and took **$${formatNumberToReadableString(
         realWinAmount
       )}** from ${interaction.user}!`
-
-      user.balance -= parsedBetAmount
-      user.netProfit -= parsedBetAmount
-      targetUser.balance += realWinAmount
-      targetUser.netProfit += realWinAmount
-      await user.save()
-      await targetUser.save()
     }
 
     if (initialUserChoice?.beats === targetUserChoice?.name) {
+      transactions.push(
+        {
+          userId: user.userId,
+          guildId: user.guildId,
+          amount: parsedBetAmount,
+          type: 'bet',
+          source: 'casino',
+          betId,
+        },
+        {
+          userId: targetUser.userId,
+          guildId: targetUser.guildId,
+          amount: parsedBetAmount,
+          type: 'bet',
+          source: 'casino',
+          betId,
+        },
+        {
+          userId: user.userId,
+          guildId: user.guildId,
+          amount: parsedBetAmount + realWinAmount,
+          type: 'win',
+          source: 'casino',
+          betId,
+        }
+      )
+
+      user.balance += realWinAmount
+      targetUser.balance -= parsedBetAmount
+
       result = `${
         interaction.user
       } won and took **$${formatNumberToReadableString(
         realWinAmount
       )}** from ${targetDiscordUser}!`
-
-      user.balance += realWinAmount
-      user.netProfit += realWinAmount
-      targetUser.balance -= parsedBetAmount
-      targetUser.netProfit -= parsedBetAmount
-      await user.save()
-      await targetUser.save()
     }
 
     if (targetUserChoice?.name === initialUserChoice?.name) {
       result = 'It’s a draw!'
     }
+
+    if (transactions.length > 0) {
+      await Transaction.insertMany(transactions)
+    }
+
+    await user.save()
+    await targetUser.save()
 
     embed.setDescription(
       `${targetDiscordUser} chose ${targetUserChoice?.name} ${targetUserChoice?.emoji} \n${interaction.user} chose ${initialUserChoice?.name} ${initialUserChoice?.emoji}. \n\n${result}`

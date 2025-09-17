@@ -10,9 +10,11 @@ import {
   checkUserRegistration,
   checkValidBet,
   formatNumberToReadableString,
+  generateBetId,
   parseReadableStringToNumber,
 } from '../../../utils/utils'
 import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
+import Transaction from '../../../models/Transaction'
 
 const GOLDEN_JACKPOT_MAX_ENTRIES = 100
 
@@ -113,9 +115,20 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (!isBetValid) return
 
+    const betId = generateBetId()
+
     const totalBet = parsedBetAmount * entries
 
     user.balance -= totalBet
+    await Transaction.create({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: totalBet,
+      type: 'bet',
+      source: 'casino',
+      betId,
+      createdAt: new Date(),
+    })
 
     const initialTickets = entries
     let totalWinnings = 0
@@ -133,7 +146,8 @@ export async function run({ interaction }: SlashCommandProps) {
             `🎟️ Tickets left: **${initialTickets}**\n` +
             `\n💰 Total: ${
               liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(liveResult)}**`
+            } **$${formatNumberToReadableString(liveResult)}**`,
+          betId
         ),
       ],
     })
@@ -187,7 +201,8 @@ export async function run({ interaction }: SlashCommandProps) {
                     : '') +
                   `\n💰 Total: ${
                     liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                  } **$${formatNumberToReadableString(liveResult)}**`
+                  } **$${formatNumberToReadableString(liveResult)}**`,
+                betId
               ),
             ],
           })
@@ -197,8 +212,19 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     user.balance += totalWinnings
-    user.netProfit += liveResult
     await user.save()
+
+    if (totalWinnings > 0) {
+      await Transaction.create({
+        userId: user.userId,
+        guildId: user.guildId,
+        amount: totalWinnings,
+        type: 'win',
+        source: 'casino',
+        betId,
+        createdAt: new Date(),
+      })
+    }
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -221,7 +247,8 @@ export async function run({ interaction }: SlashCommandProps) {
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
               ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
-              : '')
+              : ''),
+          betId
         ),
       ],
     })

@@ -102,23 +102,29 @@ async function run({ interaction, client }) {
             interaction.user.globalName ||
             interaction.user.username;
         const managerRole = guildConfiguration.managerRoleId;
-        logChannel
-            .send({
-            content: `${managerRole ? `<@&${guildConfiguration.managerRoleId}>` : ''}`,
+        const logMessage = await logChannel.send({
+            content: managerRole ? `<@&${managerRole}>` : '',
             embeds: [
                 new discord_js_1.EmbedBuilder()
                     .setTitle(`ATM - Withdrawal by ${displayName} (${interaction.user.username})`)
                     .setColor('Red')
-                    .setDescription(`<@${interaction.user.id}> has withdrawn **$${readableAmount}** into account **${account}**.`),
+                    .setDescription(`<@${interaction.user.id}> wants to withdraw **$${readableAmount}** into account **${account}**.`),
             ],
-        })
-            .then((message) => {
-            message.react('✅');
-        })
-            .catch(console.error);
+            components: [],
+        });
+        const approveButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`atm-withdraw.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`)
+            .setLabel('Approve')
+            .setStyle(discord_js_1.ButtonStyle.Success);
+        const rejectButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`atm-withdraw.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`)
+            .setLabel('Reject')
+            .setStyle(discord_js_1.ButtonStyle.Danger);
+        const row = new discord_js_1.ActionRowBuilder().addComponents(approveButton, rejectButton);
+        await logMessage.edit({ components: [row] });
         return interaction.reply({
             embeds: [
-                (0, createEmbed_1.createSuccessEmbed)('ATM - Withdraw', `You have successfully withdrawn **$${readableAmount}**.\nPlease wait for the transaction to be processed.`),
+                (0, createEmbed_1.createSuccessEmbed)('ATM - Withdraw', `You have requested to withdraw **$${readableAmount}**.\nPlease wait for the transaction to be processed.`),
             ],
             flags: discord_js_1.MessageFlags.Ephemeral,
         });

@@ -4,7 +4,6 @@ export type UserDoc = Document & {
   userId: string
   guildId: string
   balance: number
-  netProfit: number
   lastDailyClaim: Date
   dailyStreak: number
   createdAt: Date
@@ -16,7 +15,6 @@ const UserSchema = new Schema<UserDoc>(
     userId: { type: String, required: true },
     guildId: { type: String, required: true },
     balance: { type: Number, default: 0 },
-    netProfit: { type: Number, default: 0 },
     lastDailyClaim: { type: Date, default: null },
     dailyStreak: { type: Number, default: 0 },
   },

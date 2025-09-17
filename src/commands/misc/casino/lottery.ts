@@ -11,8 +11,10 @@ import {
   formatNumberToReadableString,
   checkChannelConfiguration,
   checkValidBet,
+  generateBetId,
 } from '../../../utils/utils'
 import { drawLottery } from '../../../utils/casinoHelpers'
+import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {
   name: 'lottery',
@@ -100,17 +102,6 @@ export async function run({ interaction }: SlashCommandProps) {
     const showBalance = interaction.options.getBoolean('show-balance')
     const skipAnimations = interaction.options.getBoolean('skip-animations')
 
-    const isBetValid = checkValidBet(
-      interaction,
-      parsedBetAmount,
-      configReply.casinoSettings.lottery.maxBet,
-      configReply.casinoSettings.lottery.minBet,
-      user.balance,
-      entries
-    )
-
-    if (!isBetValid) return
-
     const numbersInput = interaction.options.getString('numbers', true)
     const userNumbers = numbersInput.split(',').map((n) => parseFloat(n.trim()))
 
@@ -135,9 +126,31 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
+    const isBetValid = checkValidBet(
+      interaction,
+      parsedBetAmount,
+      configReply.casinoSettings.lottery.maxBet,
+      configReply.casinoSettings.lottery.minBet,
+      user.balance,
+      entries
+    )
+
+    if (!isBetValid) return
+
+    const betId = generateBetId()
+
     const totalBet = parsedBetAmount * entries
 
     user.balance -= totalBet
+    await Transaction.create({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: totalBet,
+      type: 'bet',
+      source: 'casino',
+      betId,
+      createdAt: new Date(),
+    })
 
     let totalWinnings = 0
     let liveResult = 0
@@ -165,7 +178,8 @@ export async function run({ interaction }: SlashCommandProps) {
                 )}\n\n` +
                 `💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                } **$${formatNumberToReadableString(liveResult)}**`
+                } **$${formatNumberToReadableString(liveResult)}**`,
+              betId
             ),
           ],
         })
@@ -203,8 +217,19 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     user.balance += totalWinnings
-    user.netProfit += liveResult
     await user.save()
+
+    if (totalWinnings > 0) {
+      await Transaction.create({
+        userId: user.userId,
+        guildId: user.guildId,
+        amount: totalWinnings,
+        type: 'win',
+        source: 'casino',
+        betId,
+        createdAt: new Date(),
+      })
+    }
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -228,7 +253,8 @@ export async function run({ interaction }: SlashCommandProps) {
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
               ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
-              : '')
+              : ''),
+          betId
         ),
       ],
     })

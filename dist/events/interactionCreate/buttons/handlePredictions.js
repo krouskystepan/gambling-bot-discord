@@ -6,6 +6,7 @@ const Prediction_1 = require("../../../models/Prediction");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
+const Transaction_1 = require("../../../models/Transaction");
 exports.default = async (interaction) => {
     if (!interaction.isButton() || !interaction.customId)
         return;
@@ -22,11 +23,22 @@ exports.default = async (interaction) => {
         if (targetPrediction.status !== 'active') {
             return await interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Not active', 'This prediction is not active.'),
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Not Active', 'This prediction is not active.'),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
+        if (!targetPrediction.choices || targetPrediction.choices.length === 0) {
+            return await interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - No Choices', 'This prediction has no choices available.'),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        const targetChoice = targetPrediction.choices.find((c) => c.choiceName === choiceName);
+        if (!targetChoice)
+            return;
         const modal = new discord_js_1.ModalBuilder()
             .setTitle(`Place your bet on ${choiceName}.`)
             .setCustomId(`prediction-${predictionId}-${choiceName}-${interaction.user.id}`);
@@ -48,23 +60,20 @@ exports.default = async (interaction) => {
         if (!modalInteraction)
             return;
         await modalInteraction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
-        const betAmount = modalInteraction.fields.getTextInputValue(`bet-${predictionId}-input-${modalInteraction.user.id}`);
-        const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmount);
+        const betAmountInput = modalInteraction.fields.getTextInputValue(`bet-${predictionId}-input-${modalInteraction.user.id}`);
+        const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmountInput);
         if (isNaN(parsedBetAmount) || parsedBetAmount <= 0) {
             return modalInteraction.editReply({
                 embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Invalid Input', 'Please enter a valid positive number.'),
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Non-positive number', 'Please enter a valid positive number.'),
                 ],
             });
         }
-        const guildConfiguration = await GuildConfiguration_1.default.findOne({
+        const guildConfig = await GuildConfiguration_1.default.findOne({
             guildId: interaction.guildId,
         });
-        const casinoSettings = guildConfiguration?.casinoSettings;
+        const casinoSettings = guildConfig?.casinoSettings;
         if (!casinoSettings)
-            return;
-        const targetChoice = targetPrediction.choices.find((c) => c.choiceName === choiceName);
-        if (!targetChoice)
             return;
         const userChoiceTotal = targetChoice.bets
             .filter((bet) => bet.userId === modalInteraction.user.id)
@@ -90,12 +99,7 @@ exports.default = async (interaction) => {
             userId: modalInteraction.user.id,
             guildId: modalInteraction.guildId,
             balance: { $gte: parsedBetAmount },
-        }, {
-            $inc: {
-                balance: -parsedBetAmount,
-                netProfit: -parsedBetAmount,
-            },
-        }, { new: true });
+        }, { $inc: { balance: -parsedBetAmount } }, { new: true });
         if (!updatedUser) {
             return modalInteraction.editReply({
                 embeds: [
@@ -103,6 +107,15 @@ exports.default = async (interaction) => {
                 ],
             });
         }
+        await Transaction_1.default.create({
+            userId: modalInteraction.user.id,
+            guildId: interaction.guildId,
+            amount: parsedBetAmount,
+            type: 'bet',
+            source: 'casino',
+            betId: predictionId,
+            createdAt: new Date(),
+        });
         await Prediction_1.default.findOneAndUpdate({
             predictionId,
             guildId: modalInteraction.guildId,

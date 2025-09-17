@@ -5,6 +5,7 @@ const User_1 = require("../../../models/User");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
+//! DB TRANSACTIONS
 exports.default = async (interaction, client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;

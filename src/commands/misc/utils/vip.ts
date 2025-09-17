@@ -16,6 +16,7 @@ import {
   formatNumberToReadableString,
   parseTimeToSeconds,
 } from '../../../utils/utils'
+import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {
   name: 'vip',
@@ -253,6 +254,19 @@ export async function run({ interaction }: SlashCommandProps) {
       user.balance -= totalPrice
       await user.save()
 
+      await Transaction.create({
+        userId: user.userId,
+        guildId: user.guildId,
+        amount: totalPrice,
+        type: 'vip',
+        source: 'system',
+        meta: {
+          action: 'buy',
+          durationDays: durationDays,
+        },
+        createdAt: new Date(),
+      })
+
       return interaction.editReply({
         embeds: [
           createSuccessEmbed(
@@ -346,6 +360,18 @@ export async function run({ interaction }: SlashCommandProps) {
       user.balance -= totalPrice
       await user.save()
 
+      await Transaction.create({
+        userId: user.userId,
+        guildId: user.guildId,
+        amount: totalPrice,
+        type: 'vip',
+        source: 'system',
+        meta: {
+          action: 'extend',
+          durationDays: durationDays,
+        },
+        createdAt: new Date(),
+      })
       const vipChannel = await interaction.guild!.channels.fetch(
         existingVip.channelId
       )

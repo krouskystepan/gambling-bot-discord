@@ -6,6 +6,7 @@ const User_1 = require("../../../models/User");
 const utils_1 = require("../../../utils/utils");
 const discord_js_1 = require("discord.js");
 const createEmbed_1 = require("../../../utils/createEmbed");
+const Transaction_1 = require("../../../models/Transaction");
 exports.data = {
     name: 'manage-balance',
     description: 'Manage user balances.',
@@ -62,18 +63,13 @@ exports.data = {
             ],
         },
         {
-            name: 'list',
-            description: 'Check the balance of all users.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
-        },
-        {
             name: 'reset',
-            description: 'Reset a user’s balance.',
+            description: 'Reset a user’s balance to $0 and remove all their transactions in this server.',
             type: discord_js_1.ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'user',
-                    description: 'The user whose balance you want to reset.',
+                    description: 'The user whose balance and transaction history you want to reset.',
                     type: discord_js_1.ApplicationCommandOptionType.User,
                     required: true,
                 },
@@ -88,9 +84,9 @@ exports.options = {
 };
 async function run({ interaction, client }) {
     try {
-        const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'transactionChannelId', {
-            notSet: 'This server has not been configured for transactions yet.\nSet it up using web dashboard.',
-            notAllowed: `This channel is not configured for transactions. Try one of these channels:`,
+        const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'atmChannelIds', {
+            notSet: 'This server has not been configured for ATM logs yet.\nSet it up using web dashboard.',
+            notAllowed: `This channel is not configured for ATM logs. Try one of these channels:`,
         });
         if (!configReply)
             return;
@@ -109,7 +105,7 @@ async function run({ interaction, client }) {
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         if (subcommand === 'deposit') {
-            const user = interaction.options.getUser('user', true);
+            const user = options.getUser('user', true);
             if (user.bot) {
                 return interaction.reply({
                     embeds: [
@@ -118,7 +114,7 @@ async function run({ interaction, client }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            const amount = interaction.options.getString('amount', true);
+            const amount = options.getString('amount', true);
             const parsedAmount = (0, utils_1.parseReadableStringToNumber)(amount);
             const readableAmount = (0, utils_1.formatNumberToReadableString)(parsedAmount);
             if (isNaN(parsedAmount)) {
@@ -151,6 +147,15 @@ async function run({ interaction, client }) {
             }
             userDocument.balance += parsedAmount;
             await userDocument.save();
+            await Transaction_1.default.create({
+                userId: userDocument.userId,
+                guildId: userDocument.guildId,
+                amount: parsedAmount,
+                type: 'deposit',
+                source: 'command',
+                handledBy: interaction.user.id,
+                createdAt: new Date(),
+            });
             return interaction.reply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('ATM - Admin Deposit', `You have successfully added **$${readableAmount}** to <@${user.id}>.\nTheir new balance is now: **$${(0, utils_1.formatNumberToReadableString)(userDocument.balance)}**.`),
@@ -158,7 +163,7 @@ async function run({ interaction, client }) {
             });
         }
         if (subcommand === 'withdraw') {
-            const user = interaction.options.getUser('user', true);
+            const user = options.getUser('user', true);
             if (user.bot) {
                 return interaction.reply({
                     embeds: [
@@ -167,7 +172,7 @@ async function run({ interaction, client }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            const amount = interaction.options.getString('amount', true);
+            const amount = options.getString('amount', true);
             const parsedAmount = (0, utils_1.parseReadableStringToNumber)(amount);
             const readableAmount = (0, utils_1.formatNumberToReadableString)(parsedAmount);
             if (isNaN(parsedAmount)) {
@@ -208,6 +213,15 @@ async function run({ interaction, client }) {
             }
             userDocument.balance -= parsedAmount;
             await userDocument.save();
+            await Transaction_1.default.create({
+                userId: userDocument.userId,
+                guildId: userDocument.guildId,
+                amount: parsedAmount,
+                type: 'withdraw',
+                source: 'command',
+                handledBy: interaction.user.id,
+                createdAt: new Date(),
+            });
             return interaction.reply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('ATM - Admin Withdraw', `You have successfully removed **$${readableAmount}** from <@${user.id}>.\nTheir new balance is now: **$${(0, utils_1.formatNumberToReadableString)(userDocument.balance)}**.`),
@@ -215,7 +229,7 @@ async function run({ interaction, client }) {
             });
         }
         if (subcommand === 'reset') {
-            const user = interaction.options.getUser('user', true);
+            const user = options.getUser('user', true);
             if (user.bot) {
                 return interaction.reply({
                     embeds: [
@@ -238,14 +252,18 @@ async function run({ interaction, client }) {
             }
             userDocument.balance = 0;
             await userDocument.save();
+            await Transaction_1.default.deleteMany({
+                userId: user.id,
+                guildId: interaction.guildId,
+            });
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('ATM - Admin Reset', `You have successfully reset the balance of <@${user.id}>.\nTheir new balance is now: **$${(0, utils_1.formatNumberToReadableString)(userDocument.balance)}**.`),
+                    (0, createEmbed_1.createSuccessEmbed)('ATM - Admin Reset', `You have successfully reset the balance of <@${user.id}> and cleared all their transactions in this server.`),
                 ],
             });
         }
         if (subcommand === 'check') {
-            const user = interaction.options.getUser('user', true);
+            const user = options.getUser('user', true);
             if (user.bot) {
                 return interaction.reply({
                     embeds: [
@@ -269,24 +287,6 @@ async function run({ interaction, client }) {
             return interaction.reply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('ATM - Admin Check', `The balance of <@${user.id}> is **$${(0, utils_1.formatNumberToReadableString)(userDocument.balance)}**.`),
-                ],
-            });
-        }
-        if (subcommand === 'list') {
-            const users = await User_1.default.find({ guildId: interaction.guildId });
-            if (!users.length) {
-                return interaction.reply({
-                    embeds: [
-                        (0, createEmbed_1.createInfoEmbed)('No users found', 'No users have registered yet.'),
-                    ],
-                });
-            }
-            return interaction.reply({
-                embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('ATM - User Balances', users
-                        .sort((a, b) => b.balance - a.balance)
-                        .map((user) => `<@${user.userId}>: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`)
-                        .join('\n')),
                 ],
             });
         }

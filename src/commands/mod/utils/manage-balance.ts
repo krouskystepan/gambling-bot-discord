@@ -15,6 +15,7 @@ import {
   createInfoEmbed,
   createSuccessEmbed,
 } from '../../../utils/createEmbed'
+import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {
   name: 'manage-balance',
@@ -74,18 +75,15 @@ export const data: CommandData = {
       ],
     },
     {
-      name: 'list',
-      description: 'Check the balance of all users.',
-      type: ApplicationCommandOptionType.Subcommand,
-    },
-    {
       name: 'reset',
-      description: 'Reset a user’s balance.',
+      description:
+        'Reset a user’s balance to $0 and remove all their transactions in this server.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'user',
-          description: 'The user whose balance you want to reset.',
+          description:
+            'The user whose balance and transaction history you want to reset.',
           type: ApplicationCommandOptionType.User,
           required: true,
         },
@@ -104,11 +102,11 @@ export async function run({ interaction, client }: SlashCommandProps) {
   try {
     const configReply = await checkChannelConfiguration(
       interaction,
-      'transactionChannelId',
+      'atmChannelIds',
       {
         notSet:
-          'This server has not been configured for transactions yet.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for transactions. Try one of these channels:`,
+          'This server has not been configured for ATM logs yet.\nSet it up using web dashboard.',
+        notAllowed: `This channel is not configured for ATM logs. Try one of these channels:`,
       }
     )
 
@@ -138,7 +136,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
     const subcommand = options.getSubcommand()
 
     if (subcommand === 'deposit') {
-      const user = interaction.options.getUser('user', true)
+      const user = options.getUser('user', true)
 
       if (user.bot) {
         return interaction.reply({
@@ -152,7 +150,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
         })
       }
 
-      const amount = interaction.options.getString('amount', true)
+      const amount = options.getString('amount', true)
       const parsedAmount = parseReadableStringToNumber(amount)
       const readableAmount = formatNumberToReadableString(parsedAmount)
 
@@ -199,6 +197,16 @@ export async function run({ interaction, client }: SlashCommandProps) {
       userDocument.balance += parsedAmount
       await userDocument.save()
 
+      await Transaction.create({
+        userId: userDocument.userId,
+        guildId: userDocument.guildId,
+        amount: parsedAmount,
+        type: 'deposit',
+        source: 'command',
+        handledBy: interaction.user.id,
+        createdAt: new Date(),
+      })
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
@@ -214,7 +222,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
     }
 
     if (subcommand === 'withdraw') {
-      const user = interaction.options.getUser('user', true)
+      const user = options.getUser('user', true)
 
       if (user.bot) {
         return interaction.reply({
@@ -228,7 +236,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
         })
       }
 
-      const amount = interaction.options.getString('amount', true)
+      const amount = options.getString('amount', true)
       const parsedAmount = parseReadableStringToNumber(amount)
       const readableAmount = formatNumberToReadableString(parsedAmount)
 
@@ -292,6 +300,16 @@ export async function run({ interaction, client }: SlashCommandProps) {
       userDocument.balance -= parsedAmount
       await userDocument.save()
 
+      await Transaction.create({
+        userId: userDocument.userId,
+        guildId: userDocument.guildId,
+        amount: parsedAmount,
+        type: 'withdraw',
+        source: 'command',
+        handledBy: interaction.user.id,
+        createdAt: new Date(),
+      })
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
@@ -307,7 +325,7 @@ export async function run({ interaction, client }: SlashCommandProps) {
     }
 
     if (subcommand === 'reset') {
-      const user = interaction.options.getUser('user', true)
+      const user = options.getUser('user', true)
 
       if (user.bot) {
         return interaction.reply({
@@ -339,25 +357,25 @@ export async function run({ interaction, client }: SlashCommandProps) {
       }
 
       userDocument.balance = 0
-
       await userDocument.save()
+
+      await Transaction.deleteMany({
+        userId: user.id,
+        guildId: interaction.guildId,
+      })
 
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Reset',
-            `You have successfully reset the balance of <@${
-              user.id
-            }>.\nTheir new balance is now: **$${formatNumberToReadableString(
-              userDocument.balance
-            )}**.`
+            `You have successfully reset the balance of <@${user.id}> and cleared all their transactions in this server.`
           ),
         ],
       })
     }
 
     if (subcommand === 'check') {
-      const user = interaction.options.getUser('user', true)
+      const user = options.getUser('user', true)
 
       if (user.bot) {
         return interaction.reply({
@@ -395,35 +413,6 @@ export async function run({ interaction, client }: SlashCommandProps) {
             `The balance of <@${user.id}> is **$${formatNumberToReadableString(
               userDocument.balance
             )}**.`
-          ),
-        ],
-      })
-    }
-
-    if (subcommand === 'list') {
-      const users = await User.find({ guildId: interaction.guildId })
-
-      if (!users.length) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed('No users found', 'No users have registered yet.'),
-          ],
-        })
-      }
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'ATM - User Balances',
-            users
-              .sort((a, b) => b.balance - a.balance)
-              .map(
-                (user) =>
-                  `<@${user.userId}>: **$${formatNumberToReadableString(
-                    user.balance
-                  )}**.`
-              )
-              .join('\n')
           ),
         ],
       })

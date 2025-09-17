@@ -86,11 +86,11 @@ export async function run({ interaction }: SlashCommandProps) {
   try {
     const configReply = await checkChannelConfiguration(
       interaction,
-      'transactionChannelId',
+      'atmChannelIds',
       {
         notSet:
-          'This server has not been configured for transactions.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for transactions. Try one of these channels:`,
+          'This server has not been configured for ATM logs yet.\nSet it up using web dashboard.',
+        notAllowed: `This channel is not configured for ATM logs. Try one of these channels:`,
       }
     )
 

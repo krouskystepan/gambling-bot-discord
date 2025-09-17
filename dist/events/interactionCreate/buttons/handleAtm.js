@@ -5,17 +5,22 @@ const User_1 = require("../../../models/User");
 const utils_1 = require("../../../utils/utils");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const createEmbed_1 = require("../../../utils/createEmbed");
+const Transaction_1 = require("../../../models/Transaction");
 exports.default = async (interaction, client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;
     try {
-        const [type, action, confirm, details, amount] = interaction.customId.split('.');
-        if (type !== 'atm')
-            return;
-        if (!action || !action || !confirm || !details || !amount)
+        const [type, action, confirm, details, amountStr] = interaction.customId.split('.');
+        if (!type || !action || !confirm || !details || !amountStr)
             return;
         const [userId, messageId] = details.split('-');
         if (!userId || !messageId)
+            return;
+        const [atmType, atmAction] = type.split('-');
+        if (atmType !== 'atm')
+            return;
+        const parsedAmount = parseInt(amountStr);
+        if (isNaN(parsedAmount))
             return;
         const member = await interaction.guild?.members.fetch(interaction.user.id);
         const guildConfig = await GuildConfiguration_1.default.findOne({
@@ -26,106 +31,102 @@ exports.default = async (interaction, client) => {
             !member?.permissions.has(discord_js_1.PermissionsBitField.Flags.Administrator)) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Permission Denied', `You need to be an **Administrator** or have the ${managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'} to use this command.`),
+                    (0, createEmbed_1.createErrorEmbed)('Permission Denied', `You need to be an **Administrator** or have the ${managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'} to perform this action.`),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
-        const user = await User_1.default.findOne({
-            userId,
-            guildId: interaction.guildId,
-        });
+        const user = await User_1.default.findOne({ userId, guildId: interaction.guildId });
         if (!user)
             return;
-        const parsedAmount = parseInt(amount);
-        if (action === 'approve') {
-            if (confirm === '_') {
-                const confirmButton = new discord_js_1.ButtonBuilder()
-                    .setCustomId(`atm.approve.confirm.${userId}-${messageId}.${parsedAmount}`)
-                    .setLabel('Confirm Deposit')
-                    .setStyle(discord_js_1.ButtonStyle.Success);
-                const row = new discord_js_1.ActionRowBuilder().addComponents(confirmButton);
-                await interaction.reply({
-                    content: 'Are you sure?',
-                    components: [row],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-            }
-            if (confirm === 'confirm') {
-                user.balance += parsedAmount;
-                await user.save();
-                if (messageId) {
-                    try {
-                        const logChannel = (await client.channels.fetch(interaction.channelId));
-                        if (logChannel) {
-                            const logMessage = await logChannel.messages.fetch(messageId);
-                            if (logMessage) {
-                                await logMessage.edit({
-                                    content: `Approved by <@${interaction.user.id}>✅`,
-                                    components: [],
-                                });
-                            }
-                        }
-                        if (!guildConfig?.transactionChannelId)
-                            return;
-                        const transactionChannel = (await client.channels.fetch(guildConfig?.transactionChannelId));
-                        if (transactionChannel) {
-                            transactionChannel.send({
-                                embeds: [
-                                    (0, createEmbed_1.createSuccessEmbed)('ATM - Admin Deposit via Automated Action', `Manager <@${interaction.user.id}> successfully added **$${(0, utils_1.formatNumberToReadableString)(parsedAmount)}** to <@${userId}>.\nTheir new balance is now: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`),
-                                ],
-                            });
-                        }
-                    }
-                    catch (err) {
-                        console.error('Failed to remove buttons from log message', err);
-                    }
-                }
-                await interaction.update({
-                    content: `Deposit of **$${(0, utils_1.formatNumberToReadableString)(parsedAmount)}** successful!`,
-                    components: [],
-                });
-            }
+        const guildConfiguration = await GuildConfiguration_1.default.findOne({
+            guildId: interaction.guildId,
+        });
+        if (!guildConfiguration?.atmChannelIds.actions) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createErrorEmbed)('Error - Not Configured', 'ATM actions are not configured yet.\nPlease contact an administrator to complete the setup.'),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
         }
-        if (action === 'reject') {
-            if (confirm === '_') {
-                const confirmButton = new discord_js_1.ButtonBuilder()
-                    .setCustomId(`atm.reject.confirm.${userId}-${messageId}.${parsedAmount}`)
-                    .setLabel('Confirm Reject')
-                    .setStyle(discord_js_1.ButtonStyle.Danger);
-                const row = new discord_js_1.ActionRowBuilder().addComponents(confirmButton);
-                await interaction.reply({
-                    content: 'Are you sure?',
-                    components: [row],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
+        const actionChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.actions);
+        const updateLogMessage = async (content) => {
+            try {
+                const logChannel = (await client.channels.fetch(interaction.channelId));
+                const logMessage = await logChannel.messages.fetch(messageId);
+                await logMessage.edit({ content, components: [] });
             }
-            if (confirm === 'confirm') {
-                if (messageId) {
-                    try {
-                        const logChannel = (await client.channels.fetch(interaction.channelId));
-                        if (logChannel) {
-                            const logMessage = await logChannel.messages.fetch(messageId);
-                            if (logMessage) {
-                                await logMessage.edit({
-                                    content: `Rejected by <@${interaction.user.id}> ❌`,
-                                    components: [],
-                                });
-                            }
-                        }
-                    }
-                    catch (err) {
-                        console.error('Failed to remove buttons from log message', err);
-                    }
+            catch (err) {
+                console.error('Failed to update log message', err);
+            }
+        };
+        const sendConfirmation = async (label, style, customIdSuffix) => {
+            const button = new discord_js_1.ButtonBuilder()
+                .setCustomId(customIdSuffix)
+                .setLabel(label)
+                .setStyle(style);
+            const row = new discord_js_1.ActionRowBuilder().addComponents(button);
+            await interaction.reply({
+                content: 'Are you sure?',
+                components: [row],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        };
+        const sendMessageToUser = async (isApproved, atmAction, amount, targetUserId) => {
+            const readableAmount = `$${(0, utils_1.formatNumberToReadableString)(amount)}`;
+            const embed = isApproved
+                ? (0, createEmbed_1.createSuccessEmbed)('Transaction Approved ✅', `${atmAction === 'deposit' ? 'Deposit' : 'Withdraw'} of **${readableAmount}** has been approved.`)
+                : (0, createEmbed_1.createErrorEmbed)('Transaction Rejected ❌', `${atmAction === 'deposit' ? 'Deposit' : 'Withdraw'} of **${readableAmount}** has been rejected.`);
+            await actionChannel
+                .send({
+                content: `<@${targetUserId}>`,
+                embeds: [embed],
+            })
+                .catch(console.error);
+        };
+        if (action === 'approve' && confirm === '_') {
+            return await sendConfirmation(atmAction === 'deposit' ? 'Confirm Deposit' : 'Confirm Withdraw', discord_js_1.ButtonStyle.Success, `atm-${atmAction}.approve.confirm.${userId}-${messageId}.${parsedAmount}`);
+        }
+        if (action === 'reject' && confirm === '_') {
+            return await sendConfirmation('Confirm Reject', discord_js_1.ButtonStyle.Danger, `atm-${atmAction}.reject.confirm.${userId}-${messageId}.${parsedAmount}`);
+        }
+        if (confirm === 'confirm') {
+            let balanceChanged = false;
+            if (action === 'approve') {
+                if (atmAction === 'deposit') {
+                    user.balance += parsedAmount;
+                    balanceChanged = true;
                 }
-                await interaction.update({
-                    content: `Deposit of **$${(0, utils_1.formatNumberToReadableString)(parsedAmount)}** successful!`,
-                    components: [],
+            }
+            if (action === 'reject') {
+                if (atmAction === 'withdraw') {
+                    user.balance += parsedAmount;
+                    balanceChanged = true;
+                }
+            }
+            if (balanceChanged)
+                await user.save();
+            if (action === 'approve') {
+                await Transaction_1.default.create({
+                    userId: user.userId,
+                    guildId: user.guildId,
+                    amount: parsedAmount,
+                    type: atmAction,
+                    source: 'manual',
+                    handledBy: interaction.user.id,
+                    createdAt: new Date(),
                 });
             }
+            await updateLogMessage(`${action === 'approve' ? 'Approved' : 'Rejected'} by <@${interaction.user.id}> ${action === 'approve' ? '✅' : '❌'}`);
+            await sendMessageToUser(action === 'approve', atmAction, parsedAmount, userId);
+            return await interaction.update({
+                content: `${atmAction.charAt(0).toUpperCase() + atmAction.slice(1)} of **$${(0, utils_1.formatNumberToReadableString)(parsedAmount)}** ${action === 'approve' ? 'successful' : 'rejected'}!`,
+                components: [],
+            });
         }
     }
     catch (error) {
-        console.error('Error in handleGiveMoney.ts', error);
+        console.error('Error in handleAtm.ts', error);
     }
 };

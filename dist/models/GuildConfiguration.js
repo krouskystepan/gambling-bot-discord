@@ -19,10 +19,6 @@ const guildConfigurationSchema = new mongoose_1.Schema({
             default: '',
         },
     },
-    transactionChannelId: {
-        type: String,
-        default: '',
-    },
     casinoChannelIds: {
         type: [String],
         default: [],

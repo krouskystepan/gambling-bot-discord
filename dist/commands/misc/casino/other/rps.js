@@ -5,6 +5,7 @@ exports.run = run;
 const discord_js_1 = require("discord.js");
 const createEmbed_1 = require("../../../../utils/createEmbed");
 const utils_1 = require("../../../../utils/utils");
+const Transaction_1 = require("../../../../models/Transaction");
 const choices = [
     {
         name: 'rock',
@@ -94,7 +95,8 @@ async function run({ interaction }) {
         const isBetValid = (0, utils_1.checkValidBet)(interaction, parsedBetAmount, configReply.casinoSettings.rps.maxBet, configReply.casinoSettings.rps.minBet, user.balance);
         if (!isBetValid)
             return;
-        const embed = (0, createEmbed_1.createBetEmbed)('Rock, paper, scissors!', 'Yellow', `It’s now ${targetDiscordUser}'s turn!`);
+        const betId = (0, utils_1.generateBetId)();
+        const embed = (0, createEmbed_1.createBetEmbed)('Rock, paper, scissors!', 'Yellow', `It’s now ${targetDiscordUser}'s turn!`, betId);
         const buttons = choices.map((choice) => {
             return new discord_js_1.ButtonBuilder()
                 .setCustomId(choice.name)
@@ -192,27 +194,69 @@ async function run({ interaction }) {
             return;
         const initialUserChoice = choices.find((choice) => choice.name === initialUserInteraction.customId);
         let result = '';
+        const transactions = [];
         if (targetUserChoice?.beats === initialUserChoice?.name) {
-            result = `${targetDiscordUser} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${interaction.user}!`;
+            transactions.push({
+                userId: user.userId,
+                guildId: user.guildId,
+                amount: parsedBetAmount,
+                type: 'bet',
+                source: 'casino',
+                betId,
+            }, {
+                userId: targetUser.userId,
+                guildId: targetUser.guildId,
+                amount: parsedBetAmount,
+                type: 'bet',
+                source: 'casino',
+                betId,
+            }, {
+                userId: targetUser.userId,
+                guildId: targetUser.guildId,
+                amount: parsedBetAmount + realWinAmount,
+                type: 'win',
+                source: 'casino',
+                betId,
+            });
             user.balance -= parsedBetAmount;
-            user.netProfit -= parsedBetAmount;
             targetUser.balance += realWinAmount;
-            targetUser.netProfit += realWinAmount;
-            await user.save();
-            await targetUser.save();
+            result = `${targetDiscordUser} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${interaction.user}!`;
         }
         if (initialUserChoice?.beats === targetUserChoice?.name) {
-            result = `${interaction.user} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${targetDiscordUser}!`;
+            transactions.push({
+                userId: user.userId,
+                guildId: user.guildId,
+                amount: parsedBetAmount,
+                type: 'bet',
+                source: 'casino',
+                betId,
+            }, {
+                userId: targetUser.userId,
+                guildId: targetUser.guildId,
+                amount: parsedBetAmount,
+                type: 'bet',
+                source: 'casino',
+                betId,
+            }, {
+                userId: user.userId,
+                guildId: user.guildId,
+                amount: parsedBetAmount + realWinAmount,
+                type: 'win',
+                source: 'casino',
+                betId,
+            });
             user.balance += realWinAmount;
-            user.netProfit += realWinAmount;
             targetUser.balance -= parsedBetAmount;
-            targetUser.netProfit -= parsedBetAmount;
-            await user.save();
-            await targetUser.save();
+            result = `${interaction.user} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${targetDiscordUser}!`;
         }
         if (targetUserChoice?.name === initialUserChoice?.name) {
             result = 'It’s a draw!';
         }
+        if (transactions.length > 0) {
+            await Transaction_1.default.insertMany(transactions);
+        }
+        await user.save();
+        await targetUser.save();
         embed.setDescription(`${targetDiscordUser} chose ${targetUserChoice?.name} ${targetUserChoice?.emoji} \n${interaction.user} chose ${initialUserChoice?.name} ${initialUserChoice?.emoji}. \n\n${result}`);
         reply.edit({
             content: '',

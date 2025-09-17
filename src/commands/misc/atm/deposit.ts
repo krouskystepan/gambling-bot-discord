@@ -105,7 +105,6 @@ export async function run({ interaction, client }: SlashCommandProps) {
     }
 
     const account = interaction.options.getString('account', true)
-
     const amount = interaction.options.getString('amount', true)
     const parsedAmount = parseReadableStringToNumber(amount)
     const readableAmount = formatNumberToReadableString(parsedAmount)
@@ -163,14 +162,14 @@ export async function run({ interaction, client }: SlashCommandProps) {
 
     const approveButton = new ButtonBuilder()
       .setCustomId(
-        `atm.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
+        `atm-deposit.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
       )
       .setLabel('Approve')
       .setStyle(ButtonStyle.Success)
 
     const rejectButton = new ButtonBuilder()
       .setCustomId(
-        `atm.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
+        `atm-deposit.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
       )
       .setLabel('Reject')
       .setStyle(ButtonStyle.Danger)

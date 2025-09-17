@@ -8,8 +8,10 @@ import {
   formatNumberToReadableString,
   checkUserRegistration,
   checkValidBet,
+  generateBetId,
 } from '../../../utils/utils'
 import { slotEmojis, spinSlotEmotes } from '../../../utils/customEmotes'
+import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {
   name: 'slots',
@@ -101,9 +103,20 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (!isBetValid) return
 
+    const betId = generateBetId()
+
     const totalBet = parsedBetAmount * spins
 
     user.balance -= totalBet
+    await Transaction.create({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: totalBet,
+      type: 'bet',
+      source: 'casino',
+      betId,
+      createdAt: new Date(),
+    })
 
     let totalWinnings = 0
     let liveResult = 0
@@ -126,7 +139,8 @@ export async function run({ interaction }: SlashCommandProps) {
                 }${spinSlotEmotes[1]}${spinSlotEmotes[2]}${spinSlotEmotes[3]}` +
                 `\n\n💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                } **$${formatNumberToReadableString(liveResult)}**`
+                } **$${formatNumberToReadableString(liveResult)}**`,
+              betId
             ),
           ],
         })
@@ -161,8 +175,19 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     user.balance += totalWinnings
-    user.netProfit += liveResult
     await user.save()
+
+    if (totalWinnings > 0) {
+      await Transaction.create({
+        userId: user.userId,
+        guildId: user.guildId,
+        amount: totalWinnings,
+        type: 'win',
+        source: 'casino',
+        betId,
+        createdAt: new Date(),
+      })
+    }
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -183,7 +208,8 @@ export async function run({ interaction }: SlashCommandProps) {
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
               ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
-              : '')
+              : ''),
+          betId
         ),
       ],
     })

@@ -7,6 +7,7 @@ const blackjackUtils_1 = require("../../../utils/blackjackUtils");
 const casinoHelpers_1 = require("../../../utils/casinoHelpers");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
+const Transaction_1 = require("../../../models/Transaction");
 exports.default = async (interaction, client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;
@@ -14,10 +15,10 @@ exports.default = async (interaction, client) => {
         const [type, ids, action, showBalanceString] = interaction.customId.split('.');
         if (!type || !ids || !action)
             return;
-        const [gameId, userId, guildId] = ids.split('-');
+        const [gameId, userId, guildId, betId] = ids.split('-');
         if (type !== 'blackjack')
             return;
-        if (!gameId || !userId || !guildId)
+        if (!gameId || !userId || !guildId || !betId)
             return;
         const showBalance = showBalanceString === 'true';
         if (userId !== interaction.user.id) {
@@ -58,7 +59,7 @@ exports.default = async (interaction, client) => {
             const user = await User_1.default.findOne({ userId, guildId });
             if (!user)
                 return;
-            await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(game.betAmount), message, dealerCards, dealerTotal, playerCards, playerTotal, deck, gameIndex, user, guildId, gameId, showBalance);
+            await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(game.betAmount), message, dealerCards, dealerTotal, playerCards, playerTotal, deck, gameIndex, user, guildId, gameId, showBalance, betId);
             return interaction.followUp({
                 content: 'You have stood.',
                 flags: discord_js_1.MessageFlags.Ephemeral,
@@ -72,11 +73,11 @@ exports.default = async (interaction, client) => {
             let gameIndex = game.dealerCards.length + game.playerCards.length;
             if (game.playerCards.length <= 3) {
                 const hitButton = new discord_js_1.ButtonBuilder()
-                    .setCustomId(`blackjack.${gameId}-${userId}-${guildId}.hit.${showBalance}`)
+                    .setCustomId(`blackjack.${gameId}-${userId}-${guildId}-${betId}.hit.${showBalance}`)
                     .setLabel('Hit')
                     .setStyle(discord_js_1.ButtonStyle.Success);
                 const standButton = new discord_js_1.ButtonBuilder()
-                    .setCustomId(`blackjack.${gameId}-${userId}-${guildId}.stand.${showBalance}`)
+                    .setCustomId(`blackjack.${gameId}-${userId}-${guildId}-${betId}.stand.${showBalance}`)
                     .setLabel('Stand')
                     .setStyle(discord_js_1.ButtonStyle.Danger);
                 const row = new discord_js_1.ActionRowBuilder().addComponents(hitButton, standButton);
@@ -93,7 +94,7 @@ exports.default = async (interaction, client) => {
             if (playerTotal > 21) {
                 await message.edit({
                     embeds: [
-                        (0, blackjackUtils_1.createBlackjackEmbed)((0, utils_1.formatNumberToReadableString)(game.betAmount), dealerCards, dealerTotal, game.playerCards, playerTotal, 'PB', showBalance, user.balance),
+                        (0, blackjackUtils_1.createBlackjackEmbed)((0, utils_1.formatNumberToReadableString)(game.betAmount), dealerCards, dealerTotal, game.playerCards, playerTotal, 'PB', showBalance, user.balance, betId),
                     ],
                     components: [],
                 });
@@ -104,7 +105,7 @@ exports.default = async (interaction, client) => {
                 });
             }
             if (playerTotal === 21) {
-                await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(game.betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance);
+                await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(game.betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance, betId);
                 await BlackjackGame_1.default.findOneAndDelete({ userId, guildId, gameId });
                 return interaction.followUp({
                     content: 'You have hit.',
@@ -114,7 +115,7 @@ exports.default = async (interaction, client) => {
             await BlackjackGame_1.default.findOneAndUpdate({ userId, guildId, gameId }, { playerCards: game.playerCards, deck: game.deck });
             await message.edit({
                 embeds: [
-                    (0, blackjackUtils_1.createBlackjackEmbed)((0, utils_1.formatNumberToReadableString)(game.betAmount), dealerCards, dealerTotal, game.playerCards, playerTotal, undefined, false, 0, true),
+                    (0, blackjackUtils_1.createBlackjackEmbed)((0, utils_1.formatNumberToReadableString)(game.betAmount), dealerCards, dealerTotal, game.playerCards, playerTotal, undefined, false, 0, betId, true),
                 ],
             });
             return interaction.followUp({
@@ -141,8 +142,16 @@ exports.default = async (interaction, client) => {
                 });
             }
             user.balance -= game.betAmount;
-            user.netProfit -= game.betAmount;
             await user.save();
+            await Transaction_1.default.create({
+                userId: user.userId,
+                guildId: user.guildId,
+                amount: game.betAmount,
+                type: 'bet',
+                source: 'casino',
+                betId,
+                createdAt: new Date(),
+            });
             const drawnCard = (0, casinoHelpers_1.drawNextCard)(game.deck, gameIndex);
             game.playerCards.push(drawnCard);
             playerTotal = (0, blackjackUtils_1.calculateHandValue)(game.playerCards);
@@ -150,7 +159,7 @@ exports.default = async (interaction, client) => {
                 await BlackjackGame_1.default.findOneAndDelete({ userId, guildId, gameId });
                 await message.edit({
                     embeds: [
-                        (0, blackjackUtils_1.createBlackjackEmbed)((0, utils_1.formatNumberToReadableString)(betAmount), dealerCards, dealerTotal, game.playerCards, playerTotal, 'PB', showBalance, user.balance),
+                        (0, blackjackUtils_1.createBlackjackEmbed)((0, utils_1.formatNumberToReadableString)(betAmount), dealerCards, dealerTotal, game.playerCards, playerTotal, 'PB', showBalance, user.balance, betId),
                     ],
                     components: [],
                 });
@@ -159,7 +168,7 @@ exports.default = async (interaction, client) => {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance);
+            await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance, betId);
             return interaction.followUp({
                 content: 'You have doubled down.',
                 flags: discord_js_1.MessageFlags.Ephemeral,

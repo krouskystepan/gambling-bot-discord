@@ -1,12 +1,17 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
-import { createBetEmbed, createErrorEmbed } from '../../../utils/createEmbed'
+import {
+  createBetEmbed,
+  createErrorEmbed,
+  createInfoEmbed,
+} from '../../../utils/createEmbed'
 import {
   checkChannelConfiguration,
   parseReadableStringToNumber,
   formatNumberToReadableString,
   checkUserRegistration,
   checkValidBet,
+  generateBetId,
 } from '../../../utils/utils'
 import { spinRouletteWheel } from '../../../utils/casinoHelpers'
 import {
@@ -16,6 +21,7 @@ import {
   inferTypeFromValue,
   RouletteBetType,
 } from '../../../utils/rouletteUtils'
+import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {
   name: 'roulette',
@@ -99,9 +105,8 @@ export async function run({ interaction }: SlashCommandProps) {
       if (!amountStr || !rawValue) {
         return interaction.reply({
           embeds: [
-            createBetEmbed(
-              'Invalid Bet Format',
-              'Red',
+            createInfoEmbed(
+              'Invalid Input - Invalid Bet Format',
               `Each bet must be in the format: "<amount> <value>". Invalid: "${betStr.trim()}"`
             ),
           ],
@@ -116,7 +121,12 @@ export async function run({ interaction }: SlashCommandProps) {
         type = inferTypeFromValue(rawValue)
       } catch (e: any) {
         return interaction.reply({
-          embeds: [createBetEmbed('Invalid Bet Value', 'Red', `${e.message}`)],
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Invalid Bet Value',
+              `${e.message}`
+            ),
+          ],
           flags: MessageFlags.Ephemeral,
         })
       }
@@ -133,9 +143,8 @@ export async function run({ interaction }: SlashCommandProps) {
     if (bets.length === 0) {
       return interaction.reply({
         embeds: [
-          createBetEmbed(
-            'No Bets Found',
-            'Red',
+          createInfoEmbed(
+            'Invalid Input - No Bets Found',
             'Please provide at least one valid bet.'
           ),
         ],
@@ -155,8 +164,20 @@ export async function run({ interaction }: SlashCommandProps) {
     )
     if (!isBetValid) return
 
+    const betId = generateBetId()
+
     const totalBet = totalOneSpin * spins
+
     user.balance -= totalBet
+    await Transaction.create({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: totalBet,
+      type: 'bet',
+      source: 'casino',
+      betId,
+      createdAt: new Date(),
+    })
 
     let totalWinnings = 0
     let liveResult = 0
@@ -177,7 +198,8 @@ export async function run({ interaction }: SlashCommandProps) {
                 `🕹 Spin Results:\n${results.join('\n\n')}\n\n` +
                 `💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                } **$${formatNumberToReadableString(liveResult)}**`
+                } **$${formatNumberToReadableString(liveResult)}**`,
+              betId
             ),
           ],
         })
@@ -214,8 +236,19 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     user.balance += totalWinnings
-    user.netProfit += liveResult
     await user.save()
+
+    if (totalWinnings > 0) {
+      await Transaction.create({
+        userId: user.userId,
+        guildId: user.guildId,
+        amount: totalWinnings,
+        type: 'win',
+        source: 'casino',
+        betId,
+        createdAt: new Date(),
+      })
+    }
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -236,7 +269,8 @@ export async function run({ interaction }: SlashCommandProps) {
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
               ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
-              : '')
+              : ''),
+          betId
         ),
       ],
     })

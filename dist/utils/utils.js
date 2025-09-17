@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkValidBet = exports.parseTimeToSeconds = exports.formatNumberToPercentage = exports.formatNumberWithSpaces = exports.parseReadableStringToNumber = exports.formatNumberToReadableString = exports.checkUserRegistration = exports.checkChannelConfiguration = exports.connectToDatabase = void 0;
+exports.checkValidBet = exports.parseTimeToSeconds = exports.formatNumberToPercentage = exports.formatNumberWithSpaces = exports.parseReadableStringToNumber = exports.formatNumberToReadableString = exports.checkUserRegistration = exports.checkChannelConfiguration = exports.generateBetId = exports.connectToDatabase = void 0;
 const mongoose_1 = require("mongoose");
 const GuildConfiguration_1 = require("../models/GuildConfiguration");
 const discord_js_1 = require("discord.js");
@@ -21,49 +21,62 @@ const connectToDatabase = async () => {
     }
 };
 exports.connectToDatabase = connectToDatabase;
+const generateBetId = () => {
+    const timestamp = Date.now().toString(36);
+    const random = Math.floor(Math.random() * 1_000_000)
+        .toString(36)
+        .padStart(5, '0');
+    return `${timestamp}${random}`.toUpperCase();
+};
+exports.generateBetId = generateBetId;
 const checkChannelConfiguration = async (interaction, channelType, messages) => {
     try {
-        let guildConfiguration = await GuildConfiguration_1.default.findOne({
+        let guildConfig = await GuildConfiguration_1.default.findOne({
             guildId: interaction.guildId,
         });
-        if (!guildConfiguration) {
-            guildConfiguration = new GuildConfiguration_1.default({
+        if (!guildConfig) {
+            guildConfig = new GuildConfiguration_1.default({
                 guildId: interaction.guildId,
                 casinoSettings: defaultConfig_1.default,
             });
-            await guildConfiguration.save();
+            await guildConfig.save();
         }
-        else if (!guildConfiguration.casinoSettings) {
-            guildConfiguration.casinoSettings = defaultConfig_1.default;
-            await guildConfiguration.save();
+        else if (!guildConfig.casinoSettings) {
+            guildConfig.casinoSettings = defaultConfig_1.default;
+            await guildConfig.save();
         }
         let allowedChannelIds = [];
         if (channelType === 'predictionChannelIds') {
-            const actionsChannel = guildConfiguration.predictionChannelIds.actions;
-            const logsChannel = guildConfiguration.predictionChannelIds.logs;
-            if (!actionsChannel || !logsChannel) {
+            const { actions, logs } = guildConfig.predictionChannelIds || {};
+            if (!actions || !logs) {
                 await interaction.reply({
                     embeds: [(0, createEmbed_1.createErrorEmbed)('Error - Not Configured', messages.notSet)],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
                 return false;
             }
-            allowedChannelIds = [actionsChannel];
+            allowedChannelIds = [actions];
         }
-        else if (channelType === 'transactionChannelId') {
-            allowedChannelIds = guildConfiguration.transactionChannelId
-                ? [guildConfiguration.transactionChannelId]
-                : [];
+        else if (channelType === 'atmChannelIds') {
+            const logsChannel = guildConfig.atmChannelIds?.logs;
+            if (!logsChannel) {
+                await interaction.reply({
+                    embeds: [(0, createEmbed_1.createErrorEmbed)('Error - Not Configured', messages.notSet)],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return false;
+            }
+            allowedChannelIds = [logsChannel];
         }
         else {
-            allowedChannelIds = guildConfiguration[channelType] || [];
-        }
-        if (channelType === 'casinoChannelIds') {
-            const activeVipRooms = await VipRoom_1.default.find({
-                guildId: interaction.guildId,
-                expiresAt: { $gt: new Date() },
-            });
-            allowedChannelIds = allowedChannelIds.concat(activeVipRooms.map((vip) => vip.channelId));
+            allowedChannelIds = guildConfig[channelType] || [];
+            if (channelType === 'casinoChannelIds') {
+                const activeVipRooms = await VipRoom_1.default.find({
+                    guildId: interaction.guildId,
+                    expiresAt: { $gt: new Date() },
+                });
+                allowedChannelIds.push(...activeVipRooms.map((vip) => vip.channelId));
+            }
         }
         if (!allowedChannelIds.length) {
             await interaction.reply({
@@ -73,17 +86,18 @@ const checkChannelConfiguration = async (interaction, channelType, messages) => 
             return false;
         }
         if (!allowedChannelIds.includes(interaction.channelId)) {
+            const allowedMentions = allowedChannelIds
+                .map((id) => `<#${id}>`)
+                .join(', ');
             await interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Error - Incorrect Channel', `${messages.notAllowed} ${allowedChannelIds
-                        .map((id) => `<#${id}>`)
-                        .join(', ')}.`),
+                    (0, createEmbed_1.createErrorEmbed)('Error - Incorrect Channel', `${messages.notAllowed} ${allowedMentions}.`),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
             return false;
         }
-        return guildConfiguration;
+        return guildConfig;
     }
     catch (error) {
         console.error('Error checking channel configuration:', error);

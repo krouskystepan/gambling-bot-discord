@@ -1,13 +1,13 @@
 import mongoose from 'mongoose'
-import GuildConfiguration from '../models/GuildConfiguration'
+import GuildConfiguration, {
+  GuildConfigurationDoc,
+} from '../models/GuildConfiguration'
 import {
   ChatInputCommandInteraction,
   CacheType,
   MessageFlags,
-  EmbedBuilder,
-  BaseInteraction,
 } from 'discord.js'
-import User, { UserDoc } from '../models//User'
+import User from '../models//User'
 import { createErrorEmbed, createInfoEmbed } from './createEmbed'
 import defaultCasinoSettings from './defaultConfig'
 import VipRoom from '../models/VipRoom'
@@ -23,10 +23,15 @@ export const connectToDatabase = async () => {
   }
 }
 
-type ChannelType =
-  | 'casinoChannelIds'
-  | 'transactionChannelId'
-  | 'predictionChannelIds'
+export const generateBetId = (): string => {
+  const timestamp = Date.now().toString(36)
+  const random = Math.floor(Math.random() * 1_000_000)
+    .toString(36)
+    .padStart(5, '0')
+  return `${timestamp}${random}`.toUpperCase()
+}
+
+type ChannelType = 'casinoChannelIds' | 'predictionChannelIds' | 'atmChannelIds'
 
 export const checkChannelConfiguration = async (
   interaction: ChatInputCommandInteraction<CacheType>,
@@ -35,54 +40,55 @@ export const checkChannelConfiguration = async (
     notSet: string
     notAllowed: string
   }
-) => {
+): Promise<GuildConfigurationDoc | false> => {
   try {
-    let guildConfiguration = await GuildConfiguration.findOne({
+    let guildConfig = await GuildConfiguration.findOne({
       guildId: interaction.guildId,
     })
 
-    if (!guildConfiguration) {
-      guildConfiguration = new GuildConfiguration({
+    if (!guildConfig) {
+      guildConfig = new GuildConfiguration({
         guildId: interaction.guildId,
         casinoSettings: defaultCasinoSettings,
       })
-      await guildConfiguration.save()
-    } else if (!guildConfiguration.casinoSettings) {
-      guildConfiguration.casinoSettings = defaultCasinoSettings
-      await guildConfiguration.save()
+      await guildConfig.save()
+    } else if (!guildConfig.casinoSettings) {
+      guildConfig.casinoSettings = defaultCasinoSettings
+      await guildConfig.save()
     }
 
     let allowedChannelIds: string[] = []
 
     if (channelType === 'predictionChannelIds') {
-      const actionsChannel = guildConfiguration.predictionChannelIds.actions
-      const logsChannel = guildConfiguration.predictionChannelIds.logs
-
-      if (!actionsChannel || !logsChannel) {
+      const { actions, logs } = guildConfig.predictionChannelIds || {}
+      if (!actions || !logs) {
         await interaction.reply({
           embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
           flags: MessageFlags.Ephemeral,
         })
         return false
       }
-
-      allowedChannelIds = [actionsChannel]
-    } else if (channelType === 'transactionChannelId') {
-      allowedChannelIds = guildConfiguration.transactionChannelId
-        ? [guildConfiguration.transactionChannelId]
-        : []
+      allowedChannelIds = [actions]
+    } else if (channelType === 'atmChannelIds') {
+      const logsChannel = guildConfig.atmChannelIds?.logs
+      if (!logsChannel) {
+        await interaction.reply({
+          embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
+          flags: MessageFlags.Ephemeral,
+        })
+        return false
+      }
+      allowedChannelIds = [logsChannel]
     } else {
-      allowedChannelIds = guildConfiguration[channelType] || []
-    }
+      allowedChannelIds = guildConfig[channelType] || []
 
-    if (channelType === 'casinoChannelIds') {
-      const activeVipRooms = await VipRoom.find({
-        guildId: interaction.guildId,
-        expiresAt: { $gt: new Date() },
-      })
-      allowedChannelIds = allowedChannelIds.concat(
-        activeVipRooms.map((vip) => vip.channelId)
-      )
+      if (channelType === 'casinoChannelIds') {
+        const activeVipRooms = await VipRoom.find({
+          guildId: interaction.guildId,
+          expiresAt: { $gt: new Date() },
+        })
+        allowedChannelIds.push(...activeVipRooms.map((vip) => vip.channelId))
+      }
     }
 
     if (!allowedChannelIds.length) {
@@ -94,13 +100,14 @@ export const checkChannelConfiguration = async (
     }
 
     if (!allowedChannelIds.includes(interaction.channelId)) {
+      const allowedMentions = allowedChannelIds
+        .map((id) => `<#${id}>`)
+        .join(', ')
       await interaction.reply({
         embeds: [
           createErrorEmbed(
             'Error - Incorrect Channel',
-            `${messages.notAllowed} ${allowedChannelIds
-              .map((id) => `<#${id}>`)
-              .join(', ')}.`
+            `${messages.notAllowed} ${allowedMentions}.`
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -108,7 +115,7 @@ export const checkChannelConfiguration = async (
       return false
     }
 
-    return guildConfiguration
+    return guildConfig
   } catch (error) {
     console.error('Error checking channel configuration:', error)
     return false
