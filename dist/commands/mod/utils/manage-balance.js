@@ -31,6 +31,25 @@ exports.data = {
             ],
         },
         {
+            name: 'bonus',
+            description: 'Give a bonus to a user.',
+            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: 'user',
+                    description: 'The user you want to give a bonus to.',
+                    type: discord_js_1.ApplicationCommandOptionType.User,
+                    required: true,
+                },
+                {
+                    name: 'amount',
+                    description: 'The bonus amount to give. (You can also enter 1000, 2.5k, 2M).',
+                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    required: true,
+                },
+            ],
+        },
+        {
             name: 'withdraw',
             description: 'Remove money from a user.',
             type: discord_js_1.ApplicationCommandOptionType.Subcommand,
@@ -159,6 +178,56 @@ async function run({ interaction, client }) {
             return interaction.reply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('ATM - Admin Deposit', `You have successfully added **$${readableAmount}** to <@${user.id}>.\nTheir new balance is now: **$${(0, utils_1.formatNumberToReadableString)(userDocument.balance)}**.`),
+                ],
+            });
+        }
+        if (subcommand === 'bonus') {
+            const user = options.getUser('user', true);
+            if (user.bot) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input - Bot user', 'You cannot give a bonus to a bot.'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            const amount = options.getString('amount', true);
+            const parsedAmount = (0, utils_1.parseReadableStringToNumber)(amount);
+            const readableAmount = (0, utils_1.formatNumberToReadableString)(parsedAmount);
+            if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Invalid Input', 'Please enter a valid positive number.'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            const userDocument = await User_1.default.findOne({
+                userId: user.id,
+                guildId: interaction.guildId,
+            });
+            if (!userDocument) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'This user has not registered yet.'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            userDocument.balance += parsedAmount;
+            await userDocument.save();
+            await Transaction_1.default.create({
+                userId: userDocument.userId,
+                guildId: userDocument.guildId,
+                amount: parsedAmount,
+                type: 'bonus',
+                source: 'command',
+                handledBy: interaction.user.id,
+                createdAt: new Date(),
+            });
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createSuccessEmbed)('ATM - Bonus Given', `You have successfully given **$${readableAmount}** bonus to <@${user.id}>.\nTheir new balance is now: **$${(0, utils_1.formatNumberToReadableString)(userDocument.balance)}**.`),
                 ],
             });
         }
