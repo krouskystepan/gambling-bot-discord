@@ -6,6 +6,7 @@ const utils_1 = require("../../../utils/utils");
 const discord_js_1 = require("discord.js");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const createEmbed_1 = require("../../../utils/createEmbed");
+const User_1 = require("../../../models/User");
 exports.data = {
     name: 'withdraw',
     description: 'Withdraw money from your account.',
@@ -86,16 +87,38 @@ async function run({ interaction, client }) {
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
-        if (user.balance < parsedAmount) {
-            return interaction.reply({
-                embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Insufficient Funds', `You don't have enough funds to withdraw **$${readableAmount}**.\nYour current balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`),
-                ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
+        const updatedUser = await User_1.default.findOneAndUpdate({
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            balance: { $gte: parsedAmount },
+            $expr: {
+                $gte: [{ $subtract: ['$balance', '$lockedBalance'] }, parsedAmount],
+            },
+        }, {
+            $inc: { balance: -parsedAmount },
+        }, { new: true });
+        if (!updatedUser) {
+            if (user.balance < parsedAmount) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Insufficient Funds', `You don't have enough funds to withdraw **$${readableAmount}**.\nYour current balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            const withdrawable = user.balance - user.lockedBalance;
+            if (withdrawable < parsedAmount && withdrawable >= 0) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Insufficient Withdrawable Funds', `You requested **$${readableAmount}**, but you can only withdraw up to **$${(0, utils_1.formatNumberToReadableString)(withdrawable)}**.\n` +
+                            (withdrawable < user.balance
+                                ? `**$${(0, utils_1.formatNumberToReadableString)(user.balance - withdrawable)}** of your balance is locked (e.g., bonuses).\n\nYou need to wager those bonuses before you can withdraw them.`
+                                : `\n\nYou need to wager any bonuses before you can withdraw them.`)),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
         }
-        user.balance -= parsedAmount;
-        await user.save();
         const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
         const member = interaction.member;
         const displayName = member?.displayName ||

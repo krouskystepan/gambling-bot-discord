@@ -20,24 +20,12 @@ import {
   parseReadableStringToNumber,
 } from '../../../../utils/utils'
 import Transaction from '../../../../models/Transaction'
-import mongoose from 'mongoose'
+import User from '../../../../models/User'
 
 const choices = [
-  {
-    name: 'rock',
-    emoji: '🪨',
-    beats: 'scissors',
-  },
-  {
-    name: 'scissors',
-    emoji: '✂️',
-    beats: 'paper',
-  },
-  {
-    name: 'paper',
-    emoji: '📄',
-    beats: 'rock',
-  },
+  { name: 'rock', emoji: '🪨', beats: 'scissors' },
+  { name: 'scissors', emoji: '✂️', beats: 'paper' },
+  { name: 'paper', emoji: '📄', beats: 'rock' },
 ]
 
 export const data: CommandData = {
@@ -70,14 +58,10 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction.user.id,
       interaction.guildId!
     )
-
     if (!user) {
       return interaction.reply({
         embeds: [
-          createErrorEmbed(
-            'Error - Not registered',
-            'You are not registered yet.\nUse the `/register` command to register.'
-          ),
+          createErrorEmbed('Error - Not registered', 'Use `/register` first.'),
         ],
         flags: MessageFlags.Ephemeral,
       })
@@ -88,14 +72,22 @@ export async function run({ interaction }: SlashCommandProps) {
       targetDiscordUser.id,
       interaction.guildId!
     )
-
     if (!targetUser) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
             'Error - Not registered',
-            'The user you want to play against is not registered yet.'
+            'Target user not registered.'
           ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    if (interaction.user.id === targetDiscordUser.id || targetDiscordUser.bot) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed('Invalid Input', 'Cannot play against this user.'),
         ],
         flags: MessageFlags.Ephemeral,
       })
@@ -110,67 +102,40 @@ export async function run({ interaction }: SlashCommandProps) {
         notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
       }
     )
-
     if (!configReply) return
 
-    if (interaction.user.id === targetDiscordUser.id) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Same user',
-            'You cannot play against yourself.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (targetDiscordUser.bot) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Bot user',
-            'You cannot play against a bot.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    const betAmount = interaction.options.getString('bet', true)
-    const parsedBetAmount = parseReadableStringToNumber(betAmount)
-    const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
+    const betAmount = parseReadableStringToNumber(
+      interaction.options.getString('bet', true)
+    )
+    const readableBetAmount = formatNumberToReadableString(betAmount)
     const realWinAmount =
-      parsedBetAmount * (1 - configReply.casinoSettings.rps.casinoCut)
+      betAmount * (1 - configReply.casinoSettings.rps.casinoCut)
 
     const isBetValid = checkValidBet(
       interaction,
-      parsedBetAmount,
+      betAmount,
       configReply.casinoSettings.rps.maxBet,
       configReply.casinoSettings.rps.minBet,
       user.balance
     )
-
     if (!isBetValid) return
 
     const betId = generateBetId()
-
     const embed = createBetEmbed(
       'Rock, paper, scissors!',
       'Yellow',
       `It’s now ${targetDiscordUser}'s turn!`,
       betId
     )
-
-    const buttons = choices.map((choice) => {
-      return new ButtonBuilder()
-        .setCustomId(choice.name)
-        .setLabel(choice.name)
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji(choice.emoji)
-    })
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(buttons)
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      choices.map((c) =>
+        new ButtonBuilder()
+          .setCustomId(c.name)
+          .setLabel(c.name)
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji(c.emoji)
+      )
+    )
 
     const reply = await interaction.reply({
       content: `${targetDiscordUser}, you’ve been challenged by ${interaction.user} to a game of Rock, Paper, Scissors for **$${readableBetAmount}**!\nChoose one of the options to start the game.`,
@@ -178,219 +143,128 @@ export async function run({ interaction }: SlashCommandProps) {
       components: [row],
     })
 
-    const targetUserInteraction = await reply
+    const targetInteraction = await reply
       .awaitMessageComponent({
-        filter: (i) => {
-          if (i.user.id !== targetDiscordUser.id) {
-            i.reply({
-              embeds: [
-                createInfoEmbed(
-                  'Invalid Input - Wrong user',
-                  'Only the mentioned user can interact with this message.'
-                ),
-              ],
-              flags: MessageFlags.Ephemeral,
-            })
-            return false
-          }
-          return true
-        },
+        filter: (i) => i.user.id === targetDiscordUser.id,
         time: 30_000,
       })
-      .catch(async (error) => {
+      .catch(async () => {
         embed
           .setDescription(
-            `The game has been canceled because ${targetDiscordUser} did not respond in time.`
+            `Game canceled. ${targetDiscordUser} did not respond.`
           )
           .setColor('Red')
-        await reply.edit({
-          content: '',
-          embeds: [embed],
-          components: [],
-        })
+        await reply.edit({ content: '', embeds: [embed], components: [] })
+        return null
       })
+    if (!targetInteraction) return
 
-    if (!targetUserInteraction) return
-
-    if (targetUser.balance < parsedBetAmount) {
-      embed
-        .setDescription(
-          `The game has been canceled because ${targetDiscordUser} does not have enough money to place the bet.`
-        )
-        .setColor('Red')
-
-      reply.edit({
-        content: '',
-        embeds: [embed],
-        components: [],
-      })
-
-      return targetUserInteraction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient balance',
-            `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(
-              targetUser.balance
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    const targetUserChoice = choices.find(
-      (choice) => choice.name === targetUserInteraction.customId
-    )
-
-    await targetUserInteraction.reply({
-      content: `You chose ${targetUserChoice?.name} ${targetUserChoice?.emoji}.`,
+    const targetChoice = choices.find(
+      (c) => c.name === targetInteraction.customId
+    )!
+    await targetInteraction.reply({
+      content: `You chose ${targetChoice.name} ${targetChoice.emoji}.`,
       flags: MessageFlags.Ephemeral,
     })
 
-    embed.setDescription(
-      `It’s now ${interaction.user}'s turn! Choose one of the options.`
-    )
-    await reply.edit({
-      content: `Now it's your turn, ${interaction.user}!`,
-      embeds: [embed],
-    })
+    embed.setDescription(`Now it's ${interaction.user}'s turn.`)
+    await reply.edit({ content: '', embeds: [embed] })
 
-    const initialUserInteraction = await reply
+    const initiatorInteraction = await reply
       .awaitMessageComponent({
-        filter: (i) => {
-          if (i.user.id !== interaction.user.id) {
-            i.reply({
-              embeds: [
-                createInfoEmbed(
-                  'Invalid Input - Wrong user',
-                  'Only the mentioned user can interact with this message.'
-                ),
-              ],
-              flags: MessageFlags.Ephemeral,
-            })
-            return false
-          }
-          return true
-        },
+        filter: (i) => i.user.id === interaction.user.id,
         time: 30_000,
       })
-      .catch(async (error) => {
+      .catch(async () => {
         embed
-          .setDescription(
-            `The game has been canceled because ${interaction.user} did not respond in time.`
-          )
+          .setDescription(`Game canceled. ${interaction.user} did not respond.`)
           .setColor('Red')
-        await reply.edit({
-          content: '',
-          embeds: [embed],
-          components: [],
-        })
+        await reply.edit({ content: '', embeds: [embed], components: [] })
+        return null
       })
+    if (!initiatorInteraction) return
 
-    if (!initialUserInteraction) return
+    const initiatorChoice = choices.find(
+      (c) => c.name === initiatorInteraction.customId
+    )!
 
-    const initialUserChoice = choices.find(
-      (choice) => choice.name === initialUserInteraction.customId
-    )
+    let winnerUser: typeof user | typeof targetUser | null = null
+    let loserUser: typeof user | typeof targetUser | null = null
+    let resultText = 'It’s a draw!'
 
-    let result = ''
-
-    const transactions: Record<string, unknown>[] = []
-
-    if (targetUserChoice?.beats === initialUserChoice?.name) {
-      transactions.push(
-        {
-          userId: user.userId,
-          guildId: user.guildId,
-          amount: parsedBetAmount,
-          type: 'bet',
-          source: 'casino',
-          betId,
-        },
-        {
-          userId: targetUser.userId,
-          guildId: targetUser.guildId,
-          amount: parsedBetAmount,
-          type: 'bet',
-          source: 'casino',
-          betId,
-        },
-        {
-          userId: targetUser.userId,
-          guildId: targetUser.guildId,
-          amount: parsedBetAmount + realWinAmount,
-          type: 'win',
-          source: 'casino',
-          betId,
-        }
-      )
-
-      user.balance -= parsedBetAmount
-      targetUser.balance += realWinAmount
-
-      result = `${targetDiscordUser} won and took **$${formatNumberToReadableString(
+    if (targetChoice.beats === initiatorChoice.name) {
+      winnerUser = targetUser
+      loserUser = user
+      resultText = `${targetDiscordUser} won and took **$${formatNumberToReadableString(
         realWinAmount
       )}** from ${interaction.user}!`
-    }
-
-    if (initialUserChoice?.beats === targetUserChoice?.name) {
-      transactions.push(
-        {
-          userId: user.userId,
-          guildId: user.guildId,
-          amount: parsedBetAmount,
-          type: 'bet',
-          source: 'casino',
-          betId,
-        },
-        {
-          userId: targetUser.userId,
-          guildId: targetUser.guildId,
-          amount: parsedBetAmount,
-          type: 'bet',
-          source: 'casino',
-          betId,
-        },
-        {
-          userId: user.userId,
-          guildId: user.guildId,
-          amount: parsedBetAmount + realWinAmount,
-          type: 'win',
-          source: 'casino',
-          betId,
-        }
-      )
-
-      user.balance += realWinAmount
-      targetUser.balance -= parsedBetAmount
-
-      result = `${
+    } else if (initiatorChoice.beats === targetChoice.name) {
+      winnerUser = user
+      loserUser = targetUser
+      resultText = `${
         interaction.user
       } won and took **$${formatNumberToReadableString(
         realWinAmount
       )}** from ${targetDiscordUser}!`
     }
 
-    if (targetUserChoice?.name === initialUserChoice?.name) {
-      result = 'It’s a draw!'
+    if (winnerUser && loserUser) {
+      await Promise.all([
+        User.findOneAndUpdate(
+          { userId: winnerUser.userId, guildId: winnerUser.guildId },
+          {
+            $inc: {
+              balance: realWinAmount,
+              lockedBalance: -Math.min(winnerUser.lockedBalance, betAmount),
+            },
+          }
+        ),
+        User.findOneAndUpdate(
+          { userId: loserUser.userId, guildId: loserUser.guildId },
+          {
+            $inc: {
+              balance: -betAmount,
+              lockedBalance: -Math.min(loserUser.lockedBalance, betAmount),
+            },
+          }
+        ),
+        Transaction.insertMany([
+          {
+            userId: winnerUser.userId,
+            guildId: winnerUser.guildId,
+            amount: betAmount,
+            type: 'bet',
+            source: 'casino',
+            betId,
+            createdAt: new Date(),
+          },
+          {
+            userId: loserUser.userId,
+            guildId: loserUser.guildId,
+            amount: betAmount,
+            type: 'bet',
+            source: 'casino',
+            betId,
+            createdAt: new Date(),
+          },
+          {
+            userId: winnerUser.userId,
+            guildId: winnerUser.guildId,
+            amount: realWinAmount,
+            type: 'win',
+            source: 'casino',
+            betId,
+            createdAt: new Date(),
+          },
+        ]),
+      ])
     }
-
-    if (transactions.length > 0) {
-      await Transaction.insertMany(transactions)
-    }
-
-    await user.save()
-    await targetUser.save()
 
     embed.setDescription(
-      `${targetDiscordUser} chose ${targetUserChoice?.name} ${targetUserChoice?.emoji} \n${interaction.user} chose ${initialUserChoice?.name} ${initialUserChoice?.emoji}. \n\n${result}`
+      `${targetDiscordUser} chose ${targetChoice.name} ${targetChoice.emoji} \n${interaction.user} chose ${initiatorChoice.name} ${initiatorChoice.emoji}\n\n${resultText}`
     )
-    reply.edit({
-      content: '',
-      embeds: [embed],
-      components: [],
-    })
+    await reply.edit({ content: '', embeds: [embed], components: [] })
   } catch (error) {
-    console.error('Error running the command:', error)
+    console.error('Error running RPS command:', error)
   }
 }

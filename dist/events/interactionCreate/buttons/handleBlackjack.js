@@ -142,6 +142,7 @@ exports.default = async (interaction, client) => {
                 });
             }
             user.balance -= game.betAmount;
+            user.lockedBalance -= Math.min(user.lockedBalance, game.betAmount);
             await user.save();
             await Transaction_1.default.create({
                 userId: user.userId,

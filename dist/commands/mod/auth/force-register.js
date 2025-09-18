@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.options = exports.data = void 0;
 exports.run = run;
-const utils_1 = require("../../../utils/utils");
 const discord_js_1 = require("discord.js");
 const User_1 = require("../../../models/User");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
@@ -25,10 +24,10 @@ exports.options = {
 };
 async function run({ interaction, client }) {
     try {
-        const guildConfiguration = await GuildConfiguration_1.default.findOne({
+        const guildConfig = await GuildConfiguration_1.default.findOne({
             guildId: interaction.guildId,
         });
-        if (!guildConfiguration?.atmChannelIds.logs) {
+        if (!guildConfig?.atmChannelIds.logs) {
             return interaction.reply({
                 embeds: [
                     (0, createEmbed_1.createErrorEmbed)('Error - Logs Not Set Up', 'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'),
@@ -37,31 +36,26 @@ async function run({ interaction, client }) {
             });
         }
         const user = interaction.options.getUser('user', true);
-        const registeredUser = await (0, utils_1.checkUserRegistration)(user.id, guildConfiguration.guildId);
-        if (registeredUser) {
+        const newUser = await User_1.default.findOneAndUpdate({ userId: user.id, guildId: interaction.guildId }, { $setOnInsert: { balance: 0, lockedBalance: 0 } }, { new: true, upsert: true });
+        if (!newUser.isNew) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('ATM Error - Registered.', 'User is already registered in the system.'),
+                    (0, createEmbed_1.createErrorEmbed)('ATM Error - Already Registered', 'User is already registered in the system.'),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
-        const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
+        const logChannel = client.channels.cache.get(guildConfig.atmChannelIds.logs);
         logChannel
-            .send({
+            ?.send({
             embeds: [
                 new discord_js_1.EmbedBuilder()
                     .setTitle('ATM - User Registered')
-                    .setDescription(`Manager <@${interaction.user.id}> has successfully registered ${user}.`)
+                    .setDescription(`Manager <@${interaction.user.id}> has successfully registered <@${user.id}>.`)
                     .setColor('Grey'),
             ],
         })
             .catch(console.error);
-        const newUser = new User_1.default({
-            userId: user.id,
-            guildId: guildConfiguration.guildId,
-        });
-        await newUser.save();
         return interaction.reply({
             embeds: [
                 (0, createEmbed_1.createSuccessEmbed)('ATM Success - Registered', 'The user has been successfully registered in the system.'),
@@ -70,6 +64,6 @@ async function run({ interaction, client }) {
         });
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        console.error('Error running /force-register:', error);
     }
 }

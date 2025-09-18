@@ -1,5 +1,4 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
-import { checkUserRegistration } from '../../../utils/utils'
 import {
   ApplicationCommandOptionType,
   EmbedBuilder,
@@ -33,11 +32,11 @@ export const options: CommandOptions = {
 
 export async function run({ interaction, client }: SlashCommandProps) {
   try {
-    const guildConfiguration = await GuildConfiguration.findOne({
+    const guildConfig = await GuildConfiguration.findOne({
       guildId: interaction.guildId,
     })
 
-    if (!guildConfiguration?.atmChannelIds.logs) {
+    if (!guildConfig?.atmChannelIds.logs) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
@@ -51,16 +50,17 @@ export async function run({ interaction, client }: SlashCommandProps) {
 
     const user = interaction.options.getUser('user', true)
 
-    const registeredUser = await checkUserRegistration(
-      user.id,
-      guildConfiguration.guildId
+    const newUser = await User.findOneAndUpdate(
+      { userId: user.id, guildId: interaction.guildId },
+      { $setOnInsert: { balance: 0, lockedBalance: 0 } },
+      { new: true, upsert: true }
     )
 
-    if (registeredUser) {
+    if (!newUser.isNew) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'ATM Error - Registered.',
+            'ATM Error - Already Registered',
             'User is already registered in the system.'
           ),
         ],
@@ -69,28 +69,21 @@ export async function run({ interaction, client }: SlashCommandProps) {
     }
 
     const logChannel = client.channels.cache.get(
-      guildConfiguration.atmChannelIds.logs
+      guildConfig.atmChannelIds.logs
     ) as TextChannel
 
     logChannel
-      .send({
+      ?.send({
         embeds: [
           new EmbedBuilder()
             .setTitle('ATM - User Registered')
             .setDescription(
-              `Manager <@${interaction.user.id}> has successfully registered ${user}.`
+              `Manager <@${interaction.user.id}> has successfully registered <@${user.id}>.`
             )
             .setColor('Grey'),
         ],
       })
       .catch(console.error)
-
-    const newUser = new User({
-      userId: user.id,
-      guildId: guildConfiguration.guildId,
-    })
-
-    await newUser.save()
 
     return interaction.reply({
       embeds: [
@@ -102,6 +95,6 @@ export async function run({ interaction, client }: SlashCommandProps) {
       flags: MessageFlags.Ephemeral,
     })
   } catch (error) {
-    console.error('Error running the command:', error)
+    console.error('Error running /force-register:', error)
   }
 }

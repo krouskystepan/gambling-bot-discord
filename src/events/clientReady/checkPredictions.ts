@@ -36,8 +36,11 @@ export default async (client: Client) => {
 
     for (const prediction of predictionsToLock) {
       try {
-        prediction.status = 'ended'
-        await prediction.save()
+        await Prediction.findOneAndUpdate(
+          { _id: prediction._id },
+          { $set: { status: 'ended' } },
+          { new: true }
+        )
 
         const channel = await client.channels.fetch(prediction.channelId)
         if (!channel?.isTextBased()) continue

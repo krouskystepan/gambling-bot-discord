@@ -15,6 +15,7 @@ import {
 } from '../../../utils/utils'
 import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
 import Transaction from '../../../models/Transaction'
+import User from '../../../models/User'
 
 const GOLDEN_JACKPOT_MAX_ENTRIES = 100
 
@@ -119,7 +120,15 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const totalBet = parsedBetAmount * entries
 
-    user.balance -= totalBet
+    await User.findOneAndUpdate(
+      { userId: user.userId, guildId: user.guildId },
+      {
+        $inc: {
+          balance: -totalBet,
+          lockedBalance: -Math.min(user.lockedBalance, totalBet),
+        },
+      }
+    )
     await Transaction.create({
       userId: user.userId,
       guildId: user.guildId,
@@ -211,9 +220,12 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     }
 
-    user.balance += totalWinnings
-    await user.save()
-
+    const updatedUser = await User.findOneAndUpdate(
+      { userId: user.userId, guildId: user.guildId },
+      { $inc: { balance: totalWinnings } },
+      { new: true }
+    )
+    if (!updatedUser) return
     if (totalWinnings > 0) {
       await Transaction.create({
         userId: user.userId,
@@ -246,7 +258,9 @@ export async function run({ interaction }: SlashCommandProps) {
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(
+                  updatedUser.balance
+                )}**`
               : ''),
           betId
         ),

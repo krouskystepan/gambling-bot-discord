@@ -353,24 +353,6 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      const existingVip = await VipRoom.findOne({
-        userId: targetedUser.id,
-        guildId: interaction.guildId!,
-        expiresAt: { $gt: new Date() },
-      })
-
-      if (!existingVip) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'VIP Not Active',
-              `User <@${targetedUser.id}> does not currently have an active VIP room.`
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
       if (!/^(\d+[dw])+$/i.test(durationInput)) {
         return interaction.reply({
           embeds: [
@@ -396,13 +378,30 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      existingVip.expiresAt = new Date(
-        existingVip.expiresAt.getTime() + durationSeconds * 1000
+      const updatedVip = await VipRoom.findOneAndUpdate(
+        {
+          userId: targetedUser.id,
+          guildId: interaction.guildId!,
+          expiresAt: { $gt: new Date() },
+        },
+        { $set: { expiresAt: new Date(Date.now() + durationSeconds * 1000) } },
+        { new: true }
       )
-      await existingVip.save()
+
+      if (!updatedVip) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'VIP Not Found',
+              `User <@${targetedUser.id}> does not currently have an active VIP room.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
 
       const vipChannel = await interaction
-        .guild!.channels.fetch(existingVip.channelId)
+        .guild!.channels.fetch(updatedVip.channelId)
         .catch(() => null)
 
       if (vipChannel?.isTextBased()) {
@@ -412,7 +411,7 @@ export async function run({ interaction }: SlashCommandProps) {
             createSuccessEmbed(
               'VIP Channel Extended',
               `Your VIP now expires on <t:${Math.floor(
-                existingVip.expiresAt.getTime() / 1000
+                updatedVip.expiresAt.getTime() / 1000
               )}:f>.`
             ),
           ],
@@ -426,10 +425,9 @@ export async function run({ interaction }: SlashCommandProps) {
             'VIP Extended',
             `The VIP of <@${targetedUser.id}> has been extended by **${
               durationSeconds / 86400
-            } day(s)**.\n` +
-              `New expiry: <t:${Math.floor(
-                existingVip.expiresAt.getTime() / 1000
-              )}:f>`
+            } day(s)**.\nNow expires on: <t:${Math.floor(
+              updatedVip.expiresAt.getTime() / 1000
+            )}:f>`
           ),
         ],
         flags: MessageFlags.Ephemeral,

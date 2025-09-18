@@ -1,5 +1,4 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
-import { checkUserRegistration } from '../../../utils/utils'
 import { EmbedBuilder, MessageFlags, TextChannel } from 'discord.js'
 import User from '../../../models/User'
 import GuildConfiguration from '../../../models/GuildConfiguration'
@@ -20,57 +19,58 @@ export const options: CommandOptions = {
 
 export async function run({ interaction, client }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(
-      interaction.user.id,
-      interaction.guildId!
-    )
-
-    if (user) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'ATM Error - Registered.',
-            'You are already registered in the system.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
     const guildConfiguration = await GuildConfiguration.findOne({
       guildId: interaction.guildId,
     })
 
-    if (!guildConfiguration?.atmChannelIds.logs) {
+    if (
+      !guildConfiguration?.atmChannelIds?.logs ||
+      !guildConfiguration?.atmChannelIds?.actions
+    ) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Error - Logs Not Set Up',
-            'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
+            'Error - Not Configured',
+            'ATM logs or actions are not configured yet.\nPlease contact an administrator to complete the setup.'
           ),
         ],
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    if (!guildConfiguration?.atmChannelIds.actions) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Actions Not Configured',
-            'This ATM command has not been set up yet.\nPlease contact an administrator to complete the setup.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (guildConfiguration?.atmChannelIds.actions !== interaction.channelId) {
+    if (guildConfiguration.atmChannelIds.actions !== interaction.channelId) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
             'Error - Incorrect Channel',
-            `This command can only be used in <#${guildConfiguration.atmChannelIds.actions}>.\nPlease use the correct channel to proceed.`
+            `This command can only be used in <#${guildConfiguration.atmChannelIds.actions}>.`
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    const result = await User.findOneAndUpdate(
+      {
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+      },
+      { $setOnInsert: { balance: 0, lockedBalance: 0 } },
+      { new: true, upsert: true }
+    )
+
+    const wasAlreadyRegistered =
+      result &&
+      result.createdAt &&
+      result.updatedAt &&
+      result.createdAt < result.updatedAt
+
+    if (wasAlreadyRegistered) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'ATM Error - Registered',
+            'You are already registered in the system.'
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -93,13 +93,6 @@ export async function run({ interaction, client }: SlashCommandProps) {
         ],
       })
       .catch(console.error)
-
-    const newUser = new User({
-      userId: interaction.user.id,
-      guildId: interaction.guildId,
-    })
-
-    await newUser.save()
 
     return interaction.reply({
       embeds: [

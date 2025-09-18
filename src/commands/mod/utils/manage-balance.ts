@@ -42,26 +42,6 @@ export const data: CommandData = {
       ],
     },
     {
-      name: 'bonus',
-      description: 'Give a bonus to a user.',
-      type: ApplicationCommandOptionType.Subcommand,
-      options: [
-        {
-          name: 'user',
-          description: 'The user you want to give a bonus to.',
-          type: ApplicationCommandOptionType.User,
-          required: true,
-        },
-        {
-          name: 'amount',
-          description:
-            'The bonus amount to give. (You can also enter 1000, 2.5k, 2M).',
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-    },
-    {
       name: 'withdraw',
       description: 'Remove money from a user.',
       type: ApplicationCommandOptionType.Subcommand,
@@ -81,6 +61,46 @@ export const data: CommandData = {
         },
       ],
     },
+    {
+      name: 'bonus',
+      description: 'Give a bonus to a user.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'user',
+          description: 'The user you want to give a bonus to.',
+          type: ApplicationCommandOptionType.User,
+          required: true,
+        },
+        {
+          name: 'amount',
+          description:
+            'The bonus amount to give. (You can also enter 1000, 2.5k, 2M).',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+        },
+      ],
+    },
+    // {
+    //   name: 'remove-bonus',
+    //   description: 'Remove bonus funds from a user (admin only).',
+    //   type: ApplicationCommandOptionType.Subcommand,
+    //   options: [
+    //     {
+    //       name: 'user',
+    //       description: 'The user whose bonus you want to remove.',
+    //       type: ApplicationCommandOptionType.User,
+    //       required: true,
+    //     },
+    //     {
+    //       name: 'amount',
+    //       description:
+    //         'The amount of bonus to remove. (You can also enter 1000, 2.5k, 2M).',
+    //       type: ApplicationCommandOptionType.String,
+    //       required: true,
+    //     },
+    //   ],
+    // },
     {
       name: 'check',
       description: 'Check a user’s balance.',
@@ -129,7 +149,6 @@ export async function run({ interaction, client }: SlashCommandProps) {
         notAllowed: `This channel is not configured for ATM logs. Try one of these channels:`,
       }
     )
-
     if (!configReply) return
 
     const member = await interaction.guild?.members.fetch(interaction.user.id)
@@ -152,74 +171,60 @@ export async function run({ interaction, client }: SlashCommandProps) {
     }
 
     const options = interaction.options as CommandInteractionOptionResolver
-
     const subcommand = options.getSubcommand()
+    const user = options.getUser('user', true)
+
+    if (user.bot) {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Bot user',
+            'This command cannot target a bot.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+
+    const amountStr = options.getString('amount', false)
+    const parsedAmount = amountStr ? parseReadableStringToNumber(amountStr) : 0
+    const readableAmount = formatNumberToReadableString(parsedAmount)
+
+    const userDocument = await User.findOne({
+      userId: user.id,
+      guildId: interaction.guildId,
+    })
+    if (!userDocument) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Not registered',
+            'This user has not registered yet.\nThey should use `/register` or `/force-register`.'
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      })
+    }
 
     if (subcommand === 'deposit') {
-      const user = options.getUser('user', true)
-
-      if (user.bot) {
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
-              'Invalid Input - Bot user',
-              'You cannot deposit money to a bot.'
-            ),
+            createInfoEmbed('Invalid Input', 'Enter a positive number.'),
           ],
           flags: MessageFlags.Ephemeral,
         })
       }
 
-      const amount = options.getString('amount', true)
-      const parsedAmount = parseReadableStringToNumber(amount)
-      const readableAmount = formatNumberToReadableString(parsedAmount)
-
-      if (isNaN(parsedAmount)) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Not a number',
-              'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      if (parsedAmount <= 0) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Non-positive number',
-              'The number you provided must be greater than 0.\nPlease enter a positive value.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      const userDocument = await User.findOne({
-        userId: user.id,
-        guildId: interaction.guildId,
-      })
-      if (!userDocument) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Error - Not registered',
-              'This user has not registered yet.\nThey should use `/register` or you can force register them with `/force-register`.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      userDocument.balance += parsedAmount
-      await userDocument.save()
+      const updatedUser = await User.findOneAndUpdate(
+        { userId: user.id, guildId: interaction.guildId },
+        { $inc: { balance: parsedAmount } },
+        { new: true }
+      )
 
       await Transaction.create({
-        userId: userDocument.userId,
-        guildId: userDocument.guildId,
+        userId: user.id,
+        guildId: interaction.guildId,
         amount: parsedAmount,
         type: 'deposit',
         source: 'command',
@@ -234,7 +239,63 @@ export async function run({ interaction, client }: SlashCommandProps) {
             `You have successfully added **$${readableAmount}** to <@${
               user.id
             }>.\nTheir new balance is now: **$${formatNumberToReadableString(
-              userDocument.balance
+              updatedUser!.balance
+            )}**.`
+          ),
+        ],
+      })
+    }
+
+    if (subcommand === 'withdraw') {
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed('Invalid Input', 'Enter a positive number.'),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const withdrawable = userDocument.balance - userDocument.lockedBalance
+
+      if (withdrawable < parsedAmount) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Insufficient Withdrawable Funds',
+              `You cannot withdraw **$${readableAmount}** because **$${formatNumberToReadableString(
+                userDocument.lockedBalance
+              )}** of the balance comes from bonuses.\n\nThey must wager the bonuses first.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const updatedUser = await User.findOneAndUpdate(
+        { userId: user.id, guildId: interaction.guildId },
+        { $inc: { balance: -parsedAmount } },
+        { new: true }
+      )
+
+      await Transaction.create({
+        userId: user.id,
+        guildId: interaction.guildId,
+        amount: parsedAmount,
+        type: 'withdraw',
+        source: 'command',
+        handledBy: interaction.user.id,
+        createdAt: new Date(),
+      })
+
+      return interaction.reply({
+        embeds: [
+          createSuccessEmbed(
+            'ATM - Admin Withdraw',
+            `Removed **$${readableAmount}** from <@${
+              user.id
+            }>.\nNew balance: **$${formatNumberToReadableString(
+              updatedUser!.balance
             )}**.`
           ),
         ],
@@ -242,59 +303,24 @@ export async function run({ interaction, client }: SlashCommandProps) {
     }
 
     if (subcommand === 'bonus') {
-      const user = options.getUser('user', true)
-
-      if (user.bot) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Bot user',
-              'You cannot give a bonus to a bot.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      const amount = options.getString('amount', true)
-      const parsedAmount = parseReadableStringToNumber(amount)
-      const readableAmount = formatNumberToReadableString(parsedAmount)
-
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
-              'Invalid Input',
-              'Please enter a valid positive number.'
-            ),
+            createInfoEmbed('Invalid Input', 'Enter a positive number.'),
           ],
           flags: MessageFlags.Ephemeral,
         })
       }
 
-      const userDocument = await User.findOne({
-        userId: user.id,
-        guildId: interaction.guildId,
-      })
-
-      if (!userDocument) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Error - Not registered',
-              'This user has not registered yet.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      userDocument.balance += parsedAmount
-      await userDocument.save()
+      const updatedUser = await User.findOneAndUpdate(
+        { userId: user.id, guildId: interaction.guildId },
+        { $inc: { balance: parsedAmount, lockedBalance: parsedAmount } },
+        { new: true }
+      )
 
       await Transaction.create({
-        userId: userDocument.userId,
-        guildId: userDocument.guildId,
+        userId: user.id,
+        guildId: interaction.guildId,
         amount: parsedAmount,
         type: 'bonus',
         source: 'command',
@@ -309,150 +335,72 @@ export async function run({ interaction, client }: SlashCommandProps) {
             `You have successfully given **$${readableAmount}** bonus to <@${
               user.id
             }>.\nTheir new balance is now: **$${formatNumberToReadableString(
-              userDocument.balance
+              updatedUser!.balance
             )}**.`
           ),
         ],
       })
     }
 
-    if (subcommand === 'withdraw') {
-      const user = options.getUser('user', true)
+    // if (subcommand === 'remove-bonus') {
+    //   if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    //     return interaction.reply({
+    //       embeds: [
+    //         createInfoEmbed('Invalid Input', 'Enter a positive number.'),
+    //       ],
+    //       flags: MessageFlags.Ephemeral,
+    //     })
+    //   }
 
-      if (user.bot) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Bot user',
-              'You cannot withdraw money from a bot.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
+    //   if (userDocument.lockedBalance < parsedAmount) {
+    //     return interaction.reply({
+    //       embeds: [
+    //         createInfoEmbed(
+    //           'Insufficient Bonus Funds',
+    //           `User <@${user.id}> only has **$${formatNumberToReadableString(
+    //             userDocument.lockedBalance
+    //           )}** in bonus funds.`
+    //         ),
+    //       ],
+    //       flags: MessageFlags.Ephemeral,
+    //     })
+    //   }
 
-      const amount = options.getString('amount', true)
-      const parsedAmount = parseReadableStringToNumber(amount)
-      const readableAmount = formatNumberToReadableString(parsedAmount)
+    //   const updatedUser = await User.findOneAndUpdate(
+    //     { userId: user.id, guildId: interaction.guildId },
+    //     { $inc: { balance: -parsedAmount, lockedBalance: -parsedAmount } },
+    //     { new: true }
+    //   )
 
-      if (isNaN(parsedAmount)) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Not a number',
-              'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
+    //   await Transaction.create({
+    //     userId: user.id,
+    //     guildId: interaction.guildId,
+    //     amount: parsedAmount,
+    //     type: 'remove-bonus',
+    //     source: 'command',
+    //     handledBy: interaction.user.id,
+    //     createdAt: new Date(),
+    //   })
 
-      if (parsedAmount <= 0) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Non-positive number',
-              'The number you provided must be greater than 0.\nPlease enter a positive value.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      const userDocument = await User.findOne({
-        userId: user.id,
-        guildId: interaction.guildId,
-      })
-
-      if (!userDocument) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Error - Not registered',
-              'This user has not registered yet.\nThey should use `/register` or you can force register them with `/force-register`.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      if (userDocument.balance < parsedAmount) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Insufficient Funds',
-              `User <@${
-                userDocument.id
-              }> does not have enough balance.\nCurrent balance: $${formatNumberToReadableString(
-                userDocument.balance
-              )}.`
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      userDocument.balance -= parsedAmount
-      await userDocument.save()
-
-      await Transaction.create({
-        userId: userDocument.userId,
-        guildId: userDocument.guildId,
-        amount: parsedAmount,
-        type: 'withdraw',
-        source: 'command',
-        handledBy: interaction.user.id,
-        createdAt: new Date(),
-      })
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'ATM - Admin Withdraw',
-            `You have successfully removed **$${readableAmount}** from <@${
-              user.id
-            }>.\nTheir new balance is now: **$${formatNumberToReadableString(
-              userDocument.balance
-            )}**.`
-          ),
-        ],
-      })
-    }
+    //   return interaction.reply({
+    //     embeds: [
+    //       createSuccessEmbed(
+    //         'ATM - Bonus Removed',
+    //         `Removed **$${readableAmount}** bonus from <@${
+    //           user.id
+    //         }>.\nNew balance: **$${formatNumberToReadableString(
+    //           updatedUser!.balance
+    //         )}**.`
+    //       ),
+    //     ],
+    //   })
+    // }
 
     if (subcommand === 'reset') {
-      const user = options.getUser('user', true)
-
-      if (user.bot) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Bot user',
-              'You cannot reset the balance of a bot.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      const userDocument = await User.findOne({
-        userId: user.id,
-        guildId: interaction.guildId,
-      })
-
-      if (!userDocument) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Error - Not registered',
-              'This user has not registered yet.\nThey should use `/register` or you can force register them with `/force-register`.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      userDocument.balance = 0
-      await userDocument.save()
+      await User.findOneAndUpdate(
+        { userId: user.id, guildId: interaction.guildId },
+        { $set: { balance: 0, lockedBalance: 0 } }
+      )
 
       await Transaction.deleteMany({
         userId: user.id,
@@ -463,56 +411,27 @@ export async function run({ interaction, client }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Reset',
-            `You have successfully reset the balance of <@${user.id}> and cleared all their transactions in this server.`
+            `Reset balance and cleared transactions of <@${user.id}>.`
           ),
         ],
       })
     }
 
     if (subcommand === 'check') {
-      const user = options.getUser('user', true)
-
-      if (user.bot) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed(
-              'Invalid Input - Bot user',
-              'You cannot check the balance of a bot.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      const userDocument = await User.findOne({
-        userId: user.id,
-        guildId: interaction.guildId,
-      })
-
-      if (!userDocument) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Error - Not registered',
-              'This user has not registered yet.\nThey should use `/register` or you can force register them with `/force-register`.'
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Check',
-            `The balance of <@${user.id}> is **$${formatNumberToReadableString(
+            `Balance of <@${user.id}>: **$${formatNumberToReadableString(
               userDocument.balance
-            )}**.`
+            )}**\nBonus (locked) balance: **$${formatNumberToReadableString(
+              userDocument.lockedBalance
+            )}**`
           ),
         ],
       })
     }
   } catch (error) {
-    console.error('Error running the command:', error)
+    console.error('Error running /manage-balance:', error)
   }
 }

@@ -25,6 +25,7 @@ import {
   generateBetId,
 } from '../../../../utils/utils'
 import Transaction from '../../../../models/Transaction'
+import User from '../../../../models/User'
 
 export const data: CommandData = {
   name: 'blackjack',
@@ -118,9 +119,15 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const betId = generateBetId()
 
-    user.balance -= parsedBetAmount
-    await user.save()
-
+    await User.findOneAndUpdate(
+      { userId: user.userId, guildId: user.guildId },
+      {
+        $inc: {
+          balance: -parsedBetAmount,
+          lockedBalance: -Math.min(user.lockedBalance, parsedBetAmount),
+        },
+      }
+    )
     await Transaction.create({
       userId: user.userId,
       guildId: user.guildId,
@@ -150,35 +157,35 @@ export async function run({ interaction }: SlashCommandProps) {
     let resultId: BJResults
 
     if (playerHasBlackjack || dealerHasBlackjack) {
+      let balanceIncrement = 0
+
       if (playerHasBlackjack && dealerHasBlackjack) {
         resultId = 'BBJ'
-        user.balance += parsedBetAmount
-        await Transaction.create({
-          userId: user.userId,
-          guildId: user.guildId,
-          amount: parsedBetAmount,
-          type: 'win',
-          source: 'casino',
-          betId,
-          createdAt: new Date(),
-        })
+        balanceIncrement = parsedBetAmount
       } else if (playerHasBlackjack) {
         resultId = 'PBJ'
-        user.balance += parsedBetAmount * 2.5
+        balanceIncrement = parsedBetAmount * 2.5
+      } else if (dealerHasBlackjack) {
+        resultId = 'DBJ'
+        balanceIncrement = 0
+      }
+
+      if (balanceIncrement > 0) {
+        await User.findOneAndUpdate(
+          { userId: user.userId, guildId: user.guildId },
+          { $inc: { balance: balanceIncrement } }
+        )
+
         await Transaction.create({
           userId: user.userId,
           guildId: user.guildId,
-          amount: parsedBetAmount * 2.5,
+          amount: balanceIncrement,
           type: 'win',
           source: 'casino',
           betId,
           createdAt: new Date(),
         })
-      } else if (dealerHasBlackjack) {
-        resultId = 'DBJ'
       }
-
-      await user.save()
 
       return interaction.editReply({
         embeds: [
@@ -190,7 +197,7 @@ export async function run({ interaction }: SlashCommandProps) {
             playerTotal,
             resultId!,
             showBalance,
-            user.balance,
+            user.balance + balanceIncrement,
             betId
           ),
         ],
@@ -199,17 +206,17 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const message = await interaction.fetchReply()
 
-    const game = new BlackjackGame({
-      gameId: message.id,
-      userId: interaction.user.id,
-      guildId: interaction.guildId,
-      betAmount: parsedBetAmount,
-      deck: shuffledDeck,
-      playerCards,
-      dealerCards,
-    })
-
-    await game.save()
+    await BlackjackGame.findOneAndUpdate(
+      { userId: interaction.user.id, guildId: interaction.guildId },
+      {
+        gameId: message.id,
+        betAmount: parsedBetAmount,
+        deck: shuffledDeck,
+        playerCards,
+        dealerCards,
+      },
+      { upsert: true }
+    )
 
     const hitButton = new ButtonBuilder()
       .setCustomId(

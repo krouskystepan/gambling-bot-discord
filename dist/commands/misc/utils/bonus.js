@@ -2,10 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.options = exports.data = void 0;
 exports.run = run;
-const discord_js_1 = require("discord.js");
 const utils_1 = require("../../../utils/utils");
+const discord_js_1 = require("discord.js");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
+const User_1 = require("../../../models/User");
 const Transaction_1 = require("../../../models/Transaction");
 exports.data = {
     name: 'bonus',
@@ -67,36 +68,12 @@ async function run({ interaction }) {
             return reward;
         };
         if (subcommand === 'check') {
-            let nextStreak;
-            if (!lastClaim) {
-                nextStreak = 1;
-            }
-            else {
-                const diffHours = (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60);
-                if (diffHours < 24) {
-                    nextStreak = streak + 1;
-                }
-                else if (diffHours >= 24 && diffHours < 48) {
-                    nextStreak = streak + 1;
-                }
-                else {
-                    nextStreak = 1;
-                }
-            }
-            const calculateReward = (streakNum) => {
-                let reward = baseReward;
-                for (let i = 1; i < streakNum; i++) {
-                    reward = Number((reward * streakMultiplier).toFixed(2));
-                    if (maxReward > 0 && reward > maxReward) {
-                        reward = resetOnMax ? baseReward : maxReward;
-                        if (resetOnMax)
-                            break;
-                    }
-                }
-                return reward;
-            };
+            let nextStreak = !lastClaim
+                ? 1
+                : (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60) >= 48
+                    ? 1
+                    : streak + 1;
             const nextReward = calculateReward(nextStreak);
-            // přidáme výpočet, kdy může claimnout znovu
             let claimInfo = 'Available now!';
             if (lastClaim) {
                 const nextClaim = new Date(lastClaim.getTime() + 24 * 60 * 60 * 1000);
@@ -121,22 +98,7 @@ async function run({ interaction }) {
             });
         }
         if (subcommand === 'claim') {
-            let canClaim = false;
-            if (!lastClaim) {
-                canClaim = true;
-                streak = 1;
-            }
-            else {
-                const diffHours = (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60);
-                if (diffHours >= 24 && diffHours < 48) {
-                    canClaim = true;
-                    streak++;
-                }
-                else if (diffHours >= 48) {
-                    canClaim = true;
-                    streak = 1;
-                }
-            }
+            let canClaim = !lastClaim || now.getTime() - lastClaim.getTime() >= 24 * 60 * 60 * 1000;
             if (!canClaim) {
                 const nextClaim = new Date(lastClaim.getTime() + 24 * 60 * 60 * 1000);
                 return interaction.reply({
@@ -146,28 +108,49 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            let reward = calculateReward(streak);
-            if (maxReward > 0 && reward >= maxReward && resetOnMax)
-                streak = 1;
-            user.balance += reward;
-            await Transaction_1.default.create({
+            streak =
+                lastClaim && now.getTime() - lastClaim.getTime() < 48 * 60 * 60 * 1000
+                    ? streak + 1
+                    : 1;
+            const reward = calculateReward(streak);
+            const updatedUser = await User_1.default.findOneAndUpdate({
                 userId: user.userId,
                 guildId: user.guildId,
+                $or: [
+                    {
+                        lastDailyClaim: {
+                            $lt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+                        },
+                    },
+                    { lastDailyClaim: null },
+                ],
+            }, {
+                $inc: { balance: reward, lockedBalance: reward },
+                $set: { lastDailyClaim: now, dailyStreak: streak },
+            }, { new: true });
+            if (!updatedUser) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createInfoEmbed)('Daily Bonus Already Claimed', 'You already claimed your daily bonus.'),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            await Transaction_1.default.create({
+                userId: updatedUser.userId,
+                guildId: updatedUser.guildId,
                 amount: reward,
                 type: 'bonus',
                 source: 'system',
-                createdAt: new Date(),
+                createdAt: now,
             });
-            user.dailyStreak = streak;
-            user.lastDailyClaim = now;
-            await user.save();
             const embed = new discord_js_1.EmbedBuilder()
                 .setTitle('Daily Bonus Claimed!')
                 .setColor(discord_js_1.Colors.Gold)
                 .setDescription(`You claimed your daily bonus and received **$${(0, utils_1.formatNumberToReadableString)(reward)}** coins!`)
                 .addFields({ name: '🔥 Current Streak', value: `${streak} days`, inline: true }, {
                 name: '💰 New Balance',
-                value: `$${(0, utils_1.formatNumberToReadableString)(user.balance)}`,
+                value: `$${(0, utils_1.formatNumberToReadableString)(updatedUser.balance)}`,
                 inline: true,
             })
                 .setFooter({ text: 'Come back tomorrow to keep your streak alive!' })

@@ -301,37 +301,27 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (subcommand === 'end') {
       const predictionId = options.getString('prediction-id', true)
-      const prediction = await Prediction.findOne({ predictionId })
 
-      if (!prediction) {
+      const updatedPrediction = await Prediction.findOneAndUpdate(
+        { predictionId, status: 'active' },
+        { $set: { status: 'ended' } },
+        { new: true }
+      )
+
+      if (!updatedPrediction) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Not Found',
-              `No prediction found with ID: ${predictionId}`
+              'Prediction Not Active or Not Found',
+              `Prediction **${predictionId}** is either already ended/canceled or does not exist.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
         })
       }
-
-      if (prediction.status !== 'active') {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Prediction is not active',
-              `This prediction is already ${prediction.status}.`
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      prediction.status = 'ended'
-      await prediction.save()
 
       const channel = await interaction.client.channels.fetch(
-        prediction.channelId
+        updatedPrediction.channelId
       )
       if (!channel || !channel.isTextBased()) {
         return interaction.reply({
@@ -345,7 +335,9 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      const message = await channel.messages.fetch(prediction.predictionId)
+      const message = await channel.messages.fetch(
+        updatedPrediction.predictionId
+      )
       if (message) {
         const embed = message.embeds[0]?.toJSON() || {}
         const editedEmbed = {
@@ -363,7 +355,7 @@ export async function run({ interaction }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'Prediction Ended',
-            `Prediction **${prediction.title}** has ended.\n` +
+            `Prediction **${updatedPrediction.title}** has ended.\n` +
               `No more bets can be placed.`
           ),
         ],
@@ -387,35 +379,25 @@ export async function run({ interaction }: SlashCommandProps) {
       const predictionId = options.getString('prediction-id', true)
       const winnerChoice = options.getString('winner', true)
 
-      const prediction = await Prediction.findOne({
-        guildId: interaction.guildId,
-        predictionId: predictionId,
-      })
-      if (!prediction) {
+      const updatedPrediction = await Prediction.findOneAndUpdate(
+        { guildId: interaction.guildId, predictionId, status: 'ended' },
+        { $set: { status: 'paid' } },
+        { new: true }
+      )
+
+      if (!updatedPrediction) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Not Found',
-              `No prediction found with ID: ${predictionId}`
+              'Prediction Not Ended or Already Paid',
+              `Prediction **${predictionId}** is either not ended yet or has already been paid.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
         })
       }
 
-      if (prediction.status !== 'ended') {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Prediction Not Ended',
-              `You can only payout a prediction that has ended. Current status: ${prediction.status}`
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        })
-      }
-
-      const winner = prediction.choices.find(
+      const winner = updatedPrediction.choices.find(
         (c) => c.choiceName === winnerChoice
       )
       if (!winner) {
@@ -437,7 +419,7 @@ export async function run({ interaction }: SlashCommandProps) {
           amount: bet.amount * winner.odds,
           type: 'win',
           source: 'casino',
-          betId: prediction.predictionId,
+          betId: updatedPrediction.predictionId,
           createdAt: new Date(),
         })
         await User.findOneAndUpdate(
@@ -450,9 +432,6 @@ export async function run({ interaction }: SlashCommandProps) {
         )
       }
 
-      prediction.status = 'paid'
-      await prediction.save()
-
       const logChannel = interaction.client.channels.cache.get(
         configReply.predictionChannelIds.logs
       ) as TextChannel
@@ -460,7 +439,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (!logChannel) {
         console.error('Log channel not found!')
       } else {
-        const totalBets = prediction.choices.flatMap((c) => c.bets)
+        const totalBets = updatedPrediction.choices.flatMap((c) => c.bets)
 
         const winners = winner.bets.map((b) => ({
           userId: b.userId,
@@ -468,7 +447,7 @@ export async function run({ interaction }: SlashCommandProps) {
           winAmount: b.amount * winner.odds,
         }))
 
-        const losers = prediction.choices
+        const losers = updatedPrediction.choices
           .filter((c) => c.choiceName !== winnerChoice)
           .flatMap((c) =>
             c.bets.map((b) => ({
@@ -507,7 +486,7 @@ export async function run({ interaction }: SlashCommandProps) {
         )
 
         const embed = new EmbedBuilder()
-          .setTitle(`Prediction Payout - ${prediction.title}`)
+          .setTitle(`Prediction Payout - ${updatedPrediction.title}`)
           .setColor(casinoProfit >= 0 ? Colors.Green : Colors.Red)
           .addFields(
             {
@@ -533,10 +512,12 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       const channel = await interaction.client.channels.fetch(
-        prediction.channelId
+        updatedPrediction.channelId
       )
       if (channel?.isTextBased()) {
-        const message = await channel.messages.fetch(prediction.predictionId)
+        const message = await channel.messages.fetch(
+          updatedPrediction.predictionId
+        )
         if (message) {
           const embed = message.embeds[0]?.toJSON() || {}
           const editedEmbed = {
@@ -565,24 +546,26 @@ export async function run({ interaction }: SlashCommandProps) {
 
     if (subcommand === 'cancel') {
       const predictionId = options.getString('prediction-id', true)
-      const prediction = await Prediction.findOne({
-        predictionId,
-        status: { $in: ['active', 'ended'] },
-      })
 
-      if (!prediction) {
+      const updatedPrediction = await Prediction.findOneAndUpdate(
+        { predictionId, status: { $in: ['active', 'ended'] } },
+        { $set: { status: 'canceled' } },
+        { new: true }
+      )
+
+      if (!updatedPrediction) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Not Found',
-              `No prediction found with ID: ${predictionId}`
+              'Prediction Not Active or Not Found',
+              `Prediction **${predictionId}** is either already canceled or does not exist.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
         })
       }
 
-      const allBets = prediction.choices.flatMap((c) => c.bets)
+      const allBets = updatedPrediction.choices.flatMap((c) => c.bets)
       for (const bet of allBets) {
         await Transaction.create({
           userId: bet.userId,
@@ -590,33 +573,31 @@ export async function run({ interaction }: SlashCommandProps) {
           amount: bet.amount,
           type: 'refund',
           source: 'casino',
-          betId: prediction.predictionId,
+          betId: updatedPrediction.predictionId,
           createdAt: new Date(),
         })
 
         await User.findOneAndUpdate(
           { userId: bet.userId, guildId: interaction.guildId },
-          { $inc: { balance: bet.amount } }
+          { $inc: { balance: bet.amount, lockedBalance: bet.amount } }
         )
       }
 
-      prediction.status = 'canceled'
-      await prediction.save()
-
       const channel = await interaction.client.channels.fetch(
-        prediction.channelId
+        updatedPrediction.channelId
       )
       if (channel?.isTextBased()) {
         try {
-          const message = await channel.messages.fetch(prediction.predictionId)
-
+          const message = await channel.messages.fetch(
+            updatedPrediction.predictionId
+          )
           if (!message) return
 
           const embed = message.embeds[0]?.toJSON() || {}
           const editedEmbed = {
             ...embed,
             color: Colors.Red,
-            title: `${embed.title}`,
+            title: embed.title,
           }
 
           await message.edit({
@@ -631,7 +612,7 @@ export async function run({ interaction }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'Prediction Canceled',
-            `All bets for **${prediction.title}** have been refunded.`
+            `All bets for **${updatedPrediction.title}** have been refunded.`
           ),
         ],
         flags: MessageFlags.Ephemeral,

@@ -270,6 +270,7 @@ export default async (interaction: Interaction, client: Client) => {
       }
 
       user.balance -= game.betAmount
+      user.lockedBalance -= Math.min(user.lockedBalance, game.betAmount)
       await user.save()
 
       await Transaction.create({

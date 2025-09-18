@@ -232,26 +232,16 @@ async function run({ interaction }) {
         }
         if (subcommand === 'end') {
             const predictionId = options.getString('prediction-id', true);
-            const prediction = await Prediction_1.default.findOne({ predictionId });
-            if (!prediction) {
+            const updatedPrediction = await Prediction_1.default.findOneAndUpdate({ predictionId, status: 'active' }, { $set: { status: 'ended' } }, { new: true });
+            if (!updatedPrediction) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Found', `No prediction found with ID: ${predictionId}`),
+                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Active or Not Found', `Prediction **${predictionId}** is either already ended/canceled or does not exist.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            if (prediction.status !== 'active') {
-                return interaction.reply({
-                    embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction is not active', `This prediction is already ${prediction.status}.`),
-                    ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-            }
-            prediction.status = 'ended';
-            await prediction.save();
-            const channel = await interaction.client.channels.fetch(prediction.channelId);
+            const channel = await interaction.client.channels.fetch(updatedPrediction.channelId);
             if (!channel || !channel.isTextBased()) {
                 return interaction.reply({
                     embeds: [
@@ -260,7 +250,7 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            const message = await channel.messages.fetch(prediction.predictionId);
+            const message = await channel.messages.fetch(updatedPrediction.predictionId);
             if (message) {
                 const embed = message.embeds[0]?.toJSON() || {};
                 const editedEmbed = {
@@ -275,7 +265,7 @@ async function run({ interaction }) {
             }
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Prediction Ended', `Prediction **${prediction.title}** has ended.\n` +
+                    (0, createEmbed_1.createSuccessEmbed)('Prediction Ended', `Prediction **${updatedPrediction.title}** has ended.\n` +
                         `No more bets can be placed.`),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
@@ -292,27 +282,16 @@ async function run({ interaction }) {
             }
             const predictionId = options.getString('prediction-id', true);
             const winnerChoice = options.getString('winner', true);
-            const prediction = await Prediction_1.default.findOne({
-                guildId: interaction.guildId,
-                predictionId: predictionId,
-            });
-            if (!prediction) {
+            const updatedPrediction = await Prediction_1.default.findOneAndUpdate({ guildId: interaction.guildId, predictionId, status: 'ended' }, { $set: { status: 'paid' } }, { new: true });
+            if (!updatedPrediction) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Found', `No prediction found with ID: ${predictionId}`),
+                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Ended or Already Paid', `Prediction **${predictionId}** is either not ended yet or has already been paid.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            if (prediction.status !== 'ended') {
-                return interaction.reply({
-                    embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Ended', `You can only payout a prediction that has ended. Current status: ${prediction.status}`),
-                    ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-            }
-            const winner = prediction.choices.find((c) => c.choiceName === winnerChoice);
+            const winner = updatedPrediction.choices.find((c) => c.choiceName === winnerChoice);
             if (!winner) {
                 return interaction.reply({
                     embeds: [
@@ -328,7 +307,7 @@ async function run({ interaction }) {
                     amount: bet.amount * winner.odds,
                     type: 'win',
                     source: 'casino',
-                    betId: prediction.predictionId,
+                    betId: updatedPrediction.predictionId,
                     createdAt: new Date(),
                 });
                 await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, {
@@ -337,20 +316,18 @@ async function run({ interaction }) {
                     },
                 });
             }
-            prediction.status = 'paid';
-            await prediction.save();
             const logChannel = interaction.client.channels.cache.get(configReply.predictionChannelIds.logs);
             if (!logChannel) {
                 console.error('Log channel not found!');
             }
             else {
-                const totalBets = prediction.choices.flatMap((c) => c.bets);
+                const totalBets = updatedPrediction.choices.flatMap((c) => c.bets);
                 const winners = winner.bets.map((b) => ({
                     userId: b.userId,
                     betAmount: b.amount,
                     winAmount: b.amount * winner.odds,
                 }));
-                const losers = prediction.choices
+                const losers = updatedPrediction.choices
                     .filter((c) => c.choiceName !== winnerChoice)
                     .flatMap((c) => c.bets.map((b) => ({
                     userId: b.userId,
@@ -375,7 +352,7 @@ async function run({ interaction }) {
                     return `${username} (Bet: $${(0, utils_1.formatNumberToReadableString)(l.betAmount)}, Win: $0)`;
                 }));
                 const embed = new discord_js_1.EmbedBuilder()
-                    .setTitle(`Prediction Payout - ${prediction.title}`)
+                    .setTitle(`Prediction Payout - ${updatedPrediction.title}`)
                     .setColor(casinoProfit >= 0 ? discord_js_1.Colors.Green : discord_js_1.Colors.Red)
                     .addFields({
                     name: 'Participants',
@@ -391,9 +368,9 @@ async function run({ interaction }) {
                 }, { name: 'Losers Detail', value: losersDisplay.join('\n') || 'None' });
                 logChannel.send({ embeds: [embed] }).catch(console.error);
             }
-            const channel = await interaction.client.channels.fetch(prediction.channelId);
+            const channel = await interaction.client.channels.fetch(updatedPrediction.channelId);
             if (channel?.isTextBased()) {
-                const message = await channel.messages.fetch(prediction.predictionId);
+                const message = await channel.messages.fetch(updatedPrediction.predictionId);
                 if (message) {
                     const embed = message.embeds[0]?.toJSON() || {};
                     const editedEmbed = {
@@ -417,19 +394,16 @@ async function run({ interaction }) {
         }
         if (subcommand === 'cancel') {
             const predictionId = options.getString('prediction-id', true);
-            const prediction = await Prediction_1.default.findOne({
-                predictionId,
-                status: { $in: ['active', 'ended'] },
-            });
-            if (!prediction) {
+            const updatedPrediction = await Prediction_1.default.findOneAndUpdate({ predictionId, status: { $in: ['active', 'ended'] } }, { $set: { status: 'canceled' } }, { new: true });
+            if (!updatedPrediction) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Found', `No prediction found with ID: ${predictionId}`),
+                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Active or Not Found', `Prediction **${predictionId}** is either already canceled or does not exist.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            const allBets = prediction.choices.flatMap((c) => c.bets);
+            const allBets = updatedPrediction.choices.flatMap((c) => c.bets);
             for (const bet of allBets) {
                 await Transaction_1.default.create({
                     userId: bet.userId,
@@ -437,24 +411,22 @@ async function run({ interaction }) {
                     amount: bet.amount,
                     type: 'refund',
                     source: 'casino',
-                    betId: prediction.predictionId,
+                    betId: updatedPrediction.predictionId,
                     createdAt: new Date(),
                 });
-                await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, { $inc: { balance: bet.amount } });
+                await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, { $inc: { balance: bet.amount, lockedBalance: bet.amount } });
             }
-            prediction.status = 'canceled';
-            await prediction.save();
-            const channel = await interaction.client.channels.fetch(prediction.channelId);
+            const channel = await interaction.client.channels.fetch(updatedPrediction.channelId);
             if (channel?.isTextBased()) {
                 try {
-                    const message = await channel.messages.fetch(prediction.predictionId);
+                    const message = await channel.messages.fetch(updatedPrediction.predictionId);
                     if (!message)
                         return;
                     const embed = message.embeds[0]?.toJSON() || {};
                     const editedEmbed = {
                         ...embed,
                         color: discord_js_1.Colors.Red,
-                        title: `${embed.title}`,
+                        title: embed.title,
                     };
                     await message.edit({
                         content: '**Status:** Canceled — All bets refunded',
@@ -466,7 +438,7 @@ async function run({ interaction }) {
             }
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Prediction Canceled', `All bets for **${prediction.title}** have been refunded.`),
+                    (0, createEmbed_1.createSuccessEmbed)('Prediction Canceled', `All bets for **${updatedPrediction.title}** have been refunded.`),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });

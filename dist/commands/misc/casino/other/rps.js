@@ -6,22 +6,11 @@ const discord_js_1 = require("discord.js");
 const createEmbed_1 = require("../../../../utils/createEmbed");
 const utils_1 = require("../../../../utils/utils");
 const Transaction_1 = require("../../../../models/Transaction");
+const User_1 = require("../../../../models/User");
 const choices = [
-    {
-        name: 'rock',
-        emoji: '🪨',
-        beats: 'scissors',
-    },
-    {
-        name: 'scissors',
-        emoji: '✂️',
-        beats: 'paper',
-    },
-    {
-        name: 'paper',
-        emoji: '📄',
-        beats: 'rock',
-    },
+    { name: 'rock', emoji: '🪨', beats: 'scissors' },
+    { name: 'scissors', emoji: '✂️', beats: 'paper' },
+    { name: 'paper', emoji: '📄', beats: 'rock' },
 ];
 exports.data = {
     name: 'rps',
@@ -51,7 +40,7 @@ async function run({ interaction }) {
         if (!user) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'You are not registered yet.\nUse the `/register` command to register.'),
+                    (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'Use `/register` first.'),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
@@ -61,7 +50,15 @@ async function run({ interaction }) {
         if (!targetUser) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'The user you want to play against is not registered yet.'),
+                    (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'Target user not registered.'),
+                ],
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+        if (interaction.user.id === targetDiscordUser.id || targetDiscordUser.bot) {
+            return interaction.reply({
+                embeds: [
+                    (0, createEmbed_1.createInfoEmbed)('Invalid Input', 'Cannot play against this user.'),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
@@ -72,199 +69,122 @@ async function run({ interaction }) {
         });
         if (!configReply)
             return;
-        if (interaction.user.id === targetDiscordUser.id) {
-            return interaction.reply({
-                embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Same user', 'You cannot play against yourself.'),
-                ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
-        }
-        if (targetDiscordUser.bot) {
-            return interaction.reply({
-                embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Invalid Input - Bot user', 'You cannot play against a bot.'),
-                ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
-        }
-        const betAmount = interaction.options.getString('bet', true);
-        const parsedBetAmount = (0, utils_1.parseReadableStringToNumber)(betAmount);
-        const readableBetAmount = (0, utils_1.formatNumberToReadableString)(parsedBetAmount);
-        const realWinAmount = parsedBetAmount * (1 - configReply.casinoSettings.rps.casinoCut);
-        const isBetValid = (0, utils_1.checkValidBet)(interaction, parsedBetAmount, configReply.casinoSettings.rps.maxBet, configReply.casinoSettings.rps.minBet, user.balance);
+        const betAmount = (0, utils_1.parseReadableStringToNumber)(interaction.options.getString('bet', true));
+        const readableBetAmount = (0, utils_1.formatNumberToReadableString)(betAmount);
+        const realWinAmount = betAmount * (1 - configReply.casinoSettings.rps.casinoCut);
+        const isBetValid = (0, utils_1.checkValidBet)(interaction, betAmount, configReply.casinoSettings.rps.maxBet, configReply.casinoSettings.rps.minBet, user.balance);
         if (!isBetValid)
             return;
         const betId = (0, utils_1.generateBetId)();
         const embed = (0, createEmbed_1.createBetEmbed)('Rock, paper, scissors!', 'Yellow', `It’s now ${targetDiscordUser}'s turn!`, betId);
-        const buttons = choices.map((choice) => {
-            return new discord_js_1.ButtonBuilder()
-                .setCustomId(choice.name)
-                .setLabel(choice.name)
-                .setStyle(discord_js_1.ButtonStyle.Primary)
-                .setEmoji(choice.emoji);
-        });
-        const row = new discord_js_1.ActionRowBuilder().addComponents(buttons);
+        const row = new discord_js_1.ActionRowBuilder().addComponents(choices.map((c) => new discord_js_1.ButtonBuilder()
+            .setCustomId(c.name)
+            .setLabel(c.name)
+            .setStyle(discord_js_1.ButtonStyle.Primary)
+            .setEmoji(c.emoji)));
         const reply = await interaction.reply({
             content: `${targetDiscordUser}, you’ve been challenged by ${interaction.user} to a game of Rock, Paper, Scissors for **$${readableBetAmount}**!\nChoose one of the options to start the game.`,
             embeds: [embed],
             components: [row],
         });
-        const targetUserInteraction = await reply
+        const targetInteraction = await reply
             .awaitMessageComponent({
-            filter: (i) => {
-                if (i.user.id !== targetDiscordUser.id) {
-                    i.reply({
-                        embeds: [
-                            (0, createEmbed_1.createInfoEmbed)('Invalid Input - Wrong user', 'Only the mentioned user can interact with this message.'),
-                        ],
-                        flags: discord_js_1.MessageFlags.Ephemeral,
-                    });
-                    return false;
-                }
-                return true;
-            },
+            filter: (i) => i.user.id === targetDiscordUser.id,
             time: 30_000,
         })
-            .catch(async (error) => {
+            .catch(async () => {
             embed
-                .setDescription(`The game has been canceled because ${targetDiscordUser} did not respond in time.`)
+                .setDescription(`Game canceled. ${targetDiscordUser} did not respond.`)
                 .setColor('Red');
-            await reply.edit({
-                content: '',
-                embeds: [embed],
-                components: [],
-            });
+            await reply.edit({ content: '', embeds: [embed], components: [] });
+            return null;
         });
-        if (!targetUserInteraction)
+        if (!targetInteraction)
             return;
-        if (targetUser.balance < parsedBetAmount) {
-            embed
-                .setDescription(`The game has been canceled because ${targetDiscordUser} does not have enough money to place the bet.`)
-                .setColor('Red');
-            reply.edit({
-                content: '',
-                embeds: [embed],
-                components: [],
-            });
-            return targetUserInteraction.reply({
-                embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Insufficient balance', `You don't have enough money to place this bet.\nYour current balance is **$${(0, utils_1.formatNumberToReadableString)(targetUser.balance)}**.`),
-                ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
-        }
-        const targetUserChoice = choices.find((choice) => choice.name === targetUserInteraction.customId);
-        await targetUserInteraction.reply({
-            content: `You chose ${targetUserChoice?.name} ${targetUserChoice?.emoji}.`,
+        const targetChoice = choices.find((c) => c.name === targetInteraction.customId);
+        await targetInteraction.reply({
+            content: `You chose ${targetChoice.name} ${targetChoice.emoji}.`,
             flags: discord_js_1.MessageFlags.Ephemeral,
         });
-        embed.setDescription(`It’s now ${interaction.user}'s turn! Choose one of the options.`);
-        await reply.edit({
-            content: `Now it's your turn, ${interaction.user}!`,
-            embeds: [embed],
-        });
-        const initialUserInteraction = await reply
+        embed.setDescription(`Now it's ${interaction.user}'s turn.`);
+        await reply.edit({ content: '', embeds: [embed] });
+        const initiatorInteraction = await reply
             .awaitMessageComponent({
-            filter: (i) => {
-                if (i.user.id !== interaction.user.id) {
-                    i.reply({
-                        embeds: [
-                            (0, createEmbed_1.createInfoEmbed)('Invalid Input - Wrong user', 'Only the mentioned user can interact with this message.'),
-                        ],
-                        flags: discord_js_1.MessageFlags.Ephemeral,
-                    });
-                    return false;
-                }
-                return true;
-            },
+            filter: (i) => i.user.id === interaction.user.id,
             time: 30_000,
         })
-            .catch(async (error) => {
+            .catch(async () => {
             embed
-                .setDescription(`The game has been canceled because ${interaction.user} did not respond in time.`)
+                .setDescription(`Game canceled. ${interaction.user} did not respond.`)
                 .setColor('Red');
-            await reply.edit({
-                content: '',
-                embeds: [embed],
-                components: [],
-            });
+            await reply.edit({ content: '', embeds: [embed], components: [] });
+            return null;
         });
-        if (!initialUserInteraction)
+        if (!initiatorInteraction)
             return;
-        const initialUserChoice = choices.find((choice) => choice.name === initialUserInteraction.customId);
-        let result = '';
-        const transactions = [];
-        if (targetUserChoice?.beats === initialUserChoice?.name) {
-            transactions.push({
-                userId: user.userId,
-                guildId: user.guildId,
-                amount: parsedBetAmount,
-                type: 'bet',
-                source: 'casino',
-                betId,
-            }, {
-                userId: targetUser.userId,
-                guildId: targetUser.guildId,
-                amount: parsedBetAmount,
-                type: 'bet',
-                source: 'casino',
-                betId,
-            }, {
-                userId: targetUser.userId,
-                guildId: targetUser.guildId,
-                amount: parsedBetAmount + realWinAmount,
-                type: 'win',
-                source: 'casino',
-                betId,
-            });
-            user.balance -= parsedBetAmount;
-            targetUser.balance += realWinAmount;
-            result = `${targetDiscordUser} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${interaction.user}!`;
+        const initiatorChoice = choices.find((c) => c.name === initiatorInteraction.customId);
+        let winnerUser = null;
+        let loserUser = null;
+        let resultText = 'It’s a draw!';
+        if (targetChoice.beats === initiatorChoice.name) {
+            winnerUser = targetUser;
+            loserUser = user;
+            resultText = `${targetDiscordUser} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${interaction.user}!`;
         }
-        if (initialUserChoice?.beats === targetUserChoice?.name) {
-            transactions.push({
-                userId: user.userId,
-                guildId: user.guildId,
-                amount: parsedBetAmount,
-                type: 'bet',
-                source: 'casino',
-                betId,
-            }, {
-                userId: targetUser.userId,
-                guildId: targetUser.guildId,
-                amount: parsedBetAmount,
-                type: 'bet',
-                source: 'casino',
-                betId,
-            }, {
-                userId: user.userId,
-                guildId: user.guildId,
-                amount: parsedBetAmount + realWinAmount,
-                type: 'win',
-                source: 'casino',
-                betId,
-            });
-            user.balance += realWinAmount;
-            targetUser.balance -= parsedBetAmount;
-            result = `${interaction.user} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${targetDiscordUser}!`;
+        else if (initiatorChoice.beats === targetChoice.name) {
+            winnerUser = user;
+            loserUser = targetUser;
+            resultText = `${interaction.user} won and took **$${(0, utils_1.formatNumberToReadableString)(realWinAmount)}** from ${targetDiscordUser}!`;
         }
-        if (targetUserChoice?.name === initialUserChoice?.name) {
-            result = 'It’s a draw!';
+        if (winnerUser && loserUser) {
+            await Promise.all([
+                User_1.default.findOneAndUpdate({ userId: winnerUser.userId, guildId: winnerUser.guildId }, {
+                    $inc: {
+                        balance: realWinAmount,
+                        lockedBalance: -Math.min(winnerUser.lockedBalance, betAmount),
+                    },
+                }),
+                User_1.default.findOneAndUpdate({ userId: loserUser.userId, guildId: loserUser.guildId }, {
+                    $inc: {
+                        balance: -betAmount,
+                        lockedBalance: -Math.min(loserUser.lockedBalance, betAmount),
+                    },
+                }),
+                Transaction_1.default.insertMany([
+                    {
+                        userId: winnerUser.userId,
+                        guildId: winnerUser.guildId,
+                        amount: betAmount,
+                        type: 'bet',
+                        source: 'casino',
+                        betId,
+                        createdAt: new Date(),
+                    },
+                    {
+                        userId: loserUser.userId,
+                        guildId: loserUser.guildId,
+                        amount: betAmount,
+                        type: 'bet',
+                        source: 'casino',
+                        betId,
+                        createdAt: new Date(),
+                    },
+                    {
+                        userId: winnerUser.userId,
+                        guildId: winnerUser.guildId,
+                        amount: realWinAmount,
+                        type: 'win',
+                        source: 'casino',
+                        betId,
+                        createdAt: new Date(),
+                    },
+                ]),
+            ]);
         }
-        if (transactions.length > 0) {
-            await Transaction_1.default.insertMany(transactions);
-        }
-        await user.save();
-        await targetUser.save();
-        embed.setDescription(`${targetDiscordUser} chose ${targetUserChoice?.name} ${targetUserChoice?.emoji} \n${interaction.user} chose ${initialUserChoice?.name} ${initialUserChoice?.emoji}. \n\n${result}`);
-        reply.edit({
-            content: '',
-            embeds: [embed],
-            components: [],
-        });
+        embed.setDescription(`${targetDiscordUser} chose ${targetChoice.name} ${targetChoice.emoji} \n${interaction.user} chose ${initiatorChoice.name} ${initiatorChoice.emoji}\n\n${resultText}`);
+        await reply.edit({ content: '', embeds: [embed], components: [] });
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        console.error('Error running RPS command:', error);
     }
 }

@@ -20,6 +20,7 @@ import {
   createInfoEmbed,
   createSuccessEmbed,
 } from '../../../utils/createEmbed'
+import User from '../../../models/User'
 
 export const data: CommandData = {
   name: 'withdraw',
@@ -133,22 +134,57 @@ export async function run({ interaction, client }: SlashCommandProps) {
       })
     }
 
-    if (user.balance < parsedAmount) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You don't have enough funds to withdraw **$${readableAmount}**.\nYour current balance is **$${formatNumberToReadableString(
-              user.balance
-            )}**.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const updatedUser = await User.findOneAndUpdate(
+      {
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        balance: { $gte: parsedAmount },
+        $expr: {
+          $gte: [{ $subtract: ['$balance', '$lockedBalance'] }, parsedAmount],
+        },
+      },
+      {
+        $inc: { balance: -parsedAmount },
+      },
+      { new: true }
+    )
 
-    user.balance -= parsedAmount
-    await user.save()
+    if (!updatedUser) {
+      if (user.balance < parsedAmount) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Insufficient Funds',
+              `You don't have enough funds to withdraw **$${readableAmount}**.\nYour current balance is **$${formatNumberToReadableString(
+                user.balance
+              )}**.`
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
+      const withdrawable = user.balance - user.lockedBalance
+
+      if (withdrawable < parsedAmount && withdrawable >= 0) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Insufficient Withdrawable Funds',
+              `You requested **$${readableAmount}**, but you can only withdraw up to **$${formatNumberToReadableString(
+                withdrawable
+              )}**.\n` +
+                (withdrawable < user.balance
+                  ? `**$${formatNumberToReadableString(
+                      user.balance - withdrawable
+                    )}** of your balance is locked (e.g., bonuses).\n\nYou need to wager those bonuses before you can withdraw them.`
+                  : `\n\nYou need to wager any bonuses before you can withdraw them.`)
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+    }
 
     const logChannel = client.channels.cache.get(
       guildConfiguration.atmChannelIds.logs

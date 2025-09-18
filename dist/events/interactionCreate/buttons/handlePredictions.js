@@ -99,7 +99,16 @@ exports.default = async (interaction) => {
             userId: modalInteraction.user.id,
             guildId: modalInteraction.guildId,
             balance: { $gte: parsedBetAmount },
-        }, { $inc: { balance: -parsedBetAmount } }, { new: true });
+        }, [
+            {
+                $set: {
+                    balance: { $subtract: ['$balance', parsedBetAmount] },
+                    lockedBalance: {
+                        $max: [{ $subtract: ['$lockedBalance', parsedBetAmount] }, 0],
+                    },
+                },
+            },
+        ], { new: true });
         if (!updatedUser) {
             return modalInteraction.editReply({
                 embeds: [

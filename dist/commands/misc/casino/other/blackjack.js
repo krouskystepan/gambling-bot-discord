@@ -9,6 +9,7 @@ const BlackjackGame_1 = require("../../../../models/BlackjackGame");
 const casinoHelpers_1 = require("../../../../utils/casinoHelpers");
 const utils_1 = require("../../../../utils/utils");
 const Transaction_1 = require("../../../../models/Transaction");
+const User_1 = require("../../../../models/User");
 exports.data = {
     name: 'blackjack',
     description: 'Start a game of blackjack. You can hit, stand, or double down.',
@@ -69,8 +70,12 @@ async function run({ interaction }) {
             return;
         await interaction.deferReply();
         const betId = (0, utils_1.generateBetId)();
-        user.balance -= parsedBetAmount;
-        await user.save();
+        await User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, {
+            $inc: {
+                balance: -parsedBetAmount,
+                lockedBalance: -Math.min(user.lockedBalance, parsedBetAmount),
+            },
+        });
         await Transaction_1.default.create({
             userId: user.userId,
             guildId: user.guildId,
@@ -95,53 +100,45 @@ async function run({ interaction }) {
         const dealerHasBlackjack = dealerCards.length === 2 && dealerTotal === 21;
         let resultId;
         if (playerHasBlackjack || dealerHasBlackjack) {
+            let balanceIncrement = 0;
             if (playerHasBlackjack && dealerHasBlackjack) {
                 resultId = 'BBJ';
-                user.balance += parsedBetAmount;
-                await Transaction_1.default.create({
-                    userId: user.userId,
-                    guildId: user.guildId,
-                    amount: parsedBetAmount,
-                    type: 'win',
-                    source: 'casino',
-                    betId,
-                    createdAt: new Date(),
-                });
+                balanceIncrement = parsedBetAmount;
             }
             else if (playerHasBlackjack) {
                 resultId = 'PBJ';
-                user.balance += parsedBetAmount * 2.5;
+                balanceIncrement = parsedBetAmount * 2.5;
+            }
+            else if (dealerHasBlackjack) {
+                resultId = 'DBJ';
+                balanceIncrement = 0;
+            }
+            if (balanceIncrement > 0) {
+                await User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, { $inc: { balance: balanceIncrement } });
                 await Transaction_1.default.create({
                     userId: user.userId,
                     guildId: user.guildId,
-                    amount: parsedBetAmount * 2.5,
+                    amount: balanceIncrement,
                     type: 'win',
                     source: 'casino',
                     betId,
                     createdAt: new Date(),
                 });
             }
-            else if (dealerHasBlackjack) {
-                resultId = 'DBJ';
-            }
-            await user.save();
             return interaction.editReply({
                 embeds: [
-                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, user.balance, betId),
+                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, user.balance + balanceIncrement, betId),
                 ],
             });
         }
         const message = await interaction.fetchReply();
-        const game = new BlackjackGame_1.default({
+        await BlackjackGame_1.default.findOneAndUpdate({ userId: interaction.user.id, guildId: interaction.guildId }, {
             gameId: message.id,
-            userId: interaction.user.id,
-            guildId: interaction.guildId,
             betAmount: parsedBetAmount,
             deck: shuffledDeck,
             playerCards,
             dealerCards,
-        });
-        await game.save();
+        }, { upsert: true });
         const hitButton = new discord_js_1.ButtonBuilder()
             .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.hit.${showBalance}`)
             .setLabel('Hit')

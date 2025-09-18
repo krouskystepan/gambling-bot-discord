@@ -6,6 +6,7 @@ const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
 //! DB TRANSACTIONS
+//! Rare condition - no .save()
 exports.default = async (interaction, client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;
@@ -64,6 +65,7 @@ exports.default = async (interaction, client) => {
         }
         if (type === 'reset-money') {
             user.balance = 0;
+            user.lockedBalance = 0;
             user.save();
             const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
             logChannel

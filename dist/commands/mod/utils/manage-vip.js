@@ -256,19 +256,6 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            const existingVip = await VipRoom_1.default.findOne({
-                userId: targetedUser.id,
-                guildId: interaction.guildId,
-                expiresAt: { $gt: new Date() },
-            });
-            if (!existingVip) {
-                return interaction.reply({
-                    embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('VIP Not Active', `User <@${targetedUser.id}> does not currently have an active VIP room.`),
-                    ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-            }
             if (!/^(\d+[dw])+$/i.test(durationInput)) {
                 return interaction.reply({
                     embeds: [
@@ -286,24 +273,34 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            existingVip.expiresAt = new Date(existingVip.expiresAt.getTime() + durationSeconds * 1000);
-            await existingVip.save();
+            const updatedVip = await VipRoom_1.default.findOneAndUpdate({
+                userId: targetedUser.id,
+                guildId: interaction.guildId,
+                expiresAt: { $gt: new Date() },
+            }, { $set: { expiresAt: new Date(Date.now() + durationSeconds * 1000) } }, { new: true });
+            if (!updatedVip) {
+                return interaction.reply({
+                    embeds: [
+                        (0, createEmbed_1.createErrorEmbed)('VIP Not Found', `User <@${targetedUser.id}> does not currently have an active VIP room.`),
+                    ],
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
             const vipChannel = await interaction
-                .guild.channels.fetch(existingVip.channelId)
+                .guild.channels.fetch(updatedVip.channelId)
                 .catch(() => null);
             if (vipChannel?.isTextBased()) {
                 const extendMsg = await vipChannel.send({
                     content: `<@${targetedUser.id}>`,
                     embeds: [
-                        (0, createEmbed_1.createSuccessEmbed)('VIP Channel Extended', `Your VIP now expires on <t:${Math.floor(existingVip.expiresAt.getTime() / 1000)}:f>.`),
+                        (0, createEmbed_1.createSuccessEmbed)('VIP Channel Extended', `Your VIP now expires on <t:${Math.floor(updatedVip.expiresAt.getTime() / 1000)}:f>.`),
                     ],
                 });
                 await extendMsg.pin();
             }
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('VIP Extended', `The VIP of <@${targetedUser.id}> has been extended by **${durationSeconds / 86400} day(s)**.\n` +
-                        `New expiry: <t:${Math.floor(existingVip.expiresAt.getTime() / 1000)}:f>`),
+                    (0, createEmbed_1.createSuccessEmbed)('VIP Extended', `The VIP of <@${targetedUser.id}> has been extended by **${durationSeconds / 86400} day(s)**.\nNow expires on: <t:${Math.floor(updatedVip.expiresAt.getTime() / 1000)}:f>`),
                 ],
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });

@@ -12,6 +12,7 @@ import {
 import { rollDice } from '../../../utils/casinoHelpers'
 import { rollDiceEmote, diceEmojis } from '../../../utils/customEmotes'
 import Transaction from '../../../models/Transaction'
+import User from '../../../models/User'
 
 export const data: CommandData = {
   name: 'dice',
@@ -118,7 +119,15 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const totalBet = parsedBetAmount * rolls
 
-    user.balance -= totalBet
+    await User.findOneAndUpdate(
+      { userId: user.userId, guildId: user.guildId },
+      {
+        $inc: {
+          balance: -totalBet,
+          lockedBalance: -Math.min(user.lockedBalance, totalBet),
+        },
+      }
+    )
     await Transaction.create({
       userId: user.userId,
       guildId: user.guildId,
@@ -179,9 +188,12 @@ export async function run({ interaction }: SlashCommandProps) {
       liveResult += winnings - parsedBetAmount
     }
 
-    user.balance += totalWinnings
-    await user.save()
-
+    const updatedUser = await User.findOneAndUpdate(
+      { userId: user.userId, guildId: user.guildId },
+      { $inc: { balance: totalWinnings } },
+      { new: true }
+    )
+    if (!updatedUser) return
     if (totalWinnings > 0) {
       await Transaction.create({
         userId: user.userId,
@@ -212,7 +224,9 @@ export async function run({ interaction }: SlashCommandProps) {
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(user.balance)}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(
+                  updatedUser.balance
+                )}**`
               : ''),
           betId
         ),

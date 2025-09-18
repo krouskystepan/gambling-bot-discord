@@ -8,11 +8,10 @@ export default async (client: Client) => {
     let dbSettings = await GuildConfiguration.findOne({ guildId: guild.id })
 
     if (!dbSettings) {
-      dbSettings = new GuildConfiguration({
+      await GuildConfiguration.create({
         guildId: guild.id,
         casinoSettings: defaultCasinoSettings,
       })
-      await dbSettings.save()
       console.log(`🆕 Created settings => ${guild.name} (${guild.id})`)
       continue
     }

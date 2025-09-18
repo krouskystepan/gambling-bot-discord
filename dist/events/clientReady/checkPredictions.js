@@ -29,8 +29,7 @@ exports.default = async (client) => {
             return;
         for (const prediction of predictionsToLock) {
             try {
-                prediction.status = 'ended';
-                await prediction.save();
+                await Prediction_1.default.findOneAndUpdate({ _id: prediction._id }, { $set: { status: 'ended' } }, { new: true });
                 const channel = await client.channels.fetch(prediction.channelId);
                 if (!channel?.isTextBased())
                     continue;

@@ -7,11 +7,10 @@ exports.default = async (client) => {
     for (const guild of client.guilds.cache.values()) {
         let dbSettings = await GuildConfiguration_1.default.findOne({ guildId: guild.id });
         if (!dbSettings) {
-            dbSettings = new GuildConfiguration_1.default({
+            await GuildConfiguration_1.default.create({
                 guildId: guild.id,
                 casinoSettings: defaultConfig_1.default,
             });
-            await dbSettings.save();
             console.log(`🆕 Created settings => ${guild.name} (${guild.id})`);
             continue;
         }

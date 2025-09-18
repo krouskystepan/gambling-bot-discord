@@ -92,21 +92,14 @@ exports.default = async (interaction, client) => {
             return await sendConfirmation('Confirm Reject', discord_js_1.ButtonStyle.Danger, `atm-${atmAction}.reject.confirm.${userId}-${messageId}.${parsedAmount}`);
         }
         if (confirm === 'confirm') {
-            let balanceChanged = false;
-            if (action === 'approve') {
-                if (atmAction === 'deposit') {
-                    user.balance += parsedAmount;
-                    balanceChanged = true;
-                }
-            }
-            if (action === 'reject') {
-                if (atmAction === 'withdraw') {
-                    user.balance += parsedAmount;
-                    balanceChanged = true;
-                }
-            }
-            if (balanceChanged)
-                await user.save();
+            await User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, {
+                $inc: {
+                    balance: (action === 'approve' && atmAction === 'deposit') ||
+                        (action === 'reject' && atmAction === 'withdraw')
+                        ? parsedAmount
+                        : 0,
+                },
+            });
             if (action === 'approve') {
                 await Transaction_1.default.create({
                     userId: user.userId,

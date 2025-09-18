@@ -171,15 +171,11 @@ async function run({ interaction }) {
             await vipChannelCreatedMsg.pin();
             const member = await guild.members.fetch(interaction.user.id);
             await member.roles.add(vipRoleId, 'VIP purchased via /vip buy');
-            const vip = new VipRoom_1.default({
-                userId: interaction.user.id,
-                guildId: interaction.guildId,
+            await VipRoom_1.default.findOneAndUpdate({ userId: interaction.user.id, guildId: interaction.guildId }, {
                 channelId: channel.id,
                 expiresAt,
-            });
-            await vip.save();
-            user.balance -= totalPrice;
-            await user.save();
+            }, { upsert: true });
+            await User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, { $inc: { balance: -totalPrice } });
             await Transaction_1.default.create({
                 userId: user.userId,
                 guildId: user.guildId,
@@ -247,10 +243,11 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            existingVip.expiresAt = new Date(existingVip.expiresAt.getTime() + durationSeconds * 1000);
-            await existingVip.save();
-            user.balance -= totalPrice;
-            await user.save();
+            const newExpiry = new Date(existingVip.expiresAt.getTime() + durationSeconds * 1000);
+            await Promise.all([
+                VipRoom_1.default.findOneAndUpdate({ _id: existingVip._id }, { $set: { expiresAt: newExpiry } }),
+                User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, { $inc: { balance: -totalPrice } }),
+            ]);
             await Transaction_1.default.create({
                 userId: user.userId,
                 guildId: user.guildId,

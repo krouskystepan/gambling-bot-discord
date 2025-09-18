@@ -1,16 +1,21 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import {
+  checkUserRegistration,
+  formatNumberToReadableString,
+} from '../../../utils/utils'
+import {
   MessageFlags,
   EmbedBuilder,
   ApplicationCommandOptionType,
   Colors,
 } from 'discord.js'
 import {
-  checkUserRegistration,
-  formatNumberToReadableString,
-} from '../../../utils/utils'
-import { createErrorEmbed, createInfoEmbed } from '../../../utils/createEmbed'
+  createErrorEmbed,
+  createInfoEmbed,
+  createSuccessEmbed,
+} from '../../../utils/createEmbed'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import User from '../../../models/User'
 import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {
@@ -74,7 +79,6 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const calculateReward = (streakNum: number) => {
       let reward = baseReward
-
       for (let i = 1; i < streakNum; i++) {
         reward = Number((reward * streakMultiplier).toFixed(2))
         if (maxReward > 0 && reward > maxReward) {
@@ -82,43 +86,16 @@ export async function run({ interaction }: SlashCommandProps) {
           if (resetOnMax) break
         }
       }
-
       return reward
     }
 
     if (subcommand === 'check') {
-      let nextStreak: number
-
-      if (!lastClaim) {
-        nextStreak = 1
-      } else {
-        const diffHours =
-          (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60)
-
-        if (diffHours < 24) {
-          nextStreak = streak + 1
-        } else if (diffHours >= 24 && diffHours < 48) {
-          nextStreak = streak + 1
-        } else {
-          nextStreak = 1
-        }
-      }
-
-      const calculateReward = (streakNum: number) => {
-        let reward = baseReward
-        for (let i = 1; i < streakNum; i++) {
-          reward = Number((reward * streakMultiplier).toFixed(2))
-          if (maxReward > 0 && reward > maxReward) {
-            reward = resetOnMax ? baseReward : maxReward
-            if (resetOnMax) break
-          }
-        }
-        return reward
-      }
-
+      let nextStreak = !lastClaim
+        ? 1
+        : (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60) >= 48
+        ? 1
+        : streak + 1
       const nextReward = calculateReward(nextStreak)
-
-      // přidáme výpočet, kdy může claimnout znovu
       let claimInfo = 'Available now!'
       if (lastClaim) {
         const nextClaim = new Date(lastClaim.getTime() + 24 * 60 * 60 * 1000)
@@ -152,23 +129,8 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (subcommand === 'claim') {
-      let canClaim = false
-
-      if (!lastClaim) {
-        canClaim = true
-        streak = 1
-      } else {
-        const diffHours =
-          (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60)
-        if (diffHours >= 24 && diffHours < 48) {
-          canClaim = true
-          streak++
-        } else if (diffHours >= 48) {
-          canClaim = true
-          streak = 1
-        }
-      }
-
+      let canClaim =
+        !lastClaim || now.getTime() - lastClaim.getTime() >= 24 * 60 * 60 * 1000
       if (!canClaim) {
         const nextClaim = new Date(lastClaim!.getTime() + 24 * 60 * 60 * 1000)
         return interaction.reply({
@@ -184,22 +146,52 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      let reward = calculateReward(streak)
-      if (maxReward > 0 && reward >= maxReward && resetOnMax) streak = 1
+      streak =
+        lastClaim && now.getTime() - lastClaim.getTime() < 48 * 60 * 60 * 1000
+          ? streak + 1
+          : 1
+      const reward = calculateReward(streak)
 
-      user.balance += reward
+      const updatedUser = await User.findOneAndUpdate(
+        {
+          userId: user.userId,
+          guildId: user.guildId,
+          $or: [
+            {
+              lastDailyClaim: {
+                $lt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+              },
+            },
+            { lastDailyClaim: null },
+          ],
+        },
+        {
+          $inc: { balance: reward, lockedBalance: reward },
+          $set: { lastDailyClaim: now, dailyStreak: streak },
+        },
+        { new: true }
+      )
+
+      if (!updatedUser) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Daily Bonus Already Claimed',
+              'You already claimed your daily bonus.'
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+
       await Transaction.create({
-        userId: user.userId,
-        guildId: user.guildId,
+        userId: updatedUser.userId,
+        guildId: updatedUser.guildId,
         amount: reward,
         type: 'bonus',
         source: 'system',
-        createdAt: new Date(),
+        createdAt: now,
       })
-
-      user.dailyStreak = streak
-      user.lastDailyClaim = now
-      await user.save()
 
       const embed = new EmbedBuilder()
         .setTitle('Daily Bonus Claimed!')
@@ -213,7 +205,7 @@ export async function run({ interaction }: SlashCommandProps) {
           { name: '🔥 Current Streak', value: `${streak} days`, inline: true },
           {
             name: '💰 New Balance',
-            value: `$${formatNumberToReadableString(user.balance)}`,
+            value: `$${formatNumberToReadableString(updatedUser.balance)}`,
             inline: true,
           }
         )

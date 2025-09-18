@@ -157,23 +157,18 @@ export default async (interaction: Interaction, client: Client) => {
     }
 
     if (confirm === 'confirm') {
-      let balanceChanged = false
-
-      if (action === 'approve') {
-        if (atmAction === 'deposit') {
-          user.balance += parsedAmount
-          balanceChanged = true
+      await User.findOneAndUpdate(
+        { userId: user.userId, guildId: user.guildId },
+        {
+          $inc: {
+            balance:
+              (action === 'approve' && atmAction === 'deposit') ||
+              (action === 'reject' && atmAction === 'withdraw')
+                ? parsedAmount
+                : 0,
+          },
         }
-      }
-
-      if (action === 'reject') {
-        if (atmAction === 'withdraw') {
-          user.balance += parsedAmount
-          balanceChanged = true
-        }
-      }
-
-      if (balanceChanged) await user.save()
+      )
 
       if (action === 'approve') {
         await Transaction.create({

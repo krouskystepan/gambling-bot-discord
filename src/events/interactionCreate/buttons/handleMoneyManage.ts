@@ -11,6 +11,7 @@ import { createErrorEmbed } from '../../../utils/createEmbed'
 import { formatNumberToReadableString } from '../../../utils/utils'
 
 //! DB TRANSACTIONS
+//! Rare condition - no .save()
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
 
@@ -100,6 +101,7 @@ export default async (interaction: Interaction, client: Client) => {
 
     if (type === 'reset-money') {
       user.balance = 0
+      user.lockedBalance = 0
       user.save()
 
       const logChannel = client.channels.cache.get(

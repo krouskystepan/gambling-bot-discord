@@ -243,16 +243,19 @@ export async function run({ interaction }: SlashCommandProps) {
       const member = await guild.members.fetch(interaction.user.id)
       await member.roles.add(vipRoleId, 'VIP purchased via /vip buy')
 
-      const vip = new VipRoom({
-        userId: interaction.user.id,
-        guildId: interaction.guildId!,
-        channelId: channel.id,
-        expiresAt,
-      })
-      await vip.save()
+      await VipRoom.findOneAndUpdate(
+        { userId: interaction.user.id, guildId: interaction.guildId! },
+        {
+          channelId: channel.id,
+          expiresAt,
+        },
+        { upsert: true }
+      )
 
-      user.balance -= totalPrice
-      await user.save()
+      await User.findOneAndUpdate(
+        { userId: user.userId, guildId: user.guildId! },
+        { $inc: { balance: -totalPrice } }
+      )
 
       await Transaction.create({
         userId: user.userId,
@@ -352,13 +355,20 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      existingVip.expiresAt = new Date(
+      const newExpiry = new Date(
         existingVip.expiresAt.getTime() + durationSeconds * 1000
       )
-      await existingVip.save()
 
-      user.balance -= totalPrice
-      await user.save()
+      await Promise.all([
+        VipRoom.findOneAndUpdate(
+          { _id: existingVip._id },
+          { $set: { expiresAt: newExpiry } }
+        ),
+        User.findOneAndUpdate(
+          { userId: user.userId, guildId: user.guildId! },
+          { $inc: { balance: -totalPrice } }
+        ),
+      ])
 
       await Transaction.create({
         userId: user.userId,

@@ -158,7 +158,16 @@ export default async (interaction: Interaction) => {
         guildId: modalInteraction.guildId,
         balance: { $gte: parsedBetAmount },
       },
-      { $inc: { balance: -parsedBetAmount } },
+      [
+        {
+          $set: {
+            balance: { $subtract: ['$balance', parsedBetAmount] },
+            lockedBalance: {
+              $max: [{ $subtract: ['$lockedBalance', parsedBetAmount] }, 0],
+            },
+          },
+        },
+      ],
       { new: true }
     )
 

@@ -8,6 +8,7 @@ const utils_1 = require("../../../utils/utils");
 const casinoHelpers_1 = require("../../../utils/casinoHelpers");
 const rouletteUtils_1 = require("../../../utils/rouletteUtils");
 const Transaction_1 = require("../../../models/Transaction");
+const User_1 = require("../../../models/User");
 exports.data = {
     name: 'roulette',
     description: 'Play Mini Roulette with multiple bets!',
@@ -113,7 +114,12 @@ async function run({ interaction }) {
             return;
         const betId = (0, utils_1.generateBetId)();
         const totalBet = totalOneSpin * spins;
-        user.balance -= totalBet;
+        await User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, {
+            $inc: {
+                balance: -totalBet,
+                lockedBalance: -Math.min(user.lockedBalance, totalBet),
+            },
+        });
         await Transaction_1.default.create({
             userId: user.userId,
             guildId: user.guildId,
@@ -154,8 +160,9 @@ async function run({ interaction }) {
             liveResult += winnings - totalBetPerSpin;
             results.push(spinOutput);
         }
-        user.balance += totalWinnings;
-        await user.save();
+        const updatedUser = await User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, { $inc: { balance: totalWinnings } }, { new: true });
+        if (!updatedUser)
+            return;
         if (totalWinnings > 0) {
             await Transaction_1.default.create({
                 userId: user.userId,
@@ -179,7 +186,7 @@ async function run({ interaction }) {
                     `🕹 **Spin Results:**\n${results.join('\n\n')}\n\n` +
                     `💰 Total: ${isWin ? '🟢' : isLoss ? '🔴' : '🟡'} **$${(0, utils_1.formatNumberToReadableString)(liveResult)}**\n` +
                     (showBalance
-                        ? `🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**`
+                        ? `🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(updatedUser.balance)}**`
                         : ''), betId),
             ],
         });

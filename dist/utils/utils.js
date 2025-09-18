@@ -31,17 +31,8 @@ const generateBetId = () => {
 exports.generateBetId = generateBetId;
 const checkChannelConfiguration = async (interaction, channelType, messages) => {
     try {
-        let guildConfig = await GuildConfiguration_1.default.findOne({
-            guildId: interaction.guildId,
-        });
-        if (!guildConfig) {
-            guildConfig = new GuildConfiguration_1.default({
-                guildId: interaction.guildId,
-                casinoSettings: defaultConfig_1.default,
-            });
-            await guildConfig.save();
-        }
-        else if (!guildConfig.casinoSettings) {
+        const guildConfig = await GuildConfiguration_1.default.findOneAndUpdate({ guildId: interaction.guildId }, { $setOnInsert: { casinoSettings: defaultConfig_1.default } }, { upsert: true, new: true });
+        if (!guildConfig.casinoSettings) {
             guildConfig.casinoSettings = defaultConfig_1.default;
             await guildConfig.save();
         }

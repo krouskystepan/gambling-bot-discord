@@ -42,17 +42,13 @@ export const checkChannelConfiguration = async (
   }
 ): Promise<GuildConfigurationDoc | false> => {
   try {
-    let guildConfig = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
-    })
+    const guildConfig = await GuildConfiguration.findOneAndUpdate(
+      { guildId: interaction.guildId },
+      { $setOnInsert: { casinoSettings: defaultCasinoSettings } },
+      { upsert: true, new: true }
+    )
 
-    if (!guildConfig) {
-      guildConfig = new GuildConfiguration({
-        guildId: interaction.guildId,
-        casinoSettings: defaultCasinoSettings,
-      })
-      await guildConfig.save()
-    } else if (!guildConfig.casinoSettings) {
+    if (!guildConfig.casinoSettings) {
       guildConfig.casinoSettings = defaultCasinoSettings
       await guildConfig.save()
     }
