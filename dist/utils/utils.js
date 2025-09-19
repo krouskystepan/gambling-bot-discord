@@ -102,21 +102,19 @@ const checkUserRegistration = async (userId, guildId) => {
 exports.checkUserRegistration = checkUserRegistration;
 const formatNumberToReadableString = (number) => {
     const absNumber = Math.abs(number);
+    const roundTo = (num, digits = 2) => Math.round(num * 10 ** digits) / 10 ** digits;
     let formatted;
     if (absNumber >= 1_000_000_000) {
-        formatted =
-            (absNumber / 1_000_000_000).toFixed(absNumber % 1_000_000_000 === 0 ? 0 : 2) + 'B';
+        formatted = `${roundTo(absNumber / 1_000_000_000)}B`;
     }
     else if (absNumber >= 1_000_000) {
-        formatted =
-            (absNumber / 1_000_000).toFixed(absNumber % 1_000_000 === 0 ? 0 : 2) + 'M';
+        formatted = `${roundTo(absNumber / 1_000_000)}M`;
     }
     else if (absNumber >= 1_000) {
-        formatted =
-            (absNumber / 1_000).toFixed(absNumber % 1_000 === 0 ? 0 : 2) + 'k';
+        formatted = `${roundTo(absNumber / 1_000)}k`;
     }
     else {
-        formatted = absNumber.toString();
+        formatted = roundTo(absNumber).toString();
     }
     return number < 0 ? `-${formatted}` : formatted;
 };
