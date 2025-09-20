@@ -129,25 +129,33 @@ exports.default = async (interaction, client) => {
             const dealerTotal = (0, blackjackUtils_1.calculateHandValue)(dealerCards);
             let playerTotal = (0, blackjackUtils_1.calculateHandValue)(game.playerCards);
             let gameIndex = game.dealerCards.length + game.playerCards.length;
-            const user = await User_1.default.findOne({ userId, guildId });
-            const betAmount = game.betAmount * 2;
-            if (!user)
-                return;
-            if (game.betAmount > user.balance) {
+            const additionalBet = game.betAmount;
+            const user = await User_1.default.findOneAndUpdate({
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                balance: { $gte: additionalBet },
+            }, [
+                {
+                    $set: {
+                        balance: { $subtract: ['$balance', additionalBet] },
+                        lockedBalance: {
+                            $max: [{ $subtract: ['$lockedBalance', additionalBet] }, 0],
+                        },
+                    },
+                },
+            ], { new: true });
+            if (!user) {
                 return interaction.followUp({
                     embeds: [
-                        (0, createEmbed_1.createInfoEmbed)('Insufficient balance', `You don't have enough money to place this bet.\nYour current balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`),
+                        (0, createEmbed_1.createInfoEmbed)('Insufficient balance', `You don't have enough money to place this bet.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            user.balance -= game.betAmount;
-            user.lockedBalance -= Math.min(user.lockedBalance, game.betAmount);
-            await user.save();
             await Transaction_1.default.create({
                 userId: user.userId,
                 guildId: user.guildId,
-                amount: game.betAmount,
+                amount: additionalBet,
                 type: 'bet',
                 source: 'casino',
                 betId,
@@ -157,10 +165,14 @@ exports.default = async (interaction, client) => {
             game.playerCards.push(drawnCard);
             playerTotal = (0, blackjackUtils_1.calculateHandValue)(game.playerCards);
             if (playerTotal > 21) {
-                await BlackjackGame_1.default.findOneAndDelete({ userId, guildId, gameId });
+                await BlackjackGame_1.default.findOneAndDelete({
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    gameId,
+                });
                 await message.edit({
                     embeds: [
-                        (0, blackjackUtils_1.createBlackjackEmbed)((0, utils_1.formatNumberToReadableString)(betAmount), dealerCards, dealerTotal, game.playerCards, playerTotal, 'PB', showBalance, user.balance, betId),
+                        (0, blackjackUtils_1.createBlackjackEmbed)((0, utils_1.formatNumberToReadableString)(additionalBet * 2), dealerCards, dealerTotal, game.playerCards, playerTotal, 'PB', showBalance, user.balance, betId),
                     ],
                     components: [],
                 });
@@ -169,7 +181,7 @@ exports.default = async (interaction, client) => {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
-            await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(betAmount), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance, betId);
+            await (0, blackjackUtils_1.revealDealerCards)((0, utils_1.formatNumberToReadableString)(additionalBet * 2), message, dealerCards, dealerTotal, game.playerCards, playerTotal, game.deck, gameIndex + 1, user, guildId, gameId, showBalance, betId);
             return interaction.followUp({
                 content: 'You have doubled down.',
                 flags: discord_js_1.MessageFlags.Ephemeral,

@@ -2,7 +2,7 @@ import { ColorResolvable, Message } from 'discord.js'
 import { createBetEmbed } from './createEmbed'
 import BlackjackGame from '../models/BlackjackGame'
 import { drawNextCard } from './casinoHelpers'
-import { type UserDoc } from '../models/User'
+import User, { type UserDoc } from '../models/User'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
@@ -129,48 +129,42 @@ export const revealDealerCards = async (
 
   const betAmount = parseReadableStringToNumber(bet)
   let resultId: BJResults
+  let balanceChange = 0
 
   if (dealerTotal > 21) {
     resultId = 'DB'
-    user.balance += betAmount * 2
-    await user.save()
-    await Transaction.create({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: betAmount * 2,
-      type: 'win',
-      source: 'casino',
-      betId,
-      createdAt: new Date(),
-    })
+    balanceChange = betAmount * 2
   } else if (dealerTotal === playerTotal) {
     resultId = 'PUSH'
-    user.balance += betAmount
-    await Transaction.create({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: betAmount,
-      type: 'win',
-      source: 'casino',
-      betId,
-      createdAt: new Date(),
-    })
-    await user.save()
+    balanceChange = betAmount
   } else if (playerTotal > dealerTotal) {
     resultId = 'PW'
-    user.balance += betAmount * 2
+    balanceChange = betAmount * 2
+  } else {
+    resultId = 'DW'
+    balanceChange = 0
+  }
+
+  if (balanceChange > 0) {
+    const updatedUser = await User.findOneAndUpdate(
+      { userId: user.userId, guildId },
+      { $inc: { balance: balanceChange } },
+      { new: true }
+    )
+
+    if (!updatedUser) throw new Error('User not found when paying out')
+
     await Transaction.create({
       userId: user.userId,
       guildId: user.guildId,
-      amount: betAmount * 2,
+      amount: balanceChange,
       type: 'win',
       source: 'casino',
       betId,
       createdAt: new Date(),
     })
-    await user.save()
-  } else {
-    resultId = 'DW'
+
+    user.balance = updatedUser.balance
   }
 
   await message.edit({

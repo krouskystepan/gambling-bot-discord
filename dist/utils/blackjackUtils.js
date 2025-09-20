@@ -4,6 +4,7 @@ exports.createBlackjackEmbed = exports.revealDealerCards = exports.calculateHand
 const createEmbed_1 = require("./createEmbed");
 const BlackjackGame_1 = require("../models/BlackjackGame");
 const casinoHelpers_1 = require("./casinoHelpers");
+const User_1 = require("../models/User");
 const utils_1 = require("./utils");
 const Transaction_1 = require("../models/Transaction");
 exports.SUITES = ['♠️', '♣️', '♥️', '♦️'];
@@ -74,50 +75,37 @@ const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerC
     }
     const betAmount = (0, utils_1.parseReadableStringToNumber)(bet);
     let resultId;
+    let balanceChange = 0;
     if (dealerTotal > 21) {
         resultId = 'DB';
-        user.balance += betAmount * 2;
-        await user.save();
-        await Transaction_1.default.create({
-            userId: user.userId,
-            guildId: user.guildId,
-            amount: betAmount * 2,
-            type: 'win',
-            source: 'casino',
-            betId,
-            createdAt: new Date(),
-        });
+        balanceChange = betAmount * 2;
     }
     else if (dealerTotal === playerTotal) {
         resultId = 'PUSH';
-        user.balance += betAmount;
-        await Transaction_1.default.create({
-            userId: user.userId,
-            guildId: user.guildId,
-            amount: betAmount,
-            type: 'win',
-            source: 'casino',
-            betId,
-            createdAt: new Date(),
-        });
-        await user.save();
+        balanceChange = betAmount;
     }
     else if (playerTotal > dealerTotal) {
         resultId = 'PW';
-        user.balance += betAmount * 2;
+        balanceChange = betAmount * 2;
+    }
+    else {
+        resultId = 'DW';
+        balanceChange = 0;
+    }
+    if (balanceChange > 0) {
+        const updatedUser = await User_1.default.findOneAndUpdate({ userId: user.userId, guildId }, { $inc: { balance: balanceChange } }, { new: true });
+        if (!updatedUser)
+            throw new Error('User not found when paying out');
         await Transaction_1.default.create({
             userId: user.userId,
             guildId: user.guildId,
-            amount: betAmount * 2,
+            amount: balanceChange,
             type: 'win',
             source: 'casino',
             betId,
             createdAt: new Date(),
         });
-        await user.save();
-    }
-    else {
-        resultId = 'DW';
+        user.balance = updatedUser.balance;
     }
     await message.edit({
         embeds: [

@@ -246,37 +246,45 @@ export default async (interaction: Interaction, client: Client) => {
       const dealerTotal = calculateHandValue(dealerCards)
 
       let playerTotal = calculateHandValue(game.playerCards)
-
       let gameIndex = game.dealerCards.length + game.playerCards.length
 
-      const user = await User.findOne({ userId, guildId })
+      const additionalBet = game.betAmount
 
-      const betAmount = game.betAmount * 2
+      const user = await User.findOneAndUpdate(
+        {
+          userId: interaction.user.id,
+          guildId: interaction.guildId,
+          balance: { $gte: additionalBet },
+        },
+        [
+          {
+            $set: {
+              balance: { $subtract: ['$balance', additionalBet] },
+              lockedBalance: {
+                $max: [{ $subtract: ['$lockedBalance', additionalBet] }, 0],
+              },
+            },
+          },
+        ],
+        { new: true }
+      )
 
-      if (!user) return
-
-      if (game.betAmount > user.balance) {
+      if (!user) {
         return interaction.followUp({
           embeds: [
             createInfoEmbed(
               'Insufficient balance',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(
-                user.balance
-              )}**.`
+              `You don't have enough money to place this bet.`
             ),
           ],
           flags: MessageFlags.Ephemeral,
         })
       }
 
-      user.balance -= game.betAmount
-      user.lockedBalance -= Math.min(user.lockedBalance, game.betAmount)
-      await user.save()
-
       await Transaction.create({
         userId: user.userId,
         guildId: user.guildId,
-        amount: game.betAmount,
+        amount: additionalBet,
         type: 'bet',
         source: 'casino',
         betId,
@@ -284,18 +292,20 @@ export default async (interaction: Interaction, client: Client) => {
       })
 
       const drawnCard = drawNextCard(game.deck, gameIndex)
-
       game.playerCards.push(drawnCard)
-
       playerTotal = calculateHandValue(game.playerCards)
 
       if (playerTotal > 21) {
-        await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
+        await BlackjackGame.findOneAndDelete({
+          userId: interaction.user.id,
+          guildId: interaction.guildId,
+          gameId,
+        })
 
         await message.edit({
           embeds: [
             createBlackjackEmbed(
-              formatNumberToReadableString(betAmount),
+              formatNumberToReadableString(additionalBet * 2),
               dealerCards,
               dealerTotal,
               game.playerCards,
@@ -316,7 +326,7 @@ export default async (interaction: Interaction, client: Client) => {
       }
 
       await revealDealerCards(
-        formatNumberToReadableString(betAmount),
+        formatNumberToReadableString(additionalBet * 2),
         message,
         dealerCards,
         dealerTotal,
