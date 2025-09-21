@@ -170,11 +170,18 @@ export async function run({ interaction }: SlashCommandProps) {
         balanceIncrement = 0
       }
 
+      let finalBalance = user.balance - parsedBetAmount
+
       if (balanceIncrement > 0) {
-        await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
           { userId: user.userId, guildId: user.guildId },
-          { $inc: { balance: balanceIncrement } }
+          { $inc: { balance: balanceIncrement } },
+          { new: true }
         )
+
+        if (!updatedUser) {
+          throw new Error('User not found when paying out Blackjack')
+        }
 
         await Transaction.create({
           userId: user.userId,
@@ -185,6 +192,8 @@ export async function run({ interaction }: SlashCommandProps) {
           betId,
           createdAt: new Date(),
         })
+
+        finalBalance = updatedUser.balance
       }
 
       return interaction.editReply({
@@ -197,7 +206,7 @@ export async function run({ interaction }: SlashCommandProps) {
             playerTotal,
             resultId!,
             showBalance,
-            user.balance + balanceIncrement,
+            finalBalance,
             betId
           ),
         ],

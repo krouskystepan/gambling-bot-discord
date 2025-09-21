@@ -113,8 +113,12 @@ async function run({ interaction }) {
                 resultId = 'DBJ';
                 balanceIncrement = 0;
             }
+            let finalBalance = user.balance - parsedBetAmount;
             if (balanceIncrement > 0) {
-                await User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, { $inc: { balance: balanceIncrement } });
+                const updatedUser = await User_1.default.findOneAndUpdate({ userId: user.userId, guildId: user.guildId }, { $inc: { balance: balanceIncrement } }, { new: true });
+                if (!updatedUser) {
+                    throw new Error('User not found when paying out Blackjack');
+                }
                 await Transaction_1.default.create({
                     userId: user.userId,
                     guildId: user.guildId,
@@ -124,10 +128,11 @@ async function run({ interaction }) {
                     betId,
                     createdAt: new Date(),
                 });
+                finalBalance = updatedUser.balance;
             }
             return interaction.editReply({
                 embeds: [
-                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, user.balance + balanceIncrement, betId),
+                    (0, blackjackUtils_1.createBlackjackEmbed)(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, finalBalance, betId),
                 ],
             });
         }
