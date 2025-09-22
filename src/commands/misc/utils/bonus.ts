@@ -195,9 +195,6 @@ export async function run({ interaction }: SlashCommandProps) {
           },
           { name: '⏰ Next Claim', value: claimInfo, inline: false }
         )
-        .setFooter({
-          text: '✅ = claimed, 🌟 = next, ▫️ = future, 💎 = weekly, 🏆 = monthly, 🔹/🥇 = future weekly/monthly',
-        })
         .setTimestamp()
 
       return interaction.reply({
