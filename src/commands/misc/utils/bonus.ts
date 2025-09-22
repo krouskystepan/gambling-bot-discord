@@ -9,11 +9,7 @@ import {
   ApplicationCommandOptionType,
   Colors,
 } from 'discord.js'
-import {
-  createErrorEmbed,
-  createInfoEmbed,
-  createSuccessEmbed,
-} from '../../../utils/createEmbed'
+import { createErrorEmbed, createInfoEmbed } from '../../../utils/createEmbed'
 import GuildConfiguration from '../../../models/GuildConfiguration'
 import User from '../../../models/User'
 import Transaction from '../../../models/Transaction'
@@ -36,9 +32,7 @@ export const data: CommandData = {
   ],
 }
 
-export const options: CommandOptions = {
-  deleted: false,
-}
+export const options: CommandOptions = { deleted: false }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
@@ -59,7 +53,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const guildConfig = await GuildConfiguration.findOne({
       guildId: interaction.guildId!,
     })
-    if (!guildConfig || guildConfig.bonusSettings.baseReward === 0) {
+    if (!guildConfig || !guildConfig.bonusSettings) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
@@ -71,34 +65,92 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const { baseReward, streakMultiplier, maxReward, resetOnMax } =
-      guildConfig.bonusSettings
+    const settings = guildConfig.bonusSettings
+    const {
+      rewardMode = 'linear',
+      baseReward = 0,
+      streakIncrement = 0,
+      streakMultiplier = 1,
+      maxReward = 0,
+      resetOnMax = false,
+      milestoneBonus: {
+        weekly: milestoneWeekly = 0,
+        monthly: milestoneMonthly = 0,
+      } = {},
+    } = settings
+
     const now = new Date()
     const lastClaim = user.lastDailyClaim ? new Date(user.lastDailyClaim) : null
     let streak = user.dailyStreak ?? 0
 
     const calculateReward = (streakNum: number) => {
-      let reward = baseReward
-      for (let i = 1; i < streakNum; i++) {
-        reward = Number((reward * streakMultiplier).toFixed(2))
-        if (maxReward > 0 && reward > maxReward) {
-          reward = resetOnMax ? baseReward : maxReward
-          if (resetOnMax) break
-        }
-      }
+      let reward = Number(baseReward)
+      if (rewardMode === 'linear')
+        reward += (streakNum - 1) * Number(streakIncrement)
+      else reward *= Math.pow(Number(streakMultiplier), streakNum - 1)
+
+      if (maxReward > 0 && reward > maxReward)
+        reward = resetOnMax ? Number(baseReward) : maxReward
+
+      if (streakNum % 7 === 0) reward += Number(milestoneWeekly)
+      if (streakNum % 28 === 0) reward += Number(milestoneMonthly)
+
       return reward
     }
 
     if (subcommand === 'check') {
-      let nextStreak = !lastClaim
-        ? 1
-        : (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60) >= 48
-        ? 1
-        : streak + 1
+      const nowTime = now.getTime()
+      const lastTime = lastClaim ? lastClaim.getTime() : 0
+
+      let currentStreak: number
+      let nextStreak: number
+
+      if (!lastClaim) {
+        currentStreak = 0
+        nextStreak = 1
+      } else {
+        const diff = nowTime - lastTime
+        if (diff < 24 * 60 * 60 * 1000) {
+          currentStreak = streak
+          nextStreak = streak + 1
+        } else if (diff < 48 * 60 * 60 * 1000) {
+          currentStreak = streak
+          nextStreak = streak + 1
+        } else {
+          currentStreak = 0
+          nextStreak = 1
+        }
+      }
+
       const nextReward = calculateReward(nextStreak)
+
+      const totalDays = 28
+      let calendar = ''
+      for (let i = 1; i <= totalDays; i++) {
+        const isWeekly = i % 7 === 0
+        const isMonthly = i % 28 === 0
+        let emoji = '▫️'
+
+        if (i <= currentStreak) {
+          if (isMonthly) emoji = '🏆'
+          else if (isWeekly) emoji = '💎'
+          else emoji = '✅'
+        } else if (i === nextStreak) {
+          if (isMonthly) emoji = '🏆'
+          else if (isWeekly) emoji = '💎'
+          else emoji = '🌟'
+        } else {
+          if (isMonthly) emoji = '🥇'
+          else if (isWeekly) emoji = '🔹'
+        }
+
+        calendar += emoji
+        if (i % 7 === 0) calendar += '\n'
+      }
+
       let claimInfo = 'Available now!'
       if (lastClaim) {
-        const nextClaim = new Date(lastClaim.getTime() + 24 * 60 * 60 * 1000)
+        const nextClaim = new Date(lastTime + 24 * 60 * 60 * 1000)
         if (now < nextClaim) {
           claimInfo = `**<t:${Math.floor(
             nextClaim.getTime() / 1000
@@ -107,11 +159,15 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       const embed = new EmbedBuilder()
-        .setTitle('Daily Bonus Info')
+        .setTitle('Daily Bonus Calendar')
         .setColor(Colors.Blue)
-        .setDescription('Here is your bonus info and streak progress:')
+        .setDescription(`Here is your bonus streak calendar:\n\n${calendar}`)
         .addFields(
-          { name: '🔥 Current Streak', value: `${streak} days`, inline: true },
+          {
+            name: '🔥 Current Streak',
+            value: `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`,
+            inline: true,
+          },
           {
             name: '💰 Next Reward',
             value: `$${formatNumberToReadableString(nextReward)}`,
@@ -119,7 +175,9 @@ export async function run({ interaction }: SlashCommandProps) {
           },
           { name: '⏰ Next Claim', value: claimInfo, inline: false }
         )
-        .setFooter({ text: 'Use `/bonus claim` to claim your bonus!' })
+        .setFooter({
+          text: '✅ = claimed, 🌟 = next, ▫️ = future, 💎 = weekly, 🏆 = monthly, 🔹/🥇 = future weekly/monthly',
+        })
         .setTimestamp()
 
       return interaction.reply({
@@ -129,7 +187,7 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (subcommand === 'claim') {
-      let canClaim =
+      const canClaim =
         !lastClaim || now.getTime() - lastClaim.getTime() >= 24 * 60 * 60 * 1000
       if (!canClaim) {
         const nextClaim = new Date(lastClaim!.getTime() + 24 * 60 * 60 * 1000)
@@ -202,7 +260,11 @@ export async function run({ interaction }: SlashCommandProps) {
           )}** coins!`
         )
         .addFields(
-          { name: '🔥 Current Streak', value: `${streak} days`, inline: true },
+          {
+            name: '🔥 Current Streak',
+            value: `${streak} day${streak !== 1 ? 's' : ''}`,
+            inline: true,
+          },
           {
             name: '💰 New Balance',
             value: `$${formatNumberToReadableString(updatedUser.balance)}`,

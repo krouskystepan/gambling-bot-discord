@@ -60,10 +60,20 @@ const guildConfigurationSchema = new mongoose_1.Schema({
         },
     },
     bonusSettings: {
+        rewardMode: {
+            type: String,
+            enum: ['linear', 'exponential'],
+            default: 'linear',
+        },
         baseReward: { type: Number, default: 0 },
+        streakIncrement: { type: Number, default: 0 },
         streakMultiplier: { type: Number, default: 0 },
         maxReward: { type: Number, default: 0 },
         resetOnMax: { type: Boolean, default: false },
+        milestoneBonus: {
+            weekly: { type: Number, default: 0 },
+            monthly: { type: Number, default: 0 },
+        },
     },
 });
 exports.default = (0, mongoose_1.model)('GuildConfiguration', guildConfigurationSchema);
