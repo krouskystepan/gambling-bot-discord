@@ -265,6 +265,9 @@ export async function run({ interaction }: SlashCommandProps) {
         amount: reward,
         type: 'bonus',
         source: 'system',
+        meta: {
+          bonusStreak: streak,
+        },
         createdAt: now,
       })
 

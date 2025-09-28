@@ -34,6 +34,14 @@ const TransactionSchema = new Schema<TransactionDoc>(
   { timestamps: { createdAt: true, updatedAt: false } }
 )
 
-TransactionSchema.index({ guildId: 1, userId: 1, createdAt: -1 })
+TransactionSchema.index({
+  guildId: 1,
+  userId: 1,
+  createdAt: -1,
+  betId: 1,
+  type: 1,
+  source: 1,
+  handledBy: 1,
+})
 
 export default model<TransactionDoc>('Transaction', TransactionSchema)

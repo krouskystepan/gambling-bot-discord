@@ -17,6 +17,7 @@ import {
   checkChannelConfiguration,
   parseTimeToSeconds,
 } from '../../../utils/utils'
+import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {
   name: 'manage-vip',
@@ -241,6 +242,20 @@ export async function run({ interaction }: SlashCommandProps) {
         expiresAt,
       })
 
+      await Transaction.create({
+        userId: targetedUser.id,
+        guildId: user.guildId,
+        amount: 0,
+        type: 'vip',
+        source: 'command',
+        handledBy: interaction.user.id,
+        meta: {
+          adminAction: 'buy',
+          durationDays: Math.floor(durationSeconds / 86400),
+        },
+        createdAt: new Date(),
+      })
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
@@ -399,6 +414,20 @@ export async function run({ interaction }: SlashCommandProps) {
           flags: MessageFlags.Ephemeral,
         })
       }
+
+      await Transaction.create({
+        userId: targetedUser.id,
+        guildId: interaction.guildId,
+        amount: 0,
+        type: 'vip',
+        source: 'command',
+        handledBy: interaction.user.id,
+        meta: {
+          adminAction: 'extend',
+          durationDays: Math.floor(durationSeconds / 86400),
+        },
+        createdAt: new Date(),
+      })
 
       const vipChannel = await interaction
         .guild!.channels.fetch(updatedVip.channelId)
