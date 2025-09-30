@@ -8,6 +8,7 @@ const VipRoom_1 = require("../../../models/VipRoom");
 const User_1 = require("../../../models/User");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
+const Transaction_1 = require("../../../models/Transaction");
 exports.data = {
     name: 'manage-vip',
     description: 'Admin commands to manage VIP rooms.',
@@ -175,6 +176,19 @@ async function run({ interaction }) {
                 channelId: channel.id,
                 expiresAt,
             });
+            await Transaction_1.default.create({
+                userId: targetedUser.id,
+                guildId: user.guildId,
+                amount: 0,
+                type: 'vip',
+                source: 'command',
+                handledBy: interaction.user.id,
+                meta: {
+                    adminAction: 'buy',
+                    durationDays: Math.floor(durationSeconds / 86400),
+                },
+                createdAt: new Date(),
+            });
             return interaction.reply({
                 embeds: [
                     (0, createEmbed_1.createSuccessEmbed)('VIP Room Created', `VIP room <#${channel.id}> has been created for <@${targetedUser.id}>.\n` +
@@ -286,6 +300,19 @@ async function run({ interaction }) {
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
             }
+            await Transaction_1.default.create({
+                userId: targetedUser.id,
+                guildId: interaction.guildId,
+                amount: 0,
+                type: 'vip',
+                source: 'command',
+                handledBy: interaction.user.id,
+                meta: {
+                    adminAction: 'extend',
+                    durationDays: Math.floor(durationSeconds / 86400),
+                },
+                createdAt: new Date(),
+            });
             const vipChannel = await interaction
                 .guild.channels.fetch(updatedVip.channelId)
                 .catch(() => null);

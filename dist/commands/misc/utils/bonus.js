@@ -213,6 +213,9 @@ async function run({ interaction }) {
                 amount: reward,
                 type: 'bonus',
                 source: 'system',
+                meta: {
+                    bonusStreak: streak,
+                },
                 createdAt: now,
             });
             const embed = new discord_js_1.EmbedBuilder()
