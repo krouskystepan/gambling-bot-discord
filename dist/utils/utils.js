@@ -2,12 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkValidBet = exports.parseTimeToSeconds = exports.formatNumberToPercentage = exports.formatNumberWithSpaces = exports.parseReadableStringToNumber = exports.formatNumberToReadableString = exports.checkUserRegistration = exports.checkChannelConfiguration = exports.generateBetId = exports.connectToDatabase = void 0;
 const mongoose_1 = require("mongoose");
-const GuildConfiguration_1 = require("../models/GuildConfiguration");
 const discord_js_1 = require("discord.js");
 const User_1 = require("../models//User");
 const createEmbed_1 = require("./createEmbed");
-const defaultConfig_1 = require("./defaultConfig");
 const VipRoom_1 = require("../models/VipRoom");
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
+const GuildConfiguration_1 = require("../models/GuildConfiguration");
 const connectToDatabase = async () => {
     try {
         if (!process.env.MONGO_URI)
@@ -31,9 +31,9 @@ const generateBetId = () => {
 exports.generateBetId = generateBetId;
 const checkChannelConfiguration = async (interaction, channelType, messages) => {
     try {
-        const guildConfig = await GuildConfiguration_1.default.findOneAndUpdate({ guildId: interaction.guildId }, { $setOnInsert: { casinoSettings: defaultConfig_1.default } }, { upsert: true, new: true });
+        const guildConfig = await GuildConfiguration_1.default.findOneAndUpdate({ guildId: interaction.guildId }, { $setOnInsert: { casinoSettings: gambling_bot_shared_1.defaultCasinoSettings } }, { upsert: true, new: true });
         if (!guildConfig.casinoSettings) {
-            guildConfig.casinoSettings = defaultConfig_1.default;
+            guildConfig.casinoSettings = gambling_bot_shared_1.defaultCasinoSettings;
             await guildConfig.save();
         }
         let allowedChannelIds = [];

@@ -6,14 +6,15 @@ import {
 } from 'discord.js'
 import GuildConfiguration from '../../../models/GuildConfiguration'
 import { createInfoEmbed, createSuccessEmbed } from '../../../utils/createEmbed'
-import defaultCasinoSettings, {
-  readableGameValueNames,
-} from '../../../utils/defaultConfig'
 import {
   formatNumberToPercentage,
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from '../../../utils/utils'
+import {
+  defaultCasinoSettings,
+  readableGameValueNames,
+} from '@krouskystepan/gambling-bot-shared'
 
 const GAMES = [
   { name: 'All', value: 'all' },

@@ -1,7 +1,4 @@
 import mongoose from 'mongoose'
-import GuildConfiguration, {
-  GuildConfigurationDoc,
-} from '../models/GuildConfiguration'
 import {
   ChatInputCommandInteraction,
   CacheType,
@@ -9,8 +6,12 @@ import {
 } from 'discord.js'
 import User from '../models//User'
 import { createErrorEmbed, createInfoEmbed } from './createEmbed'
-import defaultCasinoSettings from './defaultConfig'
 import VipRoom from '../models/VipRoom'
+import {
+  defaultCasinoSettings,
+  TGuildConfiguration,
+} from '@krouskystepan/gambling-bot-shared'
+import GuildConfiguration from '../models/GuildConfiguration'
 
 export const connectToDatabase = async () => {
   try {
@@ -40,7 +41,7 @@ export const checkChannelConfiguration = async (
     notSet: string
     notAllowed: string
   }
-): Promise<GuildConfigurationDoc | false> => {
+): Promise<TGuildConfiguration | false> => {
   try {
     const guildConfig = await GuildConfiguration.findOneAndUpdate(
       { guildId: interaction.guildId },

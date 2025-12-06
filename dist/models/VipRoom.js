@@ -1,14 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 const mongoose_1 = require("mongoose");
-const VipRoomSchema = new mongoose_1.Schema({
-    userId: { type: String, required: true },
-    guildId: { type: String, required: true },
-    channelId: { type: String, required: true },
-    expiresAt: { type: Date, required: true },
-}, {
-    timestamps: true,
-});
-VipRoomSchema.index({ expiresAt: 1 });
-VipRoomSchema.index({ userId: 1, guildId: 1 }, { unique: true });
-exports.default = (0, mongoose_1.model)('VipRoom', VipRoomSchema);
+gambling_bot_shared_1.VipRoomSchema.index({ expiresAt: 1 });
+gambling_bot_shared_1.VipRoomSchema.index({ userId: 1, guildId: 1 }, { unique: true });
+exports.default = (0, mongoose_1.model)('VipRoom', gambling_bot_shared_1.VipRoomSchema);

@@ -5,8 +5,8 @@ exports.run = run;
 const discord_js_1 = require("discord.js");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const createEmbed_1 = require("../../../utils/createEmbed");
-const defaultConfig_1 = require("../../../utils/defaultConfig");
 const utils_1 = require("../../../utils/utils");
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 const GAMES = [
     { name: 'All', value: 'all' },
     { name: 'Dice', value: 'dice' },
@@ -80,7 +80,7 @@ async function run({ interaction }) {
         if (!guildConfiguration || !guildConfiguration.casinoSettings) {
             guildConfiguration = new GuildConfiguration_1.default({
                 guildId: interaction.guildId,
-                casinoSettings: defaultConfig_1.default,
+                casinoSettings: gambling_bot_shared_1.defaultCasinoSettings,
             });
         }
         const options = interaction.options;
@@ -121,7 +121,7 @@ async function run({ interaction }) {
                 await guildConfiguration.save();
                 return await interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createSuccessEmbed)('Casino Settings Updated', `The setting **${defaultConfig_1.readableGameValueNames.find((value) => value.value === key)
+                        (0, createEmbed_1.createSuccessEmbed)('Casino Settings Updated', `The setting **${gambling_bot_shared_1.readableGameValueNames.find((value) => value.value === key)
                             ?.name}** for **${game.toUpperCase()}** has been updated to **${(0, utils_1.formatNumberToPercentage)(valueAsNumber)}**.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
@@ -135,7 +135,7 @@ async function run({ interaction }) {
                 await guildConfiguration.save();
                 return await interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createSuccessEmbed)('Casino Settings Updated', `The setting **${defaultConfig_1.readableGameValueNames.find((value) => value.value === key)
+                        (0, createEmbed_1.createSuccessEmbed)('Casino Settings Updated', `The setting **${gambling_bot_shared_1.readableGameValueNames.find((value) => value.value === key)
                             ?.name}** for **${game.toUpperCase()}** has been updated to **${valueAsNumber}x**.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
@@ -206,7 +206,7 @@ async function run({ interaction }) {
                 await guildConfiguration.save();
                 return await interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createSuccessEmbed)('Casino Settings Updated', `The setting **${defaultConfig_1.readableGameValueNames.find((value) => value.value === key)
+                        (0, createEmbed_1.createSuccessEmbed)('Casino Settings Updated', `The setting **${gambling_bot_shared_1.readableGameValueNames.find((value) => value.value === key)
                             ?.name}** for **${game.toUpperCase()}** has been updated: **Multiplier for value ${objKey} is now ${valueAsNumber}x**.`),
                     ],
                     flags: discord_js_1.MessageFlags.Ephemeral,
@@ -233,7 +233,7 @@ async function run({ interaction }) {
         if (subCommand === 'reset') {
             const game = options.getString('game');
             if (game === 'all') {
-                guildConfiguration.casinoSettings = defaultConfig_1.default;
+                guildConfiguration.casinoSettings = gambling_bot_shared_1.defaultCasinoSettings;
                 guildConfiguration.markModified('casinoSettings');
                 await guildConfiguration.save();
                 return await interaction.reply({
@@ -245,7 +245,7 @@ async function run({ interaction }) {
             }
             if (game) {
                 guildConfiguration.casinoSettings[game] =
-                    defaultConfig_1.default[game];
+                    gambling_bot_shared_1.defaultCasinoSettings[game];
                 guildConfiguration.markModified('casinoSettings');
                 await guildConfiguration.save();
                 return await interaction.reply({

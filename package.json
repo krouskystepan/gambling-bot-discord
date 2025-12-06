@@ -1,5 +1,5 @@
 {
-  "name": "dc_gambling_bot",
+  "name": "gambling-bot-discord",
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {
@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@krouskystepan/gambling-bot-shared": "^0.1.3",
     "commandkit": "^0.1.6",
     "discord.js": "^14.22.1",
     "dotenv": "^16.6.1",

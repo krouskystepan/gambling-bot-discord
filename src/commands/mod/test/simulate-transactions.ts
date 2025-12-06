@@ -1,10 +1,11 @@
 import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType } from 'discord.js'
-import Transaction, { TransactionDoc } from '../../../models/Transaction'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from '../../../utils/utils'
+import { TTransaction } from '@krouskystepan/gambling-bot-shared'
+import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {
   name: 'simulate-transactions',
@@ -132,7 +133,7 @@ export async function run({ interaction }: SlashCommandProps) {
     await interaction.deferReply()
 
     const userIds = Array.from({ length: uniqueUsers }, () => randomString(8))
-    const transactions: Partial<TransactionDoc>[] = []
+    const transactions: Partial<TTransaction>[] = []
     const typeCount: Record<string, number> = {}
 
     for (let i = 0; i < count; i++) {

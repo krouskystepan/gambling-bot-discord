@@ -11,7 +11,7 @@ import {
   Message,
   TextChannel,
 } from 'discord.js'
-import Prediction, { PredictionOption } from '../../models/Prediction'
+import Prediction from '../../models/Prediction'
 import { createErrorEmbed, createSuccessEmbed } from '../../utils/createEmbed'
 import User from '../../models/User'
 import {
@@ -20,6 +20,7 @@ import {
 } from '../../utils/utils'
 import { DateTime } from 'luxon'
 import Transaction from '../../models/Transaction'
+import { TPredictionOption } from '@krouskystepan/gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'prediction',
@@ -178,7 +179,7 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      const choicesArray: PredictionOption[] = []
+      const choicesArray: TPredictionOption[] = []
       for (const item of rawChoices) {
         const [name, odds] = item.split(':').map((x) => x.trim())
         if (!name || !odds || isNaN(Number(odds))) {

@@ -1,8 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.drawNextCard = exports.spinRouletteWheel = exports.drawGoldenJackpot = exports.drawLottery = exports.flipCoin = exports.rollDice = exports.spinSlot = void 0;
-const defaultConfig_1 = require("./defaultConfig");
-const rouletteUtils_1 = require("./rouletteUtils");
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 const spinSlot = (slotConfig) => {
     const weightedSymbols = Object.entries(slotConfig.symbolWeights).flatMap(([symbol, weight]) => Array(Number(weight)).fill(symbol));
     const spin = () => weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)];
@@ -18,9 +17,9 @@ const flipCoin = () => {
 };
 exports.flipCoin = flipCoin;
 const drawLottery = () => {
-    const pool = Array.from({ length: defaultConfig_1.LOTTERY_TOTAL_NUMBERS }, (_, i) => i + 1);
+    const pool = Array.from({ length: gambling_bot_shared_1.LOTTERY_TOTAL_NUMBERS }, (_, i) => i + 1);
     const result = [];
-    for (let i = 0; i < defaultConfig_1.LOTTERY_NUM_TO_DRAW; i++) {
+    for (let i = 0; i < gambling_bot_shared_1.LOTTERY_NUM_TO_DRAW; i++) {
         const idx = Math.floor(Math.random() * pool.length);
         result.push(pool[idx]);
         pool.splice(idx, 1);
@@ -33,7 +32,7 @@ const drawGoldenJackpot = (goldenJackpotConfig) => {
 };
 exports.drawGoldenJackpot = drawGoldenJackpot;
 const spinRouletteWheel = () => {
-    const keys = Object.keys(rouletteUtils_1.MINI_NUMBERS);
+    const keys = Object.keys(gambling_bot_shared_1.MINI_NUMBERS);
     const index = Math.floor(Math.random() * keys.length);
     return keys[index];
 };

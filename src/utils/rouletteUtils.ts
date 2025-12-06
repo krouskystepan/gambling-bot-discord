@@ -1,4 +1,7 @@
-import defaultCasinoSettings from './defaultConfig'
+import {
+  defaultCasinoSettings,
+  MINI_NUMBERS,
+} from '@krouskystepan/gambling-bot-shared'
 
 export type RouletteBetType =
   keyof (typeof defaultCasinoSettings)['roulette']['winMultipliers']
@@ -8,28 +11,6 @@ export interface RouletteBet {
   value: string
   amount: number
   displayValue: string
-}
-
-export const MINI_NUMBERS: Record<string, 'red' | 'black' | 'green'> = {
-  '0': 'green',
-  '1': 'red',
-  '3': 'red',
-  '5': 'red',
-  '7': 'red',
-  '9': 'red',
-  '12': 'red',
-  '14': 'red',
-  '16': 'red',
-  '18': 'red',
-  '2': 'black',
-  '4': 'black',
-  '6': 'black',
-  '8': 'black',
-  '10': 'black',
-  '11': 'black',
-  '13': 'black',
-  '15': 'black',
-  '17': 'black',
 }
 
 export function inferTypeFromValue(value: string): RouletteBetType {

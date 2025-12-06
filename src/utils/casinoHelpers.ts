@@ -1,6 +1,9 @@
+import {
+  LOTTERY_TOTAL_NUMBERS,
+  LOTTERY_NUM_TO_DRAW,
+  MINI_NUMBERS,
+} from '@krouskystepan/gambling-bot-shared'
 import { Card } from './blackjackUtils'
-import { LOTTERY_TOTAL_NUMBERS, LOTTERY_NUM_TO_DRAW } from './defaultConfig'
-import { MINI_NUMBERS } from './rouletteUtils'
 
 export const spinSlot = (slotConfig: {
   symbolWeights: Record<string, number>

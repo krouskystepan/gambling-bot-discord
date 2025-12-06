@@ -7,8 +7,8 @@ import {
   formatNumberWithSpaces,
 } from '../../../utils/utils'
 import { flipCoin } from '../../../utils/casinoHelpers'
-import { COINFLIP_MAX_SIMULATE_FLIPS } from '../../../utils/defaultConfig'
 import GuildConfiguration from '../../../models/GuildConfiguration'
+import { COINFLIP_MAX_SIMULATE_FLIPS } from '@krouskystepan/gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'simulate-coin-flip',

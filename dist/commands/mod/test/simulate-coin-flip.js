@@ -6,8 +6,8 @@ const discord_js_1 = require("discord.js");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
 const casinoHelpers_1 = require("../../../utils/casinoHelpers");
-const defaultConfig_1 = require("../../../utils/defaultConfig");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 exports.data = {
     name: 'simulate-coin-flip',
     description: 'Simulate X coin flips. WARNING: May take a long time!',
@@ -69,9 +69,9 @@ async function run({ interaction }) {
         let currentLosingStreak = 0;
         let biggestLosingStreak = 0;
         const flips = (0, utils_1.parseReadableStringToNumber)(interaction.options.getString('flips', true));
-        if (flips > defaultConfig_1.COINFLIP_MAX_SIMULATE_FLIPS) {
+        if (flips > gambling_bot_shared_1.COINFLIP_MAX_SIMULATE_FLIPS) {
             return interaction.editReply({
-                content: `The maximum number of flips is **${(0, utils_1.formatNumberToReadableString)(defaultConfig_1.COINFLIP_MAX_SIMULATE_FLIPS)}**.`,
+                content: `The maximum number of flips is **${(0, utils_1.formatNumberToReadableString)(gambling_bot_shared_1.COINFLIP_MAX_SIMULATE_FLIPS)}**.`,
             });
         }
         const bet = (0, utils_1.parseReadableStringToNumber)(interaction.options.getString('bet', true));

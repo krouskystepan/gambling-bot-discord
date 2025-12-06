@@ -6,9 +6,8 @@ import {
 } from '../../../utils/utils'
 import GuildConfiguration from '../../../models/GuildConfiguration'
 import VipRoom from '../../../models/VipRoom'
-import { calculateRTP } from '../../../utils/rtpCalcHelper'
 import { createErrorEmbed } from '../../../utils/createEmbed'
-import { getRouletteHelpers } from '../../../utils/rouletteUtils'
+import { calculateRTP } from '@krouskystepan/gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'casino-info',

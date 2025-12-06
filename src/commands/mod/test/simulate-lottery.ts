@@ -8,7 +8,7 @@ import {
   formatNumberWithSpaces,
 } from '../../../utils/utils'
 import GuildConfiguration from '../../../models/GuildConfiguration'
-import { LOTTERY_MAX_SIMULATE_ENTRIES } from '../../../utils/defaultConfig'
+import { LOTTERY_MAX_SIMULATE_ENTRIES } from '@krouskystepan/gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'simulate-lottery',

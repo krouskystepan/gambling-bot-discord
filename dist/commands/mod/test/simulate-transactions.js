@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.options = exports.data = void 0;
 exports.run = run;
 const discord_js_1 = require("discord.js");
-const Transaction_1 = require("../../../models/Transaction");
 const utils_1 = require("../../../utils/utils");
+const Transaction_1 = require("../../../models/Transaction");
 exports.data = {
     name: 'simulate-transactions',
     description: 'Simulate X transactions for testing filtering and indexing.',

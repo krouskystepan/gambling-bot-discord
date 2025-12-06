@@ -7,7 +7,7 @@ const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
 const casinoHelpers_1 = require("../../../utils/casinoHelpers");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const defaultConfig_1 = require("../../../utils/defaultConfig");
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 exports.data = {
     name: 'simulate-goldenjackpot',
     description: 'Simulate X goldenjackpot entries. WARNING: May take a long time!',
@@ -69,9 +69,9 @@ async function run({ interaction }) {
         let currentLosingStreak = 0;
         let biggestLosingStreak = 0;
         const entries = (0, utils_1.parseReadableStringToNumber)(interaction.options.getString('entries', true));
-        if (entries > defaultConfig_1.GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES) {
+        if (entries > gambling_bot_shared_1.GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES) {
             return interaction.editReply({
-                content: `The maximum number of entries is **${(0, utils_1.formatNumberToReadableString)(defaultConfig_1.GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES)}**.`,
+                content: `The maximum number of entries is **${(0, utils_1.formatNumberToReadableString)(gambling_bot_shared_1.GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES)}**.`,
             });
         }
         const bet = (0, utils_1.parseReadableStringToNumber)(interaction.options.getString('bet', true));

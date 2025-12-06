@@ -2,12 +2,13 @@ import { ColorResolvable, Message } from 'discord.js'
 import { createBetEmbed } from './createEmbed'
 import BlackjackGame from '../models/BlackjackGame'
 import { drawNextCard } from './casinoHelpers'
-import User, { type UserDoc } from '../models/User'
+import User from '../models/User'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from './utils'
 import Transaction from '../models/Transaction'
+import { TUser } from '@krouskystepan/gambling-bot-shared'
 
 export const SUITES = ['♠️', '♣️', '♥️', '♦️'] as const
 export const VALUES = [
@@ -75,7 +76,7 @@ export const revealDealerCards = async (
   playerTotal: number,
   deck: Card[],
   gameIndex: number,
-  user: UserDoc,
+  user: TUser,
   guildId: string,
   gameId: string,
   showBalnce: boolean,

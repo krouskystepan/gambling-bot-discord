@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const defaultConfig_1 = require("../../../utils/defaultConfig");
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 exports.default = async (interaction, client) => {
     if (!interaction.isAutocomplete())
         return;
@@ -19,7 +19,7 @@ exports.default = async (interaction, client) => {
     if (!gameSettings)
         return;
     const settingKeys = Object.keys(gameSettings);
-    const filteredChoices = defaultConfig_1.readableGameValueNames
+    const filteredChoices = gambling_bot_shared_1.readableGameValueNames
         .filter((val) => settingKeys.includes(val.value))
         .filter((val) => val.name.toLowerCase().startsWith(focusedValue.toLowerCase()));
     await interaction.respond(filteredChoices).catch(() => { });

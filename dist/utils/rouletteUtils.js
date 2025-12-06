@@ -1,31 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MINI_NUMBERS = void 0;
 exports.inferTypeFromValue = inferTypeFromValue;
 exports.calculateRouletteWin = calculateRouletteWin;
 exports.getRouletteColor = getRouletteColor;
 exports.getRouletteHelpers = getRouletteHelpers;
-exports.MINI_NUMBERS = {
-    '0': 'green',
-    '1': 'red',
-    '3': 'red',
-    '5': 'red',
-    '7': 'red',
-    '9': 'red',
-    '12': 'red',
-    '14': 'red',
-    '16': 'red',
-    '18': 'red',
-    '2': 'black',
-    '4': 'black',
-    '6': 'black',
-    '8': 'black',
-    '10': 'black',
-    '11': 'black',
-    '13': 'black',
-    '15': 'black',
-    '17': 'black',
-};
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 function inferTypeFromValue(value) {
     const val = value.toLowerCase();
     if (['red', 'black'].includes(val))
@@ -38,7 +17,7 @@ function inferTypeFromValue(value) {
         return 'dozen';
     if (val.startsWith('c') && ['1', '2', '3'].includes(val[1]))
         return 'column';
-    if (val in exports.MINI_NUMBERS)
+    if (val in gambling_bot_shared_1.MINI_NUMBERS)
         return 'number';
     throw new Error(`Invalid bet value: ${value}`);
 }
@@ -51,7 +30,7 @@ function calculateRouletteWin(bet, result, payouts) {
         case 'color':
             if (result === '0')
                 return 0;
-            return exports.MINI_NUMBERS[result] === bet.value.toLowerCase()
+            return gambling_bot_shared_1.MINI_NUMBERS[result] === bet.value.toLowerCase()
                 ? amount * payouts.color
                 : 0;
         case 'parity':
@@ -81,7 +60,7 @@ function calculateRouletteWin(bet, result, payouts) {
     }
 }
 function getRouletteColor(number) {
-    const color = exports.MINI_NUMBERS[number];
+    const color = gambling_bot_shared_1.MINI_NUMBERS[number];
     if (color === 'green')
         return '🟢';
     if (color === 'red')
@@ -91,7 +70,7 @@ function getRouletteColor(number) {
     return '❓ Unknown';
 }
 function getRouletteHelpers() {
-    const numbers = Object.keys(exports.MINI_NUMBERS).map(Number);
+    const numbers = Object.keys(gambling_bot_shared_1.MINI_NUMBERS).map(Number);
     const columns = { 1: [], 2: [], 3: [] };
     numbers.forEach((n) => {
         if (n === 0)

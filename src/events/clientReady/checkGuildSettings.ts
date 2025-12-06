@@ -1,7 +1,7 @@
 import { Client } from 'discord.js'
 import { merge } from 'lodash'
-import defaultCasinoSettings from '../../utils/defaultConfig'
 import GuildConfiguration from '../../models/GuildConfiguration'
+import { defaultCasinoSettings } from '@krouskystepan/gambling-bot-shared'
 
 export default async (client: Client) => {
   for (const guild of client.guilds.cache.values()) {

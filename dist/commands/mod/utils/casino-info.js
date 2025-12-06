@@ -6,8 +6,8 @@ const discord_js_1 = require("discord.js");
 const utils_1 = require("../../../utils/utils");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const VipRoom_1 = require("../../../models/VipRoom");
-const rtpCalcHelper_1 = require("../../../utils/rtpCalcHelper");
 const createEmbed_1 = require("../../../utils/createEmbed");
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 exports.data = {
     name: 'casino-info',
     description: 'Get information about the casino.',
@@ -129,18 +129,18 @@ async function run({ interaction }) {
                     formatMultipliers(settings.dice.winMultiplier),
                     formatBet('Max Bet', settings.dice.maxBet),
                     formatBet('Min Bet', settings.dice.minBet),
-                ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('dice', settings.dice))], showAdmin),
+                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('dice', settings.dice))], showAdmin),
                 renderSection('🪙 Coin Flip', [
                     formatMultipliers(settings.coinflip.winMultiplier),
                     formatBet('Max Bet', settings.coinflip.maxBet),
                     formatBet('Min Bet', settings.coinflip.minBet),
-                ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('coinflip', settings.coinflip))], showAdmin),
+                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('coinflip', settings.coinflip))], showAdmin),
                 renderSection('🎰 Slots', [
                     formatMultipliers(settings.slots.winMultipliers),
                     formatBet('Max Bet', settings.slots.maxBet),
                     formatBet('Min Bet', settings.slots.minBet),
                 ], [
-                    formatRTP((0, rtpCalcHelper_1.calculateRTP)('slots', settings.slots)),
+                    formatRTP((0, gambling_bot_shared_1.calculateRTP)('slots', settings.slots)),
                     `- **Symbol Weights:** \n${Object.entries(settings.slots.symbolWeights)
                         .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
                         .join('\n')}`,
@@ -149,29 +149,29 @@ async function run({ interaction }) {
                     formatMultipliers(settings.lottery.winMultipliers),
                     formatBet('Max Bet', settings.lottery.maxBet),
                     formatBet('Min Bet', settings.lottery.minBet),
-                ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('lottery', settings.lottery))], showAdmin),
+                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('lottery', settings.lottery))], showAdmin),
                 renderSection('🌀 Roulette', [
                     formatMultipliers(settings.roulette.winMultipliers),
                     formatBet('Max Bet', settings.roulette.maxBet),
                     formatBet('Min Bet', settings.roulette.minBet),
-                ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('roulette', settings.roulette))], showAdmin),
+                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('roulette', settings.roulette))], showAdmin),
                 renderSection('🤑 Golden Jackpot', [
                     formatMultipliers(settings.goldenJackpot.winMultiplier),
                     formatBet('Max Bet', settings.goldenJackpot.maxBet),
                     formatBet('Min Bet', settings.goldenJackpot.minBet),
                 ], [
-                    formatRTP((0, rtpCalcHelper_1.calculateRTP)('goldenJackpot', settings.goldenJackpot)),
+                    formatRTP((0, gambling_bot_shared_1.calculateRTP)('goldenJackpot', settings.goldenJackpot)),
                     `- **One in Chance:** 1 in ${(0, utils_1.formatNumberWithSpaces)(settings.goldenJackpot.oneInChance)}`,
                 ], showAdmin),
                 renderSection('🪨📄✂️ RPS', [
                     `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
                     formatBet('Max Bet', settings.rps.maxBet),
                     formatBet('Min Bet', settings.rps.minBet),
-                ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('rps', settings.rps))], showAdmin),
+                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('rps', settings.rps))], showAdmin),
                 renderSection('🃏 Blackjack', [
                     formatBet('Max Bet', settings.blackjack.maxBet),
                     formatBet('Min Bet', settings.blackjack.minBet),
-                ], [formatRTP((0, rtpCalcHelper_1.calculateRTP)('blackjack', settings.blackjack))], showAdmin),
+                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('blackjack', settings.blackjack))], showAdmin),
                 renderSection('👀 Prediction', [
                     formatBet('Max Bet', settings.prediction.maxBet),
                     formatBet('Min Bet', settings.prediction.minBet),

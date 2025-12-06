@@ -6,8 +6,8 @@ const discord_js_1 = require("discord.js");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const casinoHelpers_1 = require("../../../utils/casinoHelpers");
 const utils_1 = require("../../../utils/utils");
-const defaultConfig_1 = require("../../../utils/defaultConfig");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
+const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
 exports.data = {
     name: 'simulate-slots',
     description: 'Simulate X spins on a slot machine. WARNING: May take a long time!',
@@ -70,9 +70,9 @@ async function run({ interaction }) {
         let currentLosingStreak = 0;
         let biggestLosingStreak = 0;
         const spins = (0, utils_1.parseReadableStringToNumber)(interaction.options.getString('spins', true));
-        if (spins > defaultConfig_1.SLOT_MAX_SIMULATE_SPINS) {
+        if (spins > gambling_bot_shared_1.SLOT_MAX_SIMULATE_SPINS) {
             return interaction.editReply({
-                content: `The maximum number of spins is ${(0, utils_1.formatNumberToReadableString)(defaultConfig_1.SLOT_MAX_SIMULATE_SPINS)}.`,
+                content: `The maximum number of spins is ${(0, utils_1.formatNumberToReadableString)(gambling_bot_shared_1.SLOT_MAX_SIMULATE_SPINS)}.`,
             });
         }
         const bet = (0, utils_1.parseReadableStringToNumber)(interaction.options.getString('bet', true));

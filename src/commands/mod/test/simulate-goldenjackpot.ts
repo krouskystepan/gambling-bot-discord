@@ -8,7 +8,7 @@ import {
 } from '../../../utils/utils'
 import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
 import GuildConfiguration from '../../../models/GuildConfiguration'
-import { GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES } from '../../../utils/defaultConfig'
+import { GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES } from '@krouskystepan/gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'simulate-goldenjackpot',
