@@ -1,4 +1,4 @@
-import { VipRoomSchema, TVipRoom } from '@krouskystepan/gambling-bot-shared'
+import { VipRoomSchema, TVipRoom } from 'gambling-bot-shared'
 import { model } from 'mongoose'
 
 VipRoomSchema.index({ expiresAt: 1 })

@@ -1,6 +1,6 @@
 import { AutocompleteInteraction, Client } from 'discord.js'
 import GuildConfiguration from '../../../models/GuildConfiguration'
-import { readableGameValueNames } from '@krouskystepan/gambling-bot-shared'
+import { readableGameValueNames } from 'gambling-bot-shared'
 
 export default async (interaction: AutocompleteInteraction, client: Client) => {
   if (!interaction.isAutocomplete()) return

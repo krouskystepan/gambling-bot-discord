@@ -1,7 +1,4 @@
-import {
-  defaultCasinoSettings,
-  MINI_NUMBERS,
-} from '@krouskystepan/gambling-bot-shared'
+import { defaultCasinoSettings, MINI_NUMBERS } from 'gambling-bot-shared'
 
 export type RouletteBetType =
   keyof (typeof defaultCasinoSettings)['roulette']['winMultipliers']

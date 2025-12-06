@@ -1,4 +1,4 @@
-import { TUser, UserSchema } from '@krouskystepan/gambling-bot-shared'
+import { TUser, UserSchema } from 'gambling-bot-shared'
 import { model } from 'mongoose'
 
 UserSchema.index({ userId: 1, guildId: 1 }, { unique: true })

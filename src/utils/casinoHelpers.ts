@@ -2,7 +2,7 @@ import {
   LOTTERY_TOTAL_NUMBERS,
   LOTTERY_NUM_TO_DRAW,
   MINI_NUMBERS,
-} from '@krouskystepan/gambling-bot-shared'
+} from 'gambling-bot-shared'
 import { Card } from './blackjackUtils'
 
 export const spinSlot = (slotConfig: {

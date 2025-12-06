@@ -7,10 +7,7 @@ import {
 import User from '../models//User'
 import { createErrorEmbed, createInfoEmbed } from './createEmbed'
 import VipRoom from '../models/VipRoom'
-import {
-  defaultCasinoSettings,
-  TGuildConfiguration,
-} from '@krouskystepan/gambling-bot-shared'
+import { defaultCasinoSettings, TGuildConfiguration } from 'gambling-bot-shared'
 import GuildConfiguration from '../models/GuildConfiguration'
 
 export const connectToDatabase = async () => {

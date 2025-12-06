@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@krouskystepan/gambling-bot-shared':
-        specifier: ^0.1.3
-        version: 0.1.3
       commandkit:
         specifier: ^0.1.6
         version: 0.1.10(discord.js@14.23.2)(typescript@5.9.3)
@@ -20,6 +17,9 @@ importers:
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
+      gambling-bot-shared:
+        specifier: ^0.1.3
+        version: 0.1.8
       luxon:
         specifier: ^3.7.2
         version: 3.7.2
@@ -378,9 +378,6 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@krouskystepan/gambling-bot-shared@0.1.3':
-    resolution: {integrity: sha512-NrgdYXVxP5mA1/0EnR0jH7isyASeA1o9mRMCRT14xHOtF7cpN5rffTxj3mnV8Nm4Av8G3J/BVLT+7uG1ffiY+g==, tarball: https://npm.pkg.github.com/download/@krouskystepan/gambling-bot-shared/0.1.3/c28dd4b1f33cb7cbe69688a6186322c3a354205b}
-
   '@mongodb-js/saslprep@1.3.1':
     resolution: {integrity: sha512-6nZrq5kfAz0POWyhljnbWQQJQ5uT8oE2ddX303q1uY0tWsivWKgBDXBBvuFPwOqRRalXJuVO9EjOdVtuhLX0zg==}
 
@@ -611,6 +608,9 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  gambling-bot-shared@0.1.8:
+    resolution: {integrity: sha512-PtTKYvha+7OuOAaV8GXepfyObW+sxx/enDkFLvWHHQgBF8YvOGYqsaZ4IsbYFt3xkLTIXu1Bow7GdUL+i3TQ9Q==}
 
   get-stream@6.0.1:
     resolution: {integrity: sha512-ts6Wi+2j3jQjqi70w5AlN8DFnkSwC+MqmxEzdEALB2qXZYV3X/b1CTfgPLGJNMeAWxdPfU8FO1ms3NUfaHCPYg==}
@@ -1298,20 +1298,6 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@krouskystepan/gambling-bot-shared@0.1.3':
-    dependencies:
-      mongoose: 8.19.1
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - '@aws-sdk/credential-providers'
-      - '@mongodb-js/zstd'
-      - gcp-metadata
-      - kerberos
-      - mongodb-client-encryption
-      - snappy
-      - socks
-      - supports-color
-
   '@mongodb-js/saslprep@1.3.1':
     dependencies:
       sparse-bitfield: 3.0.3
@@ -1595,6 +1581,20 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  gambling-bot-shared@0.1.8:
+    dependencies:
+      mongoose: 8.19.1
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-providers'
+      - '@mongodb-js/zstd'
+      - gcp-metadata
+      - kerberos
+      - mongodb-client-encryption
+      - snappy
+      - socks
+      - supports-color
 
   get-stream@6.0.1: {}
 

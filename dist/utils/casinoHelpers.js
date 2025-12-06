@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.drawNextCard = exports.spinRouletteWheel = exports.drawGoldenJackpot = exports.drawLottery = exports.flipCoin = exports.rollDice = exports.spinSlot = void 0;
-const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
+const gambling_bot_shared_1 = require("gambling-bot-shared");
 const spinSlot = (slotConfig) => {
     const weightedSymbols = Object.entries(slotConfig.symbolWeights).flatMap(([symbol, weight]) => Array(Number(weight)).fill(symbol));
     const spin = () => weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)];

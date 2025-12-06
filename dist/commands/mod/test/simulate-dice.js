@@ -7,7 +7,7 @@ const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
 const casinoHelpers_1 = require("../../../utils/casinoHelpers");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
+const gambling_bot_shared_1 = require("gambling-bot-shared");
 exports.data = {
     name: 'simulate-dice',
     description: 'Simulate X dice rolls. WARNING: May take a long time!',

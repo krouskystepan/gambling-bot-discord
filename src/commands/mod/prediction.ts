@@ -20,7 +20,7 @@ import {
 } from '../../utils/utils'
 import { DateTime } from 'luxon'
 import Transaction from '../../models/Transaction'
-import { TPredictionOption } from '@krouskystepan/gambling-bot-shared'
+import { TPredictionOption } from 'gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'prediction',

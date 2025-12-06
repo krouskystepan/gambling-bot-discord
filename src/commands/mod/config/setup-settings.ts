@@ -14,7 +14,7 @@ import {
 import {
   defaultCasinoSettings,
   readableGameValueNames,
-} from '@krouskystepan/gambling-bot-shared'
+} from 'gambling-bot-shared'
 
 const GAMES = [
   { name: 'All', value: 'all' },

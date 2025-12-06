@@ -8,7 +8,7 @@ import {
 } from '../../../utils/utils'
 import { flipCoin } from '../../../utils/casinoHelpers'
 import GuildConfiguration from '../../../models/GuildConfiguration'
-import { COINFLIP_MAX_SIMULATE_FLIPS } from '@krouskystepan/gambling-bot-shared'
+import { COINFLIP_MAX_SIMULATE_FLIPS } from 'gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'simulate-coin-flip',

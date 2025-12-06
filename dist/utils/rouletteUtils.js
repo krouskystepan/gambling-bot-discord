@@ -4,7 +4,7 @@ exports.inferTypeFromValue = inferTypeFromValue;
 exports.calculateRouletteWin = calculateRouletteWin;
 exports.getRouletteColor = getRouletteColor;
 exports.getRouletteHelpers = getRouletteHelpers;
-const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
+const gambling_bot_shared_1 = require("gambling-bot-shared");
 function inferTypeFromValue(value) {
     const val = value.toLowerCase();
     if (['red', 'black'].includes(val))

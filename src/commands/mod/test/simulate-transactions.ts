@@ -4,7 +4,7 @@ import {
   formatNumberToReadableString,
   parseReadableStringToNumber,
 } from '../../../utils/utils'
-import { TTransaction } from '@krouskystepan/gambling-bot-shared'
+import { TTransaction } from 'gambling-bot-shared'
 import Transaction from '../../../models/Transaction'
 
 export const data: CommandData = {

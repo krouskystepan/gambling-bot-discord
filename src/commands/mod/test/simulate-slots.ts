@@ -8,7 +8,7 @@ import {
   formatNumberWithSpaces,
 } from '../../../utils/utils'
 import GuildConfiguration from '../../../models/GuildConfiguration'
-import { SLOT_MAX_SIMULATE_SPINS } from '@krouskystepan/gambling-bot-shared'
+import { SLOT_MAX_SIMULATE_SPINS } from 'gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'simulate-slots',

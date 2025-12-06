@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
+const gambling_bot_shared_1 = require("gambling-bot-shared");
 exports.default = async (interaction, client) => {
     if (!interaction.isAutocomplete())
         return;

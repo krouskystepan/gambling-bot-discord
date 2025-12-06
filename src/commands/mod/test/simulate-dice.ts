@@ -8,7 +8,7 @@ import {
 } from '../../../utils/utils'
 import { rollDice } from '../../../utils/casinoHelpers'
 import GuildConfiguration from '../../../models/GuildConfiguration'
-import { DICE_MAX_SIMULATE_ROLLS } from '@krouskystepan/gambling-bot-shared'
+import { DICE_MAX_SIMULATE_ROLLS } from 'gambling-bot-shared'
 
 export const data: CommandData = {
   name: 'simulate-dice',

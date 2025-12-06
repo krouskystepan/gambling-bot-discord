@@ -7,7 +7,7 @@ const utils_1 = require("../../../utils/utils");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const VipRoom_1 = require("../../../models/VipRoom");
 const createEmbed_1 = require("../../../utils/createEmbed");
-const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
+const gambling_bot_shared_1 = require("gambling-bot-shared");
 exports.data = {
     name: 'casino-info',
     description: 'Get information about the casino.',

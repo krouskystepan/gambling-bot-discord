@@ -8,7 +8,7 @@ import {
   parseReadableStringToNumber,
 } from './utils'
 import Transaction from '../models/Transaction'
-import { TUser } from '@krouskystepan/gambling-bot-shared'
+import { TUser } from 'gambling-bot-shared'
 
 export const SUITES = ['♠️', '♣️', '♥️', '♦️'] as const
 export const VALUES = [

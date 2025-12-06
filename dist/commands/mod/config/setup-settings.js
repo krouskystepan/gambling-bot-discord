@@ -6,7 +6,7 @@ const discord_js_1 = require("discord.js");
 const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
 const createEmbed_1 = require("../../../utils/createEmbed");
 const utils_1 = require("../../../utils/utils");
-const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
+const gambling_bot_shared_1 = require("gambling-bot-shared");
 const GAMES = [
     { name: 'All', value: 'all' },
     { name: 'Dice', value: 'dice' },

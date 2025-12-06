@@ -6,7 +6,7 @@ const discord_js_1 = require("discord.js");
 const User_1 = require("../models//User");
 const createEmbed_1 = require("./createEmbed");
 const VipRoom_1 = require("../models/VipRoom");
-const gambling_bot_shared_1 = require("@krouskystepan/gambling-bot-shared");
+const gambling_bot_shared_1 = require("gambling-bot-shared");
 const GuildConfiguration_1 = require("../models/GuildConfiguration");
 const connectToDatabase = async () => {
     try {
