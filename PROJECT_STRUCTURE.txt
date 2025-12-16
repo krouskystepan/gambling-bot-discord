@@ -1,0 +1,111 @@
+src
+├── commands
+│   ├── misc
+│   │   ├── atm
+│   │   │   ├── deposit.ts
+│   │   │   ├── register.ts
+│   │   │   └── withdraw.ts
+│   │   ├── casino
+│   │   │   ├── coin-flip.ts
+│   │   │   ├── dice.ts
+│   │   │   ├── goldenjackpot.ts
+│   │   │   ├── lottery.ts
+│   │   │   ├── other
+│   │   │   │   ├── blackjack.ts
+│   │   │   │   └── rps.ts
+│   │   │   ├── roulette.ts
+│   │   │   └── slots.ts
+│   │   └── utils
+│   │       ├── balance.ts
+│   │       ├── bonus.ts
+│   │       ├── ping.ts
+│   │       └── vip.ts
+│   └── mod
+│       ├── auth
+│       │   ├── force-register.ts
+│       │   └── force-unregister.ts
+│       ├── config
+│       │   ├── setup-atm.ts
+│       │   ├── setup-casino.ts
+│       │   ├── setup-manager.ts
+│       │   ├── setup-prediction.ts
+│       │   ├── setup-settings.ts
+│       │   └── setup-vip.ts
+│       ├── prediction.ts
+│       ├── test
+│       │   ├── simulate-coin-flip.ts
+│       │   ├── simulate-dice.ts
+│       │   ├── simulate-goldenjackpot.ts
+│       │   ├── simulate-lottery.ts
+│       │   ├── simulate-slots.ts
+│       │   └── simulate-transactions.ts
+│       └── utils
+│           ├── casino-games.ts
+│           ├── casino-info.ts
+│           ├── manage-balance.ts
+│           ├── manage-vip.ts
+│           ├── money-manager.ts
+│           ├── role-info.ts
+│           └── who-is.ts
+├── errors
+│   ├── index.ts
+│   └── interaction-error.handler.ts
+├── events
+│   ├── clientReady
+│   │   ├── checkExpiredVip.ts
+│   │   ├── checkGuildSettings.ts
+│   │   ├── checkPredictions.ts
+│   │   └── consoleLog.ts
+│   └── interactionCreate
+│       ├── autocomplete
+│       │   ├── predictionAutocomplete.ts
+│       │   └── settingsAutocomplete.ts
+│       └── buttons
+│           ├── handleAtm.ts
+│           ├── handleBlackjack.ts
+│           ├── handleMoneyManage.ts
+│           └── handlePredictions.ts
+├── index.ts
+├── models
+│   ├── BlackjackGame.ts
+│   ├── GuildConfiguration.ts
+│   ├── Prediction.ts
+│   ├── Transaction.ts
+│   ├── User.ts
+│   └── VipRoom.ts
+├── services
+│   ├── db
+│   │   ├── base.db.ts
+│   │   ├── blackjackGame.db.ts
+│   │   ├── guildConfiguration.db.ts
+│   │   ├── index.ts
+│   │   ├── prediction.db.ts
+│   │   ├── transaction.db.ts
+│   │   ├── user.db.ts
+│   │   └── vip.db.ts
+│   ├── guildConfiguration
+│   │   ├── checkChannel.service.ts
+│   │   └── index.ts
+│   ├── index.ts
+│   ├── user
+│   │   ├── checkUserRegistration.service.ts
+│   │   ├── claimDailyBonus.service.ts
+│   │   └── index.ts
+│   └── vip
+│       ├── getActiveVipChannels.service.ts
+│       └── index.ts
+├── types
+│   ├── mongo.ts
+│   └── types.ts
+└── utils
+    ├── casino
+    │   ├── blackjack.ts
+    │   ├── rng.ts
+    │   └── roulette.ts
+    ├── common
+    │   └── utils.ts
+    └── discord
+        ├── createEmbed.ts
+        └── customEmotes.ts
+
+29 directories, 80 files

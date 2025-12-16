@@ -105,11 +105,9 @@ Unregister a user (delete from DB).
 Manage the manager role.
 
 - `set role:@role`
-
   - Set the manager role.
 
 - `remove`
-
   - Remove the manager role.
 
 ```
@@ -119,11 +117,9 @@ Manage the manager role.
 Manage the admin channels.
 
 - `add channel:#channel`
-
   - Set a channel for using admin commands.
 
 - `remove channel-id:ID`
-
   - Remove a channel from admin commands using its ID.
 
 ```
@@ -133,11 +129,9 @@ Manage the admin channels.
 Manage the casino channels.
 
 - `add channel:#channel`
-
   - Set a channel for using casino bets.
 
 - `remove channel-id:ID`
-
   - Remove a channel from admin commands using its ID.
 
 ```
@@ -147,19 +141,15 @@ Manage the casino channels.
 Manage ATM actions and log channels.
 
 - `add-actions channel:#channel`
-
   - Set a channel for ATM transactions (deposits and withdrawals).
 
 - `remove-actions channel-id:ID`
-
   - Remove a channel for ATM transactions using its ID (deposits and withdrawals).
 
 - `add-logs channel:#channel`
-
   - Set a channel for ATM logs (transaction logs).
 
 - `remove-logs channel-id:ID`
-
   - Remove a channel for ATM logs using its ID (transaction logs).
 
 ```
@@ -169,11 +159,9 @@ Manage ATM actions and log channels.
 Edit bot settings
 
 - `edit game:Dice key:Maximum Bet Amount value:10k`
-
   - Edit settings for individual game.
 
 - `reset game:Dice`
-
   - Reset settings to default value (you can reset all settings too).
 
 ### UTILS
@@ -203,11 +191,9 @@ Get information about a user.
 Create an embed for manage balance.
 
 - `give-balance amount:100k`
-
   - Create an embed for giving money.
 
 - `reset-balance `
-
   - Create an embed for reseting money.
 
 ```
@@ -217,19 +203,15 @@ Create an embed for manage balance.
 Manage user balances.
 
 - `deposit user:@user amount:250k`
-
   - Add money to a user.
 
 - `withdraw user:@user amount:250k`
-
   - Remove money from a user.
 
 - `check user:@user`
-
   - Check a user’s balance.
 
 - `list`
-
   - Check the balance of all users.
 
 ### TEST

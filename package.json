@@ -13,7 +13,8 @@
     "lint:fix": "eslint src --fix",
     "check": "pnpm format:check && pnpm lint:check",
     "fix": "pnpm format:fix && pnpm lint:fix",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist PROJECT_STRUCTURE.txt",
+    "generate-tree": "tree -L 6 src > PROJECT_STRUCTURE.txt"
   },
   "keywords": [],
   "author": "",
