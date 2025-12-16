@@ -13,8 +13,8 @@
     "lint:fix": "eslint src --fix",
     "check": "pnpm format:check && pnpm lint:check",
     "fix": "pnpm format:fix && pnpm lint:fix",
-    "clean": "rm -rf dist PROJECT_STRUCTURE.txt",
-    "generate-tree": "tree -L 6 src > PROJECT_STRUCTURE.txt"
+    "clean": "rm -rf dist",
+    "gdocs": "tsx src/scripts/generate-commands-structure.ts"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +38,7 @@
     "@typescript-eslint/parser": "^8.49.0",
     "eslint": "^9.39.2",
     "prettier": "^3.7.4",
+    "ts-morph": "^27.0.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
