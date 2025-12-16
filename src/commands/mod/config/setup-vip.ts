@@ -7,6 +7,7 @@ import {
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
 import { parseReadableStringToNumber } from '@/utils/common/utils'
 import {
@@ -373,6 +374,6 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
   } catch (error) {
-    console.error('Error running /setup-vip:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

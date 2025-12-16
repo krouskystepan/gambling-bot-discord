@@ -1,4 +1,5 @@
 import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
 import { parseReadableStringToNumber } from '@/utils/common/utils';
 import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
@@ -278,6 +279,6 @@ export async function run({ interaction }) {
         }
     }
     catch (error) {
-        console.error('Error running /setup-vip:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

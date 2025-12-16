@@ -1,5 +1,6 @@
 import { defaultCasinoSettings, readableGameValueNames } from 'gambling-bot-shared';
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
 import { formatNumberToPercentage, formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
 import { createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
@@ -253,6 +254,6 @@ export async function run({ interaction }) {
         }
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

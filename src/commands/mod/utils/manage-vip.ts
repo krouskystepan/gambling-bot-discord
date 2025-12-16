@@ -7,6 +7,7 @@ import {
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
   addMemberToVip,
   createTransaction,
@@ -619,6 +620,6 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
   } catch (error) {
-    console.error('Error running /manage-vip:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

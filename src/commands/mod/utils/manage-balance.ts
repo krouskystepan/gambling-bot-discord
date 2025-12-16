@@ -6,6 +6,7 @@ import {
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
   checkAtmChannels,
   checkTargetUserRegistration,
@@ -417,6 +418,6 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
   } catch (error) {
-    console.error('Error running /manage-balance:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

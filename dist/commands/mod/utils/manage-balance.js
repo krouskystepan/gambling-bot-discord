@@ -1,4 +1,5 @@
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { checkAtmChannels, checkTargetUserRegistration, createTransaction, deleteAllTransactionsByUserId, resetUserBalance, updateUserBalance } from '@/services';
 import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
 import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
@@ -320,6 +321,6 @@ export async function run({ interaction }) {
         }
     }
     catch (error) {
-        console.error('Error running /manage-balance:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

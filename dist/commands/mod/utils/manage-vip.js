@@ -1,4 +1,5 @@
 import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { addMemberToVip, createTransaction, createVip, deleteVipByOwnerId, extendVipExpiry, getActiveVipByOwner, getGuildConfigByGuildId, getUser } from '@/services';
 import { parseTimeToSeconds } from '@/utils/common/utils';
 import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
@@ -456,6 +457,6 @@ export async function run({ interaction }) {
         }
     }
     catch (error) {
-        console.error('Error running /manage-vip:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

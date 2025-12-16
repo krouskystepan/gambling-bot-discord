@@ -1,4 +1,5 @@
 import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
 import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
@@ -92,6 +93,6 @@ export async function run({ interaction }) {
         }
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

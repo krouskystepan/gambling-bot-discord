@@ -1,4 +1,5 @@
 import { ApplicationCommandOptionType, EmbedBuilder, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { forceDeleteUser, getGuildConfigByGuildId } from '@/services';
 import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
@@ -62,6 +63,6 @@ export async function run({ interaction, client }) {
         });
     }
     catch (error) {
-        console.error('Error running /force-unregister:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

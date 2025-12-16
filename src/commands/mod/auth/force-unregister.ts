@@ -7,6 +7,7 @@ import {
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import { forceDeleteUser, getGuildConfigByGuildId } from '@/services'
 import {
   createErrorEmbed,
@@ -94,6 +95,6 @@ export async function run({ interaction, client }: SlashCommandProps) {
       flags: MessageFlags.Ephemeral
     })
   } catch (error) {
-    console.error('Error running /force-unregister:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }
