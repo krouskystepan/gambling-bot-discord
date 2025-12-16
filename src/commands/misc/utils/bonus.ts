@@ -14,8 +14,8 @@ import {
   createTransaction,
   getGuildConfigByGuildId
 } from '@/services'
-import { createErrorEmbed, createInfoEmbed } from '@/utils/createEmbed'
-import { formatNumberToReadableString } from '@/utils/utils'
+import { formatNumberToReadableString } from '@/utils/common/utils'
+import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'bonus',

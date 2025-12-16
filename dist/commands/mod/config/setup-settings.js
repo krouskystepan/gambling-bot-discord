@@ -1,8 +1,8 @@
 import { defaultCasinoSettings, readableGameValueNames } from 'gambling-bot-shared';
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
-import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed';
-import { formatNumberToPercentage, formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/utils';
+import { formatNumberToPercentage, formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 const GAMES = [
     { name: 'All', value: 'all' },
     { name: 'Dice', value: 'dice' },

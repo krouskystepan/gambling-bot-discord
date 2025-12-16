@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType, EmbedBuilder, MessageFlags } from 'discord.js';
 import { forceCreateUser, getGuildConfigByGuildId } from '@/services';
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'force-register',
     description: 'Force register a user.',

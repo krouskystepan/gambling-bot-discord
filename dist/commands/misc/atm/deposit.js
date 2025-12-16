@@ -1,8 +1,8 @@
 import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkAtmChannels, checkUserRegistration } from '@/services';
-import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/utils';
+import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'deposit',
     description: 'Deposit money to your account.',

@@ -23,15 +23,15 @@ import {
   calculateHandValue,
   createBlackjackEmbed,
   shuffleDeck
-} from '@/utils/blackjackUtils'
-import { drawNextCard } from '@/utils/casinoHelpers'
-import { createErrorEmbed } from '@/utils/createEmbed'
+} from '@/utils/casino/blackjack'
+import { drawNextCard } from '@/utils/casino/rng'
 import {
   checkValidBet,
   formatNumberToReadableString,
   generateBetId,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'blackjack',

@@ -1,6 +1,6 @@
 import { TextChannel } from 'discord.js';
 import { deleteVipByOwnerId, getAllActiveVips, getGuildConfigByGuildId } from '@/services';
-import { createInfoEmbed } from '@/utils/createEmbed';
+import { createInfoEmbed } from '@/utils/discord/createEmbed';
 export default async (client) => {
     console.log('👀 VIP Room listener started');
     setInterval(async () => {

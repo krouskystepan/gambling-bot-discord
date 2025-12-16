@@ -4,7 +4,10 @@ import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { checkAtmChannels, createUser, getUser } from '@/services'
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed'
+import {
+  createErrorEmbed,
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'register',

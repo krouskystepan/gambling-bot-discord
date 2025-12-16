@@ -1,8 +1,8 @@
 import { MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkUserRegistration } from '@/services';
-import { createSuccessEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString } from '@/utils/utils';
+import { formatNumberToReadableString } from '@/utils/common/utils';
+import { createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'balance',
     description: 'Check your current balance (only you can see this).',

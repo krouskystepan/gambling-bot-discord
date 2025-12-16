@@ -1,6 +1,6 @@
 import BlackjackGame from '@/models/BlackjackGame'
 import { TGetBlackjackGame, TUpsertBlackjackGame } from '@/types/types'
-import { Card } from '@/utils/blackjackUtils'
+import { Card } from '@/utils/casino/blackjack'
 
 export const getBlackjackGameByUserAndGuild = async ({
   userId,

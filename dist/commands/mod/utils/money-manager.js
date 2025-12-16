@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } from 'discord.js';
-import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/utils';
+import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
 export const data = {
     name: 'money-manager',
     description: 'Create an embed for manage balance.',

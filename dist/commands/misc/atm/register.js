@@ -1,7 +1,7 @@
 import { EmbedBuilder, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkAtmChannels, createUser, getUser } from '@/services';
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'register',
     description: 'Register yourself in the system.',

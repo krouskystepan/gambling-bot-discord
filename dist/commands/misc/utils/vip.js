@@ -1,8 +1,8 @@
 import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { addMemberToVip, createTransaction, createVip, extendVipExpiry, getActiveVipByOwner, getGuildConfigByGuildId, getUser, removeMemberFromVip, updateUserBalance } from '@/services';
-import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString, parseTimeToSeconds } from '@/utils/utils';
+import { formatNumberToReadableString, parseTimeToSeconds } from '@/utils/common/utils';
+import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'vip',
     description: 'VIP management commands.',

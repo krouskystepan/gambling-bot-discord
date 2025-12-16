@@ -1,9 +1,9 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { consumeUserBalance, createTransaction, deleteBlackjackGame, getBlackjackGameByUserAndGuild, getUser, updateBlackjackGameState } from '@/services';
-import { calculateHandValue, createBlackjackEmbed, revealDealerCards } from '@/utils/blackjackUtils';
-import { drawNextCard } from '@/utils/casinoHelpers';
-import { createErrorEmbed, createInfoEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString } from '@/utils/utils';
+import { calculateHandValue, createBlackjackEmbed, revealDealerCards } from '@/utils/casino/blackjack';
+import { drawNextCard } from '@/utils/casino/rng';
+import { formatNumberToReadableString } from '@/utils/common/utils';
+import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed';
 export default async (interaction, _client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;

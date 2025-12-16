@@ -9,14 +9,14 @@ import {
   createTransaction,
   updateUserBalance
 } from '@/services'
-import { drawLottery } from '@/utils/casinoHelpers'
-import { createBetEmbed, createInfoEmbed } from '@/utils/createEmbed'
+import { drawLottery } from '@/utils/casino/rng'
 import {
   checkValidBet,
   formatNumberToReadableString,
   generateBetId,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'lottery',

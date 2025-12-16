@@ -19,11 +19,14 @@ import {
   updateUserBalance
 } from '@/services'
 import {
+  formatNumberToReadableString,
+  parseTimeToSeconds
+} from '@/utils/common/utils'
+import {
   createErrorEmbed,
   createInfoEmbed,
   createSuccessEmbed
-} from '@/utils/createEmbed'
-import { formatNumberToReadableString, parseTimeToSeconds } from '@/utils/utils'
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'vip',

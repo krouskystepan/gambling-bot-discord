@@ -14,11 +14,14 @@ import {
   getGuildConfigByGuildId,
   getPredictionById
 } from '@/services'
-import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import {
+  createInfoEmbed,
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return

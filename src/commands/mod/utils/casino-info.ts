@@ -5,11 +5,11 @@ import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { getAllActiveVipsByGuildId, getGuildConfigByGuildId } from '@/services'
-import { createErrorEmbed } from '@/utils/createEmbed'
 import {
   formatNumberToReadableString,
   formatNumberWithSpaces
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'casino-info',

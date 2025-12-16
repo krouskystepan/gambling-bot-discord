@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
-import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed';
-import { parseReadableStringToNumber } from '@/utils/utils';
+import { parseReadableStringToNumber } from '@/utils/common/utils';
+import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'setup-vip',
     description: 'Manage VIP settings.',

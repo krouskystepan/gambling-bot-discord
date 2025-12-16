@@ -5,7 +5,7 @@ import {
   getAllActiveVips,
   getGuildConfigByGuildId
 } from '@/services'
-import { createInfoEmbed } from '@/utils/createEmbed'
+import { createInfoEmbed } from '@/utils/discord/createEmbed'
 
 export default async (client: Client) => {
   console.log('👀 VIP Room listener started')

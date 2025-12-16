@@ -17,12 +17,12 @@ import {
   getGuildConfigByGuildId,
   getUser
 } from '@/services'
+import { parseTimeToSeconds } from '@/utils/common/utils'
 import {
   createErrorEmbed,
   createInfoEmbed,
   createSuccessEmbed
-} from '@/utils/createEmbed'
-import { parseTimeToSeconds } from '@/utils/utils'
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'manage-vip',

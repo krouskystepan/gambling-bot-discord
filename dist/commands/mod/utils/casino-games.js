@@ -1,4 +1,4 @@
-import { getRouletteHelpers } from '@/utils/rouletteUtils';
+import { getRouletteHelpers } from '@/utils/casino/roulette';
 export const data = {
     name: 'casino-games',
     description: 'Show available casino games and how to use them.',

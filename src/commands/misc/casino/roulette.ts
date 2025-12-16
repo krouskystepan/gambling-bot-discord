@@ -9,21 +9,21 @@ import {
   createTransaction,
   updateUserBalance
 } from '@/services'
-import { spinRouletteWheel } from '@/utils/casinoHelpers'
-import { createBetEmbed, createInfoEmbed } from '@/utils/createEmbed'
+import { spinRouletteWheel } from '@/utils/casino/rng'
 import {
   RouletteBet,
   RouletteBetType,
   calculateRouletteWin,
   getRouletteColor,
   inferTypeFromValue
-} from '@/utils/rouletteUtils'
+} from '@/utils/casino/roulette'
 import {
   checkValidBet,
   formatNumberToReadableString,
   generateBetId,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'roulette',

@@ -17,11 +17,14 @@ import {
   checkUserRegistration,
   withdrawBalance
 } from '@/services'
-import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import {
+  createInfoEmbed,
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'withdraw',

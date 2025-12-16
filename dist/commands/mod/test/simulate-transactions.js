@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import { createMultipleTransactions } from '@/services';
-import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/utils';
+import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
 export const data = {
     name: 'simulate-transactions',
     description: 'Simulate X transactions for testing filtering and indexing.',

@@ -1,10 +1,10 @@
 import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, getBlackjackGameByUserAndGuild, updateUserBalance, upsertBlackjackGame } from '@/services';
-import { DECK, calculateHandValue, createBlackjackEmbed, shuffleDeck } from '@/utils/blackjackUtils';
-import { drawNextCard } from '@/utils/casinoHelpers';
-import { createErrorEmbed } from '@/utils/createEmbed';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/utils';
+import { DECK, calculateHandValue, createBlackjackEmbed, shuffleDeck } from '@/utils/casino/blackjack';
+import { drawNextCard } from '@/utils/casino/rng';
+import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createErrorEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'blackjack',
     description: 'Start a game of blackjack. You can hit, stand, or double down.',

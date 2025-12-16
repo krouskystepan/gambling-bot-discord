@@ -4,7 +4,7 @@ import {
   MessageFlags
 } from 'discord.js'
 
-import { createErrorEmbed } from '@/utils/createEmbed'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const handleUnexpectedInteractionError = async (
   interaction: ChatInputCommandInteraction<CacheType>,

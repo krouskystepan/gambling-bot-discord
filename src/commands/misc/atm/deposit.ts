@@ -13,11 +13,14 @@ import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { checkAtmChannels, checkUserRegistration } from '@/services'
-import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import {
+  createInfoEmbed,
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'deposit',

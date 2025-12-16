@@ -8,7 +8,10 @@ import {
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { forceDeleteUser, getGuildConfigByGuildId } from '@/services'
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed'
+import {
+  createErrorEmbed,
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'force-unregister',

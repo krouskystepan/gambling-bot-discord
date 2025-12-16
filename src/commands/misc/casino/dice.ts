@@ -9,15 +9,15 @@ import {
   createTransaction,
   updateUserBalance
 } from '@/services'
-import { rollDice } from '@/utils/casinoHelpers'
-import { createBetEmbed } from '@/utils/createEmbed'
-import { diceEmojis, rollDiceEmote } from '@/utils/customEmotes'
+import { rollDice } from '@/utils/casino/rng'
 import {
   checkValidBet,
   formatNumberToReadableString,
   generateBetId,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createBetEmbed } from '@/utils/discord/createEmbed'
+import { diceEmojis, rollDiceEmote } from '@/utils/discord/customEmotes'
 
 export const data: CommandData = {
   name: 'dice',

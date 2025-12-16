@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'setup-casino',
     description: 'Manage the casino channels.',

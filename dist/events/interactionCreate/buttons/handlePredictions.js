@@ -1,7 +1,7 @@
 import { ActionRowBuilder, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { addPredictionBet, consumeUserBalance, createTransaction, getGuildConfigByGuildId, getPredictionById } from '@/services';
-import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/utils';
+import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export default async (interaction) => {
     if (!interaction.isButton() || !interaction.customId)
         return;

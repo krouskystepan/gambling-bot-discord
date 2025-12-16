@@ -7,7 +7,7 @@ import {
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { checkUserRegistration } from '@/services'
-import { formatNumberToReadableString } from '@/utils/utils'
+import { formatNumberToReadableString } from '@/utils/common/utils'
 
 export const data: CommandData = {
   name: 'who-is',

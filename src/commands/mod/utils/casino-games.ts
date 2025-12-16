@@ -1,6 +1,6 @@
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
-import { getRouletteHelpers } from '@/utils/rouletteUtils'
+import { getRouletteHelpers } from '@/utils/casino/roulette'
 
 export const data: CommandData = {
   name: 'casino-games',

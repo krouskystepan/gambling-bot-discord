@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
 import { addMemberToVip, createTransaction, createVip, deleteVipByOwnerId, extendVipExpiry, getActiveVipByOwner, getGuildConfigByGuildId, getUser } from '@/services';
-import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed';
-import { parseTimeToSeconds } from '@/utils/utils';
+import { parseTimeToSeconds } from '@/utils/common/utils';
+import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'manage-vip',
     description: 'Admin commands to manage VIP rooms.',

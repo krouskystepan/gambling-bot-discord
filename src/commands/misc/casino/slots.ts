@@ -9,15 +9,15 @@ import {
   createTransaction,
   updateUserBalance
 } from '@/services'
-import { spinSlot } from '@/utils/casinoHelpers'
-import { createBetEmbed } from '@/utils/createEmbed'
-import { slotEmojis, spinSlotEmotes } from '@/utils/customEmotes'
+import { spinSlot } from '@/utils/casino/rng'
 import {
   checkValidBet,
   formatNumberToReadableString,
   generateBetId,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createBetEmbed } from '@/utils/discord/createEmbed'
+import { slotEmojis, spinSlotEmotes } from '@/utils/discord/customEmotes'
 
 export const data: CommandData = {
   name: 'slots',

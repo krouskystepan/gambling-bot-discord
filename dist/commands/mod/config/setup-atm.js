@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'setup-atm',
     description: 'Manage ATM actions and logs channels.',

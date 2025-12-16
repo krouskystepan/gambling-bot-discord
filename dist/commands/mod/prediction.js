@@ -1,8 +1,8 @@
 import { DateTime } from 'luxon';
 import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder, MessageFlags } from 'discord.js';
 import { checkPredictionChannels, createPrediction, createTransaction, getPredictionById, updatePredictionStatus, updateUserBalance } from '@/services';
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString } from '@/utils/utils';
+import { formatNumberToReadableString } from '@/utils/common/utils';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'prediction',
     description: 'Manage predictions.',

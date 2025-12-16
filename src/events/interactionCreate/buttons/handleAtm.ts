@@ -17,8 +17,11 @@ import {
   getUser,
   updateUserBalance
 } from '@/services'
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed'
-import { formatNumberToReadableString } from '@/utils/utils'
+import { formatNumberToReadableString } from '@/utils/common/utils'
+import {
+  createErrorEmbed,
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return

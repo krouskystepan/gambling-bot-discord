@@ -24,8 +24,11 @@ import {
   updatePredictionStatus,
   updateUserBalance
 } from '@/services'
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed'
-import { formatNumberToReadableString } from '@/utils/utils'
+import { formatNumberToReadableString } from '@/utils/common/utils'
+import {
+  createErrorEmbed,
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'prediction',

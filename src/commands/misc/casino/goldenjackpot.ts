@@ -9,14 +9,14 @@ import {
   createTransaction,
   updateUserBalance
 } from '@/services'
-import { drawGoldenJackpot } from '@/utils/casinoHelpers'
-import { createBetEmbed, createInfoEmbed } from '@/utils/createEmbed'
+import { drawGoldenJackpot } from '@/utils/casino/rng'
 import {
   checkValidBet,
   formatNumberToReadableString,
   generateBetId,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
 const GOLDEN_JACKPOT_MAX_ENTRIES = 100
 

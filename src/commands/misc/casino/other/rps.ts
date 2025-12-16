@@ -16,13 +16,13 @@ import {
   createTransaction,
   updateUserBalance
 } from '@/services'
-import { createBetEmbed, createInfoEmbed } from '@/utils/createEmbed'
 import {
   checkValidBet,
   formatNumberToReadableString,
   generateBetId,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
 const choices = [
   { name: 'rock', emoji: '🪨', beats: 'scissors' },

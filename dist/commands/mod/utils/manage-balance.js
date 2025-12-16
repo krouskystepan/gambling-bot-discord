@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
 import { checkAtmChannels, checkTargetUserRegistration, createTransaction, deleteAllTransactionsByUserId, resetUserBalance, updateUserBalance } from '@/services';
-import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/utils';
+import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createErrorEmbed, createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'manage-balance',
     description: 'Manage user balances.',

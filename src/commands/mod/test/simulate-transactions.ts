@@ -8,7 +8,7 @@ import { createMultipleTransactions } from '@/services'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
 
 export const data: CommandData = {
   name: 'simulate-transactions',

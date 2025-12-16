@@ -12,12 +12,15 @@ import {
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
-import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed'
 import {
   formatNumberToPercentage,
   formatNumberToReadableString,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import {
+  createInfoEmbed,
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 const GAMES = [
   { name: 'All', value: 'all' },

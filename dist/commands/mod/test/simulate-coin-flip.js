@@ -1,9 +1,9 @@
 import { COINFLIP_MAX_SIMULATE_FLIPS } from 'gambling-bot-shared';
 import { ApplicationCommandOptionType } from 'discord.js';
 import { getGuildConfigByGuildId } from '@/services';
-import { flipCoin } from '@/utils/casinoHelpers';
-import { createBetEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString, formatNumberWithSpaces, parseReadableStringToNumber } from '@/utils/utils';
+import { flipCoin } from '@/utils/casino/rng';
+import { formatNumberToReadableString, formatNumberWithSpaces, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'simulate-coin-flip',
     description: 'Simulate X coin flips. WARNING: May take a long time!',

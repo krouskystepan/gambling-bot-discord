@@ -1,10 +1,10 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, updateUserBalance } from '@/services';
-import { rollDice } from '@/utils/casinoHelpers';
-import { createBetEmbed } from '@/utils/createEmbed';
-import { diceEmojis, rollDiceEmote } from '@/utils/customEmotes';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/utils';
+import { rollDice } from '@/utils/casino/rng';
+import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed } from '@/utils/discord/createEmbed';
+import { diceEmojis, rollDiceEmote } from '@/utils/discord/customEmotes';
 export const data = {
     name: 'dice',
     description: 'Play a dice game!',

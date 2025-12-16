@@ -1,6 +1,6 @@
 import type { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
-import { createSuccessEmbed } from '@/utils/createEmbed'
+import { createSuccessEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'ping',

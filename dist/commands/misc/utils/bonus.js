@@ -1,8 +1,8 @@
 import { ApplicationCommandOptionType, Colors, EmbedBuilder, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkUserRegistration, claimDailyBonus, createTransaction, getGuildConfigByGuildId } from '@/services';
-import { createErrorEmbed, createInfoEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString } from '@/utils/utils';
+import { formatNumberToReadableString } from '@/utils/common/utils';
+import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'bonus',
     description: 'Daily bonus system with streaks.',

@@ -1,9 +1,9 @@
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, updateUserBalance } from '@/services';
-import { drawGoldenJackpot } from '@/utils/casinoHelpers';
-import { createBetEmbed, createInfoEmbed } from '@/utils/createEmbed';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/utils';
+import { drawGoldenJackpot } from '@/utils/casino/rng';
+import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed';
 const GOLDEN_JACKPOT_MAX_ENTRIES = 100;
 export const data = {
     name: 'goldenjackpot',

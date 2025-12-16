@@ -1,9 +1,9 @@
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, updateUserBalance } from '@/services';
-import { drawLottery } from '@/utils/casinoHelpers';
-import { createBetEmbed, createInfoEmbed } from '@/utils/createEmbed';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/utils';
+import { drawLottery } from '@/utils/casino/rng';
+import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'lottery',
     description: 'Play the lottery! Pick 5 numbers and see if you win.',

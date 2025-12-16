@@ -8,12 +8,12 @@ import {
   updateUserBalance
 } from '@/services'
 
-import { drawNextCard } from './casinoHelpers'
-import { createBetEmbed } from './createEmbed'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber
-} from './utils'
+} from '../common/utils'
+import { createBetEmbed } from '../discord/createEmbed'
+import { drawNextCard } from './rng'
 
 export const SUITES = ['♠️', '♣️', '♥️', '♦️'] as const
 export const VALUES = [

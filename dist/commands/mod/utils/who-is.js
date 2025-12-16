@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js';
 import { checkUserRegistration } from '@/services';
-import { formatNumberToReadableString } from '@/utils/utils';
+import { formatNumberToReadableString } from '@/utils/common/utils';
 export const data = {
     name: 'who-is',
     description: 'Get information about a user.',

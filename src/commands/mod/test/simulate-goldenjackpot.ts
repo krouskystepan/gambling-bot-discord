@@ -5,13 +5,13 @@ import { ApplicationCommandOptionType } from 'discord.js'
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { getGuildConfigByGuildId } from '@/services'
-import { drawGoldenJackpot } from '@/utils/casinoHelpers'
-import { createBetEmbed } from '@/utils/createEmbed'
+import { drawGoldenJackpot } from '@/utils/casino/rng'
 import {
   formatNumberToReadableString,
   formatNumberWithSpaces,
   parseReadableStringToNumber
-} from '@/utils/utils'
+} from '@/utils/common/utils'
+import { createBetEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'simulate-goldenjackpot',

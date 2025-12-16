@@ -1,5 +1,5 @@
 import { MessageFlags } from 'discord.js';
-import { createErrorEmbed } from '@/utils/createEmbed';
+import { createErrorEmbed } from '@/utils/discord/createEmbed';
 import { getUser } from '../db/user.db';
 export const checkUserRegistration = async ({ interaction }) => {
     const user = await getUser({

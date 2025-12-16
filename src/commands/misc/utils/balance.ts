@@ -4,8 +4,8 @@ import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { checkUserRegistration } from '@/services'
-import { createSuccessEmbed } from '@/utils/createEmbed'
-import { formatNumberToReadableString } from '@/utils/utils'
+import { formatNumberToReadableString } from '@/utils/common/utils'
+import { createSuccessEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'balance',

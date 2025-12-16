@@ -1,8 +1,8 @@
 import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkTargetUserRegistration, checkUserRegistration, createTransaction, updateUserBalance } from '@/services';
-import { createBetEmbed, createInfoEmbed } from '@/utils/createEmbed';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/utils';
+import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed';
 const choices = [
     { name: 'rock', emoji: '🪨', beats: 'scissors' },
     { name: 'scissors', emoji: '✂️', beats: 'paper' },

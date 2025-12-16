@@ -1,4 +1,4 @@
-import { createSuccessEmbed } from '@/utils/createEmbed';
+import { createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'ping',
     description: 'Check the bot latency.'

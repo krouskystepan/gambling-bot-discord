@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType, EmbedBuilder, MessageFlags } from 'discord.js';
 import { forceDeleteUser, getGuildConfigByGuildId } from '@/services';
-import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'force-unregister',
     description: 'Unregister a user (delete from DB).',

@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose'
 
-import { Card } from '../utils/blackjackUtils'
+import { Card } from '../utils/casino/blackjack'
 
 export type BlackjackGameDoc = Document & {
   gameId: string

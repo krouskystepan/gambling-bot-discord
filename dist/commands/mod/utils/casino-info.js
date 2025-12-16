@@ -1,8 +1,8 @@
 import { calculateRTP } from 'gambling-bot-shared';
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
 import { getAllActiveVipsByGuildId, getGuildConfigByGuildId } from '@/services';
-import { createErrorEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString, formatNumberWithSpaces } from '@/utils/utils';
+import { formatNumberToReadableString, formatNumberWithSpaces } from '@/utils/common/utils';
+import { createErrorEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'casino-info',
     description: 'Get information about the casino.',

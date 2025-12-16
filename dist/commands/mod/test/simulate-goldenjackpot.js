@@ -1,9 +1,9 @@
 import { GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES } from 'gambling-bot-shared';
 import { ApplicationCommandOptionType } from 'discord.js';
 import { getGuildConfigByGuildId } from '@/services';
-import { drawGoldenJackpot } from '@/utils/casinoHelpers';
-import { createBetEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString, formatNumberWithSpaces, parseReadableStringToNumber } from '@/utils/utils';
+import { drawGoldenJackpot } from '@/utils/casino/rng';
+import { formatNumberToReadableString, formatNumberWithSpaces, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'simulate-goldenjackpot',
     description: 'Simulate X goldenjackpot entries. WARNING: May take a long time!',

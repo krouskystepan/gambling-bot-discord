@@ -12,8 +12,8 @@ import {
   resetUserBalance,
   updateUserBalance
 } from '@/services'
-import { createErrorEmbed } from '@/utils/createEmbed'
-import { formatNumberToReadableString } from '@/utils/utils'
+import { formatNumberToReadableString } from '@/utils/common/utils'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 //! DB TRANSACTIONS
 //! Rare condition - no .save()

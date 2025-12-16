@@ -1,10 +1,10 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, updateUserBalance } from '@/services';
-import { flipCoin } from '@/utils/casinoHelpers';
-import { createBetEmbed } from '@/utils/createEmbed';
-import { coinEmojis, flipCoinEmote } from '@/utils/customEmotes';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/utils';
+import { flipCoin } from '@/utils/casino/rng';
+import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed } from '@/utils/discord/createEmbed';
+import { coinEmojis, flipCoinEmote } from '@/utils/discord/customEmotes';
 export const data = {
     name: 'coin-flip',
     description: 'Flip a coin!',

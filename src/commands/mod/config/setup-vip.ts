@@ -8,12 +8,12 @@ import {
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
+import { parseReadableStringToNumber } from '@/utils/common/utils'
 import {
   createErrorEmbed,
   createInfoEmbed,
   createSuccessEmbed
-} from '@/utils/createEmbed'
-import { parseReadableStringToNumber } from '@/utils/utils'
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-vip',

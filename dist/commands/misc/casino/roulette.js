@@ -1,10 +1,10 @@
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, updateUserBalance } from '@/services';
-import { spinRouletteWheel } from '@/utils/casinoHelpers';
-import { createBetEmbed, createInfoEmbed } from '@/utils/createEmbed';
-import { calculateRouletteWin, getRouletteColor, inferTypeFromValue } from '@/utils/rouletteUtils';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/utils';
+import { spinRouletteWheel } from '@/utils/casino/rng';
+import { calculateRouletteWin, getRouletteColor, inferTypeFromValue } from '@/utils/casino/roulette';
+import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'roulette',
     description: 'Play Mini Roulette with multiple bets!',

@@ -4,7 +4,7 @@ import {
   MessageFlags
 } from 'discord.js'
 
-import { createInfoEmbed } from './createEmbed'
+import { createInfoEmbed } from '../discord/createEmbed'
 
 export const generateBetId = (): string => {
   const timestamp = Date.now().toString(36)

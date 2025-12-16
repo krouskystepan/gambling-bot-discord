@@ -1,5 +1,5 @@
 import { MessageFlags } from 'discord.js';
-import { createErrorEmbed } from '@/utils/createEmbed';
+import { createErrorEmbed } from '@/utils/discord/createEmbed';
 import { getGuildConfigByGuildId } from '../db/guildConfiguration.db';
 import { getActiveVipChannels } from '../vip/getActiveVipChannels.service';
 export const checkAtmChannels = async (interaction) => {

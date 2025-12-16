@@ -1,9 +1,9 @@
 import { DICE_MAX_SIMULATE_ROLLS } from 'gambling-bot-shared';
 import { ApplicationCommandOptionType } from 'discord.js';
 import { getGuildConfigByGuildId } from '@/services';
-import { rollDice } from '@/utils/casinoHelpers';
-import { createBetEmbed } from '@/utils/createEmbed';
-import { formatNumberToReadableString, formatNumberWithSpaces, parseReadableStringToNumber } from '@/utils/utils';
+import { rollDice } from '@/utils/casino/rng';
+import { formatNumberToReadableString, formatNumberWithSpaces, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'simulate-dice',
     description: 'Simulate X dice rolls. WARNING: May take a long time!',

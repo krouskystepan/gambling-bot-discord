@@ -1,10 +1,10 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, updateUserBalance } from '@/services';
-import { spinSlot } from '@/utils/casinoHelpers';
-import { createBetEmbed } from '@/utils/createEmbed';
-import { slotEmojis, spinSlotEmotes } from '@/utils/customEmotes';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/utils';
+import { spinSlot } from '@/utils/casino/rng';
+import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { createBetEmbed } from '@/utils/discord/createEmbed';
+import { slotEmojis, spinSlotEmotes } from '@/utils/discord/customEmotes';
 export const data = {
     name: 'slots',
     description: 'Spin the slot machine!',
