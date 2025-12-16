@@ -1,20 +1,23 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
+import {
+  defaultCasinoSettings,
+  readableGameValueNames
+} from 'gambling-bot-shared'
+
 import {
   ApplicationCommandOptionType,
   CommandInteractionOptionResolver,
-  MessageFlags,
+  MessageFlags
 } from 'discord.js'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import { createInfoEmbed, createSuccessEmbed } from '../../../utils/createEmbed'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
+import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed'
 import {
   formatNumberToPercentage,
   formatNumberToReadableString,
-  parseReadableStringToNumber,
-} from '../../../utils/utils'
-import {
-  defaultCasinoSettings,
-  readableGameValueNames,
-} from 'gambling-bot-shared'
+  parseReadableStringToNumber
+} from '@/utils/utils'
 
 const GAMES = [
   { name: 'All', value: 'all' },
@@ -25,7 +28,7 @@ const GAMES = [
   { name: 'RPS', value: 'rps' },
   { name: 'Golden Jackpot', value: 'goldenJackpot' },
   { name: 'Blackjack', value: 'blackjack' },
-  { name: 'Prediction', value: 'prediction' },
+  { name: 'Prediction', value: 'prediction' }
 ]
 
 export const data: CommandData = {
@@ -42,22 +45,22 @@ export const data: CommandData = {
           description: 'Game to configure',
           type: ApplicationCommandOptionType.String,
           required: true,
-          choices: GAMES,
+          choices: GAMES
         },
         {
           name: 'key',
           description: 'Select the setting to update.',
           type: ApplicationCommandOptionType.String,
           required: true,
-          autocomplete: true,
+          autocomplete: true
         },
         {
           name: 'value',
           description: 'New value. NOTE: Be sure to enter a correct value.',
           type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'reset',
@@ -69,31 +72,30 @@ export const data: CommandData = {
           description: 'Game to reset',
           type: ApplicationCommandOptionType.String,
           required: false,
-          choices: GAMES,
-        },
-      ],
-    },
+          choices: GAMES
+        }
+      ]
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: true,
-  devOnly: true,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    let guildConfiguration = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    let guildConfiguration = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
-    if (!guildConfiguration || !guildConfiguration.casinoSettings) {
-      guildConfiguration = new GuildConfiguration({
-        guildId: interaction.guildId,
-        casinoSettings: defaultCasinoSettings,
+    if (!guildConfiguration) {
+      guildConfiguration = await createGuildConfiguration({
+        guildId: interaction.guildId!
       })
     }
 
@@ -112,9 +114,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createInfoEmbed(
               'Invalid Game',
               'The game you provided is not valid.\nPlease make sure you enter a valid game name.'
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -124,9 +126,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createInfoEmbed(
               'Invalid Setting',
               'The setting you provided is not valid.\nPlease make sure you enter a valid setting name.\n\n> ***Note:** After changing the game a second time within the same command. Please retype the command from scratch to refresh the options. (This is a Discord API bug).*'
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -140,9 +142,9 @@ export async function run({ interaction }: SlashCommandProps) {
               createInfoEmbed(
                 'Invalid Input - Out of Range',
                 'The number you provided must be between 10% and 90%.\nPlease enter a positive value.'
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -161,9 +163,9 @@ export async function run({ interaction }: SlashCommandProps) {
               }** for **${game.toUpperCase()}** has been updated to **${formatNumberToPercentage(
                 valueAsNumber
               )}**.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -184,9 +186,9 @@ export async function run({ interaction }: SlashCommandProps) {
                 readableGameValueNames.find((value) => value.value === key)
                   ?.name
               }** for **${game.toUpperCase()}** has been updated to **${valueAsNumber}x**.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -207,9 +209,9 @@ export async function run({ interaction }: SlashCommandProps) {
               createInfoEmbed(
                 'Invalid Input - Not a number',
                 'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -219,9 +221,9 @@ export async function run({ interaction }: SlashCommandProps) {
               createInfoEmbed(
                 'Invalid Input - Non-positive number',
                 'The number you provided must be greater than 0.\nPlease enter a positive value.'
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -236,9 +238,9 @@ export async function run({ interaction }: SlashCommandProps) {
                 `The minimum bet cannot be greater than the maximum bet of **$${formatNumberToReadableString(
                   guildConfiguration.casinoSettings[game].maxBet
                 )}**.`
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -254,9 +256,9 @@ export async function run({ interaction }: SlashCommandProps) {
               `The setting ${key} for ${game} has been updated to **${formatNumberToReadableString(
                 parsedValue
               )}**.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -271,9 +273,9 @@ export async function run({ interaction }: SlashCommandProps) {
               createInfoEmbed(
                 'Invalid Input - Not a number',
                 'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -285,9 +287,9 @@ export async function run({ interaction }: SlashCommandProps) {
               createInfoEmbed(
                 'Invalid Input - Not a valid object key',
                 'The object key you entered is not valid.\nPlease make sure you enter a valid object key.'
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -303,9 +305,9 @@ export async function run({ interaction }: SlashCommandProps) {
                 readableGameValueNames.find((value) => value.value === key)
                   ?.name
               }** for **${game.toUpperCase()}** has been updated: **Multiplier for value ${objKey} is now ${valueAsNumber}x**.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -324,10 +326,10 @@ export async function run({ interaction }: SlashCommandProps) {
               '- `b` for billions (e.g., `1b` = 1 000 000 000)',
               '- `*` for custom values (e.g., `*500` = 500, `*1250` = 1250)',
               '',
-              '- `:` for object keys (e.g. `key:value`, `🔔🔔🔔:3` = Mult for value `🔔🔔🔔` is `3x`, `4:2` = Mult for number `4` is `2x`)',
+              '- `:` for object keys (e.g. `key:value`, `🔔🔔🔔:3` = Mult for value `🔔🔔🔔` is `3x`, `4:2` = Mult for number `4` is `2x`)'
             ].join('\n')
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -345,9 +347,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createSuccessEmbed(
               'Casino Settings Reset',
               'All casino settings have been reset to default values.'
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -363,9 +365,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createSuccessEmbed(
               'Casino Settings Reset',
               `The casino settings for **${game.toUpperCase()}** have been reset to default values.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
     }

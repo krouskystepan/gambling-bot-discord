@@ -1,31 +1,37 @@
-import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 import {
   ActionRowBuilder,
   ApplicationCommandOptionType,
   ButtonBuilder,
   ButtonStyle,
-  MessageFlags,
+  MessageFlags
 } from 'discord.js'
-import { createErrorEmbed } from '../../../../utils/createEmbed'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  shuffleDeck,
+  checkCasinoChannels,
+  checkUserRegistration,
+  createTransaction,
+  getBlackjackGameByUserAndGuild,
+  updateUserBalance,
+  upsertBlackjackGame
+} from '@/services'
+import {
+  BJResults,
   DECK,
   calculateHandValue,
   createBlackjackEmbed,
-  BJResults,
-} from '../../../../utils/blackjackUtils'
-import BlackjackGame from '../../../../models/BlackjackGame'
-import { drawNextCard } from '../../../../utils/casinoHelpers'
+  shuffleDeck
+} from '@/utils/blackjackUtils'
+import { drawNextCard } from '@/utils/casinoHelpers'
+import { createErrorEmbed } from '@/utils/createEmbed'
 import {
-  checkUserRegistration,
-  checkChannelConfiguration,
-  parseReadableStringToNumber,
-  formatNumberToReadableString,
   checkValidBet,
+  formatNumberToReadableString,
   generateBetId,
-} from '../../../../utils/utils'
-import Transaction from '../../../../models/Transaction'
-import User from '../../../../models/User'
+  parseReadableStringToNumber
+} from '@/utils/utils'
 
 export const data: CommandData = {
   name: 'blackjack',
@@ -35,57 +41,34 @@ export const data: CommandData = {
       name: 'bet',
       description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'show-balance',
       description:
         'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(
-      interaction.user.id,
-      interaction.guildId!
-    )
+    const user = await checkUserRegistration({ interaction })
+    if (!user) return
 
-    if (!user) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Not registered',
-            'You are not registered yet.\nUse the `/register` command to register.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    const configReply = await checkChannelConfiguration(
-      interaction,
-      'casinoChannelIds',
-      {
-        notSet:
-          'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
-      }
-    )
-
+    const configReply = await checkCasinoChannels(interaction)
     if (!configReply) return
 
-    const existingGame = await BlackjackGame.findOne({
-      guildId: interaction.guild?.id,
+    const existingGame = await getBlackjackGameByUserAndGuild({
       userId: interaction.user.id,
+      guildId: interaction.guildId!
     })
 
     if (existingGame) {
@@ -94,9 +77,9 @@ export async function run({ interaction }: SlashCommandProps) {
           createErrorEmbed(
             'Blackjack Already Active',
             `You already have an active Blackjack game running! 🃏`
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -119,33 +102,30 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const betId = generateBetId()
 
-    await User.findOneAndUpdate(
-      { userId: user.userId, guildId: user.guildId },
-      {
-        $inc: {
-          balance: -parsedBetAmount,
-          lockedBalance: -Math.min(user.lockedBalance, parsedBetAmount),
-        },
-      }
-    )
-    await Transaction.create({
+    await updateUserBalance({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: -parsedBetAmount,
+      lockedAmount: -Math.min(user.lockedBalance, parsedBetAmount)
+    })
+
+    await createTransaction({
       userId: user.userId,
       guildId: user.guildId,
       amount: parsedBetAmount,
       type: 'bet',
       source: 'casino',
-      betId,
-      createdAt: new Date(),
+      betId
     })
 
     const shuffledDeck = shuffleDeck(DECK)
     const playerCards = [
       drawNextCard(shuffledDeck, 0),
-      drawNextCard(shuffledDeck, 1),
+      drawNextCard(shuffledDeck, 1)
     ]
     const dealerCards = [
       drawNextCard(shuffledDeck, 2),
-      drawNextCard(shuffledDeck, 3),
+      drawNextCard(shuffledDeck, 3)
     ]
 
     const playerTotal = calculateHandValue(playerCards)
@@ -173,24 +153,23 @@ export async function run({ interaction }: SlashCommandProps) {
       let finalBalance = user.balance - parsedBetAmount
 
       if (balanceIncrement > 0) {
-        const updatedUser = await User.findOneAndUpdate(
-          { userId: user.userId, guildId: user.guildId },
-          { $inc: { balance: balanceIncrement } },
-          { new: true }
-        )
+        const updatedUser = await updateUserBalance({
+          userId: user.userId,
+          guildId: user.guildId,
+          amount: balanceIncrement
+        })
 
         if (!updatedUser) {
           throw new Error('User not found when paying out Blackjack')
         }
 
-        await Transaction.create({
+        await createTransaction({
           userId: user.userId,
           guildId: user.guildId,
           amount: balanceIncrement,
           type: 'win',
           source: 'casino',
-          betId,
-          createdAt: new Date(),
+          betId
         })
 
         finalBalance = updatedUser.balance
@@ -208,24 +187,22 @@ export async function run({ interaction }: SlashCommandProps) {
             showBalance,
             finalBalance,
             betId
-          ),
-        ],
+          )
+        ]
       })
     }
 
     const message = await interaction.fetchReply()
 
-    await BlackjackGame.findOneAndUpdate(
-      { userId: interaction.user.id, guildId: interaction.guildId },
-      {
-        gameId: message.id,
-        betAmount: parsedBetAmount,
-        deck: shuffledDeck,
-        playerCards,
-        dealerCards,
-      },
-      { upsert: true }
-    )
+    await upsertBlackjackGame({
+      userId: interaction.user.id,
+      guildId: interaction.guildId!,
+      gameId: message.id,
+      betAmount: parsedBetAmount,
+      deck: shuffledDeck,
+      playerCards,
+      dealerCards
+    })
 
     const hitButton = new ButtonBuilder()
       .setCustomId(
@@ -267,11 +244,11 @@ export async function run({ interaction }: SlashCommandProps) {
           0,
           betId,
           true
-        ),
+        )
       ],
-      components: [row],
+      components: [row]
     })
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

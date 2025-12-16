@@ -1,14 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createBlackjackEmbed = exports.revealDealerCards = exports.calculateHandValue = exports.shuffleDeck = exports.DECK = exports.VALUES = exports.SUITES = void 0;
-const createEmbed_1 = require("./createEmbed");
-const BlackjackGame_1 = require("../models/BlackjackGame");
-const casinoHelpers_1 = require("./casinoHelpers");
-const User_1 = require("../models/User");
-const utils_1 = require("./utils");
-const Transaction_1 = require("../models/Transaction");
-exports.SUITES = ['♠️', '♣️', '♥️', '♦️'];
-exports.VALUES = [
+import { createTransaction, deleteBlackjackGame, updateUserBalance } from '@/services';
+import { drawNextCard } from './casinoHelpers';
+import { createBetEmbed } from './createEmbed';
+import { formatNumberToReadableString, parseReadableStringToNumber } from './utils';
+export const SUITES = ['♠️', '♣️', '♥️', '♦️'];
+export const VALUES = [
     { label: 'A', value: 11 },
     { label: '2', value: 2 },
     { label: '3', value: 3 },
@@ -21,10 +16,10 @@ exports.VALUES = [
     { label: '10', value: 10 },
     { label: 'J', value: 10 },
     { label: 'Q', value: 10 },
-    { label: 'K', value: 10 },
+    { label: 'K', value: 10 }
 ];
-exports.DECK = exports.SUITES.flatMap((suite) => exports.VALUES.map(({ label, value }) => ({ suite, label, value })));
-const shuffleDeck = (deck) => {
+export const DECK = SUITES.flatMap((suite) => VALUES.map(({ label, value }) => ({ suite, label, value })));
+export const shuffleDeck = (deck) => {
     const shuffled = [...deck];
     for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -32,8 +27,7 @@ const shuffleDeck = (deck) => {
     }
     return shuffled;
 };
-exports.shuffleDeck = shuffleDeck;
-const calculateHandValue = (cards) => {
+export const calculateHandValue = (cards) => {
     let total = 0;
     let aceCount = 0;
     cards.forEach((card) => {
@@ -51,29 +45,28 @@ const calculateHandValue = (cards) => {
     }
     return total;
 };
-exports.calculateHandValue = calculateHandValue;
-const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerCards, playerTotal, deck, gameIndex, user, guildId, gameId, showBalnce, betId) => {
+export const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerCards, playerTotal, deck, gameIndex, user, guildId, gameId, showBalnce, betId) => {
     await message.edit({
         embeds: [
-            (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, 'DRAWING', false, 0, betId),
+            createBlackjackEmbed(bet, dealerCards, dealerTotal, playerCards, playerTotal, 'DRAWING', false, 0, betId)
         ],
-        components: [],
+        components: []
     });
     await new Promise((resolve) => setTimeout(resolve, 1000));
     while (dealerTotal < 17) {
-        const drawnCard = (0, casinoHelpers_1.drawNextCard)(deck, gameIndex);
+        const drawnCard = drawNextCard(deck, gameIndex);
         dealerCards.push(drawnCard);
-        dealerTotal = (0, exports.calculateHandValue)(dealerCards);
+        dealerTotal = calculateHandValue(dealerCards);
         gameIndex++;
         await message.edit({
             embeds: [
-                (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, 'DRAWING', false, 0, betId),
+                createBlackjackEmbed(bet, dealerCards, dealerTotal, playerCards, playerTotal, 'DRAWING', false, 0, betId)
             ],
-            components: [],
+            components: []
         });
         await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    const betAmount = (0, utils_1.parseReadableStringToNumber)(bet);
+    const betAmount = parseReadableStringToNumber(bet);
     let resultId;
     let balanceChange = 0;
     if (dealerTotal > 21) {
@@ -93,44 +86,44 @@ const revealDealerCards = async (bet, message, dealerCards, dealerTotal, playerC
         balanceChange = 0;
     }
     if (balanceChange > 0) {
-        const updatedUser = await User_1.default.findOneAndUpdate({ userId: user.userId, guildId }, { $inc: { balance: balanceChange } }, { new: true });
+        const updatedUser = await updateUserBalance({
+            userId: user.userId,
+            guildId,
+            amount: balanceChange
+        });
         if (!updatedUser)
             throw new Error('User not found when paying out');
-        await Transaction_1.default.create({
+        await createTransaction({
             userId: user.userId,
             guildId: user.guildId,
             amount: balanceChange,
             type: 'win',
             source: 'casino',
-            betId,
-            createdAt: new Date(),
+            betId
         });
         user.balance = updatedUser.balance;
     }
     await message.edit({
         embeds: [
-            (0, exports.createBlackjackEmbed)(bet, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalnce, user.balance, betId),
+            createBlackjackEmbed(bet, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalnce, user.balance, betId)
         ],
-        components: [],
+        components: []
     });
-    await BlackjackGame_1.default.findOneAndDelete({ userId: user.userId, guildId, gameId });
+    await deleteBlackjackGame({ userId: user.userId, guildId });
 };
-exports.revealDealerCards = revealDealerCards;
-const createBlackjackEmbed = (bet, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, userBalance, betId, dealerVisibleOneCard = false) => {
+export const createBlackjackEmbed = (bet, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, userBalance, betId, dealerVisibleOneCard = false) => {
     const dealerHandText = dealerVisibleOneCard
         ? `${dealerCards[0].label}${dealerCards[0].suite} ??`
-        : `${dealerCards
-            .map((c) => `${c.label}${c.suite}`)
-            .join(' ')} (**${dealerTotal}**)`;
+        : `${dealerCards.map((c) => `${c.label}${c.suite}`).join(' ')} (**${dealerTotal}**)`;
     let resultText = '';
     let color = 'Yellow';
-    const betAmount = (0, utils_1.parseReadableStringToNumber)(bet);
+    const betAmount = parseReadableStringToNumber(bet);
     switch (resultId) {
         case 'BBJ':
             resultText = `You both have Blackjack!\n💰 Total: 🟡 **$${0}**`;
             break;
         case 'PBJ':
-            resultText = `You have Blackjack!\n💰 Total: 🟢 **$${(0, utils_1.formatNumberToReadableString)(betAmount * 2.5)}**`;
+            resultText = `You have Blackjack!\n💰 Total: 🟢 **$${formatNumberToReadableString(betAmount * 2.5)}**`;
             color = 'Green';
             break;
         case 'DBJ':
@@ -142,11 +135,11 @@ const createBlackjackEmbed = (bet, dealerCards, dealerTotal, playerCards, player
             color = 'Red';
             break;
         case 'DB':
-            resultText = `Dealer busted!\n💰 Total: 🟢 **$${(0, utils_1.formatNumberToReadableString)(betAmount * 2)}**`;
+            resultText = `Dealer busted!\n💰 Total: 🟢 **$${formatNumberToReadableString(betAmount * 2)}**`;
             color = 'Green';
             break;
         case 'PW':
-            resultText = `You win!\n💰 Total: 🟢 **$${(0, utils_1.formatNumberToReadableString)(betAmount * 2)}**`;
+            resultText = `You win!\n💰 Total: 🟢 **$${formatNumberToReadableString(betAmount * 2)}**`;
             color = 'Green';
             break;
         case 'DW':
@@ -168,18 +161,17 @@ const createBlackjackEmbed = (bet, dealerCards, dealerTotal, playerCards, player
         `**Dealer's Hand:**\n${dealerHandText}`,
         `**Your Hand:**\n${playerCards
             .map((c) => `${c.label}${c.suite}`)
-            .join(' ')} (**${playerTotal}**)`,
+            .join(' ')} (**${playerTotal}**)`
     ];
     if (resultText) {
         let resultSection = `**Result**\n${resultText}`;
         if (showBalance) {
-            resultSection += `\n🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(userBalance)}**`;
+            resultSection += `\n🏦 Balance: **$${formatNumberToReadableString(userBalance)}**`;
         }
         sections.push(resultSection);
     }
     else if (showBalance) {
-        sections.push(`🏦 Balance: **$${(0, utils_1.formatNumberToReadableString)(userBalance)}**`);
+        sections.push(`🏦 Balance: **$${formatNumberToReadableString(userBalance)}**`);
     }
-    return (0, createEmbed_1.createBetEmbed)('🃏 Blackjack', color, sections.join('\n\n'), betId);
+    return createBetEmbed('🃏 Blackjack', color, sections.join('\n\n'), betId);
 };
-exports.createBlackjackEmbed = createBlackjackEmbed;

@@ -3,12 +3,17 @@ import {
   EmbedBuilder,
   Interaction,
   MessageFlags,
-  TextChannel,
+  TextChannel
 } from 'discord.js'
-import User from '../../../models/User'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import { createErrorEmbed } from '../../../utils/createEmbed'
-import { formatNumberToReadableString } from '../../../utils/utils'
+
+import {
+  getGuildConfigByGuildId,
+  getUser,
+  resetUserBalance,
+  updateUserBalance
+} from '@/services'
+import { createErrorEmbed } from '@/utils/createEmbed'
+import { formatNumberToReadableString } from '@/utils/utils'
 
 //! DB TRANSACTIONS
 //! Rare condition - no .save()
@@ -20,8 +25,8 @@ export default async (interaction: Interaction, client: Client) => {
 
     if (type !== 'give-money' && type !== 'reset-money') return
 
-    const guildConfiguration = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    const guildConfiguration = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     if (!guildConfiguration?.atmChannelIds.logs) {
@@ -30,15 +35,15 @@ export default async (interaction: Interaction, client: Client) => {
           createErrorEmbed(
             'Error - Not Configured',
             'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
-    const user = await User.findOne({
-      userId: interaction.user.id,
-      guildId: interaction.guildId,
+    const user = await getUser({
+      guildId: interaction.guildId!,
+      userId: interaction.user.id
     })
 
     if (!user) {
@@ -47,9 +52,9 @@ export default async (interaction: Interaction, client: Client) => {
           createErrorEmbed(
             'Error - Not registered',
             'You are not registered yet.\nUse the `/register` command to register.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -58,8 +63,11 @@ export default async (interaction: Interaction, client: Client) => {
 
       const parsedAmount = parseInt(amount)
 
-      user.balance += parsedAmount
-      user.save()
+      updateUserBalance({
+        userId: interaction.user.id,
+        guildId: interaction.guildId!,
+        amount: parsedAmount
+      })
 
       const logChannel = client.channels.cache.get(
         guildConfiguration.atmChannelIds.logs
@@ -71,14 +79,12 @@ export default async (interaction: Interaction, client: Client) => {
             new EmbedBuilder()
               .setTitle('ATM - Money Generator')
               .setDescription(
-                `<@${
-                  interaction.user.id
-                }> has added **$${formatNumberToReadableString(
+                `<@${interaction.user.id}> has added **$${formatNumberToReadableString(
                   parsedAmount
                 )}** to their account.`
               )
-              .setColor('DarkGreen'),
-          ],
+              .setColor('DarkGreen')
+          ]
         })
         .catch(console.error)
 
@@ -95,14 +101,15 @@ export default async (interaction: Interaction, client: Client) => {
 
       await interaction.reply({
         embeds: [embed],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
     if (type === 'reset-money') {
-      user.balance = 0
-      user.lockedBalance = 0
-      user.save()
+      resetUserBalance({
+        userId: interaction.user.id,
+        guildId: interaction.guildId!
+      })
 
       const logChannel = client.channels.cache.get(
         guildConfiguration.atmChannelIds.logs
@@ -116,8 +123,8 @@ export default async (interaction: Interaction, client: Client) => {
               .setDescription(
                 `<@${interaction.user.id}> has reset their account balance.`
               )
-              .setColor('DarkRed'),
-          ],
+              .setColor('DarkRed')
+          ]
         })
         .catch(console.error)
 
@@ -132,7 +139,7 @@ export default async (interaction: Interaction, client: Client) => {
 
       await interaction.reply({
         embeds: [embed],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
   } catch (error) {

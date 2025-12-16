@@ -1,3 +1,5 @@
+import { TTransaction } from 'gambling-bot-shared'
+
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -6,16 +8,17 @@ import {
   Interaction,
   MessageFlags,
   PermissionsBitField,
-  TextChannel,
+  TextChannel
 } from 'discord.js'
-import User from '../../../models/User'
-import { formatNumberToReadableString } from '../../../utils/utils'
-import GuildConfiguration from '../../../models/GuildConfiguration'
+
 import {
-  createErrorEmbed,
-  createSuccessEmbed,
-} from '../../../utils/createEmbed'
-import Transaction from '../../../models/Transaction'
+  createTransaction,
+  getGuildConfigByGuildId,
+  getUser,
+  updateUserBalance
+} from '@/services'
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed'
+import { formatNumberToReadableString } from '@/utils/utils'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -35,8 +38,8 @@ export default async (interaction: Interaction, client: Client) => {
     if (isNaN(parsedAmount)) return
 
     const member = await interaction.guild?.members.fetch(interaction.user.id)
-    const guildConfig = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    const guildConfig = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
     const managerRoleId = guildConfig?.managerRoleId
 
@@ -51,17 +54,20 @@ export default async (interaction: Interaction, client: Client) => {
             `You need to be an **Administrator** or have the ${
               managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
             } to perform this action.`
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
-    const user = await User.findOne({ userId, guildId: interaction.guildId })
+    const user = await getUser({
+      userId: interaction.user.id,
+      guildId: interaction.guildId!
+    })
     if (!user) return
 
-    const guildConfiguration = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    const guildConfiguration = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     if (!guildConfiguration?.atmChannelIds.actions) {
@@ -70,9 +76,9 @@ export default async (interaction: Interaction, client: Client) => {
           createErrorEmbed(
             'Error - Not Configured',
             'ATM actions are not configured yet.\nPlease contact an administrator to complete the setup.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -106,7 +112,7 @@ export default async (interaction: Interaction, client: Client) => {
       await interaction.reply({
         content: 'Are you sure?',
         components: [row],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -135,7 +141,7 @@ export default async (interaction: Interaction, client: Client) => {
       await actionChannel
         .send({
           content: `<@${targetUserId}>`,
-          embeds: [embed],
+          embeds: [embed]
         })
         .catch(console.error)
     }
@@ -157,28 +163,24 @@ export default async (interaction: Interaction, client: Client) => {
     }
 
     if (confirm === 'confirm') {
-      await User.findOneAndUpdate(
-        { userId: user.userId, guildId: user.guildId },
-        {
-          $inc: {
-            balance:
-              (action === 'approve' && atmAction === 'deposit') ||
-              (action === 'reject' && atmAction === 'withdraw')
-                ? parsedAmount
-                : 0,
-          },
-        }
-      )
+      await updateUserBalance({
+        userId: user.userId,
+        guildId: user.guildId,
+        amount:
+          (action === 'approve' && atmAction === 'deposit') ||
+          (action === 'reject' && atmAction === 'withdraw')
+            ? parsedAmount
+            : 0
+      })
 
       if (action === 'approve') {
-        await Transaction.create({
+        await createTransaction({
           userId: user.userId,
           guildId: user.guildId,
           amount: parsedAmount,
-          type: atmAction,
+          type: atmAction as TTransaction['type'],
           source: 'manual',
-          handledBy: interaction.user.id,
-          createdAt: new Date(),
+          handledBy: interaction.user.id
         })
       }
 
@@ -201,7 +203,7 @@ export default async (interaction: Interaction, client: Client) => {
         } of **$${formatNumberToReadableString(parsedAmount)}** ${
           action === 'approve' ? 'successful' : 'rejected'
         }!`,
-        components: [],
+        components: []
       })
     }
   } catch (error) {

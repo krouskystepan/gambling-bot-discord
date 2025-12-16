@@ -1,18 +1,23 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
-import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
-import { createBetEmbed, createErrorEmbed } from '../../../utils/createEmbed'
+import { ApplicationCommandOptionType } from 'discord.js'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  checkChannelConfiguration,
-  parseReadableStringToNumber,
-  formatNumberToReadableString,
+  checkCasinoChannels,
   checkUserRegistration,
+  createTransaction,
+  updateUserBalance
+} from '@/services'
+import { rollDice } from '@/utils/casinoHelpers'
+import { createBetEmbed } from '@/utils/createEmbed'
+import { diceEmojis, rollDiceEmote } from '@/utils/customEmotes'
+import {
   checkValidBet,
+  formatNumberToReadableString,
   generateBetId,
-} from '../../../utils/utils'
-import { rollDice } from '../../../utils/casinoHelpers'
-import { rollDiceEmote, diceEmojis } from '../../../utils/customEmotes'
-import Transaction from '../../../models/Transaction'
-import User from '../../../models/User'
+  parseReadableStringToNumber
+} from '@/utils/utils'
 
 export const data: CommandData = {
   name: 'dice',
@@ -22,7 +27,7 @@ export const data: CommandData = {
       name: 'bet',
       description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'side',
@@ -31,8 +36,8 @@ export const data: CommandData = {
       required: true,
       choices: Array.from({ length: 6 }, (_, i) => ({
         name: (i + 1).toString(),
-        value: i + 1,
-      })),
+        value: i + 1
+      }))
     },
     {
       name: 'rolls',
@@ -41,59 +46,36 @@ export const data: CommandData = {
       required: false,
       choices: Array.from({ length: 10 }, (_, i) => ({
         name: (i + 1).toString(),
-        value: i + 1,
-      })),
+        value: i + 1
+      }))
     },
     {
       name: 'show-balance',
       description:
         'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'skip-animations',
       description: 'Skip game animations for faster results.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(
-      interaction.user.id,
-      interaction.guildId!
-    )
+    const user = await checkUserRegistration({ interaction })
+    if (!user) return
 
-    if (!user) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Not registered',
-            'You are not registered yet.\nUse the `/register` command to register.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    const configReply = await checkChannelConfiguration(
-      interaction,
-      'casinoChannelIds',
-      {
-        notSet:
-          'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
-      }
-    )
-
+    const configReply = await checkCasinoChannels(interaction)
     if (!configReply) return
 
     const rolls = interaction.options.getInteger('rolls') || 1
@@ -119,23 +101,20 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const totalBet = parsedBetAmount * rolls
 
-    await User.findOneAndUpdate(
-      { userId: user.userId, guildId: user.guildId },
-      {
-        $inc: {
-          balance: -totalBet,
-          lockedBalance: -Math.min(user.lockedBalance, totalBet),
-        },
-      }
-    )
-    await Transaction.create({
+    await updateUserBalance({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: -totalBet,
+      lockedAmount: -Math.min(user.lockedBalance, totalBet)
+    })
+
+    await createTransaction({
       userId: user.userId,
       guildId: user.guildId,
       amount: totalBet,
       type: 'bet',
       source: 'casino',
-      betId,
-      createdAt: new Date(),
+      betId
     })
 
     let totalWinnings = 0
@@ -143,7 +122,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const results: string[] = []
 
     await interaction.deferReply({
-      withResponse: true,
+      withResponse: true
     })
 
     for (let i = 0; i < rolls; i++) {
@@ -153,18 +132,14 @@ export async function run({ interaction }: SlashCommandProps) {
             createBetEmbed(
               `🎲 Rolling...`,
               'Blue',
-              `💵 Total Bet: **$${formatNumberToReadableString(
-                totalBet
-              )}**\n\n` +
-                `🎲 **Roll Results:**\n${[...results, rollDiceEmote].join(
-                  '\n'
-                )}` +
+              `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+                `🎲 **Roll Results:**\n${[...results, rollDiceEmote].join('\n')}` +
                 `\n\n💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
                 } **$${formatNumberToReadableString(liveResult)}**`,
               betId
-            ),
-          ],
+            )
+          ]
         })
 
         await new Promise((res) => setTimeout(res, 700))
@@ -188,21 +163,21 @@ export async function run({ interaction }: SlashCommandProps) {
       liveResult += winnings - parsedBetAmount
     }
 
-    const updatedUser = await User.findOneAndUpdate(
-      { userId: user.userId, guildId: user.guildId },
-      { $inc: { balance: totalWinnings } },
-      { new: true }
-    )
+    const updatedUser = await updateUserBalance({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: totalWinnings
+    })
+
     if (!updatedUser) return
     if (totalWinnings > 0) {
-      await Transaction.create({
+      await createTransaction({
         userId: user.userId,
         guildId: user.guildId,
         amount: totalWinnings,
         type: 'win',
         source: 'casino',
-        betId,
-        createdAt: new Date(),
+        betId
       })
     }
 
@@ -215,8 +190,8 @@ export async function run({ interaction }: SlashCommandProps) {
           isWin
             ? '🎲 **Win!** 🎉'
             : isLoss
-            ? '🎲 **Better Luck Next Time...** ❌'
-            : '🎲 **Not Bad...** 👀',
+              ? '🎲 **Better Luck Next Time...** ❌'
+              : '🎲 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
             `🎲 **Roll Results:**\n${results.join('\n')}\n\n` +
@@ -224,15 +199,13 @@ export async function run({ interaction }: SlashCommandProps) {
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(
-                  updatedUser.balance
-                )}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(updatedUser.balance)}**`
               : ''),
           betId
-        ),
-      ],
+        )
+      ]
     })
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

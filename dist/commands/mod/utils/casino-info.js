@@ -1,42 +1,37 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const discord_js_1 = require("discord.js");
-const utils_1 = require("../../../utils/utils");
-const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const VipRoom_1 = require("../../../models/VipRoom");
-const createEmbed_1 = require("../../../utils/createEmbed");
-const gambling_bot_shared_1 = require("gambling-bot-shared");
-exports.data = {
+import { calculateRTP } from 'gambling-bot-shared';
+import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
+import { getAllActiveVipsByGuildId, getGuildConfigByGuildId } from '@/services';
+import { createErrorEmbed } from '@/utils/createEmbed';
+import { formatNumberToReadableString, formatNumberWithSpaces } from '@/utils/utils';
+export const data = {
     name: 'casino-info',
     description: 'Get information about the casino.',
     options: [
         {
             name: 'games',
             description: 'Show information about casino games',
-            type: discord_js_1.ApplicationCommandOptionType.Boolean,
-            required: false,
+            type: ApplicationCommandOptionType.Boolean,
+            required: false
         },
         {
             name: 'config',
             description: 'Show server casino configuration',
-            type: discord_js_1.ApplicationCommandOptionType.Boolean,
-            required: false,
+            type: ApplicationCommandOptionType.Boolean,
+            required: false
         },
         {
             name: 'admin',
             description: 'Show administrator-only information (contains sensitive data)',
-            type: discord_js_1.ApplicationCommandOptionType.Boolean,
-            required: false,
-        },
+            type: ApplicationCommandOptionType.Boolean,
+            required: false
+        }
     ],
-    dm_permission: false,
+    dm_permission: false
 };
-exports.options = {
+export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: false,
+    deleted: false
 };
 const formatRTP = (rtp) => {
     if (typeof rtp === 'number') {
@@ -49,9 +44,11 @@ const formatRTP = (rtp) => {
                 .join('\n'));
     }
 };
-const formatBet = (label, value) => {
+const formatBet = (label, value, symbol = '$') => {
     const parsedValue = parseFloat(value);
-    return `- **${label}:** ${parsedValue === 0 ? 'No Limit' : (0, utils_1.formatNumberToReadableString)(parsedValue)}`;
+    return `- **${label}:** ${parsedValue === 0
+        ? 'No Limit'
+        : `${symbol}${formatNumberToReadableString(parsedValue)}`}`;
 };
 const formatRooms = (label, ids, fallback = 'No rooms') => {
     if (!ids || !ids.length)
@@ -85,14 +82,14 @@ const formatRole = (label, id) => {
 };
 const formatMultipliers = (multipliers) => {
     if (typeof multipliers === 'number') {
-        return `- **Multiplier:** ${(0, utils_1.formatNumberWithSpaces)(multipliers)}x`;
+        return `- **Multiplier:** ${formatNumberWithSpaces(multipliers)}x`;
     }
     const entries = Object.entries(multipliers);
     if (entries.length === 1) {
         const [, value] = entries[0];
-        return `- **Multiplier:** ${(0, utils_1.formatNumberWithSpaces)(value)}x`;
+        return `- **Multiplier:** ${formatNumberWithSpaces(value)}x`;
     }
-    const lines = entries.map(([key, value]) => `  - ${key.charAt(0).toUpperCase() + key.slice(1)}: ${(0, utils_1.formatNumberWithSpaces)(value)}x`);
+    const lines = entries.map(([key, value]) => `  - ${key.charAt(0).toUpperCase() + key.slice(1)}: ${formatNumberWithSpaces(value)}x`);
     return `- **Multipliers:**\n${lines.join('\n')}`;
 };
 const renderSection = (title, baseLines, adminLines, isAdmin) => {
@@ -102,13 +99,15 @@ const renderSection = (title, baseLines, adminLines, isAdmin) => {
     lines.push(...baseLines);
     return `## ${title}\n${lines.join('\n')}`;
 };
-async function run({ interaction }) {
-    const config = await GuildConfiguration_1.default.findOne({
-        guildId: interaction.guildId,
+export async function run({ interaction }) {
+    const config = await getGuildConfigByGuildId({
+        guildId: interaction.guildId
     });
     if (!config?.casinoSettings)
         return;
-    const vipRooms = await VipRoom_1.default.find({ guildId: interaction.guildId }, { channelId: 1, _id: 0 });
+    const vipRooms = await getAllActiveVipsByGuildId({
+        guildId: interaction.guildId
+    });
     const vipChannelIds = vipRooms.map((room) => room.channelId);
     const settings = config.casinoSettings;
     const showGames = interaction.options.getBoolean('games') ?? false;
@@ -117,9 +116,9 @@ async function run({ interaction }) {
     if ((showGames && showConfig) || (!showGames && !showConfig)) {
         return interaction.reply({
             embeds: [
-                (0, createEmbed_1.createErrorEmbed)('Error - Invalid selection', 'Please select **only one** section to view: either `games` or `config`.'),
+                createErrorEmbed('Error - Invalid selection', 'Please select **only one** section to view: either `games` or `config`.')
             ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
         });
     }
     if (showGames) {
@@ -128,77 +127,79 @@ async function run({ interaction }) {
                 renderSection('🎲 Dice', [
                     formatMultipliers(settings.dice.winMultiplier),
                     formatBet('Max Bet', settings.dice.maxBet),
-                    formatBet('Min Bet', settings.dice.minBet),
-                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('dice', settings.dice))], showAdmin),
+                    formatBet('Min Bet', settings.dice.minBet)
+                ], [formatRTP(calculateRTP('dice', settings.dice))], showAdmin),
                 renderSection('🪙 Coin Flip', [
                     formatMultipliers(settings.coinflip.winMultiplier),
                     formatBet('Max Bet', settings.coinflip.maxBet),
-                    formatBet('Min Bet', settings.coinflip.minBet),
-                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('coinflip', settings.coinflip))], showAdmin),
+                    formatBet('Min Bet', settings.coinflip.minBet)
+                ], [formatRTP(calculateRTP('coinflip', settings.coinflip))], showAdmin),
                 renderSection('🎰 Slots', [
                     formatMultipliers(settings.slots.winMultipliers),
                     formatBet('Max Bet', settings.slots.maxBet),
-                    formatBet('Min Bet', settings.slots.minBet),
+                    formatBet('Min Bet', settings.slots.minBet)
                 ], [
-                    formatRTP((0, gambling_bot_shared_1.calculateRTP)('slots', settings.slots)),
+                    formatRTP(calculateRTP('slots', settings.slots)),
                     `- **Symbol Weights:** \n${Object.entries(settings.slots.symbolWeights)
                         .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
-                        .join('\n')}`,
+                        .join('\n')}`
                 ], showAdmin),
                 renderSection('🎟️ Lottery', [
                     formatMultipliers(settings.lottery.winMultipliers),
                     formatBet('Max Bet', settings.lottery.maxBet),
-                    formatBet('Min Bet', settings.lottery.minBet),
-                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('lottery', settings.lottery))], showAdmin),
+                    formatBet('Min Bet', settings.lottery.minBet)
+                ], [formatRTP(calculateRTP('lottery', settings.lottery))], showAdmin),
                 renderSection('🌀 Roulette', [
                     formatMultipliers(settings.roulette.winMultipliers),
                     formatBet('Max Bet', settings.roulette.maxBet),
-                    formatBet('Min Bet', settings.roulette.minBet),
-                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('roulette', settings.roulette))], showAdmin),
+                    formatBet('Min Bet', settings.roulette.minBet)
+                ], [formatRTP(calculateRTP('roulette', settings.roulette))], showAdmin),
                 renderSection('🤑 Golden Jackpot', [
                     formatMultipliers(settings.goldenJackpot.winMultiplier),
                     formatBet('Max Bet', settings.goldenJackpot.maxBet),
-                    formatBet('Min Bet', settings.goldenJackpot.minBet),
+                    formatBet('Min Bet', settings.goldenJackpot.minBet)
                 ], [
-                    formatRTP((0, gambling_bot_shared_1.calculateRTP)('goldenJackpot', settings.goldenJackpot)),
-                    `- **One in Chance:** 1 in ${(0, utils_1.formatNumberWithSpaces)(settings.goldenJackpot.oneInChance)}`,
+                    formatRTP(calculateRTP('goldenJackpot', settings.goldenJackpot)),
+                    `- **One in Chance:** 1 in ${formatNumberWithSpaces(settings.goldenJackpot.oneInChance)}`
                 ], showAdmin),
                 renderSection('🪨📄✂️ RPS', [
                     `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
                     formatBet('Max Bet', settings.rps.maxBet),
-                    formatBet('Min Bet', settings.rps.minBet),
-                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('rps', settings.rps))], showAdmin),
+                    formatBet('Min Bet', settings.rps.minBet)
+                ], [formatRTP(calculateRTP('rps', settings.rps))], showAdmin),
                 renderSection('🃏 Blackjack', [
                     formatBet('Max Bet', settings.blackjack.maxBet),
-                    formatBet('Min Bet', settings.blackjack.minBet),
-                ], [formatRTP((0, gambling_bot_shared_1.calculateRTP)('blackjack', settings.blackjack))], showAdmin),
+                    formatBet('Min Bet', settings.blackjack.minBet)
+                ], [formatRTP(calculateRTP('blackjack', settings.blackjack))], showAdmin),
                 renderSection('👀 Prediction', [
                     formatBet('Max Bet', settings.prediction.maxBet),
-                    formatBet('Min Bet', settings.prediction.minBet),
-                ]),
-            ].join('\n\n')}`,
+                    formatBet('Min Bet', settings.prediction.minBet)
+                ])
+            ].join('\n\n')}`
         });
     }
     if (showConfig) {
         await interaction.reply({
             content: renderSection('⚙️ Server Config', [
-                formatRole('VIP Role', config.vipSettings.roleId),
+                formatRole('VIP Owner Role', config.vipSettings.roleOwnerId),
+                formatRole('VIP Member Role', config.vipSettings.roleMemberId),
+                formatBet('VIP Max Members', config.vipSettings.maxMembers, ''),
                 `- **VIP Price Per Day:** ${config.vipSettings.pricePerDay === 0
                     ? 'Not Set'
-                    : `$${(0, utils_1.formatNumberToReadableString)(config.vipSettings.pricePerDay)}`}`,
+                    : `$${formatNumberToReadableString(config.vipSettings.pricePerDay)}`}`,
                 `- **VIP Create Price:** ${config.vipSettings.pricePerCreate === 0
                     ? 'Not Set'
-                    : `$${(0, utils_1.formatNumberToReadableString)(config.vipSettings.pricePerCreate)}`}`,
+                    : `$${formatNumberToReadableString(config.vipSettings.pricePerCreate)}`}`,
                 '',
-                formatRole('Manager Role', config.managerRoleId),
+                formatRole('Manager Role', config.managerRoleId)
             ], [
                 formatMultipleRooms('ATM Rooms', config.atmChannelIds),
                 formatMultipleRooms('Prediction Rooms', config.predictionChannelIds),
                 formatRooms('Gambling Rooms', config.casinoChannelIds),
                 formatRooms('VIP Active Rooms', vipChannelIds),
                 '',
-                formatCategory('VIP Category', config.vipSettings.categoryId),
-            ], showAdmin),
+                formatCategory('VIP Category', config.vipSettings.categoryId)
+            ], showAdmin)
         });
     }
 }

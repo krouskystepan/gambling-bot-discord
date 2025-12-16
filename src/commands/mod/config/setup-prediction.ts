@@ -1,15 +1,14 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import {
   ApplicationCommandOptionType,
   ChannelType,
   CommandInteractionOptionResolver,
-  MessageFlags,
+  MessageFlags
 } from 'discord.js'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import {
-  createErrorEmbed,
-  createSuccessEmbed,
-} from '../../../utils/createEmbed'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-prediction',
@@ -25,9 +24,9 @@ export const data: CommandData = {
           description: 'The channel to add for prediction actions.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'remove-actions',
@@ -39,9 +38,9 @@ export const data: CommandData = {
           description:
             'The ID of the channel to remove from prediction actions.',
           type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'add-logs',
@@ -53,9 +52,9 @@ export const data: CommandData = {
           description: 'The channel to set as prediction logs.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'remove-logs',
@@ -66,30 +65,30 @@ export const data: CommandData = {
           name: 'channel-id',
           description: 'The ID of the channel to remove from prediction logs.',
           type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-    },
+          required: true
+        }
+      ]
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: true,
-  devOnly: true,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    let guildConfiguration = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    let guildConfiguration = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     if (!guildConfiguration) {
-      guildConfiguration = new GuildConfiguration({
-        guildId: interaction.guildId,
+      guildConfiguration = await createGuildConfiguration({
+        guildId: interaction.guildId!
       })
     }
 
@@ -105,9 +104,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Prediction Channel Setup - Add Actions',
               `Channel ${channel} is already set for prediction actions.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -119,8 +118,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Prediction Channel Setup - Add Actions',
             `Channel ${channel} has been successfully set for prediction actions.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -133,9 +132,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Prediction Channel Setup - Remove Actions',
               `Channel with ID ${channelId} is not set for prediction actions.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -147,8 +146,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Prediction Channel Setup - Remove Actions',
             `Channel with ID ${channelId} has been removed from prediction actions.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -161,9 +160,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Prediction Channel Setup - Add Logs',
               `Channel ${channel} is already set for prediction logs.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -175,8 +174,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Prediction Channel Setup - Add Logs',
             `Channel ${channel} has been successfully set for prediction logs.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -189,9 +188,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Prediction Channel Setup - Remove Logs',
               `Channel with ID ${channelId} is not set for prediction logs.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -203,8 +202,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Prediction Channel Setup - Remove Logs',
             `Channel with ID ${channelId} has been removed from prediction logs.`
-          ),
-        ],
+          )
+        ]
       })
     }
   } catch (error) {

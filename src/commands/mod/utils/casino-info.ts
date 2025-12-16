@@ -1,13 +1,15 @@
-import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+import { calculateRTP } from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { getAllActiveVipsByGuildId, getGuildConfigByGuildId } from '@/services'
+import { createErrorEmbed } from '@/utils/createEmbed'
 import {
   formatNumberToReadableString,
-  formatNumberWithSpaces,
-} from '../../../utils/utils'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import VipRoom from '../../../models/VipRoom'
-import { createErrorEmbed } from '../../../utils/createEmbed'
-import { calculateRTP } from 'gambling-bot-shared'
+  formatNumberWithSpaces
+} from '@/utils/utils'
 
 export const data: CommandData = {
   name: 'casino-info',
@@ -17,29 +19,29 @@ export const data: CommandData = {
       name: 'games',
       description: 'Show information about casino games',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'config',
       description: 'Show server casino configuration',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'admin',
       description:
         'Show administrator-only information (contains sensitive data)',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  deleted: false,
+  deleted: false
 }
 
 const formatRTP = (rtp: number | Record<string, number>): string => {
@@ -51,20 +53,20 @@ const formatRTP = (rtp: number | Record<string, number>): string => {
       Object.entries(rtp)
         .map(
           ([key, value]) =>
-            `  - ${key.charAt(0).toUpperCase() + key.slice(1)}: ${value.toFixed(
-              2
-            )}%`
+            `  - ${key.charAt(0).toUpperCase() + key.slice(1)}: ${value.toFixed(2)}%`
         )
         .join('\n')
     )
   }
 }
 
-const formatBet = (label: string, value: number) => {
+const formatBet = (label: string, value: number, symbol = '$') => {
   const parsedValue = parseFloat(value as unknown as string)
 
   return `- **${label}:** ${
-    parsedValue === 0 ? 'No Limit' : formatNumberToReadableString(parsedValue)
+    parsedValue === 0
+      ? 'No Limit'
+      : `${symbol}${formatNumberToReadableString(parsedValue)}`
   }`
 }
 
@@ -101,8 +103,8 @@ const formatMultipleRooms = (
     return Array.isArray(value)
       ? value.map((id) => `<#${id}> (${id})`).join(', ')
       : value.trim() === ''
-      ? 'No channel'
-      : `<#${value}> (${value})`
+        ? 'No channel'
+        : `<#${value}> (${value})`
   }
 
   const actions = formatField(ids.actions)
@@ -130,9 +132,7 @@ const formatMultipliers = (
 
   const lines = entries.map(
     ([key, value]) =>
-      `  - ${
-        key.charAt(0).toUpperCase() + key.slice(1)
-      }: ${formatNumberWithSpaces(value)}x`
+      `  - ${key.charAt(0).toUpperCase() + key.slice(1)}: ${formatNumberWithSpaces(value)}x`
   )
   return `- **Multipliers:**\n${lines.join('\n')}`
 }
@@ -150,15 +150,14 @@ const renderSection = (
 }
 
 export async function run({ interaction }: SlashCommandProps) {
-  const config = await GuildConfiguration.findOne({
-    guildId: interaction.guildId,
+  const config = await getGuildConfigByGuildId({
+    guildId: interaction.guildId!
   })
   if (!config?.casinoSettings) return
 
-  const vipRooms = await VipRoom.find(
-    { guildId: interaction.guildId },
-    { channelId: 1, _id: 0 }
-  )
+  const vipRooms = await getAllActiveVipsByGuildId({
+    guildId: interaction.guildId!
+  })
   const vipChannelIds = vipRooms.map((room) => room.channelId)
 
   const settings = config.casinoSettings
@@ -173,9 +172,9 @@ export async function run({ interaction }: SlashCommandProps) {
         createErrorEmbed(
           'Error - Invalid selection',
           'Please select **only one** section to view: either `games` or `config`.'
-        ),
+        )
       ],
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral
     })
   }
 
@@ -187,7 +186,7 @@ export async function run({ interaction }: SlashCommandProps) {
           [
             formatMultipliers(settings.dice.winMultiplier),
             formatBet('Max Bet', settings.dice.maxBet),
-            formatBet('Min Bet', settings.dice.minBet),
+            formatBet('Min Bet', settings.dice.minBet)
           ],
           [formatRTP(calculateRTP('dice', settings.dice))],
           showAdmin
@@ -197,7 +196,7 @@ export async function run({ interaction }: SlashCommandProps) {
           [
             formatMultipliers(settings.coinflip.winMultiplier),
             formatBet('Max Bet', settings.coinflip.maxBet),
-            formatBet('Min Bet', settings.coinflip.minBet),
+            formatBet('Min Bet', settings.coinflip.minBet)
           ],
           [formatRTP(calculateRTP('coinflip', settings.coinflip))],
           showAdmin
@@ -207,7 +206,7 @@ export async function run({ interaction }: SlashCommandProps) {
           [
             formatMultipliers(settings.slots.winMultipliers),
             formatBet('Max Bet', settings.slots.maxBet),
-            formatBet('Min Bet', settings.slots.minBet),
+            formatBet('Min Bet', settings.slots.minBet)
           ],
           [
             formatRTP(calculateRTP('slots', settings.slots)),
@@ -215,7 +214,7 @@ export async function run({ interaction }: SlashCommandProps) {
               settings.slots.symbolWeights
             )
               .map(([symbol, weight]) => `  - ${symbol}: ${weight}`)
-              .join('\n')}`,
+              .join('\n')}`
           ],
           showAdmin
         ),
@@ -224,7 +223,7 @@ export async function run({ interaction }: SlashCommandProps) {
           [
             formatMultipliers(settings.lottery.winMultipliers),
             formatBet('Max Bet', settings.lottery.maxBet),
-            formatBet('Min Bet', settings.lottery.minBet),
+            formatBet('Min Bet', settings.lottery.minBet)
           ],
           [formatRTP(calculateRTP('lottery', settings.lottery))],
           showAdmin
@@ -234,7 +233,7 @@ export async function run({ interaction }: SlashCommandProps) {
           [
             formatMultipliers(settings.roulette.winMultipliers),
             formatBet('Max Bet', settings.roulette.maxBet),
-            formatBet('Min Bet', settings.roulette.minBet),
+            formatBet('Min Bet', settings.roulette.minBet)
           ],
           [formatRTP(calculateRTP('roulette', settings.roulette))],
           showAdmin
@@ -244,13 +243,13 @@ export async function run({ interaction }: SlashCommandProps) {
           [
             formatMultipliers(settings.goldenJackpot.winMultiplier),
             formatBet('Max Bet', settings.goldenJackpot.maxBet),
-            formatBet('Min Bet', settings.goldenJackpot.minBet),
+            formatBet('Min Bet', settings.goldenJackpot.minBet)
           ],
           [
             formatRTP(calculateRTP('goldenJackpot', settings.goldenJackpot)),
             `- **One in Chance:** 1 in ${formatNumberWithSpaces(
               settings.goldenJackpot.oneInChance
-            )}`,
+            )}`
           ],
           showAdmin
         ),
@@ -259,7 +258,7 @@ export async function run({ interaction }: SlashCommandProps) {
           [
             `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
             formatBet('Max Bet', settings.rps.maxBet),
-            formatBet('Min Bet', settings.rps.minBet),
+            formatBet('Min Bet', settings.rps.minBet)
           ],
           [formatRTP(calculateRTP('rps', settings.rps))],
           showAdmin
@@ -268,16 +267,16 @@ export async function run({ interaction }: SlashCommandProps) {
           '🃏 Blackjack',
           [
             formatBet('Max Bet', settings.blackjack.maxBet),
-            formatBet('Min Bet', settings.blackjack.minBet),
+            formatBet('Min Bet', settings.blackjack.minBet)
           ],
           [formatRTP(calculateRTP('blackjack', settings.blackjack))],
           showAdmin
         ),
         renderSection('👀 Prediction', [
           formatBet('Max Bet', settings.prediction.maxBet),
-          formatBet('Min Bet', settings.prediction.minBet),
-        ]),
-      ].join('\n\n')}`,
+          formatBet('Min Bet', settings.prediction.minBet)
+        ])
+      ].join('\n\n')}`
     })
   }
 
@@ -286,23 +285,21 @@ export async function run({ interaction }: SlashCommandProps) {
       content: renderSection(
         '⚙️ Server Config',
         [
-          formatRole('VIP Role', config.vipSettings.roleId),
+          formatRole('VIP Owner Role', config.vipSettings.roleOwnerId),
+          formatRole('VIP Member Role', config.vipSettings.roleMemberId),
+          formatBet('VIP Max Members', config.vipSettings.maxMembers, ''),
           `- **VIP Price Per Day:** ${
             config.vipSettings.pricePerDay === 0
               ? 'Not Set'
-              : `$${formatNumberToReadableString(
-                  config.vipSettings.pricePerDay
-                )}`
+              : `$${formatNumberToReadableString(config.vipSettings.pricePerDay)}`
           }`,
           `- **VIP Create Price:** ${
             config.vipSettings.pricePerCreate === 0
               ? 'Not Set'
-              : `$${formatNumberToReadableString(
-                  config.vipSettings.pricePerCreate
-                )}`
+              : `$${formatNumberToReadableString(config.vipSettings.pricePerCreate)}`
           }`,
           '',
-          formatRole('Manager Role', config.managerRoleId),
+          formatRole('Manager Role', config.managerRoleId)
         ],
         [
           formatMultipleRooms('ATM Rooms', config.atmChannelIds),
@@ -310,10 +307,10 @@ export async function run({ interaction }: SlashCommandProps) {
           formatRooms('Gambling Rooms', config.casinoChannelIds),
           formatRooms('VIP Active Rooms', vipChannelIds),
           '',
-          formatCategory('VIP Category', config.vipSettings.categoryId),
+          formatCategory('VIP Category', config.vipSettings.categoryId)
         ],
         showAdmin
-      ),
+      )
     })
   }
 }

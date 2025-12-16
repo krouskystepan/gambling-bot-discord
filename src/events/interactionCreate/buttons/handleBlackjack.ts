@@ -4,21 +4,27 @@ import {
   ButtonStyle,
   Client,
   Interaction,
-  MessageFlags,
+  MessageFlags
 } from 'discord.js'
-import User from '../../../models/User'
-import BlackjackGame from '../../../models/BlackjackGame'
+
+import {
+  consumeUserBalance,
+  createTransaction,
+  deleteBlackjackGame,
+  getBlackjackGameByUserAndGuild,
+  getUser,
+  updateBlackjackGameState
+} from '@/services'
 import {
   calculateHandValue,
-  revealDealerCards,
   createBlackjackEmbed,
-} from '../../../utils/blackjackUtils'
-import { drawNextCard } from '../../../utils/casinoHelpers'
-import { createInfoEmbed, createErrorEmbed } from '../../../utils/createEmbed'
-import { formatNumberToReadableString } from '../../../utils/utils'
-import Transaction from '../../../models/Transaction'
+  revealDealerCards
+} from '@/utils/blackjackUtils'
+import { drawNextCard } from '@/utils/casinoHelpers'
+import { createErrorEmbed, createInfoEmbed } from '@/utils/createEmbed'
+import { formatNumberToReadableString } from '@/utils/utils'
 
-export default async (interaction: Interaction, client: Client) => {
+export default async (interaction: Interaction, _client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
 
   try {
@@ -40,13 +46,16 @@ export default async (interaction: Interaction, client: Client) => {
           createInfoEmbed(
             'Invalid Input - Wrong user',
             'This is not your game.\nStart your own with `/blackjack`.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
-    const game = await BlackjackGame.findOne({ userId, guildId, gameId })
+    const game = await getBlackjackGameByUserAndGuild({
+      guildId,
+      userId
+    })
 
     if (!game) {
       return interaction.reply({
@@ -54,25 +63,25 @@ export default async (interaction: Interaction, client: Client) => {
           createErrorEmbed(
             'Error - Game not found',
             'You do not have an active game.\nStart one with `/blackjack`.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
     const message = await interaction.channel?.messages.fetch(gameId)
 
     if (!message) {
-      await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
+      await deleteBlackjackGame({ guildId, userId })
 
       return interaction.reply({
         embeds: [
           createErrorEmbed(
             'Error - Message not found',
             'The message for this game was not found.\nStart a new game with `/blackjack`.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -89,8 +98,7 @@ export default async (interaction: Interaction, client: Client) => {
 
       let gameIndex = game.dealerCards.length + game.playerCards.length
 
-      const user = await User.findOne({ userId, guildId })
-
+      const user = await getUser({ userId, guildId })
       if (!user) return
 
       await revealDealerCards(
@@ -111,7 +119,7 @@ export default async (interaction: Interaction, client: Client) => {
 
       return interaction.followUp({
         content: 'You have stood.',
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -146,7 +154,7 @@ export default async (interaction: Interaction, client: Client) => {
         )
 
         await message.edit({
-          components: [row],
+          components: [row]
         })
       }
 
@@ -156,8 +164,7 @@ export default async (interaction: Interaction, client: Client) => {
 
       playerTotal = calculateHandValue(game.playerCards)
 
-      const user = await User.findOne({ userId, guildId })
-
+      const user = await getUser({ userId, guildId })
       if (!user) return
 
       if (playerTotal > 21) {
@@ -173,16 +180,16 @@ export default async (interaction: Interaction, client: Client) => {
               showBalance,
               user.balance,
               betId
-            ),
+            )
           ],
-          components: [],
+          components: []
         })
 
-        await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
+        await deleteBlackjackGame({ userId, guildId })
 
         return interaction.followUp({
           content: 'You have busted.',
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -203,18 +210,20 @@ export default async (interaction: Interaction, client: Client) => {
           betId
         )
 
-        await BlackjackGame.findOneAndDelete({ userId, guildId, gameId })
+        await deleteBlackjackGame({ userId, guildId })
 
         return interaction.followUp({
           content: 'You have hit.',
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
-      await BlackjackGame.findOneAndUpdate(
-        { userId, guildId, gameId },
-        { playerCards: game.playerCards, deck: game.deck }
-      )
+      await updateBlackjackGameState({
+        userId,
+        guildId,
+        playerCards: game.playerCards,
+        deck: game.deck
+      })
 
       await message.edit({
         embeds: [
@@ -229,13 +238,13 @@ export default async (interaction: Interaction, client: Client) => {
             0,
             betId,
             true
-          ),
-        ],
+          )
+        ]
       })
 
       return interaction.followUp({
         content: 'You have hit.',
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -250,24 +259,11 @@ export default async (interaction: Interaction, client: Client) => {
 
       const additionalBet = game.betAmount
 
-      const user = await User.findOneAndUpdate(
-        {
-          userId: interaction.user.id,
-          guildId: interaction.guildId,
-          balance: { $gte: additionalBet },
-        },
-        [
-          {
-            $set: {
-              balance: { $subtract: ['$balance', additionalBet] },
-              lockedBalance: {
-                $max: [{ $subtract: ['$lockedBalance', additionalBet] }, 0],
-              },
-            },
-          },
-        ],
-        { new: true }
-      )
+      const user = await consumeUserBalance({
+        userId,
+        guildId,
+        amount: additionalBet
+      })
 
       if (!user) {
         return interaction.followUp({
@@ -275,20 +271,19 @@ export default async (interaction: Interaction, client: Client) => {
             createInfoEmbed(
               'Insufficient balance',
               `You don't have enough money to place this bet.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
-      await Transaction.create({
+      await createTransaction({
         userId: user.userId,
         guildId: user.guildId,
         amount: additionalBet,
         type: 'bet',
         source: 'casino',
-        betId,
-        createdAt: new Date(),
+        betId
       })
 
       const drawnCard = drawNextCard(game.deck, gameIndex)
@@ -296,11 +291,7 @@ export default async (interaction: Interaction, client: Client) => {
       playerTotal = calculateHandValue(game.playerCards)
 
       if (playerTotal > 21) {
-        await BlackjackGame.findOneAndDelete({
-          userId: interaction.user.id,
-          guildId: interaction.guildId,
-          gameId,
-        })
+        await deleteBlackjackGame({ userId, guildId })
 
         await message.edit({
           embeds: [
@@ -314,14 +305,14 @@ export default async (interaction: Interaction, client: Client) => {
               showBalance,
               user.balance,
               betId
-            ),
+            )
           ],
-          components: [],
+          components: []
         })
 
         return interaction.followUp({
           content: 'You have busted.',
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -343,7 +334,7 @@ export default async (interaction: Interaction, client: Client) => {
 
       return interaction.followUp({
         content: 'You have doubled down.',
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
   } catch (error) {

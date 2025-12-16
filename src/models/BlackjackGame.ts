@@ -1,4 +1,5 @@
 import { Schema, model } from 'mongoose'
+
 import { Card } from '../utils/blackjackUtils'
 
 export type BlackjackGameDoc = Document & {
@@ -15,43 +16,43 @@ const BlackjackGameSchema = new Schema<BlackjackGameDoc>({
   gameId: {
     type: String,
     required: true,
-    index: true,
+    index: true
   },
   userId: {
     type: String,
     required: true,
-    index: true,
+    index: true
   },
   guildId: {
     type: String,
     required: true,
-    index: true,
+    index: true
   },
   betAmount: {
     type: Number,
-    required: true,
+    required: true
   },
   deck: [
     {
       suite: { type: String, required: true },
       label: { type: String, required: true },
-      value: { type: Number, required: true },
-    },
+      value: { type: Number, required: true }
+    }
   ],
   playerCards: [
     {
       suite: { type: String, required: true },
       label: { type: String, required: true },
-      value: { type: Number, required: true },
-    },
+      value: { type: Number, required: true }
+    }
   ],
   dealerCards: [
     {
       suite: { type: String, required: true },
       label: { type: String, required: true },
-      value: { type: Number, required: true },
-    },
-  ],
+      value: { type: Number, required: true }
+    }
+  ]
 })
 
 BlackjackGameSchema.index({ userId: 1, guildId: 1 }, { unique: true })

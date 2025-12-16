@@ -1,106 +1,13 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkValidBet = exports.parseTimeToSeconds = exports.formatNumberToPercentage = exports.formatNumberWithSpaces = exports.parseReadableStringToNumber = exports.formatNumberToReadableString = exports.checkUserRegistration = exports.checkChannelConfiguration = exports.generateBetId = exports.connectToDatabase = void 0;
-const mongoose_1 = require("mongoose");
-const discord_js_1 = require("discord.js");
-const User_1 = require("../models//User");
-const createEmbed_1 = require("./createEmbed");
-const VipRoom_1 = require("../models/VipRoom");
-const gambling_bot_shared_1 = require("gambling-bot-shared");
-const GuildConfiguration_1 = require("../models/GuildConfiguration");
-const connectToDatabase = async () => {
-    try {
-        if (!process.env.MONGO_URI)
-            throw new Error('MONGO_URI is not defined');
-        mongoose_1.default.set('strictQuery', false);
-        await mongoose_1.default.connect(process.env.MONGO_URI);
-        console.log('✅ Connected to the database');
-    }
-    catch (error) {
-        console.error('Error connecting to the database:', error);
-    }
-};
-exports.connectToDatabase = connectToDatabase;
-const generateBetId = () => {
+import { MessageFlags } from 'discord.js';
+import { createInfoEmbed } from './createEmbed';
+export const generateBetId = () => {
     const timestamp = Date.now().toString(36);
     const random = Math.floor(Math.random() * 1_000_000)
         .toString(36)
         .padStart(5, '0');
     return `${timestamp}${random}`.toUpperCase();
 };
-exports.generateBetId = generateBetId;
-const checkChannelConfiguration = async (interaction, channelType, messages) => {
-    try {
-        const guildConfig = await GuildConfiguration_1.default.findOneAndUpdate({ guildId: interaction.guildId }, { $setOnInsert: { casinoSettings: gambling_bot_shared_1.defaultCasinoSettings } }, { upsert: true, new: true });
-        if (!guildConfig.casinoSettings) {
-            guildConfig.casinoSettings = gambling_bot_shared_1.defaultCasinoSettings;
-            await guildConfig.save();
-        }
-        let allowedChannelIds = [];
-        if (channelType === 'predictionChannelIds') {
-            const { actions, logs } = guildConfig.predictionChannelIds || {};
-            if (!actions || !logs) {
-                await interaction.reply({
-                    embeds: [(0, createEmbed_1.createErrorEmbed)('Error - Not Configured', messages.notSet)],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-                return false;
-            }
-            allowedChannelIds = [actions];
-        }
-        else if (channelType === 'atmChannelIds') {
-            const logsChannel = guildConfig.atmChannelIds?.logs;
-            if (!logsChannel) {
-                await interaction.reply({
-                    embeds: [(0, createEmbed_1.createErrorEmbed)('Error - Not Configured', messages.notSet)],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-                return false;
-            }
-            allowedChannelIds = [logsChannel];
-        }
-        else {
-            allowedChannelIds = guildConfig[channelType] || [];
-            if (channelType === 'casinoChannelIds') {
-                const activeVipRooms = await VipRoom_1.default.find({
-                    guildId: interaction.guildId,
-                    expiresAt: { $gt: new Date() },
-                });
-                allowedChannelIds.push(...activeVipRooms.map((vip) => vip.channelId));
-            }
-        }
-        if (!allowedChannelIds.length) {
-            await interaction.reply({
-                embeds: [(0, createEmbed_1.createErrorEmbed)('Error - Not Configured', messages.notSet)],
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
-            return false;
-        }
-        if (!allowedChannelIds.includes(interaction.channelId)) {
-            const allowedMentions = allowedChannelIds
-                .map((id) => `<#${id}>`)
-                .join(', ');
-            await interaction.reply({
-                embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Error - Incorrect Channel', `${messages.notAllowed} ${allowedMentions}.`),
-                ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
-            return false;
-        }
-        return guildConfig;
-    }
-    catch (error) {
-        console.error('Error checking channel configuration:', error);
-        return false;
-    }
-};
-exports.checkChannelConfiguration = checkChannelConfiguration;
-const checkUserRegistration = async (userId, guildId) => {
-    return await User_1.default.findOne({ userId, guildId });
-};
-exports.checkUserRegistration = checkUserRegistration;
-const formatNumberToReadableString = (number) => {
+export const formatNumberToReadableString = (number) => {
     const absNumber = Math.abs(number);
     const roundTo = (num, digits = 2) => Math.round(num * 10 ** digits) / 10 ** digits;
     let formatted;
@@ -118,8 +25,7 @@ const formatNumberToReadableString = (number) => {
     }
     return number < 0 ? `-${formatted}` : formatted;
 };
-exports.formatNumberToReadableString = formatNumberToReadableString;
-const parseReadableStringToNumber = (readableString) => {
+export const parseReadableStringToNumber = (readableString) => {
     const normalizedString = readableString.toUpperCase();
     if (!/^[-]?[0-9.]+[BMK]?$/.test(normalizedString)) {
         return NaN;
@@ -137,16 +43,13 @@ const parseReadableStringToNumber = (readableString) => {
         return parseFloat(normalizedString);
     }
 };
-exports.parseReadableStringToNumber = parseReadableStringToNumber;
-const formatNumberWithSpaces = (num) => {
+export const formatNumberWithSpaces = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 };
-exports.formatNumberWithSpaces = formatNumberWithSpaces;
-const formatNumberToPercentage = (num) => {
+export const formatNumberToPercentage = (num) => {
     return (num * 100).toFixed(2) + '%';
 };
-exports.formatNumberToPercentage = formatNumberToPercentage;
-const parseTimeToSeconds = (time) => {
+export const parseTimeToSeconds = (time) => {
     const regex = /(\d+)([hdw])/gi;
     let totalSeconds = 0;
     const sanitizedTime = time.replace(/\s+/g, '');
@@ -170,50 +73,49 @@ const parseTimeToSeconds = (time) => {
     }
     return totalSeconds;
 };
-exports.parseTimeToSeconds = parseTimeToSeconds;
-const checkValidBet = (interaction, betAmount, maxBet, minBet, userBalance, xTimes) => {
+export const checkValidBet = (interaction, betAmount, maxBet, minBet, userBalance, xTimes) => {
     if (isNaN(betAmount)) {
         interaction.reply({
             embeds: [
-                (0, createEmbed_1.createInfoEmbed)('Invalid Input - Not a number', 'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'),
+                createInfoEmbed('Invalid Input - Not a number', 'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.')
             ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
         });
         return false;
     }
     if (betAmount <= 0) {
         interaction.reply({
             embeds: [
-                (0, createEmbed_1.createInfoEmbed)('Invalid Input - Non-positive number', 'The number you provided must be greater than 0.\nPlease enter a positive value.'),
+                createInfoEmbed('Invalid Input - Non-positive number', 'The number you provided must be greater than 0.\nPlease enter a positive value.')
             ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
         });
         return false;
     }
     if (maxBet > 0 && betAmount > maxBet) {
         interaction.reply({
             embeds: [
-                (0, createEmbed_1.createInfoEmbed)('Invalid Input - Above Maximum Bet', `The maximum bet is **$${(0, exports.formatNumberToReadableString)(maxBet)}**.`),
+                createInfoEmbed('Invalid Input - Above Maximum Bet', `The maximum bet is **$${formatNumberToReadableString(maxBet)}**.`)
             ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
         });
         return false;
     }
     if (minBet > 0 && betAmount < minBet) {
         interaction.reply({
             embeds: [
-                (0, createEmbed_1.createInfoEmbed)('Invalid Input - Below Minimum Bet', `The minimum bet is **$${(0, exports.formatNumberToReadableString)(minBet)}**.`),
+                createInfoEmbed('Invalid Input - Below Minimum Bet', `The minimum bet is **$${formatNumberToReadableString(minBet)}**.`)
             ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
         });
         return false;
     }
     if (userBalance < betAmount) {
         interaction.reply({
             embeds: [
-                (0, createEmbed_1.createInfoEmbed)('Insufficient Funds', `You don't have enough money to place this bet.\nYour current balance is **$${(0, exports.formatNumberToReadableString)(userBalance)}**.`),
+                createInfoEmbed('Insufficient Funds', `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(userBalance)}**.`)
             ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
         });
         return false;
     }
@@ -222,13 +124,12 @@ const checkValidBet = (interaction, betAmount, maxBet, minBet, userBalance, xTim
         if (userBalance < totalBet) {
             interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('Insufficient Funds', `You don't have enough money to place this bet for ${xTimes} spins (you need **$${(0, exports.formatNumberToReadableString)(totalBet)}**).\nYour current balance is **$${(0, exports.formatNumberToReadableString)(userBalance)}**.`),
+                    createInfoEmbed('Insufficient Funds', `You don't have enough money to place this bet for ${xTimes} spins (you need **$${formatNumberToReadableString(totalBet)}**).\nYour current balance is **$${formatNumberToReadableString(userBalance)}**.`)
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
             return false;
         }
     }
     return true;
 };
-exports.checkValidBet = checkValidBet;

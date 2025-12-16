@@ -1,13 +1,13 @@
-import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 import {
   ApplicationCommandOptionType,
   CommandInteractionOptionResolver,
-  EmbedBuilder,
+  EmbedBuilder
 } from 'discord.js'
-import {
-  checkUserRegistration,
-  formatNumberToReadableString,
-} from '../../../utils/utils'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { checkUserRegistration } from '@/services'
+import { formatNumberToReadableString } from '@/utils/utils'
 
 export const data: CommandData = {
   name: 'who-is',
@@ -17,16 +17,16 @@ export const data: CommandData = {
       name: 'user',
       description: 'The user you want to get information about.',
       type: ApplicationCommandOptionType.User,
-      required: true,
-    },
+      required: true
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -34,10 +34,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
   const user = options.getUser('user', true)
 
-  const userDocument = await checkUserRegistration(
-    user.id,
-    interaction.guildId!
-  )
+  const userDocument = await checkUserRegistration({ interaction })
 
   const member = await interaction.guild?.members.fetch(user.id)
 
@@ -70,77 +67,77 @@ export async function run({ interaction }: SlashCommandProps) {
       {
         name: '👤 Username',
         value: `\`\`\`${user.username}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '🤡 Nickname',
         value: `\`\`\`${member.displayName}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '',
         value: '',
-        inline: false,
+        inline: false
       },
       {
         name: '🆔 User ID',
         value: `\`\`\`${member.id}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '',
         value: '',
-        inline: false,
+        inline: false
       },
       {
         name: '🗓️ Account Created',
         value: `\`\`\`${formattedCreatedAt}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '🗓️ Joined Server',
         value: `\`\`\`${formattedJoinDate}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '',
         value: '',
-        inline: false,
+        inline: false
       },
       ...(userDocument
         ? [
             {
               name: '💰 Balance',
               value: `\`\`\`${balance}\`\`\``,
-              inline: true,
+              inline: true
             },
             {
               name: '📅 Registered',
               value: `\`\`\`${registered}\`\`\``,
-              inline: true,
-            },
+              inline: true
+            }
           ]
         : [
             {
               name: '📅 Registered',
               value: `\`\`\`Not registered\`\`\``,
-              inline: true,
-            },
+              inline: true
+            }
           ]),
       {
         name: '',
         value: '',
-        inline: false,
+        inline: false
       },
       {
         name: '🏅 Roles',
         value: roles.length > 0 ? roles : 'No roles',
-        inline: false,
+        inline: false
       }
     )
     .setThumbnail(user.displayAvatarURL({ extension: 'png', size: 128 }))
 
   return interaction.reply({
-    embeds: [embed],
+    embeds: [embed]
   })
 }

@@ -1,14 +1,19 @@
+import { TUser } from 'gambling-bot-shared'
+
 import { ColorResolvable, Message } from 'discord.js'
-import { createBetEmbed } from './createEmbed'
-import BlackjackGame from '../models/BlackjackGame'
+
+import {
+  createTransaction,
+  deleteBlackjackGame,
+  updateUserBalance
+} from '@/services'
+
 import { drawNextCard } from './casinoHelpers'
-import User from '../models/User'
+import { createBetEmbed } from './createEmbed'
 import {
   formatNumberToReadableString,
-  parseReadableStringToNumber,
+  parseReadableStringToNumber
 } from './utils'
-import Transaction from '../models/Transaction'
-import { TUser } from 'gambling-bot-shared'
 
 export const SUITES = ['♠️', '♣️', '♥️', '♦️'] as const
 export const VALUES = [
@@ -24,7 +29,7 @@ export const VALUES = [
   { label: '10', value: 10 },
   { label: 'J', value: 10 },
   { label: 'Q', value: 10 },
-  { label: 'K', value: 10 },
+  { label: 'K', value: 10 }
 ] as const
 
 export type Card = {
@@ -94,9 +99,9 @@ export const revealDealerCards = async (
         false,
         0,
         betId
-      ),
+      )
     ],
-    components: [],
+    components: []
   })
 
   await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -120,9 +125,9 @@ export const revealDealerCards = async (
           false,
           0,
           betId
-        ),
+        )
       ],
-      components: [],
+      components: []
     })
 
     await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -147,22 +152,21 @@ export const revealDealerCards = async (
   }
 
   if (balanceChange > 0) {
-    const updatedUser = await User.findOneAndUpdate(
-      { userId: user.userId, guildId },
-      { $inc: { balance: balanceChange } },
-      { new: true }
-    )
+    const updatedUser = await updateUserBalance({
+      userId: user.userId,
+      guildId,
+      amount: balanceChange
+    })
 
     if (!updatedUser) throw new Error('User not found when paying out')
 
-    await Transaction.create({
+    await createTransaction({
       userId: user.userId,
       guildId: user.guildId,
       amount: balanceChange,
       type: 'win',
       source: 'casino',
-      betId,
-      createdAt: new Date(),
+      betId
     })
 
     user.balance = updatedUser.balance
@@ -180,12 +184,12 @@ export const revealDealerCards = async (
         showBalnce,
         user.balance,
         betId
-      ),
+      )
     ],
-    components: [],
+    components: []
   })
 
-  await BlackjackGame.findOneAndDelete({ userId: user.userId, guildId, gameId })
+  await deleteBlackjackGame({ userId: user.userId, guildId })
 }
 
 export type BJResults =
@@ -214,9 +218,7 @@ export const createBlackjackEmbed = (
 ) => {
   const dealerHandText = dealerVisibleOneCard
     ? `${dealerCards[0].label}${dealerCards[0].suite} ??`
-    : `${dealerCards
-        .map((c) => `${c.label}${c.suite}`)
-        .join(' ')} (**${dealerTotal}**)`
+    : `${dealerCards.map((c) => `${c.label}${c.suite}`).join(' ')} (**${dealerTotal}**)`
 
   let resultText = ''
   let color: ColorResolvable = 'Yellow'
@@ -248,9 +250,7 @@ export const createBlackjackEmbed = (
       color = 'Green'
       break
     case 'PW':
-      resultText = `You win!\n💰 Total: 🟢 **$${formatNumberToReadableString(
-        betAmount * 2
-      )}**`
+      resultText = `You win!\n💰 Total: 🟢 **$${formatNumberToReadableString(betAmount * 2)}**`
       color = 'Green'
       break
     case 'DW':
@@ -273,15 +273,13 @@ export const createBlackjackEmbed = (
     `**Dealer's Hand:**\n${dealerHandText}`,
     `**Your Hand:**\n${playerCards
       .map((c) => `${c.label}${c.suite}`)
-      .join(' ')} (**${playerTotal}**)`,
+      .join(' ')} (**${playerTotal}**)`
   ]
 
   if (resultText) {
     let resultSection = `**Result**\n${resultText}`
     if (showBalance) {
-      resultSection += `\n🏦 Balance: **$${formatNumberToReadableString(
-        userBalance
-      )}**`
+      resultSection += `\n🏦 Balance: **$${formatNumberToReadableString(userBalance)}**`
     }
     sections.push(resultSection)
   } else if (showBalance) {

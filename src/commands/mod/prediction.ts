@@ -1,26 +1,31 @@
-import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+import { TPredictionOption } from 'gambling-bot-shared'
+import { DateTime } from 'luxon'
+
 import {
-  CommandInteractionOptionResolver,
-  ApplicationCommandOptionType,
   ActionRowBuilder,
+  ApplicationCommandOptionType,
   ButtonBuilder,
   ButtonStyle,
-  MessageFlags,
-  EmbedBuilder,
   Colors,
+  CommandInteractionOptionResolver,
+  EmbedBuilder,
   Message,
-  TextChannel,
+  MessageFlags,
+  TextChannel
 } from 'discord.js'
-import Prediction from '../../models/Prediction'
-import { createErrorEmbed, createSuccessEmbed } from '../../utils/createEmbed'
-import User from '../../models/User'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
 import {
-  checkChannelConfiguration,
-  formatNumberToReadableString,
-} from '../../utils/utils'
-import { DateTime } from 'luxon'
-import Transaction from '../../models/Transaction'
-import { TPredictionOption } from 'gambling-bot-shared'
+  checkPredictionChannels,
+  createPrediction,
+  createTransaction,
+  getPredictionById,
+  updatePredictionStatus,
+  updateUserBalance
+} from '@/services'
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed'
+import { formatNumberToReadableString } from '@/utils/utils'
 
 export const data: CommandData = {
   name: 'prediction',
@@ -35,23 +40,23 @@ export const data: CommandData = {
           name: 'title',
           description: 'Title of the prediction',
           type: ApplicationCommandOptionType.String,
-          required: true,
+          required: true
         },
         {
           name: 'choices',
           description:
             'Comma-separated list of choices with odds (e.g. Yes:2,No:1.5,Maybe:3)',
           type: ApplicationCommandOptionType.String,
-          required: true,
+          required: true
         },
         {
           name: 'autolock',
           description:
             'Optional: Automatically lock this prediction at a specific date & time (DD-MM-YYYY HH:mm)',
           type: ApplicationCommandOptionType.String,
-          required: false,
-        },
-      ],
+          required: false
+        }
+      ]
     },
     {
       name: 'end',
@@ -63,9 +68,9 @@ export const data: CommandData = {
           description: 'ID of the prediction to end',
           type: ApplicationCommandOptionType.String,
           autocomplete: true,
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'payout',
@@ -77,16 +82,16 @@ export const data: CommandData = {
           description: 'ID of the prediction to payout',
           type: ApplicationCommandOptionType.String,
           required: true,
-          autocomplete: true,
+          autocomplete: true
         },
         {
           name: 'winner',
           description: 'Name of the winning choice (full name)',
           type: ApplicationCommandOptionType.String,
           required: true,
-          autocomplete: true,
-        },
-      ],
+          autocomplete: true
+        }
+      ]
     },
     {
       name: 'cancel',
@@ -98,9 +103,9 @@ export const data: CommandData = {
           description: 'ID of the prediction to cancel',
           type: ApplicationCommandOptionType.String,
           required: true,
-          autocomplete: true,
-        },
-      ],
+          autocomplete: true
+        }
+      ]
     },
     {
       name: 'check',
@@ -112,30 +117,22 @@ export const data: CommandData = {
           description: 'ID of the prediction to check',
           type: ApplicationCommandOptionType.String,
           required: true,
-          autocomplete: true,
-        },
-      ],
-    },
+          autocomplete: true
+        }
+      ]
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   botPermissions: ['Administrator'],
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const configReply = await checkChannelConfiguration(
-      interaction,
-      'predictionChannelIds',
-      {
-        notSet:
-          'This server has not been configured for predictions yet.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for prediction command.\nTry one of these channels:`,
-      }
-    )
+    const configReply = await checkPredictionChannels(interaction)
 
     if (!configReply) return
 
@@ -152,9 +149,9 @@ export async function run({ interaction }: SlashCommandProps) {
             `You need to be an **Administrator** or have the ${
               managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
             } to use this command.`
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -173,9 +170,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Invalid Input - Wrong Number of Choices',
               'You must provide **2 or 3 choices** only.'
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -188,15 +185,15 @@ export async function run({ interaction }: SlashCommandProps) {
               createErrorEmbed(
                 'Invalid Input - Invalid Format',
                 `Invalid option format: "${item}". Use OptionName:Odds (e.g. Yes:2)`
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
         choicesArray.push({
           choiceName: name,
           odds: Number(odds),
-          bets: [],
+          bets: []
         })
       }
 
@@ -211,9 +208,9 @@ export async function run({ interaction }: SlashCommandProps) {
               createErrorEmbed(
                 'Invalid Input - Invalid Autolock Date/Time',
                 'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 18:00` or `09.09.2025 18:00`'
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -231,9 +228,9 @@ export async function run({ interaction }: SlashCommandProps) {
               createErrorEmbed(
                 'Invalid Input - Invalid Autolock Date/Time',
                 'The date/time you provided is invalid.'
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -243,9 +240,9 @@ export async function run({ interaction }: SlashCommandProps) {
               createErrorEmbed(
                 'Invalid Input - Autolock in the Past',
                 'Autolock must be a future date/time. Please provide a date and time that is after now.'
-              ),
+              )
             ],
-            flags: MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
           })
         }
 
@@ -285,29 +282,30 @@ export async function run({ interaction }: SlashCommandProps) {
       await interaction.editReply({
         content: '**Status:** Active' + autolockString,
         embeds: [embed],
-        components: [row],
+        components: [row]
       })
 
-      await Prediction.create({
+      await createPrediction({
         predictionId: messageReply.id,
         guildId: interaction.guildId!,
-        channelId: interaction.channel?.id,
+        channelId: interaction.channel?.id!,
         creatorId: interaction.user.id,
         title,
         choices: choicesArray,
         autolock: autolockDate,
-        status: 'active',
+        status: 'active'
       })
     }
 
     if (subcommand === 'end') {
       const predictionId = options.getString('prediction-id', true)
 
-      const updatedPrediction = await Prediction.findOneAndUpdate(
-        { predictionId, status: 'active' },
-        { $set: { status: 'ended' } },
-        { new: true }
-      )
+      const updatedPrediction = await updatePredictionStatus({
+        predictionId,
+        guildId: interaction.guildId!,
+        fromStatus: 'active',
+        toStatus: 'ended'
+      })
 
       if (!updatedPrediction) {
         return interaction.reply({
@@ -315,9 +313,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Prediction Not Active or Not Found',
               `Prediction **${predictionId}** is either already ended/canceled or does not exist.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -330,9 +328,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Channel Not Found',
               'Could not fetch the channel for this prediction.'
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -343,12 +341,12 @@ export async function run({ interaction }: SlashCommandProps) {
         const embed = message.embeds[0]?.toJSON() || {}
         const editedEmbed = {
           ...embed,
-          color: Colors.Orange,
+          color: Colors.Orange
         }
         await message.edit({
           content: '**Status:** Ended',
           embeds: [editedEmbed],
-          components: [],
+          components: []
         })
       }
 
@@ -358,9 +356,9 @@ export async function run({ interaction }: SlashCommandProps) {
             'Prediction Ended',
             `Prediction **${updatedPrediction.title}** has ended.\n` +
               `No more bets can be placed.`
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -371,20 +369,21 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Error - Logs Not Set Up',
               'Prediction logs are not configured yet.\nPlease complete the setup.'
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
       const predictionId = options.getString('prediction-id', true)
       const winnerChoice = options.getString('winner', true)
 
-      const updatedPrediction = await Prediction.findOneAndUpdate(
-        { guildId: interaction.guildId, predictionId, status: 'ended' },
-        { $set: { status: 'paid' } },
-        { new: true }
-      )
+      const updatedPrediction = await updatePredictionStatus({
+        predictionId,
+        guildId: interaction.guildId!,
+        fromStatus: 'ended',
+        toStatus: 'paid'
+      })
 
       if (!updatedPrediction) {
         return interaction.reply({
@@ -392,9 +391,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Prediction Not Ended or Already Paid',
               `Prediction **${predictionId}** is either not ended yet or has already been paid.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -407,30 +406,27 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Invalid Choice',
               `The winner "${winnerChoice}" does not exist in this prediction.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
       for (const bet of winner.bets) {
-        await Transaction.create({
+        await createTransaction({
           userId: bet.userId,
-          guildId: interaction.guildId,
+          guildId: interaction.guildId!,
           amount: bet.amount * winner.odds,
           type: 'win',
           source: 'casino',
-          betId: updatedPrediction.predictionId,
-          createdAt: new Date(),
+          betId: updatedPrediction.predictionId
         })
-        await User.findOneAndUpdate(
-          { userId: bet.userId, guildId: interaction.guildId },
-          {
-            $inc: {
-              balance: bet.amount * winner.odds,
-            },
-          }
-        )
+
+        await updateUserBalance({
+          userId: bet.userId,
+          guildId: interaction.guildId!,
+          amount: bet.amount * winner.odds
+        })
       }
 
       const logChannel = interaction.client.channels.cache.get(
@@ -445,7 +441,7 @@ export async function run({ interaction }: SlashCommandProps) {
         const winners = winner.bets.map((b) => ({
           userId: b.userId,
           betAmount: b.amount,
-          winAmount: b.amount * winner.odds,
+          winAmount: b.amount * winner.odds
         }))
 
         const losers = updatedPrediction.choices
@@ -454,7 +450,7 @@ export async function run({ interaction }: SlashCommandProps) {
             c.bets.map((b) => ({
               userId: b.userId,
               betAmount: b.amount,
-              winAmount: 0,
+              winAmount: 0
             }))
           )
 
@@ -480,9 +476,7 @@ export async function run({ interaction }: SlashCommandProps) {
               .fetch(l.userId)
               .catch(() => null)
             const username = member ? `<@${member.id}>` : 'Unknown'
-            return `${username} (Bet: $${formatNumberToReadableString(
-              l.betAmount
-            )}, Win: $0)`
+            return `${username} (Bet: $${formatNumberToReadableString(l.betAmount)}, Win: $0)`
           })
         )
 
@@ -493,20 +487,23 @@ export async function run({ interaction }: SlashCommandProps) {
             {
               name: 'Participants',
               value: `${totalBets.length}`,
-              inline: true,
+              inline: true
             },
             { name: 'Winners', value: `${winners.length}`, inline: true },
             { name: 'Losers', value: `${losers.length}`, inline: true },
             {
               name: 'Casino Profit/Loss',
               value: `$${formatNumberToReadableString(casinoProfit)}`,
-              inline: true,
+              inline: true
             },
             {
               name: 'Winners Detail',
-              value: winnersDisplay.join('\n') || 'None',
+              value: winnersDisplay.join('\n') || 'None'
             },
-            { name: 'Losers Detail', value: losersDisplay.join('\n') || 'None' }
+            {
+              name: 'Losers Detail',
+              value: losersDisplay.join('\n') || 'None'
+            }
           )
 
         logChannel.send({ embeds: [embed] }).catch(console.error)
@@ -524,12 +521,12 @@ export async function run({ interaction }: SlashCommandProps) {
           const editedEmbed = {
             ...embed,
             color: Colors.Green,
-            title: embed.title,
+            title: embed.title
           }
           await message.edit({
             content: `**Status:** Paid (Winner: ${winnerChoice})`,
             embeds: [editedEmbed],
-            components: [],
+            components: []
           })
         }
       }
@@ -539,20 +536,21 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Winners Paid',
             `All users who bet on **${winnerChoice}** have been paid.`
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
     if (subcommand === 'cancel') {
       const predictionId = options.getString('prediction-id', true)
 
-      const updatedPrediction = await Prediction.findOneAndUpdate(
-        { predictionId, status: { $in: ['active', 'ended'] } },
-        { $set: { status: 'canceled' } },
-        { new: true }
-      )
+      const updatedPrediction = await updatePredictionStatus({
+        predictionId,
+        guildId: interaction.guildId!,
+        fromStatus: ['active', 'ended'],
+        toStatus: 'canceled'
+      })
 
       if (!updatedPrediction) {
         return interaction.reply({
@@ -560,28 +558,29 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Prediction Not Active or Not Found',
               `Prediction **${predictionId}** is either already canceled or does not exist.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
       const allBets = updatedPrediction.choices.flatMap((c) => c.bets)
       for (const bet of allBets) {
-        await Transaction.create({
+        await createTransaction({
           userId: bet.userId,
-          guildId: interaction.guildId,
+          guildId: interaction.guildId!,
           amount: bet.amount,
           type: 'refund',
           source: 'casino',
-          betId: updatedPrediction.predictionId,
-          createdAt: new Date(),
+          betId: updatedPrediction.predictionId
         })
 
-        await User.findOneAndUpdate(
-          { userId: bet.userId, guildId: interaction.guildId },
-          { $inc: { balance: bet.amount, lockedBalance: bet.amount } }
-        )
+        await updateUserBalance({
+          userId: bet.userId,
+          guildId: interaction.guildId!,
+          amount: bet.amount,
+          lockedAmount: bet.amount
+        })
       }
 
       const channel = await interaction.client.channels.fetch(
@@ -598,13 +597,13 @@ export async function run({ interaction }: SlashCommandProps) {
           const editedEmbed = {
             ...embed,
             color: Colors.Red,
-            title: embed.title,
+            title: embed.title
           }
 
           await message.edit({
             content: '**Status:** Canceled — All bets refunded',
             embeds: [editedEmbed],
-            components: [],
+            components: []
           })
         } catch {}
       }
@@ -614,15 +613,18 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Prediction Canceled',
             `All bets for **${updatedPrediction.title}** have been refunded.`
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
     if (subcommand === 'check') {
       const predictionId = options.getString('prediction-id', true)
-      const prediction = await Prediction.findOne({ predictionId })
+      const prediction = await getPredictionById({
+        predictionId,
+        guildId: interaction.guildId!
+      })
 
       if (!prediction) {
         return interaction.reply({
@@ -630,9 +632,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Prediction Not Found',
               `No prediction found with ID: ${predictionId}`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -652,9 +654,7 @@ export async function run({ interaction }: SlashCommandProps) {
                 .fetch(b.userId)
                 .catch(() => null)
               const username = member ? `<@${member.id}>` : 'Unknown'
-              return `${username} — Bet: $${formatNumberToReadableString(
-                b.amount
-              )}`
+              return `${username} — Bet: $${formatNumberToReadableString(b.amount)}`
             })
           )
 
@@ -667,7 +667,7 @@ export async function run({ interaction }: SlashCommandProps) {
               )}\n` +
               `If Wins → Payout: $${formatNumberToReadableString(totalWin)}\n` +
               (bettors.length ? bettors.join('\n') : 'No bets'),
-            inline: false,
+            inline: false
           }
         })
       )
@@ -680,7 +680,7 @@ export async function run({ interaction }: SlashCommandProps) {
           {
             name: 'Total Bets',
             value: `$${formatNumberToReadableString(totalBetAmount)}`,
-            inline: true,
+            inline: true
           },
           ...choiceSummaries
         )
@@ -689,10 +689,10 @@ export async function run({ interaction }: SlashCommandProps) {
 
       return interaction.reply({
         embeds: [embed],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error running the command:', error)
   }
 }

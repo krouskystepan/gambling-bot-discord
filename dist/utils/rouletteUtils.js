@@ -1,11 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.inferTypeFromValue = inferTypeFromValue;
-exports.calculateRouletteWin = calculateRouletteWin;
-exports.getRouletteColor = getRouletteColor;
-exports.getRouletteHelpers = getRouletteHelpers;
-const gambling_bot_shared_1 = require("gambling-bot-shared");
-function inferTypeFromValue(value) {
+import { MINI_NUMBERS } from 'gambling-bot-shared';
+export function inferTypeFromValue(value) {
     const val = value.toLowerCase();
     if (['red', 'black'].includes(val))
         return 'color';
@@ -17,11 +11,11 @@ function inferTypeFromValue(value) {
         return 'dozen';
     if (val.startsWith('c') && ['1', '2', '3'].includes(val[1]))
         return 'column';
-    if (val in gambling_bot_shared_1.MINI_NUMBERS)
+    if (val in MINI_NUMBERS)
         return 'number';
     throw new Error(`Invalid bet value: ${value}`);
 }
-function calculateRouletteWin(bet, result, payouts) {
+export function calculateRouletteWin(bet, result, payouts) {
     const amount = bet.amount;
     const numResult = Number(result);
     switch (bet.type) {
@@ -30,7 +24,7 @@ function calculateRouletteWin(bet, result, payouts) {
         case 'color':
             if (result === '0')
                 return 0;
-            return gambling_bot_shared_1.MINI_NUMBERS[result] === bet.value.toLowerCase()
+            return MINI_NUMBERS[result] === bet.value.toLowerCase()
                 ? amount * payouts.color
                 : 0;
         case 'parity':
@@ -59,8 +53,8 @@ function calculateRouletteWin(bet, result, payouts) {
             return Number(bet.value) === col ? amount * payouts.column : 0;
     }
 }
-function getRouletteColor(number) {
-    const color = gambling_bot_shared_1.MINI_NUMBERS[number];
+export function getRouletteColor(number) {
+    const color = MINI_NUMBERS[number];
     if (color === 'green')
         return '🟢';
     if (color === 'red')
@@ -69,8 +63,8 @@ function getRouletteColor(number) {
         return '⚫';
     return '❓ Unknown';
 }
-function getRouletteHelpers() {
-    const numbers = Object.keys(gambling_bot_shared_1.MINI_NUMBERS).map(Number);
+export function getRouletteHelpers() {
+    const numbers = Object.keys(MINI_NUMBERS).map(Number);
     const columns = { 1: [], 2: [], 3: [] };
     numbers.forEach((n) => {
         if (n === 0)
@@ -101,6 +95,6 @@ function getRouletteHelpers() {
         `- **Parity:**\n${parityTest}`,
         `- **Ranges:**\n${rangesTest}`,
         `- **Columns:**\n${columnsText}`,
-        `- **Dozens:**\n${dozensText}`,
+        `- **Dozens:**\n${dozensText}`
     ].join('\n');
 }

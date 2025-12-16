@@ -1,119 +1,110 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const discord_js_1 = require("discord.js");
-const Prediction_1 = require("../../models/Prediction");
-const createEmbed_1 = require("../../utils/createEmbed");
-const User_1 = require("../../models/User");
-const utils_1 = require("../../utils/utils");
-const luxon_1 = require("luxon");
-const Transaction_1 = require("../../models/Transaction");
-exports.data = {
+import { DateTime } from 'luxon';
+import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder, MessageFlags } from 'discord.js';
+import { checkPredictionChannels, createPrediction, createTransaction, getPredictionById, updatePredictionStatus, updateUserBalance } from '@/services';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed';
+import { formatNumberToReadableString } from '@/utils/utils';
+export const data = {
     name: 'prediction',
     description: 'Manage predictions.',
     options: [
         {
             name: 'create',
             description: 'Create a new prediction.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'title',
                     description: 'Title of the prediction',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
-                    required: true,
+                    type: ApplicationCommandOptionType.String,
+                    required: true
                 },
                 {
                     name: 'choices',
                     description: 'Comma-separated list of choices with odds (e.g. Yes:2,No:1.5,Maybe:3)',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
-                    required: true,
+                    type: ApplicationCommandOptionType.String,
+                    required: true
                 },
                 {
                     name: 'autolock',
                     description: 'Optional: Automatically lock this prediction at a specific date & time (DD-MM-YYYY HH:mm)',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
-                    required: false,
-                },
-            ],
+                    type: ApplicationCommandOptionType.String,
+                    required: false
+                }
+            ]
         },
         {
             name: 'end',
             description: 'End an active prediction so no more bets can be placed.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'prediction-id',
                     description: 'ID of the prediction to end',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    type: ApplicationCommandOptionType.String,
                     autocomplete: true,
-                    required: true,
-                },
-            ],
+                    required: true
+                }
+            ]
         },
         {
             name: 'payout',
             description: 'Pay out winners of a prediction.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'prediction-id',
                     description: 'ID of the prediction to payout',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    type: ApplicationCommandOptionType.String,
                     required: true,
-                    autocomplete: true,
+                    autocomplete: true
                 },
                 {
                     name: 'winner',
                     description: 'Name of the winning choice (full name)',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    type: ApplicationCommandOptionType.String,
                     required: true,
-                    autocomplete: true,
-                },
-            ],
+                    autocomplete: true
+                }
+            ]
         },
         {
             name: 'cancel',
             description: 'Cancel a prediction and refund all bets.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'prediction-id',
                     description: 'ID of the prediction to cancel',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    type: ApplicationCommandOptionType.String,
                     required: true,
-                    autocomplete: true,
-                },
-            ],
+                    autocomplete: true
+                }
+            ]
         },
         {
             name: 'check',
             description: 'Check the status of a prediction.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'prediction-id',
                     description: 'ID of the prediction to check',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
+                    type: ApplicationCommandOptionType.String,
                     required: true,
-                    autocomplete: true,
-                },
-            ],
-        },
+                    autocomplete: true
+                }
+            ]
+        }
     ],
-    dm_permission: false,
+    dm_permission: false
 };
-exports.options = {
+export const options = {
     botPermissions: ['Administrator'],
-    deleted: false,
+    deleted: false
 };
-async function run({ interaction }) {
+export async function run({ interaction }) {
     try {
-        const configReply = await (0, utils_1.checkChannelConfiguration)(interaction, 'predictionChannelIds', {
-            notSet: 'This server has not been configured for predictions yet.\nSet it up using web dashboard.',
-            notAllowed: `This channel is not configured for prediction command.\nTry one of these channels:`,
-        });
+        const configReply = await checkPredictionChannels(interaction);
         if (!configReply)
             return;
         const member = await interaction.guild?.members.fetch(interaction.user.id);
@@ -123,9 +114,9 @@ async function run({ interaction }) {
         if (!hasAdmin && !hasManager) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Permission Denied', `You need to be an **Administrator** or have the ${managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'} to use this command.`),
+                    createErrorEmbed('Permission Denied', `You need to be an **Administrator** or have the ${managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'} to use this command.`)
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
         const options = interaction.options;
@@ -138,9 +129,9 @@ async function run({ interaction }) {
             if (rawChoices.length < 2 || rawChoices.length > 3) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Invalid Input - Wrong Number of Choices', 'You must provide **2 or 3 choices** only.'),
+                        createErrorEmbed('Invalid Input - Wrong Number of Choices', 'You must provide **2 or 3 choices** only.')
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             const choicesArray = [];
@@ -149,15 +140,15 @@ async function run({ interaction }) {
                 if (!name || !odds || isNaN(Number(odds))) {
                     return interaction.reply({
                         embeds: [
-                            (0, createEmbed_1.createErrorEmbed)('Invalid Input - Invalid Format', `Invalid option format: "${item}". Use OptionName:Odds (e.g. Yes:2)`),
+                            createErrorEmbed('Invalid Input - Invalid Format', `Invalid option format: "${item}". Use OptionName:Odds (e.g. Yes:2)`)
                         ],
-                        flags: discord_js_1.MessageFlags.Ephemeral,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
                 choicesArray.push({
                     choiceName: name,
                     odds: Number(odds),
-                    bets: [],
+                    bets: []
                 });
             }
             let autolockDate = null;
@@ -167,49 +158,49 @@ async function run({ interaction }) {
                 if (!match) {
                     return interaction.reply({
                         embeds: [
-                            (0, createEmbed_1.createErrorEmbed)('Invalid Input - Invalid Autolock Date/Time', 'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 18:00` or `09.09.2025 18:00`'),
+                            createErrorEmbed('Invalid Input - Invalid Autolock Date/Time', 'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 18:00` or `09.09.2025 18:00`')
                         ],
-                        flags: discord_js_1.MessageFlags.Ephemeral,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
                 const [_, day, month, year, hour, minute] = match.map(Number);
-                const dt = luxon_1.DateTime.fromObject({ year, month, day, hour, minute }, 
+                const dt = DateTime.fromObject({ year, month, day, hour, minute }, 
                 //! Later in db
                 { zone: 'Europe/Prague' });
                 if (!dt.isValid) {
                     return interaction.reply({
                         embeds: [
-                            (0, createEmbed_1.createErrorEmbed)('Invalid Input - Invalid Autolock Date/Time', 'The date/time you provided is invalid.'),
+                            createErrorEmbed('Invalid Input - Invalid Autolock Date/Time', 'The date/time you provided is invalid.')
                         ],
-                        flags: discord_js_1.MessageFlags.Ephemeral,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
                 if (dt.toMillis() <= Date.now()) {
                     return interaction.reply({
                         embeds: [
-                            (0, createEmbed_1.createErrorEmbed)('Invalid Input - Autolock in the Past', 'Autolock must be a future date/time. Please provide a date and time that is after now.'),
+                            createErrorEmbed('Invalid Input - Autolock in the Past', 'Autolock must be a future date/time. Please provide a date and time that is after now.')
                         ],
-                        flags: discord_js_1.MessageFlags.Ephemeral,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
                 autolockDate = dt.toJSDate();
             }
             await interaction.deferReply();
             const messageReply = (await interaction.fetchReply());
-            const embed = new discord_js_1.EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setTitle(title)
                 .setDescription(choicesArray
                 .map((c) => `- **${c.choiceName}** — ${c.odds}x`)
                 .join('\n'))
                 .setFooter({ text: `ID: ${messageReply.id}` })
-                .setColor(discord_js_1.Colors.Yellow)
+                .setColor(Colors.Yellow)
                 .setTimestamp();
-            const row = new discord_js_1.ActionRowBuilder();
+            const row = new ActionRowBuilder();
             choicesArray.forEach((c) => {
-                row.addComponents(new discord_js_1.ButtonBuilder()
+                row.addComponents(new ButtonBuilder()
                     .setCustomId(`prediction.${messageReply.id}.${c.choiceName}.${c.odds}`)
                     .setLabel(c.choiceName)
-                    .setStyle(discord_js_1.ButtonStyle.Primary));
+                    .setStyle(ButtonStyle.Primary));
             });
             const autolockString = autolockDate
                 ? `\nAuto-Lock: <t:${Math.floor(autolockDate.getTime() / 1000)}:f>`
@@ -217,9 +208,9 @@ async function run({ interaction }) {
             await interaction.editReply({
                 content: '**Status:** Active' + autolockString,
                 embeds: [embed],
-                components: [row],
+                components: [row]
             });
-            await Prediction_1.default.create({
+            await createPrediction({
                 predictionId: messageReply.id,
                 guildId: interaction.guildId,
                 channelId: interaction.channel?.id,
@@ -227,27 +218,32 @@ async function run({ interaction }) {
                 title,
                 choices: choicesArray,
                 autolock: autolockDate,
-                status: 'active',
+                status: 'active'
             });
         }
         if (subcommand === 'end') {
             const predictionId = options.getString('prediction-id', true);
-            const updatedPrediction = await Prediction_1.default.findOneAndUpdate({ predictionId, status: 'active' }, { $set: { status: 'ended' } }, { new: true });
+            const updatedPrediction = await updatePredictionStatus({
+                predictionId,
+                guildId: interaction.guildId,
+                fromStatus: 'active',
+                toStatus: 'ended'
+            });
             if (!updatedPrediction) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Active or Not Found', `Prediction **${predictionId}** is either already ended/canceled or does not exist.`),
+                        createErrorEmbed('Prediction Not Active or Not Found', `Prediction **${predictionId}** is either already ended/canceled or does not exist.`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             const channel = await interaction.client.channels.fetch(updatedPrediction.channelId);
             if (!channel || !channel.isTextBased()) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Channel Not Found', 'Could not fetch the channel for this prediction.'),
+                        createErrorEmbed('Channel Not Found', 'Could not fetch the channel for this prediction.')
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             const message = await channel.messages.fetch(updatedPrediction.predictionId);
@@ -255,65 +251,69 @@ async function run({ interaction }) {
                 const embed = message.embeds[0]?.toJSON() || {};
                 const editedEmbed = {
                     ...embed,
-                    color: discord_js_1.Colors.Orange,
+                    color: Colors.Orange
                 };
                 await message.edit({
                     content: '**Status:** Ended',
                     embeds: [editedEmbed],
-                    components: [],
+                    components: []
                 });
             }
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Prediction Ended', `Prediction **${updatedPrediction.title}** has ended.\n` +
-                        `No more bets can be placed.`),
+                    createSuccessEmbed('Prediction Ended', `Prediction **${updatedPrediction.title}** has ended.\n` +
+                        `No more bets can be placed.`)
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
         if (subcommand === 'payout') {
             if (!configReply?.predictionChannelIds.logs) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Error - Logs Not Set Up', 'Prediction logs are not configured yet.\nPlease complete the setup.'),
+                        createErrorEmbed('Error - Logs Not Set Up', 'Prediction logs are not configured yet.\nPlease complete the setup.')
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             const predictionId = options.getString('prediction-id', true);
             const winnerChoice = options.getString('winner', true);
-            const updatedPrediction = await Prediction_1.default.findOneAndUpdate({ guildId: interaction.guildId, predictionId, status: 'ended' }, { $set: { status: 'paid' } }, { new: true });
+            const updatedPrediction = await updatePredictionStatus({
+                predictionId,
+                guildId: interaction.guildId,
+                fromStatus: 'ended',
+                toStatus: 'paid'
+            });
             if (!updatedPrediction) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Ended or Already Paid', `Prediction **${predictionId}** is either not ended yet or has already been paid.`),
+                        createErrorEmbed('Prediction Not Ended or Already Paid', `Prediction **${predictionId}** is either not ended yet or has already been paid.`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             const winner = updatedPrediction.choices.find((c) => c.choiceName === winnerChoice);
             if (!winner) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Invalid Choice', `The winner "${winnerChoice}" does not exist in this prediction.`),
+                        createErrorEmbed('Invalid Choice', `The winner "${winnerChoice}" does not exist in this prediction.`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             for (const bet of winner.bets) {
-                await Transaction_1.default.create({
+                await createTransaction({
                     userId: bet.userId,
                     guildId: interaction.guildId,
                     amount: bet.amount * winner.odds,
                     type: 'win',
                     source: 'casino',
-                    betId: updatedPrediction.predictionId,
-                    createdAt: new Date(),
+                    betId: updatedPrediction.predictionId
                 });
-                await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, {
-                    $inc: {
-                        balance: bet.amount * winner.odds,
-                    },
+                await updateUserBalance({
+                    userId: bet.userId,
+                    guildId: interaction.guildId,
+                    amount: bet.amount * winner.odds
                 });
             }
             const logChannel = interaction.client.channels.cache.get(configReply.predictionChannelIds.logs);
@@ -325,14 +325,14 @@ async function run({ interaction }) {
                 const winners = winner.bets.map((b) => ({
                     userId: b.userId,
                     betAmount: b.amount,
-                    winAmount: b.amount * winner.odds,
+                    winAmount: b.amount * winner.odds
                 }));
                 const losers = updatedPrediction.choices
                     .filter((c) => c.choiceName !== winnerChoice)
                     .flatMap((c) => c.bets.map((b) => ({
                     userId: b.userId,
                     betAmount: b.amount,
-                    winAmount: 0,
+                    winAmount: 0
                 })));
                 const totalWon = winners.reduce((acc, w) => acc + w.winAmount, 0);
                 const totalLost = losers.reduce((acc, l) => acc + l.betAmount, 0);
@@ -342,30 +342,33 @@ async function run({ interaction }) {
                         .fetch(w.userId)
                         .catch(() => null);
                     const username = member ? `<@${member.id}>` : 'Unknown';
-                    return `${username} (Bet: $${(0, utils_1.formatNumberToReadableString)(w.betAmount)}, Win: $${(0, utils_1.formatNumberToReadableString)(w.winAmount)})`;
+                    return `${username} (Bet: $${formatNumberToReadableString(w.betAmount)}, Win: $${formatNumberToReadableString(w.winAmount)})`;
                 }));
                 const losersDisplay = await Promise.all(losers.map(async (l) => {
                     const member = await interaction.guild?.members
                         .fetch(l.userId)
                         .catch(() => null);
                     const username = member ? `<@${member.id}>` : 'Unknown';
-                    return `${username} (Bet: $${(0, utils_1.formatNumberToReadableString)(l.betAmount)}, Win: $0)`;
+                    return `${username} (Bet: $${formatNumberToReadableString(l.betAmount)}, Win: $0)`;
                 }));
-                const embed = new discord_js_1.EmbedBuilder()
+                const embed = new EmbedBuilder()
                     .setTitle(`Prediction Payout - ${updatedPrediction.title}`)
-                    .setColor(casinoProfit >= 0 ? discord_js_1.Colors.Green : discord_js_1.Colors.Red)
+                    .setColor(casinoProfit >= 0 ? Colors.Green : Colors.Red)
                     .addFields({
                     name: 'Participants',
                     value: `${totalBets.length}`,
-                    inline: true,
+                    inline: true
                 }, { name: 'Winners', value: `${winners.length}`, inline: true }, { name: 'Losers', value: `${losers.length}`, inline: true }, {
                     name: 'Casino Profit/Loss',
-                    value: `$${(0, utils_1.formatNumberToReadableString)(casinoProfit)}`,
-                    inline: true,
+                    value: `$${formatNumberToReadableString(casinoProfit)}`,
+                    inline: true
                 }, {
                     name: 'Winners Detail',
-                    value: winnersDisplay.join('\n') || 'None',
-                }, { name: 'Losers Detail', value: losersDisplay.join('\n') || 'None' });
+                    value: winnersDisplay.join('\n') || 'None'
+                }, {
+                    name: 'Losers Detail',
+                    value: losersDisplay.join('\n') || 'None'
+                });
                 logChannel.send({ embeds: [embed] }).catch(console.error);
             }
             const channel = await interaction.client.channels.fetch(updatedPrediction.channelId);
@@ -375,46 +378,55 @@ async function run({ interaction }) {
                     const embed = message.embeds[0]?.toJSON() || {};
                     const editedEmbed = {
                         ...embed,
-                        color: discord_js_1.Colors.Green,
-                        title: embed.title,
+                        color: Colors.Green,
+                        title: embed.title
                     };
                     await message.edit({
                         content: `**Status:** Paid (Winner: ${winnerChoice})`,
                         embeds: [editedEmbed],
-                        components: [],
+                        components: []
                     });
                 }
             }
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Winners Paid', `All users who bet on **${winnerChoice}** have been paid.`),
+                    createSuccessEmbed('Winners Paid', `All users who bet on **${winnerChoice}** have been paid.`)
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
         if (subcommand === 'cancel') {
             const predictionId = options.getString('prediction-id', true);
-            const updatedPrediction = await Prediction_1.default.findOneAndUpdate({ predictionId, status: { $in: ['active', 'ended'] } }, { $set: { status: 'canceled' } }, { new: true });
+            const updatedPrediction = await updatePredictionStatus({
+                predictionId,
+                guildId: interaction.guildId,
+                fromStatus: ['active', 'ended'],
+                toStatus: 'canceled'
+            });
             if (!updatedPrediction) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Active or Not Found', `Prediction **${predictionId}** is either already canceled or does not exist.`),
+                        createErrorEmbed('Prediction Not Active or Not Found', `Prediction **${predictionId}** is either already canceled or does not exist.`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             const allBets = updatedPrediction.choices.flatMap((c) => c.bets);
             for (const bet of allBets) {
-                await Transaction_1.default.create({
+                await createTransaction({
                     userId: bet.userId,
                     guildId: interaction.guildId,
                     amount: bet.amount,
                     type: 'refund',
                     source: 'casino',
-                    betId: updatedPrediction.predictionId,
-                    createdAt: new Date(),
+                    betId: updatedPrediction.predictionId
                 });
-                await User_1.default.findOneAndUpdate({ userId: bet.userId, guildId: interaction.guildId }, { $inc: { balance: bet.amount, lockedBalance: bet.amount } });
+                await updateUserBalance({
+                    userId: bet.userId,
+                    guildId: interaction.guildId,
+                    amount: bet.amount,
+                    lockedAmount: bet.amount
+                });
             }
             const channel = await interaction.client.channels.fetch(updatedPrediction.channelId);
             if (channel?.isTextBased()) {
@@ -425,33 +437,36 @@ async function run({ interaction }) {
                     const embed = message.embeds[0]?.toJSON() || {};
                     const editedEmbed = {
                         ...embed,
-                        color: discord_js_1.Colors.Red,
-                        title: embed.title,
+                        color: Colors.Red,
+                        title: embed.title
                     };
                     await message.edit({
                         content: '**Status:** Canceled — All bets refunded',
                         embeds: [editedEmbed],
-                        components: [],
+                        components: []
                     });
                 }
                 catch { }
             }
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Prediction Canceled', `All bets for **${updatedPrediction.title}** have been refunded.`),
+                    createSuccessEmbed('Prediction Canceled', `All bets for **${updatedPrediction.title}** have been refunded.`)
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
         if (subcommand === 'check') {
             const predictionId = options.getString('prediction-id', true);
-            const prediction = await Prediction_1.default.findOne({ predictionId });
+            const prediction = await getPredictionById({
+                predictionId,
+                guildId: interaction.guildId
+            });
             if (!prediction) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Prediction Not Found', `No prediction found with ID: ${predictionId}`),
+                        createErrorEmbed('Prediction Not Found', `No prediction found with ID: ${predictionId}`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             const totalBets = prediction.choices.flatMap((c) => c.bets);
@@ -463,30 +478,30 @@ async function run({ interaction }) {
                         .fetch(b.userId)
                         .catch(() => null);
                     const username = member ? `<@${member.id}>` : 'Unknown';
-                    return `${username} — Bet: $${(0, utils_1.formatNumberToReadableString)(b.amount)}`;
+                    return `${username} — Bet: $${formatNumberToReadableString(b.amount)}`;
                 }));
                 return {
                     name: `Option: ${choice.choiceName} (${choice.odds}x)`,
                     value: `Bets: ${bettors.length}\n` +
-                        `Total Bet: $${(0, utils_1.formatNumberToReadableString)(choice.bets.reduce((a, b) => a + b.amount, 0))}\n` +
-                        `If Wins → Payout: $${(0, utils_1.formatNumberToReadableString)(totalWin)}\n` +
+                        `Total Bet: $${formatNumberToReadableString(choice.bets.reduce((a, b) => a + b.amount, 0))}\n` +
+                        `If Wins → Payout: $${formatNumberToReadableString(totalWin)}\n` +
                         (bettors.length ? bettors.join('\n') : 'No bets'),
-                    inline: false,
+                    inline: false
                 };
             }));
-            const embed = new discord_js_1.EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setTitle(`Prediction Status - ${prediction.title}`)
-                .setColor(discord_js_1.Colors.Blurple)
+                .setColor(Colors.Blurple)
                 .addFields({ name: 'Status', value: prediction.status, inline: true }, {
                 name: 'Total Bets',
-                value: `$${(0, utils_1.formatNumberToReadableString)(totalBetAmount)}`,
-                inline: true,
+                value: `$${formatNumberToReadableString(totalBetAmount)}`,
+                inline: true
             }, ...choiceSummaries)
                 .setFooter({ text: `ID: ${prediction.predictionId}` })
                 .setTimestamp();
             return interaction.reply({
                 embeds: [embed],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
     }

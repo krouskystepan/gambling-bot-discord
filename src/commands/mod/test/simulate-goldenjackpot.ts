@@ -1,14 +1,17 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
+import { GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES } from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType } from 'discord.js'
-import { createBetEmbed } from '../../../utils/createEmbed'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { getGuildConfigByGuildId } from '@/services'
+import { drawGoldenJackpot } from '@/utils/casinoHelpers'
+import { createBetEmbed } from '@/utils/createEmbed'
 import {
-  parseReadableStringToNumber,
   formatNumberToReadableString,
   formatNumberWithSpaces,
-} from '../../../utils/utils'
-import { drawGoldenJackpot } from '../../../utils/casinoHelpers'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import { GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES } from 'gambling-bot-shared'
+  parseReadableStringToNumber
+} from '@/utils/utils'
 
 export const data: CommandData = {
   name: 'simulate-goldenjackpot',
@@ -19,47 +22,47 @@ export const data: CommandData = {
       name: 'entries',
       description: 'Number of entries you want to simulate.',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'bet',
       description: 'Enter a bet (e.g. 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'details',
       description: 'Displays win details.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'wins-losses-count',
       description: 'Displays the count of wins and losses.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'win-losses-series',
       description: 'Displays the longest winning and losing streak.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
-  devOnly: true,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const config = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    const config = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     const settings = config?.casinoSettings
@@ -86,7 +89,7 @@ export async function run({ interaction }: SlashCommandProps) {
       return interaction.editReply({
         content: `The maximum number of entries is **${formatNumberToReadableString(
           GOLDEN_JACKPOT_MAX_SIMULATE_ENTRIES
-        )}**.`,
+        )}**.`
       })
     }
 
@@ -100,9 +103,7 @@ export async function run({ interaction }: SlashCommandProps) {
     await interaction.editReply(
       `Simulating **${formatNumberToReadableString(
         entries
-      )}** entries with a bet of **$${formatNumberToReadableString(
-        bet
-      )}**. Please wait...`
+      )}** entries with a bet of **$${formatNumberToReadableString(bet)}**. Please wait...`
     )
 
     const startTime = performance.now()
@@ -142,9 +143,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const profitOrLossPercentage = (profitOrLoss / totalBet) * 100
     const rtp = (totalWinnings / totalBet) * 100
 
-    const winDetails = `**1** in **${formatNumberWithSpaces(
-      settings.goldenJackpot.oneInChance
-    )}**`
+    const winDetails = `**1** in **${formatNumberWithSpaces(settings.goldenJackpot.oneInChance)}**`
 
     const winLossesDetails =
       `🎉 Wins: **${formatNumberWithSpaces(wins)}**\n` +
@@ -157,9 +156,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 
     const embed = createBetEmbed(
-      `🤑 GoldenJackpot Simulation - ${formatNumberToReadableString(
-        entries
-      )} entries`,
+      `🤑 GoldenJackpot Simulation - ${formatNumberToReadableString(entries)} entries`,
       profitOrLoss >= 0 ? 'Green' : 'Red',
       `Total bet: **$${formatNumberToReadableString(totalBet)}**\n` +
         `Total: **$${formatNumberToReadableString(totalWinnings)}**\n` +
@@ -174,7 +171,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
     await interaction.editReply({
       content: `Simulation completed.`,
-      embeds: [embed],
+      embeds: [embed]
     })
   } catch (error) {
     console.error('Error running the command:', error)

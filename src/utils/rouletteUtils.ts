@@ -1,4 +1,4 @@
-import { defaultCasinoSettings, MINI_NUMBERS } from 'gambling-bot-shared'
+import { MINI_NUMBERS, defaultCasinoSettings } from 'gambling-bot-shared'
 
 export type RouletteBetType =
   keyof (typeof defaultCasinoSettings)['roulette']['winMultipliers']
@@ -114,6 +114,6 @@ export function getRouletteHelpers() {
     `- **Parity:**\n${parityTest}`,
     `- **Ranges:**\n${rangesTest}`,
     `- **Columns:**\n${columnsText}`,
-    `- **Dozens:**\n${dozensText}`,
+    `- **Dozens:**\n${dozensText}`
   ].join('\n')
 }

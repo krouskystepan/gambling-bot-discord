@@ -1,22 +1,39 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const createEmbed_1 = require("../../../utils/createEmbed");
-exports.data = {
+import { createSuccessEmbed } from '@/utils/createEmbed';
+export const data = {
     name: 'ping',
-    description: 'Check the bot latency.',
+    description: 'Check the bot latency.'
 };
-exports.options = {
-    deleted: false,
+export const options = {
+    deleted: false
 };
-async function run({ interaction, client }) {
-    await interaction.deferReply();
-    const reply = await interaction.fetchReply();
-    const ping = reply.createdTimestamp - interaction.createdTimestamp;
-    interaction.editReply({
+const formatUptime = (ms) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return [
+        days && `${days}d`,
+        hours && `${hours}h`,
+        minutes && `${minutes}m`,
+        `${seconds}s`
+    ]
+        .filter(Boolean)
+        .join(' ');
+};
+export async function run({ interaction, client }) {
+    const start = Date.now();
+    await interaction.deferReply({ ephemeral: true });
+    const clientPing = Date.now() - start;
+    const wsPing = client.ws.ping ?? 0;
+    const uptime = formatUptime(client.uptime ?? 0);
+    await interaction.editReply({
         embeds: [
-            (0, createEmbed_1.createSuccessEmbed)('Pong! 🏓', `**・** Klient: \`${ping}ms\` \n **・** Websocket: \`${client.ws.ping}ms\``),
-        ],
+            createSuccessEmbed('🏓 Pong!', [
+                `**Client latency:** \`${clientPing}ms\``,
+                `**WebSocket latency:** \`${wsPing}ms\``,
+                `**Uptime:** \`${uptime}\``
+            ].join('\n'))
+        ]
     });
 }

@@ -1,27 +1,28 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-require("dotenv/config");
-const discord_js_1 = require("discord.js");
-const utils_1 = require("./utils/utils");
-const commandkit_1 = require("commandkit");
-const path = require("path");
-const client = new discord_js_1.Client({
+import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Client, GatewayIntentBits } from 'discord.js';
+import { CommandKit } from 'commandkit';
+import { connectToDatabase } from './services';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const client = new Client({
     intents: [
-        discord_js_1.GatewayIntentBits.Guilds,
-        discord_js_1.GatewayIntentBits.GuildMembers,
-        discord_js_1.GatewayIntentBits.GuildMessages,
-        discord_js_1.GatewayIntentBits.MessageContent,
-    ],
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 async function startApp(client) {
-    await (0, utils_1.connectToDatabase)();
-    new commandkit_1.CommandKit({
+    await connectToDatabase();
+    new CommandKit({
         client,
         commandsPath: path.join(__dirname, 'commands'),
         eventsPath: path.join(__dirname, 'events'),
         devGuildIds: ['1298805664654561340'],
         devUserIds: ['563799503056928768'],
-        bulkRegister: true,
+        bulkRegister: true
     });
     await client.login(process.env.TOKEN);
 }

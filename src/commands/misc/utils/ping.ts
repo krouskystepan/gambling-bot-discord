@@ -1,28 +1,52 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
-import { createSuccessEmbed } from '../../../utils/createEmbed'
+import type { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { createSuccessEmbed } from '@/utils/createEmbed'
 
 export const data: CommandData = {
   name: 'ping',
-  description: 'Check the bot latency.',
+  description: 'Check the bot latency.'
 }
 
 export const options: CommandOptions = {
-  deleted: false,
+  deleted: false
+}
+
+const formatUptime = (ms: number) => {
+  const totalSeconds = Math.floor(ms / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  return [
+    days && `${days}d`,
+    hours && `${hours}h`,
+    minutes && `${minutes}m`,
+    `${seconds}s`
+  ]
+    .filter(Boolean)
+    .join(' ')
 }
 
 export async function run({ interaction, client }: SlashCommandProps) {
-  await interaction.deferReply()
+  const start = Date.now()
 
-  const reply = await interaction.fetchReply()
+  await interaction.deferReply({ ephemeral: true })
 
-  const ping = reply.createdTimestamp - interaction.createdTimestamp
+  const clientPing = Date.now() - start
+  const wsPing = client.ws.ping ?? 0
+  const uptime = formatUptime(client.uptime ?? 0)
 
-  interaction.editReply({
+  await interaction.editReply({
     embeds: [
       createSuccessEmbed(
-        'Pong! 🏓',
-        `**・** Klient: \`${ping}ms\` \n **・** Websocket: \`${client.ws.ping}ms\``
-      ),
-    ],
+        '🏓 Pong!',
+        [
+          `**Client latency:** \`${clientPing}ms\``,
+          `**WebSocket latency:** \`${wsPing}ms\``,
+          `**Uptime:** \`${uptime}\``
+        ].join('\n')
+      )
+    ]
   })
 }

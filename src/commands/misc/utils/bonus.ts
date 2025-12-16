@@ -1,18 +1,21 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import {
-  checkUserRegistration,
-  formatNumberToReadableString,
-} from '../../../utils/utils'
-import {
-  MessageFlags,
-  EmbedBuilder,
   ApplicationCommandOptionType,
   Colors,
+  EmbedBuilder,
+  MessageFlags
 } from 'discord.js'
-import { createErrorEmbed, createInfoEmbed } from '../../../utils/createEmbed'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import User from '../../../models/User'
-import Transaction from '../../../models/Transaction'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
+import {
+  checkUserRegistration,
+  claimDailyBonus,
+  createTransaction,
+  getGuildConfigByGuildId
+} from '@/services'
+import { createErrorEmbed, createInfoEmbed } from '@/utils/createEmbed'
+import { formatNumberToReadableString } from '@/utils/utils'
 
 export const data: CommandData = {
   name: 'bonus',
@@ -22,14 +25,14 @@ export const data: CommandData = {
     {
       name: 'claim',
       description: 'Claim your daily bonus',
-      type: ApplicationCommandOptionType.Subcommand,
+      type: ApplicationCommandOptionType.Subcommand
     },
     {
       name: 'check',
       description: 'Check your streak and next bonus',
-      type: ApplicationCommandOptionType.Subcommand,
-    },
-  ],
+      type: ApplicationCommandOptionType.Subcommand
+    }
+  ]
 }
 
 export const options: CommandOptions = { deleted: false }
@@ -37,21 +40,11 @@ export const options: CommandOptions = { deleted: false }
 export async function run({ interaction }: SlashCommandProps) {
   try {
     const subcommand = interaction.options.getSubcommand()
-    const user = await checkUserRegistration(
-      interaction.user.id,
-      interaction.guildId!
-    )
-    if (!user) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed('Error - Not registered', 'Use `/register` first.'),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const user = await checkUserRegistration({ interaction })
+    if (!user) return
 
-    const guildConfig = await GuildConfiguration.findOne({
-      guildId: interaction.guildId!,
+    const guildConfig = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
     if (!guildConfig || !guildConfig.bonusSettings) {
       return interaction.reply({
@@ -59,9 +52,9 @@ export async function run({ interaction }: SlashCommandProps) {
           createErrorEmbed(
             'Error - Bonus not configured',
             'Daily bonus is not configured for this server.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -75,8 +68,8 @@ export async function run({ interaction }: SlashCommandProps) {
       resetOnMax = false,
       milestoneBonus: {
         weekly: milestoneWeekly = 0,
-        monthly: milestoneMonthly = 0,
-      } = {},
+        monthly: milestoneMonthly = 0
+      } = {}
     } = settings
 
     const now = new Date()
@@ -186,12 +179,12 @@ export async function run({ interaction }: SlashCommandProps) {
           {
             name: '🔥 Current Streak',
             value: `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`,
-            inline: true,
+            inline: true
           },
           {
             name: '💰 Next Reward',
             value: `$${formatNumberToReadableString(nextReward)}`,
-            inline: true,
+            inline: true
           },
           { name: '⏰ Next Claim', value: claimInfo, inline: false }
         )
@@ -199,7 +192,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       return interaction.reply({
         embeds: [embed],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -215,9 +208,9 @@ export async function run({ interaction }: SlashCommandProps) {
               `Come back at **<t:${Math.floor(
                 nextClaim.getTime() / 1000
               )}:f> / <t:${Math.floor(nextClaim.getTime() / 1000)}:R>**`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -227,25 +220,12 @@ export async function run({ interaction }: SlashCommandProps) {
           : 1
       const reward = calculateReward(streak)
 
-      const updatedUser = await User.findOneAndUpdate(
-        {
-          userId: user.userId,
-          guildId: user.guildId,
-          $or: [
-            {
-              lastDailyClaim: {
-                $lt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
-              },
-            },
-            { lastDailyClaim: null },
-          ],
-        },
-        {
-          $inc: { balance: reward, lockedBalance: reward },
-          $set: { lastDailyClaim: now, dailyStreak: streak },
-        },
-        { new: true }
-      )
+      const updatedUser = await claimDailyBonus({
+        user,
+        reward,
+        streak,
+        now
+      })
 
       if (!updatedUser) {
         return interaction.reply({
@@ -253,22 +233,21 @@ export async function run({ interaction }: SlashCommandProps) {
             createInfoEmbed(
               'Daily Bonus Already Claimed',
               'You already claimed your daily bonus.'
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
-      await Transaction.create({
+      await createTransaction({
         userId: updatedUser.userId,
         guildId: updatedUser.guildId,
         amount: reward,
         type: 'bonus',
         source: 'system',
         meta: {
-          bonusStreak: streak,
-        },
-        createdAt: now,
+          bonusStreak: streak
+        }
       })
 
       const embed = new EmbedBuilder()
@@ -283,12 +262,12 @@ export async function run({ interaction }: SlashCommandProps) {
           {
             name: '🔥 Current Streak',
             value: `${streak} day${streak !== 1 ? 's' : ''}`,
-            inline: true,
+            inline: true
           },
           {
             name: '💰 New Balance',
             value: `$${formatNumberToReadableString(updatedUser.balance)}`,
-            inline: true,
+            inline: true
           }
         )
         .setFooter({ text: 'Come back tomorrow to keep your streak alive!' })
@@ -296,10 +275,10 @@ export async function run({ interaction }: SlashCommandProps) {
 
       return interaction.reply({
         embeds: [embed],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
   } catch (error) {
-    console.error('Error running /bonus command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

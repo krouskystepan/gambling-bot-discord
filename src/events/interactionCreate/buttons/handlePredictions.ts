@@ -1,20 +1,24 @@
 import {
   ActionRowBuilder,
+  Interaction,
+  MessageFlags,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle,
-  MessageFlags,
-  Interaction,
+  TextInputStyle
 } from 'discord.js'
-import User from '../../../models/User'
-import Prediction from '../../../models/Prediction'
-import { createInfoEmbed, createSuccessEmbed } from '../../../utils/createEmbed'
+
 import {
-  parseReadableStringToNumber,
+  addPredictionBet,
+  consumeUserBalance,
+  createTransaction,
+  getGuildConfigByGuildId,
+  getPredictionById
+} from '@/services'
+import { createInfoEmbed, createSuccessEmbed } from '@/utils/createEmbed'
+import {
   formatNumberToReadableString,
-} from '../../../utils/utils'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import Transaction from '../../../models/Transaction'
+  parseReadableStringToNumber
+} from '@/utils/utils'
 
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -25,9 +29,9 @@ export default async (interaction: Interaction) => {
 
     if (type !== 'prediction' || !predictionId || !choiceName || !odds) return
 
-    const targetPrediction = await Prediction.findOne({
+    const targetPrediction = await getPredictionById({
       predictionId,
-      guildId: interaction.guildId,
+      guildId: interaction.guildId!
     })
     if (!targetPrediction || !interaction.channel) return
     if (targetPrediction.status !== 'active') {
@@ -36,9 +40,9 @@ export default async (interaction: Interaction) => {
           createInfoEmbed(
             'Invalid Input - Not Active',
             'This prediction is not active.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -48,9 +52,9 @@ export default async (interaction: Interaction) => {
           createInfoEmbed(
             'Invalid Input - No Choices',
             'This prediction has no choices available.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -83,7 +87,7 @@ export default async (interaction: Interaction) => {
         filter: (i) =>
           i.customId.startsWith(`prediction-${predictionId}-${choiceName}`) &&
           i.user.id === interaction.user.id,
-        time: 60000,
+        time: 60000
       })
       .catch(() => null)
 
@@ -101,13 +105,13 @@ export default async (interaction: Interaction) => {
           createInfoEmbed(
             'Invalid Input - Non-positive number',
             'Please enter a valid positive number.'
-          ),
-        ],
+          )
+        ]
       })
     }
 
-    const guildConfig = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    const guildConfig = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
     const casinoSettings = guildConfig?.casinoSettings
     if (!casinoSettings) return
@@ -131,8 +135,8 @@ export default async (interaction: Interaction) => {
             )}**. You already have **$${formatNumberToReadableString(
               userChoiceTotal
             )}** on **${choiceName}**.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -147,29 +151,16 @@ export default async (interaction: Interaction) => {
             `The minimum bet is **$${formatNumberToReadableString(
               casinoSettings.prediction.minBet
             )}**.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
-    const updatedUser = await User.findOneAndUpdate(
-      {
-        userId: modalInteraction.user.id,
-        guildId: modalInteraction.guildId,
-        balance: { $gte: parsedBetAmount },
-      },
-      [
-        {
-          $set: {
-            balance: { $subtract: ['$balance', parsedBetAmount] },
-            lockedBalance: {
-              $max: [{ $subtract: ['$lockedBalance', parsedBetAmount] }, 0],
-            },
-          },
-        },
-      ],
-      { new: true }
-    )
+    const updatedUser = await consumeUserBalance({
+      userId: interaction.user.id,
+      guildId: interaction.guildId!,
+      amount: parsedBetAmount
+    })
 
     if (!updatedUser) {
       return modalInteraction.editReply({
@@ -177,46 +168,35 @@ export default async (interaction: Interaction) => {
           createInfoEmbed(
             'Insufficient Funds',
             `You don't have enough money to place this bet.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
-    await Transaction.create({
+    await createTransaction({
       userId: modalInteraction.user.id,
-      guildId: interaction.guildId,
+      guildId: interaction.guildId!,
       amount: parsedBetAmount,
       type: 'bet',
       source: 'casino',
-      betId: predictionId,
-      createdAt: new Date(),
+      betId: predictionId
     })
 
-    await Prediction.findOneAndUpdate(
-      {
-        predictionId,
-        guildId: modalInteraction.guildId,
-        'choices.choiceName': choiceName,
-      },
-      {
-        $push: {
-          'choices.$.bets': {
-            userId: modalInteraction.user.id,
-            amount: parsedBetAmount,
-          },
-        },
-      }
-    )
+    await addPredictionBet({
+      predictionId,
+      guildId: modalInteraction.guildId!,
+      userId: modalInteraction.user.id,
+      amount: parsedBetAmount,
+      choiceName
+    })
 
     await modalInteraction.editReply({
       embeds: [
         createSuccessEmbed(
           'Bet Placed Successfully',
-          `You placed **$${formatNumberToReadableString(
-            parsedBetAmount
-          )}** on **${choiceName}**`
-        ),
-      ],
+          `You placed **$${formatNumberToReadableString(parsedBetAmount)}** on **${choiceName}**`
+        )
+      ]
     })
   } catch (error) {
     console.error('Error in handlePrediction.ts', error)

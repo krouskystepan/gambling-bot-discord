@@ -1,4 +1,3 @@
-import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 import {
   ActionRowBuilder,
   ApplicationCommandOptionType,
@@ -6,12 +5,15 @@ import {
   ButtonStyle,
   Colors,
   CommandInteractionOptionResolver,
-  EmbedBuilder,
+  EmbedBuilder
 } from 'discord.js'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
 import {
-  parseReadableStringToNumber,
   formatNumberToReadableString,
-} from '../../../utils/utils'
+  parseReadableStringToNumber
+} from '@/utils/utils'
 
 export const data: CommandData = {
   name: 'money-manager',
@@ -26,24 +28,24 @@ export const data: CommandData = {
           name: 'amount',
           description: 'The amount of money you want to give.',
           type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'reset-balance',
       description: 'Create an embed for resetting money.',
-      type: ApplicationCommandOptionType.Subcommand,
-    },
+      type: ApplicationCommandOptionType.Subcommand
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
-  devOnly: true,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -77,7 +79,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       return interaction.reply({
         embeds: [embed],
-        components: [row],
+        components: [row]
       })
     }
 
@@ -99,7 +101,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       return interaction.reply({
         embeds: [embed],
-        components: [row],
+        components: [row]
       })
     }
   } catch (error) {

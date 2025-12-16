@@ -1,25 +1,10 @@
-import mongoose from 'mongoose'
 import {
-  ChatInputCommandInteraction,
   CacheType,
-  MessageFlags,
+  ChatInputCommandInteraction,
+  MessageFlags
 } from 'discord.js'
-import User from '../models//User'
-import { createErrorEmbed, createInfoEmbed } from './createEmbed'
-import VipRoom from '../models/VipRoom'
-import { defaultCasinoSettings, TGuildConfiguration } from 'gambling-bot-shared'
-import GuildConfiguration from '../models/GuildConfiguration'
 
-export const connectToDatabase = async () => {
-  try {
-    if (!process.env.MONGO_URI) throw new Error('MONGO_URI is not defined')
-    mongoose.set('strictQuery', false)
-    await mongoose.connect(process.env.MONGO_URI)
-    console.log('✅ Connected to the database')
-  } catch (error) {
-    console.error('Error connecting to the database:', error)
-  }
-}
+import { createInfoEmbed } from './createEmbed'
 
 export const generateBetId = (): string => {
   const timestamp = Date.now().toString(36)
@@ -27,100 +12,6 @@ export const generateBetId = (): string => {
     .toString(36)
     .padStart(5, '0')
   return `${timestamp}${random}`.toUpperCase()
-}
-
-type ChannelType = 'casinoChannelIds' | 'predictionChannelIds' | 'atmChannelIds'
-
-export const checkChannelConfiguration = async (
-  interaction: ChatInputCommandInteraction<CacheType>,
-  channelType: ChannelType,
-  messages: {
-    notSet: string
-    notAllowed: string
-  }
-): Promise<TGuildConfiguration | false> => {
-  try {
-    const guildConfig = await GuildConfiguration.findOneAndUpdate(
-      { guildId: interaction.guildId },
-      { $setOnInsert: { casinoSettings: defaultCasinoSettings } },
-      { upsert: true, new: true }
-    )
-
-    if (!guildConfig.casinoSettings) {
-      guildConfig.casinoSettings = defaultCasinoSettings
-      await guildConfig.save()
-    }
-
-    let allowedChannelIds: string[] = []
-
-    if (channelType === 'predictionChannelIds') {
-      const { actions, logs } = guildConfig.predictionChannelIds || {}
-      if (!actions || !logs) {
-        await interaction.reply({
-          embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
-          flags: MessageFlags.Ephemeral,
-        })
-        return false
-      }
-      allowedChannelIds = [actions]
-    } else if (channelType === 'atmChannelIds') {
-      const logsChannel = guildConfig.atmChannelIds?.logs
-      if (!logsChannel) {
-        await interaction.reply({
-          embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
-          flags: MessageFlags.Ephemeral,
-        })
-        return false
-      }
-      allowedChannelIds = [logsChannel]
-    } else {
-      allowedChannelIds = guildConfig[channelType] || []
-
-      if (channelType === 'casinoChannelIds') {
-        const activeVipRooms = await VipRoom.find({
-          guildId: interaction.guildId,
-          expiresAt: { $gt: new Date() },
-        })
-        allowedChannelIds.push(...activeVipRooms.map((vip) => vip.channelId))
-      }
-    }
-
-    if (!allowedChannelIds.length) {
-      await interaction.reply({
-        embeds: [createErrorEmbed('Error - Not Configured', messages.notSet)],
-        flags: MessageFlags.Ephemeral,
-      })
-      return false
-    }
-
-    if (!allowedChannelIds.includes(interaction.channelId)) {
-      const allowedMentions = allowedChannelIds
-        .map((id) => `<#${id}>`)
-        .join(', ')
-      await interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Incorrect Channel',
-            `${messages.notAllowed} ${allowedMentions}.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-      return false
-    }
-
-    return guildConfig
-  } catch (error) {
-    console.error('Error checking channel configuration:', error)
-    return false
-  }
-}
-
-export const checkUserRegistration = async (
-  userId: string,
-  guildId: string
-) => {
-  return await User.findOne({ userId, guildId })
 }
 
 export const formatNumberToReadableString = (number: number): string => {
@@ -214,9 +105,9 @@ export const checkValidBet = (
         createInfoEmbed(
           'Invalid Input - Not a number',
           'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-        ),
+        )
       ],
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral
     })
     return false
   }
@@ -227,9 +118,9 @@ export const checkValidBet = (
         createInfoEmbed(
           'Invalid Input - Non-positive number',
           'The number you provided must be greater than 0.\nPlease enter a positive value.'
-        ),
+        )
       ],
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral
     })
     return false
   }
@@ -240,9 +131,9 @@ export const checkValidBet = (
         createInfoEmbed(
           'Invalid Input - Above Maximum Bet',
           `The maximum bet is **$${formatNumberToReadableString(maxBet)}**.`
-        ),
+        )
       ],
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral
     })
     return false
   }
@@ -253,9 +144,9 @@ export const checkValidBet = (
         createInfoEmbed(
           'Invalid Input - Below Minimum Bet',
           `The minimum bet is **$${formatNumberToReadableString(minBet)}**.`
-        ),
+        )
       ],
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral
     })
     return false
   }
@@ -268,9 +159,9 @@ export const checkValidBet = (
           `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(
             userBalance
           )}**.`
-        ),
+        )
       ],
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral
     })
     return false
   }
@@ -285,12 +176,10 @@ export const checkValidBet = (
             'Insufficient Funds',
             `You don't have enough money to place this bet for ${xTimes} spins (you need **$${formatNumberToReadableString(
               totalBet
-            )}**).\nYour current balance is **$${formatNumberToReadableString(
-              userBalance
-            )}**.`
-          ),
+            )}**).\nYour current balance is **$${formatNumberToReadableString(userBalance)}**.`
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
       return false
     }

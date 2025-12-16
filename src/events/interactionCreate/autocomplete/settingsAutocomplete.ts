@@ -1,8 +1,13 @@
-import { AutocompleteInteraction, Client } from 'discord.js'
-import GuildConfiguration from '../../../models/GuildConfiguration'
 import { readableGameValueNames } from 'gambling-bot-shared'
 
-export default async (interaction: AutocompleteInteraction, client: Client) => {
+import { AutocompleteInteraction, Client } from 'discord.js'
+
+import { getGuildConfigByGuildId } from '@/services'
+
+export default async (
+  interaction: AutocompleteInteraction,
+  _client: Client
+) => {
   if (!interaction.isAutocomplete()) return
   if (interaction.commandName !== 'setup-settings') return
 
@@ -12,8 +17,8 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
 
   if (!game) return
 
-  const config = await GuildConfiguration.findOne({
-    guildId: interaction.guildId,
+  const config = await getGuildConfigByGuildId({
+    guildId: interaction.guildId!
   })
 
   const gameSettings = config?.casinoSettings?.[game]
@@ -28,5 +33,5 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
       val.name.toLowerCase().startsWith(focusedValue.toLowerCase())
     )
 
-  await interaction.respond(filteredChoices).catch(() => {})
+  void interaction.respond(filteredChoices)
 }

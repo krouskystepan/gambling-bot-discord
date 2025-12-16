@@ -1,14 +1,13 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import {
   ApplicationCommandOptionType,
   CommandInteractionOptionResolver,
-  MessageFlags,
+  MessageFlags
 } from 'discord.js'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import {
-  createErrorEmbed,
-  createSuccessEmbed,
-} from '../../../utils/createEmbed'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-manager',
@@ -23,9 +22,9 @@ export const data: CommandData = {
           name: 'role',
           description: 'The role you want to set as manager.',
           type: ApplicationCommandOptionType.Role,
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'remove',
@@ -36,30 +35,30 @@ export const data: CommandData = {
           name: 'role-id',
           description: 'The ID of the role you want to remove.',
           type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-    },
+          required: true
+        }
+      ]
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: true,
-  devOnly: true,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    let guildConfiguration = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    let guildConfiguration = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     if (!guildConfiguration) {
-      guildConfiguration = new GuildConfiguration({
-        guildId: interaction.guildId,
+      guildConfiguration = await createGuildConfiguration({
+        guildId: interaction.guildId!
       })
     }
 
@@ -75,9 +74,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Manager Role Setup - Set',
               `The manager role is already set to ${role}.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -89,8 +88,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Manager Role Setup - Set',
             `Manager role has been set to ${role}.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -103,9 +102,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Manager Role Setup - Remove',
               `Role with ID ${roleId} is not set as manager role.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -117,8 +116,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Manager Role Setup - Remove',
             `Manager role with ID ${roleId} has been successfully removed.`
-          ),
-        ],
+          )
+        ]
       })
     }
   } catch (error) {
