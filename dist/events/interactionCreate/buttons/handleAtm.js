@@ -33,7 +33,7 @@ export default async (interaction, client) => {
             });
         }
         const user = await getUser({
-            userId: interaction.user.id,
+            userId,
             guildId: interaction.guildId
         });
         if (!user)
@@ -90,9 +90,13 @@ export default async (interaction, client) => {
         if (action === 'reject' && confirm === '_') {
             return await sendConfirmation('Confirm Reject', ButtonStyle.Danger, `atm-${atmAction}.reject.confirm.${userId}-${messageId}.${parsedAmount}`);
         }
+        console.log((action === 'approve' && atmAction === 'deposit') ||
+            (action === 'reject' && atmAction === 'withdraw')
+            ? parsedAmount
+            : 0);
         if (confirm === 'confirm') {
             await updateUserBalance({
-                userId: user.userId,
+                userId,
                 guildId: user.guildId,
                 amount: (action === 'approve' && atmAction === 'deposit') ||
                     (action === 'reject' && atmAction === 'withdraw')
@@ -101,7 +105,7 @@ export default async (interaction, client) => {
             });
             if (action === 'approve') {
                 await createTransaction({
-                    userId: user.userId,
+                    userId,
                     guildId: user.guildId,
                     amount: parsedAmount,
                     type: atmAction,

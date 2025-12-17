@@ -66,7 +66,7 @@ export const data = {
 export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: true,
+    deleted: false,
     devOnly: true
 };
 export async function run({ interaction }) {

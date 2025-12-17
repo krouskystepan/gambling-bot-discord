@@ -27,12 +27,12 @@ export const withdrawBalance = async ({ userId, guildId, amount }) => {
     const updatedUser = await User.findOneAndUpdate({ userId, guildId }, { $inc: { balance: -amount } }, { new: true }).lean();
     return { ok: true, user: updatedUser };
 };
-export const updateUserBalance = async ({ userId, guildId, amount, lockedAmount }) => {
+export const updateUserBalance = async ({ userId, guildId, amount, lockedAmount = 0 }) => {
     const user = await User.findOneAndUpdate({ userId, guildId }, { $inc: { balance: amount, lockedBalance: lockedAmount } }, { new: true });
     return user;
 };
 export const resetUserBalance = async ({ userId, guildId }) => {
-    const updatedUser = await User.findOneAndUpdate({ userId, guildId }, { $set: { balance: 0, lockedBalance: 0 } });
+    const updatedUser = await User.findOneAndUpdate({ userId, guildId }, { $set: { balance: 0, lockedBalance: 0 } }, { new: true });
     return updatedUser;
 };
 export const createUser = async ({ userId, guildId }) => {

@@ -87,6 +87,19 @@ export const data = {
                     required: true
                 }
             ]
+        },
+        {
+            name: 'set-add-member-price',
+            description: 'Set the one-time price for adding a member to room.',
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: 'price',
+                    description: 'One-time price in your currency.',
+                    type: ApplicationCommandOptionType.String,
+                    required: true
+                }
+            ]
         }
     ],
     dm_permission: false
@@ -94,7 +107,7 @@ export const data = {
 export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: true,
+    deleted: false,
     devOnly: true
 };
 export async function run({ interaction }) {
@@ -274,6 +287,33 @@ export async function run({ interaction }) {
             return interaction.reply({
                 embeds: [
                     createSuccessEmbed('VIP Setup - Set Create Price', `Creation fee for VIP rooms has been set to **${price}**.`)
+                ]
+            });
+        }
+        if (subcommand === 'set-add-member-price') {
+            const price = options.getString('price', true);
+            const parsedBetAmount = parseReadableStringToNumber(price);
+            if (isNaN(parsedBetAmount)) {
+                return interaction.reply({
+                    embeds: [
+                        createInfoEmbed('Invalid Input - Not a number', 'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.')
+                    ],
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+            if (parsedBetAmount < 0) {
+                return interaction.reply({
+                    embeds: [
+                        createInfoEmbed('Invalid Input - Negative number', 'The number you provided cannot be negative.\nPlease enter 0 or a positive value.')
+                    ],
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+            guildConfiguration.vipSettings.pricePerAdditionalMember = parsedBetAmount;
+            await guildConfiguration.save();
+            return interaction.reply({
+                embeds: [
+                    createSuccessEmbed('VIP Setup - Set Member Price', `Member fee for VIP rooms has been set to **${price}**.`)
                 ]
             });
         }

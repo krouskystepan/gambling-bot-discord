@@ -62,8 +62,8 @@ export const updateUserBalance = async ({
   userId,
   guildId,
   amount,
-  lockedAmount
-}: TUpdateUserBalance) => {
+  lockedAmount = 0
+}: TUpdateUserBalance): Promise<TUser | null> => {
   const user = await User.findOneAndUpdate(
     { userId, guildId },
     { $inc: { balance: amount, lockedBalance: lockedAmount } },
@@ -79,10 +79,11 @@ export const resetUserBalance = async ({
 }: {
   userId: string
   guildId: string
-}) => {
+}): Promise<TUser | null> => {
   const updatedUser = await User.findOneAndUpdate(
     { userId, guildId },
-    { $set: { balance: 0, lockedBalance: 0 } }
+    { $set: { balance: 0, lockedBalance: 0 } },
+    { new: true }
   )
 
   return updatedUser

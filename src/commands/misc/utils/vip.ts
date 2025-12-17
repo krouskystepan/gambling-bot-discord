@@ -307,6 +307,8 @@ export async function run({ interaction }: SlashCommandProps) {
       const member = await guild.members.fetch(interaction.user.id)
       await member.roles.add(vipRoleOwnerId, 'VIP purchased via /vip buy')
 
+      console.log(expiresAt.toLocaleString('cs-CZ'))
+
       await createVip({
         ownerId: interaction.user.id,
         guildId: interaction.guildId!,

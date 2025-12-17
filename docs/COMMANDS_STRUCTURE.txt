@@ -119,6 +119,7 @@ src
     │          ├─ remove-member-role – Remove the member VIP role.
     │          ├─ set-price-per-day – Set the price per day for VIP access.
     │          ├─ set-create-price – Set the one-time price for creating a VIP room.
+    │          ├─ set-add-member-price – Set the one-time price for adding a member to room.
     ├── prediction.ts
     │   └─ /prediction – Manage predictions.
     │      ├─ create – Create a new prediction.

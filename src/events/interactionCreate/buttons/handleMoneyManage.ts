@@ -63,11 +63,13 @@ export default async (interaction: Interaction, client: Client) => {
 
       const parsedAmount = parseInt(amount)
 
-      updateUserBalance({
+      const updatedUser = await updateUserBalance({
         userId: interaction.user.id,
         guildId: interaction.guildId!,
         amount: parsedAmount
       })
+
+      if (!updatedUser) return
 
       const logChannel = client.channels.cache.get(
         guildConfiguration.atmChannelIds.logs
@@ -80,7 +82,7 @@ export default async (interaction: Interaction, client: Client) => {
               .setTitle('ATM - Money Generator')
               .setDescription(
                 `<@${interaction.user.id}> has added **$${formatNumberToReadableString(
-                  parsedAmount
+                  updatedUser.balance
                 )}** to their account.`
               )
               .setColor('DarkGreen')
@@ -94,7 +96,7 @@ export default async (interaction: Interaction, client: Client) => {
           `Server has added **$${formatNumberToReadableString(
             parsedAmount
           )}** to your account.\nYour new balance is **$${formatNumberToReadableString(
-            user.balance
+            updatedUser.balance
           )}**.`
         )
         .setColor('DarkGreen')
@@ -106,10 +108,12 @@ export default async (interaction: Interaction, client: Client) => {
     }
 
     if (type === 'reset-money') {
-      resetUserBalance({
+      const newUser = await resetUserBalance({
         userId: interaction.user.id,
         guildId: interaction.guildId!
       })
+
+      if (!newUser) return
 
       const logChannel = client.channels.cache.get(
         guildConfiguration.atmChannelIds.logs
@@ -132,7 +136,7 @@ export default async (interaction: Interaction, client: Client) => {
         .setTitle('ATM - Money Reset')
         .setDescription(
           `Server has reset your account balance.\nYour new balance is **$${formatNumberToReadableString(
-            user.balance
+            newUser.balance
           )}**.`
         )
         .setColor('DarkRed')

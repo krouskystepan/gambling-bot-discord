@@ -2,7 +2,7 @@ import { Client, TextChannel } from 'discord.js'
 
 import {
   deleteVipByOwnerId,
-  getAllActiveVips,
+  getAllOldVips,
   getGuildConfigByGuildId
 } from '@/services'
 import { createInfoEmbed } from '@/utils/discord/createEmbed'
@@ -11,7 +11,7 @@ export default async (client: Client) => {
   console.log('👀 VIP Room listener started')
 
   setInterval(async () => {
-    const expiredRooms = await getAllActiveVips()
+    const expiredRooms = await getAllOldVips()
 
     for (const room of expiredRooms) {
       const guild = await client.guilds.fetch(room.guildId).catch(() => null)

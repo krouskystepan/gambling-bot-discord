@@ -20,6 +20,13 @@ export const getAllActiveVips = async () => {
     });
     return vipInfos;
 };
+export const getAllOldVips = async () => {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const vipInfos = await VipRoom.find({
+        expiresAt: { $lt: sevenDaysAgo }
+    });
+    return vipInfos;
+};
 export const createVip = async ({ ownerId, guildId, channelId, expiresAt }) => {
     await VipRoom.create({
         ownerId,

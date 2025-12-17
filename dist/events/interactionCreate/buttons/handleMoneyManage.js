@@ -38,25 +38,27 @@ export default async (interaction, client) => {
             if (!amount)
                 return;
             const parsedAmount = parseInt(amount);
-            updateUserBalance({
+            const updatedUser = await updateUserBalance({
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
                 amount: parsedAmount
             });
+            if (!updatedUser)
+                return;
             const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
             logChannel
                 .send({
                 embeds: [
                     new EmbedBuilder()
                         .setTitle('ATM - Money Generator')
-                        .setDescription(`<@${interaction.user.id}> has added **$${formatNumberToReadableString(parsedAmount)}** to their account.`)
+                        .setDescription(`<@${interaction.user.id}> has added **$${formatNumberToReadableString(updatedUser.balance)}** to their account.`)
                         .setColor('DarkGreen')
                 ]
             })
                 .catch(console.error);
             const embed = new EmbedBuilder()
                 .setTitle('ATM - Money Generator')
-                .setDescription(`Server has added **$${formatNumberToReadableString(parsedAmount)}** to your account.\nYour new balance is **$${formatNumberToReadableString(user.balance)}**.`)
+                .setDescription(`Server has added **$${formatNumberToReadableString(parsedAmount)}** to your account.\nYour new balance is **$${formatNumberToReadableString(updatedUser.balance)}**.`)
                 .setColor('DarkGreen');
             await interaction.reply({
                 embeds: [embed],
@@ -64,10 +66,12 @@ export default async (interaction, client) => {
             });
         }
         if (type === 'reset-money') {
-            resetUserBalance({
+            const newUser = await resetUserBalance({
                 userId: interaction.user.id,
                 guildId: interaction.guildId
             });
+            if (!newUser)
+                return;
             const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
             logChannel
                 .send({
@@ -81,7 +85,7 @@ export default async (interaction, client) => {
                 .catch(console.error);
             const embed = new EmbedBuilder()
                 .setTitle('ATM - Money Reset')
-                .setDescription(`Server has reset your account balance.\nYour new balance is **$${formatNumberToReadableString(user.balance)}**.`)
+                .setDescription(`Server has reset your account balance.\nYour new balance is **$${formatNumberToReadableString(newUser.balance)}**.`)
                 .setColor('DarkRed');
             await interaction.reply({
                 embeds: [embed],

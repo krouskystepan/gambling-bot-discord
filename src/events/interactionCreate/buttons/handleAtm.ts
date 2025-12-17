@@ -64,7 +64,7 @@ export default async (interaction: Interaction, client: Client) => {
     }
 
     const user = await getUser({
-      userId: interaction.user.id,
+      userId,
       guildId: interaction.guildId!
     })
     if (!user) return
@@ -165,9 +165,16 @@ export default async (interaction: Interaction, client: Client) => {
       )
     }
 
+    console.log(
+      (action === 'approve' && atmAction === 'deposit') ||
+        (action === 'reject' && atmAction === 'withdraw')
+        ? parsedAmount
+        : 0
+    )
+
     if (confirm === 'confirm') {
       await updateUserBalance({
-        userId: user.userId,
+        userId,
         guildId: user.guildId,
         amount:
           (action === 'approve' && atmAction === 'deposit') ||
@@ -178,7 +185,7 @@ export default async (interaction: Interaction, client: Client) => {
 
       if (action === 'approve') {
         await createTransaction({
-          userId: user.userId,
+          userId,
           guildId: user.guildId,
           amount: parsedAmount,
           type: atmAction as TTransaction['type'],
