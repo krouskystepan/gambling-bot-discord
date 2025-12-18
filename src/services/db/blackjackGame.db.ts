@@ -9,6 +9,14 @@ export const getBlackjackGameByUserAndGuild = async ({
   return await BlackjackGame.findOne({ userId, guildId })
 }
 
+export const getAllOldBlackjackGames = async (days: number) => {
+  return BlackjackGame.find({
+    updatedAt: {
+      $lte: new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    }
+  })
+}
+
 export const updateBlackjackGameState = async ({
   userId,
   guildId,
