@@ -6,7 +6,7 @@ import {
   TVipRoom
 } from 'gambling-bot-shared'
 
-import { Card } from '@/utils/casino/blackjack/deck'
+import { Card } from '@/utils/casino/blackjack'
 
 // Create
 export type TCreateUser = Pick<TUser, 'userId' | 'guildId'>

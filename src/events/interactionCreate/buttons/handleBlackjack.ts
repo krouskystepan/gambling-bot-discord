@@ -7,18 +7,17 @@ import {
   getBlackjackGameByBetId,
   updateBlackjackGame
 } from '@/services'
-import { decodeId } from '@/utils/casino/blackjack/customId'
 import {
   applyAction,
   dealerDrawOne,
   dealerShouldDraw,
-  resolveResult
-} from '@/utils/casino/blackjack/engine'
-import {
+  decodeId,
+  docToEngine,
+  engineToDoc,
   renderBlackjackButtons,
-  renderBlackjackEmbed
-} from '@/utils/casino/blackjack/render'
-import { docToEngine, engineToDoc } from '@/utils/casino/blackjack/state'
+  renderBlackjackEmbed,
+  resolveResult
+} from '@/utils/casino/blackjack'
 import { logger } from '@/utils/logger'
 
 const sleep = (ms: number) =>

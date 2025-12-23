@@ -11,12 +11,13 @@ import {
   updateUserBalance,
   upsertBlackjackGame
 } from '@/services'
-import { DECK, shuffleDeck } from '@/utils/casino/blackjack/deck'
-import { calculateHandValue } from '@/utils/casino/blackjack/math'
 import {
+  DECK,
+  calculateHandValue,
   renderBlackjackButtons,
-  renderBlackjackEmbed
-} from '@/utils/casino/blackjack/render'
+  renderBlackjackEmbed,
+  shuffleDeck
+} from '@/utils/casino/blackjack'
 import {
   checkValidBet,
   generateBetId,

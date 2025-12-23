@@ -9,10 +9,10 @@ import {
   applyAction,
   dealerDrawOne,
   dealerShouldDraw,
+  docToEngine,
+  renderBlackjackEmbed,
   resolveResult
-} from '@/utils/casino/blackjack/engine'
-import { renderBlackjackEmbed } from '@/utils/casino/blackjack/render'
-import { docToEngine } from '@/utils/casino/blackjack/state'
+} from '@/utils/casino/blackjack'
 import { logger } from '@/utils/logger'
 
 export default async (client: Client) => {

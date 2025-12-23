@@ -4,7 +4,7 @@ import {
   MINI_NUMBERS
 } from 'gambling-bot-shared'
 
-import { Card } from './blackjack/deck'
+import { Card } from './blackjack'
 
 export const spinSlot = (slotConfig: {
   symbolWeights: Record<string, number>

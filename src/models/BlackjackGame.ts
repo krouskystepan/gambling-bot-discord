@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose'
 
-import { Card } from '@/utils/casino/blackjack/deck'
+import { Card } from '@/utils/casino/blackjack'
 
 export type TBlackjackGame = {
   userId: string

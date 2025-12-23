@@ -1,9 +1,7 @@
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, getBlackjackGameByUserAndGuild, updateUserBalance, upsertBlackjackGame } from '@/services';
-import { DECK, shuffleDeck } from '@/utils/casino/blackjack/deck';
-import { calculateHandValue } from '@/utils/casino/blackjack/math';
-import { renderBlackjackButtons, renderBlackjackEmbed } from '@/utils/casino/blackjack/render';
+import { DECK, calculateHandValue, renderBlackjackButtons, renderBlackjackEmbed, shuffleDeck } from '@/utils/casino/blackjack';
 import { checkValidBet, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
 import { createErrorEmbed } from '@/utils/discord/createEmbed';
 export const data = {
