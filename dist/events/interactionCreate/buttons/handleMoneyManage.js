@@ -2,6 +2,7 @@ import { EmbedBuilder, MessageFlags } from 'discord.js';
 import { getGuildConfigByGuildId, getUser, resetUserBalance, updateUserBalance } from '@/services';
 import { formatNumberToReadableString } from '@/utils/common/utils';
 import { createErrorEmbed } from '@/utils/discord/createEmbed';
+import { logger } from '@/utils/logger';
 //! DB TRANSACTIONS
 //! Rare condition - no .save()
 export default async (interaction, client) => {
@@ -55,7 +56,7 @@ export default async (interaction, client) => {
                         .setColor('DarkGreen')
                 ]
             })
-                .catch(console.error);
+                .catch((err) => logger.error('Failed to send the message', err));
             const embed = new EmbedBuilder()
                 .setTitle('ATM - Money Generator')
                 .setDescription(`Server has added **$${formatNumberToReadableString(parsedAmount)}** to your account.\nYour new balance is **$${formatNumberToReadableString(updatedUser.balance)}**.`)
@@ -82,7 +83,7 @@ export default async (interaction, client) => {
                         .setColor('DarkRed')
                 ]
             })
-                .catch(console.error);
+                .catch((err) => logger.error('Failed to send the message', err));
             const embed = new EmbedBuilder()
                 .setTitle('ATM - Money Reset')
                 .setDescription(`Server has reset your account balance.\nYour new balance is **$${formatNumberToReadableString(newUser.balance)}**.`)
@@ -94,6 +95,6 @@ export default async (interaction, client) => {
         }
     }
     catch (error) {
-        console.error('Error in handleGiveMoney.ts', error);
+        logger.error('Error in handleGiveMoney.ts', error);
     }
 };

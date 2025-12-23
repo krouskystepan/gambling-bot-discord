@@ -18,7 +18,8 @@ export const data = {
 export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: false
+    deleted: false,
+    devOnly: true
 };
 export async function run({ interaction, client }) {
     try {
@@ -47,16 +48,14 @@ export async function run({ interaction, client }) {
             });
         }
         const logChannel = client.channels.cache.get(guildConfig.atmChannelIds.logs);
-        logChannel
-            ?.send({
+        logChannel.send({
             embeds: [
                 new EmbedBuilder()
                     .setTitle('ATM - User Registered')
                     .setDescription(`Manager <@${interaction.user.id}> has successfully registered <@${user.id}>.`)
                     .setColor('Grey')
             ]
-        })
-            .catch(console.error);
+        });
         return interaction.reply({
             embeds: [
                 createSuccessEmbed('ATM Success - Registered', 'The user has been successfully registered in the system.')

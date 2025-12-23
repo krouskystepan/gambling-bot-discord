@@ -6,7 +6,7 @@ import {
   TVipRoom
 } from 'gambling-bot-shared'
 
-import { Card } from '@/utils/casino/blackjack'
+import { Card } from '@/utils/casino/blackjack/deck'
 
 // Create
 export type TCreateUser = Pick<TUser, 'userId' | 'guildId'>
@@ -49,12 +49,16 @@ export type TDeleteAllTransactions = Pick<TUser, 'userId' | 'guildId'>
 
 // Other
 export type TUpsertBlackjackGame = Pick<TUser, 'userId' | 'guildId'> & {
-  gameId: string
+  channelId: string
+  messageId: string
+  betId: string
   betAmount: number
   deck: Card[]
+  deckIndex: number
   playerCards: Card[]
   dealerCards: Card[]
 }
+
 export type TWithdrawResult =
   | {
       ok: true

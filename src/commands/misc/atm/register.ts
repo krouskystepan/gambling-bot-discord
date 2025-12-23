@@ -8,6 +8,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const data: CommandData = {
   name: 'register',
@@ -61,7 +62,9 @@ export async function run({ interaction, client }: SlashCommandProps) {
             .setColor('White')
         ]
       })
-      .catch(console.error)
+      .catch((err) => {
+        logger.error('Registration failed', err)
+      })
 
     return interaction.reply({
       embeds: [

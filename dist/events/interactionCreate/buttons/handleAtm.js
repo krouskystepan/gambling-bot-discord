@@ -2,6 +2,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, Permissions
 import { createTransaction, getGuildConfigByGuildId, getUser, updateUserBalance } from '@/services';
 import { formatNumberToReadableString } from '@/utils/common/utils';
 import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
+import { logger } from '@/utils/logger';
 export default async (interaction, client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;
@@ -57,7 +58,7 @@ export default async (interaction, client) => {
                 await logMessage.edit({ content, components: [] });
             }
             catch (err) {
-                console.error('Failed to update log message', err);
+                logger.error('Failed to update log message', err);
             }
         };
         const sendConfirmation = async (label, style, customIdSuffix) => {
@@ -82,7 +83,7 @@ export default async (interaction, client) => {
                 content: `<@${targetUserId}>`,
                 embeds: [embed]
             })
-                .catch(console.error);
+                .catch((err) => logger.error('Failed to send the message', err));
         };
         if (action === 'approve' && confirm === '_') {
             return await sendConfirmation(atmAction === 'deposit' ? 'Confirm Deposit' : 'Confirm Withdraw', ButtonStyle.Success, `atm-${atmAction}.approve.confirm.${userId}-${messageId}.${parsedAmount}`);
@@ -90,10 +91,6 @@ export default async (interaction, client) => {
         if (action === 'reject' && confirm === '_') {
             return await sendConfirmation('Confirm Reject', ButtonStyle.Danger, `atm-${atmAction}.reject.confirm.${userId}-${messageId}.${parsedAmount}`);
         }
-        console.log((action === 'approve' && atmAction === 'deposit') ||
-            (action === 'reject' && atmAction === 'withdraw')
-            ? parsedAmount
-            : 0);
         if (confirm === 'confirm') {
             await updateUserBalance({
                 userId,
@@ -122,6 +119,6 @@ export default async (interaction, client) => {
         }
     }
     catch (error) {
-        console.error('Error in handleAtm.ts', error);
+        logger.error('Error in handleAtm.ts', error);
     }
 };

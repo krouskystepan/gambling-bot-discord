@@ -4,6 +4,7 @@ import { ApplicationCommandOptionType } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import { createMultipleTransactions } from '@/services'
 import {
   formatNumberToReadableString,
@@ -179,9 +180,6 @@ export async function run({ interaction }: SlashCommandProps) {
       )}** transactions across **${uniqueUsers}** users\n🗓️ Period: last **${days}** days\n\n**Breakdown:**\n${summary}`
     })
   } catch (error) {
-    console.error('Error simulating transactions:', error)
-    await interaction.editReply({
-      content: '❌ Something went wrong while simulating transactions.'
-    })
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

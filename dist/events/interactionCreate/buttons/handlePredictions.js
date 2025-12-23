@@ -2,6 +2,7 @@ import { ActionRowBuilder, MessageFlags, ModalBuilder, TextInputBuilder, TextInp
 import { addPredictionBet, consumeUserBalance, createTransaction, getGuildConfigByGuildId, getPredictionById } from '@/services';
 import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
 import { createInfoEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
+import { logger } from '@/utils/logger';
 export default async (interaction) => {
     if (!interaction.isButton() || !interaction.customId)
         return;
@@ -124,6 +125,6 @@ export default async (interaction) => {
         });
     }
     catch (error) {
-        console.error('Error in handlePrediction.ts', error);
+        logger.error('Error in handlePrediction.ts', error);
     }
 };

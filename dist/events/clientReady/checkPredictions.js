@@ -1,5 +1,6 @@
 import { Colors } from 'discord.js';
 import { deletePrediction, getOldPredictions, getPredictionToLock, updatePredictionStatus } from '@/services';
+import { logger } from '@/utils/logger';
 // OLD PREDICTION CLEANUP
 const cleanupOldPredictions = async () => {
     const oldPredictions = await getOldPredictions({
@@ -10,7 +11,8 @@ const cleanupOldPredictions = async () => {
         return;
     await Promise.all(oldPredictions.map((prediction) => deletePrediction({ predictionId: prediction.predictionId })));
     for (const p of oldPredictions) {
-        console.log(`Deleted old prediction "${p.title}" (${p.predictionId}) [${p.status}]`);
+        logger.worker(`Deleted old prediction "${p.title}" (${p.predictionId}) [${p.status}]`);
+        logger;
     }
 };
 // AUTOLOCK PREDICTIONS
@@ -47,17 +49,17 @@ const autolockPredictions = async (client) => {
                 embeds: [{ ...embed, color: Colors.Orange }],
                 components: []
             });
-            console.log(`Prediction "${prediction.title}" (${prediction.predictionId}) auto-locked`);
+            logger.worker(`Prediction "${prediction.title}" (${prediction.predictionId}) auto-locked`);
         }
         catch (err) {
-            console.error(`Failed to autolock prediction "${prediction.predictionId}"`, err);
+            logger.error(`Failed to autolock prediction "${prediction.predictionId}"`, err);
         }
     }
 };
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_MINUTE = 60 * 1000;
 export default async (client) => {
-    console.log('👀 Prediction listener started');
+    logger.boot('⏱️ Prediction cleanup & autolock workers started');
     setInterval(cleanupOldPredictions, ONE_DAY);
     setInterval(() => autolockPredictions(client), ONE_MINUTE);
 };

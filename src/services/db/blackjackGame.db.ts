@@ -1,12 +1,22 @@
 import BlackjackGame from '@/models/BlackjackGame'
 import { TGetBlackjackGame, TUpsertBlackjackGame } from '@/types/types'
-import { Card } from '@/utils/casino/blackjack'
+import { Card } from '@/utils/casino/blackjack/deck'
 
 export const getBlackjackGameByUserAndGuild = async ({
   userId,
   guildId
 }: TGetBlackjackGame) => {
   return await BlackjackGame.findOne({ userId, guildId })
+}
+
+export const getBlackjackGameByBetId = async ({
+  betId,
+  guildId
+}: {
+  betId: string
+  guildId: string
+}) => {
+  return BlackjackGame.findOne({ betId, guildId })
 }
 
 export const getAllOldBlackjackGames = async (days: number) => {
@@ -34,12 +44,21 @@ export const updateBlackjackGameState = async ({
   )
 }
 
+export const updateBlackjackGame = async (
+  game: typeof BlackjackGame.prototype
+) => {
+  await game.save()
+}
+
 export const upsertBlackjackGame = async ({
   userId,
   guildId,
-  gameId,
+  channelId,
+  messageId,
+  betId,
   betAmount,
   deck,
+  deckIndex,
   playerCards,
   dealerCards
 }: TUpsertBlackjackGame) => {
@@ -47,14 +66,20 @@ export const upsertBlackjackGame = async ({
     { userId, guildId },
     {
       $set: {
-        gameId,
+        channelId,
+        messageId,
+        betId,
         betAmount,
         deck,
+        deckIndex,
         playerCards,
         dealerCards
       }
     },
-    { upsert: true, new: true }
+    {
+      upsert: true,
+      new: true
+    }
   )
 }
 

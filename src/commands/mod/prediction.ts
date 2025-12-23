@@ -16,6 +16,7 @@ import {
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
   checkPredictionChannels,
   createPrediction,
@@ -29,6 +30,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const data: CommandData = {
   name: 'prediction',
@@ -437,7 +439,7 @@ export async function run({ interaction }: SlashCommandProps) {
       ) as TextChannel
 
       if (!logChannel) {
-        console.error('Log channel not found!')
+        logger.error('Log channel not found!')
       } else {
         const totalBets = updatedPrediction.choices.flatMap((c) => c.bets)
 
@@ -509,7 +511,9 @@ export async function run({ interaction }: SlashCommandProps) {
             }
           )
 
-        logChannel.send({ embeds: [embed] }).catch(console.error)
+        logChannel.send({ embeds: [embed] }).catch((err) => {
+          logger.error('Failed to pay the winners', err)
+        })
       }
 
       const channel = await interaction.client.channels.fetch(
@@ -696,6 +700,6 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

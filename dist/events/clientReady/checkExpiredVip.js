@@ -1,8 +1,9 @@
 import { TextChannel } from 'discord.js';
 import { deleteVipByOwnerId, getAllOldVips, getGuildConfigByGuildId } from '@/services';
 import { createInfoEmbed } from '@/utils/discord/createEmbed';
+import { logger } from '@/utils/logger';
 export default async (client) => {
-    console.log('👀 VIP Room listener started');
+    logger.boot('⏱️ VIP room expiration worker started');
     setInterval(async () => {
         const expiredRooms = await getAllOldVips();
         for (const room of expiredRooms) {
@@ -59,7 +60,7 @@ export default async (client) => {
                 ownerId: room.ownerId,
                 guildId: room.guildId
             });
-            console.log(`VIP channel ${room.channelId} expired.`);
+            logger.worker(`VIP channel ${room.channelId} expired.`);
         }
     }, 60_000);
 };

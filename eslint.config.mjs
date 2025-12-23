@@ -20,6 +20,15 @@ export default [
     rules: {
       'no-unused-vars': 'off',
 
+      'no-console': 'off',
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'console',
+          message: 'Do not use console.* directly. Use the logger instead.'
+        }
+      ],
+
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -54,6 +63,12 @@ export default [
     files: ['src/services/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': 'off'
+    }
+  },
+  {
+    files: ['src/utils/logger.ts'],
+    rules: {
+      'no-restricted-globals': 'off'
     }
   }
 ]

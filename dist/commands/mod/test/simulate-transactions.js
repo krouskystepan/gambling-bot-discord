@@ -1,4 +1,5 @@
 import { ApplicationCommandOptionType } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { createMultipleTransactions } from '@/services';
 import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
 export const data = {
@@ -131,9 +132,6 @@ export async function run({ interaction }) {
         });
     }
     catch (error) {
-        console.error('Error simulating transactions:', error);
-        await interaction.editReply({
-            content: '❌ Something went wrong while simulating transactions.'
-        });
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

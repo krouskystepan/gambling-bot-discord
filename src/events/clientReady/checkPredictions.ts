@@ -6,6 +6,7 @@ import {
   getPredictionToLock,
   updatePredictionStatus
 } from '@/services'
+import { logger } from '@/utils/logger'
 
 // OLD PREDICTION CLEANUP
 const cleanupOldPredictions = async () => {
@@ -23,9 +24,10 @@ const cleanupOldPredictions = async () => {
   )
 
   for (const p of oldPredictions) {
-    console.log(
+    logger.worker(
       `Deleted old prediction "${p.title}" (${p.predictionId}) [${p.status}]`
     )
+    logger
   }
 }
 
@@ -66,11 +68,11 @@ const autolockPredictions = async (client: Client) => {
         components: []
       })
 
-      console.log(
+      logger.worker(
         `Prediction "${prediction.title}" (${prediction.predictionId}) auto-locked`
       )
     } catch (err) {
-      console.error(
+      logger.error(
         `Failed to autolock prediction "${prediction.predictionId}"`,
         err
       )
@@ -82,7 +84,7 @@ const ONE_DAY = 24 * 60 * 60 * 1000
 const ONE_MINUTE = 60 * 1000
 
 export default async (client: Client) => {
-  console.log('👀 Prediction listener started')
+  logger.boot('⏱️ Prediction cleanup & autolock workers started')
 
   setInterval(cleanupOldPredictions, ONE_DAY)
   setInterval(() => autolockPredictions(client), ONE_MINUTE)

@@ -6,9 +6,10 @@ import {
   getGuildConfigByGuildId
 } from '@/services'
 import { createInfoEmbed } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export default async (client: Client) => {
-  console.log('👀 VIP Room listener started')
+  logger.boot('⏱️ VIP room expiration worker started')
 
   setInterval(async () => {
     const expiredRooms = await getAllOldVips()
@@ -78,7 +79,7 @@ export default async (client: Client) => {
         guildId: room.guildId
       })
 
-      console.log(`VIP channel ${room.channelId} expired.`)
+      logger.worker(`VIP channel ${room.channelId} expired.`)
     }
   }, 60_000)
 }

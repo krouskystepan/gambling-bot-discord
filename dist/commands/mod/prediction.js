@@ -1,8 +1,10 @@
 import { DateTime } from 'luxon';
 import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { checkPredictionChannels, createPrediction, createTransaction, getPredictionById, updatePredictionStatus, updateUserBalance } from '@/services';
 import { formatNumberToReadableString } from '@/utils/common/utils';
 import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
+import { logger } from '@/utils/logger';
 export const data = {
     name: 'prediction',
     description: 'Manage predictions.',
@@ -318,7 +320,7 @@ export async function run({ interaction }) {
             }
             const logChannel = interaction.client.channels.cache.get(configReply.predictionChannelIds.logs);
             if (!logChannel) {
-                console.error('Log channel not found!');
+                logger.error('Log channel not found!');
             }
             else {
                 const totalBets = updatedPrediction.choices.flatMap((c) => c.bets);
@@ -369,7 +371,9 @@ export async function run({ interaction }) {
                     name: 'Losers Detail',
                     value: losersDisplay.join('\n') || 'None'
                 });
-                logChannel.send({ embeds: [embed] }).catch(console.error);
+                logChannel.send({ embeds: [embed] }).catch((err) => {
+                    logger.error('Failed to pay the winners', err);
+                });
             }
             const channel = await interaction.client.channels.fetch(updatedPrediction.channelId);
             if (channel?.isTextBased()) {
@@ -506,6 +510,6 @@ export async function run({ interaction }) {
         }
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

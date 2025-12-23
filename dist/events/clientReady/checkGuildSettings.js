@@ -1,6 +1,7 @@
 import { defaultCasinoSettings } from 'gambling-bot-shared';
 import merge from 'lodash/merge';
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
+import { logger } from '@/utils/logger';
 export default async (client) => {
     for (const guild of client.guilds.cache.values()) {
         let dbSettings = await await getGuildConfigByGuildId({
@@ -8,7 +9,7 @@ export default async (client) => {
         });
         if (!dbSettings) {
             await createGuildConfiguration({ guildId: guild.id });
-            console.log(`🆕 Created settings => ${guild.name} (${guild.id})`);
+            logger.worker(`🆕 Created settings => ${guild.name} (${guild.id})`);
             continue;
         }
         const mergedSettings = merge({}, defaultCasinoSettings, dbSettings.casinoSettings);
@@ -16,7 +17,7 @@ export default async (client) => {
             JSON.stringify(mergedSettings)) {
             dbSettings.casinoSettings = mergedSettings;
             await dbSettings.save();
-            console.log(`🔧 Updated settings => ${guild.name} (${guild.id})`);
+            logger.worker(`🔧 Updated settings => ${guild.name} (${guild.id})`);
         }
     }
 };

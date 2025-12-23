@@ -22,6 +22,7 @@ import {
   createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -202,6 +203,6 @@ export default async (interaction: Interaction) => {
       ]
     })
   } catch (error) {
-    console.error('Error in handlePrediction.ts', error)
+    logger.error('Error in handlePrediction.ts', error)
   }
 }

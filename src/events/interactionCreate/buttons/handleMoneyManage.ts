@@ -14,6 +14,7 @@ import {
 } from '@/services'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 //! DB TRANSACTIONS
 //! Rare condition - no .save()
@@ -88,7 +89,7 @@ export default async (interaction: Interaction, client: Client) => {
               .setColor('DarkGreen')
           ]
         })
-        .catch(console.error)
+        .catch((err) => logger.error('Failed to send the message', err))
 
       const embed = new EmbedBuilder()
         .setTitle('ATM - Money Generator')
@@ -130,7 +131,7 @@ export default async (interaction: Interaction, client: Client) => {
               .setColor('DarkRed')
           ]
         })
-        .catch(console.error)
+        .catch((err) => logger.error('Failed to send the message', err))
 
       const embed = new EmbedBuilder()
         .setTitle('ATM - Money Reset')
@@ -147,6 +148,6 @@ export default async (interaction: Interaction, client: Client) => {
       })
     }
   } catch (error) {
-    console.error('Error in handleGiveMoney.ts', error)
+    logger.error('Error in handleGiveMoney.ts', error)
   }
 }

@@ -5,12 +5,13 @@ import {
 } from 'discord.js'
 
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const handleUnexpectedInteractionError = async (
   interaction: ChatInputCommandInteraction<CacheType>,
   error: unknown
 ) => {
-  console.error('Unexpected interaction error', {
+  logger.error('Unexpected interaction error', {
     command: interaction.commandName,
     userId: interaction.user.id,
     guildId: interaction.guildId,

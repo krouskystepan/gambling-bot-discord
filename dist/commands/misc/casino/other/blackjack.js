@@ -1,9 +1,10 @@
-import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkCasinoChannels, checkUserRegistration, createTransaction, getBlackjackGameByUserAndGuild, updateUserBalance, upsertBlackjackGame } from '@/services';
-import { DECK, calculateHandValue, createBlackjackEmbed, shuffleDeck } from '@/utils/casino/blackjack';
-import { drawNextCard } from '@/utils/casino/rng';
-import { checkValidBet, formatNumberToReadableString, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
+import { DECK, shuffleDeck } from '@/utils/casino/blackjack/deck';
+import { calculateHandValue } from '@/utils/casino/blackjack/math';
+import { renderBlackjackButtons, renderBlackjackEmbed } from '@/utils/casino/blackjack/render';
+import { checkValidBet, generateBetId, parseReadableStringToNumber } from '@/utils/common/utils';
 import { createErrorEmbed } from '@/utils/discord/createEmbed';
 export const data = {
     name: 'blackjack',
@@ -49,7 +50,6 @@ export async function run({ interaction }) {
         }
         const betAmount = interaction.options.getString('bet', true);
         const parsedBetAmount = parseReadableStringToNumber(betAmount);
-        const readableBetAmount = formatNumberToReadableString(parsedBetAmount);
         const showBalance = interaction.options.getBoolean('show-balance') || false;
         const isBetValid = checkValidBet(interaction, parsedBetAmount, configReply.casinoSettings.blackjack.maxBet, configReply.casinoSettings.blackjack.minBet, user.balance);
         if (!isBetValid)
@@ -71,56 +71,57 @@ export async function run({ interaction }) {
             betId
         });
         const shuffledDeck = shuffleDeck(DECK);
-        const playerCards = [
-            drawNextCard(shuffledDeck, 0),
-            drawNextCard(shuffledDeck, 1)
-        ];
-        const dealerCards = [
-            drawNextCard(shuffledDeck, 2),
-            drawNextCard(shuffledDeck, 3)
-        ];
-        const playerTotal = calculateHandValue(playerCards);
-        const dealerTotal = calculateHandValue(dealerCards);
-        const playerHasBlackjack = playerCards.length === 2 && playerTotal === 21;
-        const dealerHasBlackjack = dealerCards.length === 2 && dealerTotal === 21;
-        let resultId;
+        const playerCards = [shuffledDeck[0], shuffledDeck[1]];
+        const dealerCards = [shuffledDeck[2], shuffledDeck[3]];
+        const playerHasBlackjack = playerCards.length === 2 && calculateHandValue(playerCards) === 21;
+        const dealerHasBlackjack = dealerCards.length === 2 && calculateHandValue(dealerCards) === 21;
         if (playerHasBlackjack || dealerHasBlackjack) {
-            let balanceIncrement = 0;
+            let resultId;
+            let payout = 0;
             if (playerHasBlackjack && dealerHasBlackjack) {
                 resultId = 'BBJ';
-                balanceIncrement = parsedBetAmount;
+                payout = parsedBetAmount;
             }
             else if (playerHasBlackjack) {
                 resultId = 'PBJ';
-                balanceIncrement = parsedBetAmount * 2.5;
+                payout = parsedBetAmount * 2.5;
             }
-            else if (dealerHasBlackjack) {
+            else {
                 resultId = 'DBJ';
-                balanceIncrement = 0;
+                payout = 0;
             }
             let finalBalance = user.balance - parsedBetAmount;
-            if (balanceIncrement > 0) {
+            if (payout > 0) {
                 const updatedUser = await updateUserBalance({
                     userId: user.userId,
                     guildId: user.guildId,
-                    amount: balanceIncrement
+                    amount: payout
                 });
-                if (!updatedUser) {
-                    throw new Error('User not found when paying out Blackjack');
+                if (updatedUser) {
+                    await createTransaction({
+                        userId: user.userId,
+                        guildId: user.guildId,
+                        amount: payout,
+                        type: 'win',
+                        source: 'casino',
+                        betId
+                    });
+                    finalBalance = updatedUser.balance;
                 }
-                await createTransaction({
-                    userId: user.userId,
-                    guildId: user.guildId,
-                    amount: balanceIncrement,
-                    type: 'win',
-                    source: 'casino',
-                    betId
-                });
-                finalBalance = updatedUser.balance;
             }
             return interaction.editReply({
                 embeds: [
-                    createBlackjackEmbed(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, resultId, showBalance, finalBalance, betId)
+                    renderBlackjackEmbed({
+                        userId: interaction.user.id,
+                        guildId: interaction.guildId,
+                        betId,
+                        betAmount: parsedBetAmount,
+                        playerCards,
+                        dealerCards,
+                        showBalance,
+                        userBalance: finalBalance,
+                        resultId
+                    })
                 ]
             });
         }
@@ -128,28 +129,34 @@ export async function run({ interaction }) {
         await upsertBlackjackGame({
             userId: interaction.user.id,
             guildId: interaction.guildId,
-            gameId: message.id,
+            channelId: interaction.channelId,
+            messageId: message.id,
+            betId,
             betAmount: parsedBetAmount,
             deck: shuffledDeck,
+            deckIndex: 4,
             playerCards,
             dealerCards
         });
-        const hitButton = new ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.hit.${showBalance}`)
-            .setLabel('Hit')
-            .setStyle(ButtonStyle.Success);
-        const standButton = new ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.stand.${showBalance}`)
-            .setLabel('Stand')
-            .setStyle(ButtonStyle.Danger);
-        const doubleButton = new ButtonBuilder()
-            .setCustomId(`blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.double.${showBalance}`)
-            .setLabel('Double')
-            .setStyle(ButtonStyle.Primary);
-        const row = new ActionRowBuilder().addComponents(hitButton, standButton, doubleButton);
-        interaction.editReply({
+        // TODO: Add logic check for can split
+        const row = renderBlackjackButtons({
+            betId,
+            showBalance,
+            canDouble: true,
+            canSplit: false
+        });
+        await interaction.editReply({
             embeds: [
-                createBlackjackEmbed(readableBetAmount, dealerCards, dealerTotal, playerCards, playerTotal, undefined, false, 0, betId, true)
+                renderBlackjackEmbed({
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    betId,
+                    betAmount: parsedBetAmount,
+                    playerCards,
+                    dealerCards,
+                    showBalance,
+                    dealerHideSecondCard: true
+                })
             ],
             components: [row]
         });

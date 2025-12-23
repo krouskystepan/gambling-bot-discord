@@ -31,7 +31,8 @@ export const data: CommandData = {
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  deleted: false
+  deleted: false,
+  devOnly: true
 }
 
 export async function run({ interaction, client }: SlashCommandProps) {
@@ -75,18 +76,16 @@ export async function run({ interaction, client }: SlashCommandProps) {
       guildConfig.atmChannelIds.logs
     ) as TextChannel
 
-    logChannel
-      ?.send({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle('ATM - User Registered')
-            .setDescription(
-              `Manager <@${interaction.user.id}> has successfully registered <@${user.id}>.`
-            )
-            .setColor('Grey')
-        ]
-      })
-      .catch(console.error)
+    logChannel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle('ATM - User Registered')
+          .setDescription(
+            `Manager <@${interaction.user.id}> has successfully registered <@${user.id}>.`
+          )
+          .setColor('Grey')
+      ]
+    })
 
     return interaction.reply({
       embeds: [

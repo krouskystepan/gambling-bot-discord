@@ -22,6 +22,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -97,7 +98,7 @@ export default async (interaction: Interaction, client: Client) => {
         const logMessage = await logChannel.messages.fetch(messageId)
         await logMessage.edit({ content, components: [] })
       } catch (err) {
-        console.error('Failed to update log message', err)
+        logger.error('Failed to update log message', err)
       }
     }
 
@@ -146,7 +147,7 @@ export default async (interaction: Interaction, client: Client) => {
           content: `<@${targetUserId}>`,
           embeds: [embed]
         })
-        .catch(console.error)
+        .catch((err) => logger.error('Failed to send the message', err))
     }
 
     if (action === 'approve' && confirm === '_') {
@@ -164,13 +165,6 @@ export default async (interaction: Interaction, client: Client) => {
         `atm-${atmAction}.reject.confirm.${userId}-${messageId}.${parsedAmount}`
       )
     }
-
-    console.log(
-      (action === 'approve' && atmAction === 'deposit') ||
-        (action === 'reject' && atmAction === 'withdraw')
-        ? parsedAmount
-        : 0
-    )
 
     if (confirm === 'confirm') {
       await updateUserBalance({
@@ -217,6 +211,6 @@ export default async (interaction: Interaction, client: Client) => {
       })
     }
   } catch (error) {
-    console.error('Error in handleAtm.ts', error)
+    logger.error('Error in handleAtm.ts', error)
   }
 }

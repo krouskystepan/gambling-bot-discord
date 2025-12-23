@@ -4,6 +4,7 @@ import { ApplicationCommandOptionType } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import { getGuildConfigByGuildId } from '@/services'
 import { rollDice } from '@/utils/casino/rng'
 import {
@@ -173,6 +174,6 @@ export async function run({ interaction }: SlashCommandProps) {
       embeds: [embed]
     })
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

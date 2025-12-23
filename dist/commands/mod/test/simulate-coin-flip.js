@@ -1,5 +1,6 @@
 import { COINFLIP_MAX_SIMULATE_FLIPS } from 'gambling-bot-shared';
 import { ApplicationCommandOptionType } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
 import { getGuildConfigByGuildId } from '@/services';
 import { flipCoin } from '@/utils/casino/rng';
 import { formatNumberToReadableString, formatNumberWithSpaces, parseReadableStringToNumber } from '@/utils/common/utils';
@@ -125,6 +126,6 @@ export async function run({ interaction }) {
         });
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

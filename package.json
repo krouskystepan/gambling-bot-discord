@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch --no-deprecation src/index.ts",
-    "build": "tsc",
+    "build": "npm run check && tsc",
     "start": "node dist/index.js",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "format:fix": "prettier --write \"src/**/*.{ts,tsx}\"",

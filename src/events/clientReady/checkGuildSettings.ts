@@ -4,6 +4,7 @@ import merge from 'lodash/merge'
 import { Client } from 'discord.js'
 
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
+import { logger } from '@/utils/logger'
 
 export default async (client: Client) => {
   for (const guild of client.guilds.cache.values()) {
@@ -13,7 +14,7 @@ export default async (client: Client) => {
 
     if (!dbSettings) {
       await createGuildConfiguration({ guildId: guild.id })
-      console.log(`🆕 Created settings => ${guild.name} (${guild.id})`)
+      logger.worker(`🆕 Created settings => ${guild.name} (${guild.id})`)
       continue
     }
 
@@ -29,7 +30,7 @@ export default async (client: Client) => {
     ) {
       dbSettings.casinoSettings = mergedSettings
       await dbSettings.save()
-      console.log(`🔧 Updated settings => ${guild.name} (${guild.id})`)
+      logger.worker(`🔧 Updated settings => ${guild.name} (${guild.id})`)
     }
   }
 }

@@ -184,6 +184,9 @@ export async function run({ interaction }) {
                 formatRole('VIP Owner Role', config.vipSettings.roleOwnerId),
                 formatRole('VIP Member Role', config.vipSettings.roleMemberId),
                 formatBet('VIP Max Members', config.vipSettings.maxMembers, ''),
+                `- **VIP Price Per Additional Member:** ${config.vipSettings.pricePerAdditionalMember === 0
+                    ? 'Not Set'
+                    : `$${formatNumberToReadableString(config.vipSettings.pricePerAdditionalMember)}`}`,
                 `- **VIP Price Per Day:** ${config.vipSettings.pricePerDay === 0
                     ? 'Not Set'
                     : `$${formatNumberToReadableString(config.vipSettings.pricePerDay)}`}`,

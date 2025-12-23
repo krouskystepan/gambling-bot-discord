@@ -1,343 +1,268 @@
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  Client,
-  Interaction,
-  MessageFlags
-} from 'discord.js'
+import { Interaction, MessageFlags } from 'discord.js'
 
 import {
   consumeUserBalance,
   createTransaction,
   deleteBlackjackGame,
-  getBlackjackGameByUserAndGuild,
-  getUser,
-  updateBlackjackGameState
+  getBlackjackGameByBetId,
+  updateBlackjackGame
 } from '@/services'
+import { decodeId } from '@/utils/casino/blackjack/customId'
 import {
-  calculateHandValue,
-  createBlackjackEmbed,
-  revealDealerCards
-} from '@/utils/casino/blackjack'
-import { drawNextCard } from '@/utils/casino/rng'
-import { formatNumberToReadableString } from '@/utils/common/utils'
-import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
+  applyAction,
+  dealerDrawOne,
+  dealerShouldDraw,
+  resolveResult
+} from '@/utils/casino/blackjack/engine'
+import {
+  renderBlackjackButtons,
+  renderBlackjackEmbed
+} from '@/utils/casino/blackjack/render'
+import { docToEngine, engineToDoc } from '@/utils/casino/blackjack/state'
+import { logger } from '@/utils/logger'
 
-export default async (interaction: Interaction, _client: Client) => {
-  if (!interaction.isButton() || !interaction.customId) return
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+export default async (interaction: Interaction) => {
+  if (!interaction.isButton()) return
+
+  const data = decodeId(interaction.customId)
+
+  if (!data) return
+
+  const { betId, action, showBalance } = data
+
+  const guildId = interaction.guildId
+  if (!guildId) return
 
   try {
-    const [type, ids, action, showBalanceString] =
-      interaction.customId.split('.')
-
-    if (!type || !ids || !action) return
-
-    const [gameId, userId, guildId, betId] = ids.split('-')
-
-    if (type !== 'blackjack') return
-    if (!gameId || !userId || !guildId || !betId) return
-
-    const showBalance = showBalanceString === 'true'
-
-    if (userId !== interaction.user.id) {
-      return interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Wrong user',
-            'This is not your game.\nStart your own with `/blackjack`.'
-          )
-        ],
-        flags: MessageFlags.Ephemeral
-      })
-    }
-
-    const game = await getBlackjackGameByUserAndGuild({
-      guildId,
-      userId
+    // TODO: Enhance the errors
+    const game = await getBlackjackGameByBetId({
+      betId,
+      guildId
     })
 
     if (!game) {
       return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Game not found',
-            'You do not have an active game.\nStart one with `/blackjack`.'
-          )
-        ],
+        content: 'This game no longer exists.',
         flags: MessageFlags.Ephemeral
       })
     }
 
-    const message = await interaction.channel?.messages.fetch(gameId)
+    // TODO: Delete this in prod.
+    if (action === 'DEV-DELETE') {
+      const engine = docToEngine(game)
 
-    if (!message) {
-      await deleteBlackjackGame({ guildId, userId })
+      deleteBlackjackGame({
+        userId: game.userId,
+        guildId
+      })
+
+      await interaction.message.edit({
+        embeds: [
+          renderBlackjackEmbed({
+            userId: game.userId,
+            guildId,
+            betId,
+            betAmount: engine.betAmount,
+            playerCards: engine.playerCards,
+            dealerCards: engine.dealerCards,
+            showBalance,
+            dealerHideSecondCard: false
+          })
+        ],
+        components: []
+      })
 
       return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Message not found',
-            'The message for this game was not found.\nStart a new game with `/blackjack`.'
-          )
-        ],
+        content: 'Game Removed. DEV ONLY!',
         flags: MessageFlags.Ephemeral
       })
     }
 
-    if (action === 'stand') {
-      await interaction.deferUpdate()
-
-      const deck = [...game.deck]
-
-      let dealerCards = [...game.dealerCards]
-      const playerCards = [...game.playerCards]
-
-      let dealerTotal = calculateHandValue(dealerCards)
-      const playerTotal = calculateHandValue(playerCards)
-
-      let gameIndex = game.dealerCards.length + game.playerCards.length
-
-      const user = await getUser({ userId, guildId })
-      if (!user) return
-
-      await revealDealerCards(
-        formatNumberToReadableString(game.betAmount),
-        message,
-        dealerCards,
-        dealerTotal,
-        playerCards,
-        playerTotal,
-        deck,
-        gameIndex,
-        user,
-        guildId,
-        gameId,
-        showBalance,
-        betId
-      )
-
-      return interaction.followUp({
-        content: 'You have stood.',
+    if (interaction.user.id !== game.userId) {
+      return interaction.reply({
+        content: 'This is not your game.',
         flags: MessageFlags.Ephemeral
       })
     }
 
-    if (action === 'hit') {
-      await interaction.deferUpdate()
+    await interaction.deferUpdate()
 
-      const dealerCards = [...game.dealerCards]
-      const dealerTotal = calculateHandValue(dealerCards)
+    const engine = docToEngine(game)
 
-      let playerTotal = calculateHandValue(game.playerCards)
-
-      let gameIndex = game.dealerCards.length + game.playerCards.length
-
-      if (game.playerCards.length <= 3) {
-        const hitButton = new ButtonBuilder()
-          .setCustomId(
-            `blackjack.${gameId}-${userId}-${guildId}-${betId}.hit.${showBalance}`
-          )
-          .setLabel('Hit')
-          .setStyle(ButtonStyle.Success)
-
-        const standButton = new ButtonBuilder()
-          .setCustomId(
-            `blackjack.${gameId}-${userId}-${guildId}-${betId}.stand.${showBalance}`
-          )
-          .setLabel('Stand')
-          .setStyle(ButtonStyle.Danger)
-
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          hitButton,
-          standButton
-        )
-
-        await message.edit({
-          components: [row]
-        })
-      }
-
-      const drawnCard = drawNextCard(game.deck, gameIndex)
-
-      game.playerCards.push(drawnCard)
-
-      playerTotal = calculateHandValue(game.playerCards)
-
-      const user = await getUser({ userId, guildId })
-      if (!user) return
-
-      if (playerTotal > 21) {
-        await message.edit({
-          embeds: [
-            createBlackjackEmbed(
-              formatNumberToReadableString(game.betAmount),
-              dealerCards,
-              dealerTotal,
-              game.playerCards,
-              playerTotal,
-              'PB',
-              showBalance,
-              user.balance,
-              betId
-            )
-          ],
-          components: []
-        })
-
-        await deleteBlackjackGame({ userId, guildId })
-
-        return interaction.followUp({
-          content: 'You have busted.',
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      if (playerTotal === 21) {
-        await revealDealerCards(
-          formatNumberToReadableString(game.betAmount),
-          message,
-          dealerCards,
-          dealerTotal,
-          game.playerCards,
-          playerTotal,
-          game.deck,
-          gameIndex + 1,
-          user,
-          guildId,
-          gameId,
-          showBalance,
-          betId
-        )
-
-        await deleteBlackjackGame({ userId, guildId })
-
-        return interaction.followUp({
-          content: 'You have hit.',
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      await updateBlackjackGameState({
-        userId,
-        guildId,
-        playerCards: game.playerCards,
-        deck: game.deck
-      })
-
-      await message.edit({
-        embeds: [
-          createBlackjackEmbed(
-            formatNumberToReadableString(game.betAmount),
-            dealerCards,
-            dealerTotal,
-            game.playerCards,
-            playerTotal,
-            undefined,
-            false,
-            0,
-            betId,
-            true
-          )
-        ]
-      })
-
-      return interaction.followUp({
-        content: 'You have hit.',
-        flags: MessageFlags.Ephemeral
-      })
-    }
-
-    if (action === 'double') {
-      await interaction.deferUpdate()
-
-      const dealerCards = [...game.dealerCards]
-      const dealerTotal = calculateHandValue(dealerCards)
-
-      let playerTotal = calculateHandValue(game.playerCards)
-      let gameIndex = game.dealerCards.length + game.playerCards.length
-
-      const additionalBet = game.betAmount
-
+    if (action === 'DOUBLE') {
       const user = await consumeUserBalance({
-        userId,
+        userId: game.userId,
         guildId,
-        amount: additionalBet
+        amount: engine.betAmount
       })
 
       if (!user) {
         return interaction.followUp({
-          embeds: [
-            createInfoEmbed(
-              'Insufficient balance',
-              `You don't have enough money to place this bet.`
-            )
-          ],
+          content: `You don't have enough balance to double.`,
           flags: MessageFlags.Ephemeral
         })
       }
 
       await createTransaction({
-        userId: user.userId,
-        guildId: user.guildId,
-        amount: additionalBet,
+        userId: game.userId,
+        guildId,
+        amount: engine.betAmount,
         type: 'bet',
         source: 'casino',
         betId
       })
+    }
 
-      const drawnCard = drawNextCard(game.deck, gameIndex)
-      game.playerCards.push(drawnCard)
-      playerTotal = calculateHandValue(game.playerCards)
+    const result = applyAction(engine, action)
 
-      if (playerTotal > 21) {
-        await deleteBlackjackGame({ userId, guildId })
+    if (!result.finished && 'dealerTurn' in result) {
+      await interaction.message.edit({
+        embeds: [
+          renderBlackjackEmbed({
+            userId: game.userId,
+            guildId,
+            betId,
+            betAmount: engine.betAmount,
+            playerCards: engine.playerCards,
+            dealerCards: engine.dealerCards,
+            showBalance,
+            dealerHideSecondCard: false
+          })
+        ],
+        components: []
+      })
 
-        await message.edit({
+      engineToDoc(engine, game)
+      await updateBlackjackGame(game)
+      while (dealerShouldDraw(engine)) {
+        await sleep(700)
+
+        dealerDrawOne(engine)
+
+        await interaction.message.edit({
           embeds: [
-            createBlackjackEmbed(
-              formatNumberToReadableString(additionalBet * 2),
-              dealerCards,
-              dealerTotal,
-              game.playerCards,
-              playerTotal,
-              'PB',
+            renderBlackjackEmbed({
+              userId: game.userId,
+              guildId,
+              betId,
+              betAmount: engine.betAmount,
+              playerCards: engine.playerCards,
+              dealerCards: engine.dealerCards,
               showBalance,
-              user.balance,
-              betId
-            )
+              dealerHideSecondCard: false
+            })
           ],
           components: []
         })
+      }
 
-        return interaction.followUp({
-          content: 'You have busted.',
-          flags: MessageFlags.Ephemeral
+      const finalResult = resolveResult(engine)
+
+      if (finalResult.finished && finalResult.payout > 0) {
+        await createTransaction({
+          userId: game.userId,
+          guildId,
+          amount: finalResult.payout,
+          type: 'win',
+          source: 'casino',
+          betId
         })
       }
 
-      await revealDealerCards(
-        formatNumberToReadableString(additionalBet * 2),
-        message,
-        dealerCards,
-        dealerTotal,
-        game.playerCards,
-        playerTotal,
-        game.deck,
-        gameIndex + 1,
-        user,
-        guildId,
-        gameId,
-        showBalance,
-        betId
-      )
+      if (finalResult.finished) {
+        await interaction.message.edit({
+          embeds: [
+            renderBlackjackEmbed({
+              userId: game.userId,
+              guildId,
+              betId,
+              betAmount: engine.betAmount,
+              playerCards: engine.playerCards,
+              dealerCards: engine.dealerCards,
+              showBalance,
+              resultId: finalResult.resultId
+            })
+          ],
+          components: []
+        })
+      }
 
-      return interaction.followUp({
-        content: 'You have doubled down.',
-        flags: MessageFlags.Ephemeral
+      await deleteBlackjackGame({
+        userId: game.userId,
+        guildId
       })
+
+      return
     }
-  } catch (error) {
-    console.error('Error in handleBlackjack.ts', error)
+
+    if (result.finished) {
+      if (result.payout > 0) {
+        await createTransaction({
+          userId: game.userId,
+          guildId,
+          amount: result.payout,
+          type: 'win',
+          source: 'casino',
+          betId
+        })
+      }
+
+      await interaction.message.edit({
+        embeds: [
+          renderBlackjackEmbed({
+            userId: game.userId,
+            guildId,
+            betId,
+            betAmount: engine.betAmount,
+            playerCards: engine.playerCards,
+            dealerCards: engine.dealerCards,
+            showBalance,
+            userBalance: undefined,
+            resultId: result.resultId
+          })
+        ],
+        components: []
+      })
+
+      await deleteBlackjackGame({
+        userId: game.userId,
+        guildId
+      })
+
+      return
+    }
+
+    // 7️⃣ Persist ongoing game
+    engineToDoc(engine, game)
+    await updateBlackjackGame(game)
+
+    // 8️⃣ Render ongoing state
+    await interaction.message.edit({
+      embeds: [
+        renderBlackjackEmbed({
+          userId: game.userId,
+          guildId,
+          betId,
+          betAmount: engine.betAmount,
+          playerCards: engine.playerCards,
+          dealerCards: engine.dealerCards,
+          showBalance,
+          dealerHideSecondCard: true
+        })
+      ],
+      components: [
+        renderBlackjackButtons({
+          betId,
+          showBalance,
+          canDouble: engine.playerCards.length === 2,
+          canSplit: false
+        })
+      ]
+    })
+  } catch (err) {
+    logger.error('Blackjack button error', err)
   }
 }

@@ -1,7 +1,10 @@
 import { Client } from 'discord.js'
 
+import { logger } from '@/utils/logger'
+
 export default async (client: Client) => {
   const currentTime = new Date().toLocaleString('cs-CZ')
 
-  console.log(`✅ ${client.user?.tag} is online\n🕛 Time: ${currentTime}`)
+  logger.ready(`🕛 Time: ${currentTime}`)
+  logger.ready(`🤖 ${client.user?.tag} is online`)
 }

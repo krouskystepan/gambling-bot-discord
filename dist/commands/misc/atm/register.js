@@ -2,6 +2,7 @@ import { EmbedBuilder, MessageFlags } from 'discord.js';
 import { handleUnexpectedInteractionError } from '@/errors';
 import { checkAtmChannels, createUser, getUser } from '@/services';
 import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
+import { logger } from '@/utils/logger';
 export const data = {
     name: 'register',
     description: 'Register yourself in the system.',
@@ -41,7 +42,9 @@ export async function run({ interaction, client }) {
                     .setColor('White')
             ]
         })
-            .catch(console.error);
+            .catch((err) => {
+            logger.error('Registration failed', err);
+        });
         return interaction.reply({
             embeds: [
                 createSuccessEmbed('ATM Success - Registered', 'You have been successfully registered in the system.')
