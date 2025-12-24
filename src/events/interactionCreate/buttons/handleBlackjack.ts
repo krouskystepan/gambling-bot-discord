@@ -125,6 +125,10 @@ export default async (interaction: Interaction) => {
       activeHand.finished = true
     }
 
+    if (action === 'HIT' && value === 21) {
+      activeHand.finished = true
+    }
+
     if (action === 'STAND' || action === 'DOUBLE') {
       activeHand.finished = true
     }

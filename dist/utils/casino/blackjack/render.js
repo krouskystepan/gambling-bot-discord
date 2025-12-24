@@ -13,7 +13,7 @@ const formatFinalResult = (result, netProfit) => {
         case 'LOSS':
             return {
                 color: 'Red',
-                text: `You lose!\n💰 Total: 🔴 **$${formatNumberToReadableString(Math.abs(netProfit))}**`
+                text: `You lose!\n💰 Total: 🔴 -**$${formatNumberToReadableString(Math.abs(netProfit))}**`
             };
         case 'EVEN':
             return {

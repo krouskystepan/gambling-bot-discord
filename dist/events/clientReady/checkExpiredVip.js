@@ -3,7 +3,7 @@ import { deleteVipByOwnerId, getAllOldVips, getGuildConfigByGuildId } from '@/se
 import { createInfoEmbed } from '@/utils/discord/createEmbed';
 import { logger } from '@/utils/logger';
 export default async (client) => {
-    logger.boot('⏱️ VIP room expiration worker started');
+    logger.boot('⌛ VIP room expiration worker started');
     setInterval(async () => {
         const expiredRooms = await getAllOldVips();
         for (const room of expiredRooms) {

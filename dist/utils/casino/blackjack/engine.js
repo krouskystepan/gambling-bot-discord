@@ -1,8 +1,9 @@
+import { logger } from '@/utils/logger';
 import { calculateHandValue } from './math';
 const draw = (s) => {
     const card = s.deck[s.deckIndex];
     if (!card)
-        throw new Error('Deck exhausted');
+        logger.error('Deck exhausted');
     s.deckIndex++;
     return card;
 };
@@ -37,7 +38,8 @@ export const applyAction = (s, action) => {
     }
     if (action === 'SPLIT') {
         if (!canSplit(s)) {
-            throw new Error('Invalid split');
+            logger.error('Invalid split');
+            return { finished: false };
         }
         const [c1, c2] = hand.cards;
         const isAceSplit = c1.label === 'A' && c2.label === 'A';

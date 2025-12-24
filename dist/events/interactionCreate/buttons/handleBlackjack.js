@@ -1,8 +1,10 @@
 import { MessageFlags } from 'discord.js';
-import { consumeUserBalance, createTransaction, deleteBlackjackGame, getBlackjackGameByBetId, updateBlackjackGame } from '@/services';
+import { consumeUserBalance, createTransaction, deleteBlackjackGame, getBlackjackGameByBetId, getUser, updateBlackjackGame, updateUserBalance } from '@/services';
 import { applyAction, calculateHandValue, canSplit, dealerDrawOne, dealerShouldDraw, decodeId, docToEngine, engineToDoc, renderBlackjackButtons, renderBlackjackEmbed, resolveResult } from '@/utils/casino/blackjack';
 import { logger } from '@/utils/logger';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+//TODO: when 21 autostand after normal hit
+//TODO: Better return interactions in whole blackjack
 export default async (interaction) => {
     if (!interaction.isButton())
         return;
@@ -84,6 +86,9 @@ export default async (interaction) => {
         if (value > 21) {
             activeHand.finished = true;
         }
+        if (action === 'HIT' && value === 21) {
+            activeHand.finished = true;
+        }
         if (action === 'STAND' || action === 'DOUBLE') {
             activeHand.finished = true;
         }
@@ -151,7 +156,18 @@ export default async (interaction) => {
                     source: 'casino',
                     betId
                 });
+                await updateUserBalance({
+                    userId: game.userId,
+                    guildId,
+                    amount: totalPayout
+                });
             }
+            const finalUser = await getUser({
+                userId: game.userId,
+                guildId
+            });
+            if (!finalUser)
+                return;
             await interaction.message.edit({
                 embeds: [
                     renderBlackjackEmbed({
@@ -162,6 +178,7 @@ export default async (interaction) => {
                         activeHandIndex: -1,
                         dealerCards: engine.dealerCards,
                         showBalance,
+                        userBalance: finalUser.balance,
                         result: { kind: 'FINAL', finalResultId }
                     })
                 ],

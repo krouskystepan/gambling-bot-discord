@@ -3,7 +3,7 @@ import { createTransaction, deleteBlackjackGame, getAllOldBlackjackGames, update
 import { applyAction, dealerDrawOne, dealerShouldDraw, docToEngine, engineToDoc, renderBlackjackEmbed, resolveResult } from '@/utils/casino/blackjack';
 import { logger } from '@/utils/logger';
 export default async (client) => {
-    logger.boot('⏱️ Blackjack auto-stand worker started');
+    logger.boot('⌛ Blackjack auto-stand worker started');
     setInterval(async () => {
         const oldGames = await getAllOldBlackjackGames(1); // 1 day
         for (const game of oldGames) {

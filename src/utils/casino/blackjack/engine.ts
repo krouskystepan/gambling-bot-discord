@@ -1,5 +1,6 @@
 // eslint-disable-next-line no-restricted-imports
 import { TBlackjackHand } from '@/models/BlackjackGame'
+import { logger } from '@/utils/logger'
 
 import { Card } from './deck'
 import { calculateHandValue } from './math'
@@ -28,7 +29,7 @@ export type EngineState = {
 
 const draw = (s: EngineState): Card => {
   const card = s.deck[s.deckIndex]
-  if (!card) throw new Error('Deck exhausted')
+  if (!card) logger.error('Deck exhausted')
   s.deckIndex++
   return card
 }
@@ -73,7 +74,8 @@ export const applyAction = (
 
   if (action === 'SPLIT') {
     if (!canSplit(s)) {
-      throw new Error('Invalid split')
+      logger.error('Invalid split')
+      return { finished: false }
     }
 
     const [c1, c2] = hand.cards

@@ -1,19 +1,14 @@
-const handDocToState = (hand) => ({
-    ...hand,
-    isSplitHand: false
-});
-const handStateToDoc = ({ isSplitHand: _isSplitHand, ...rest }) => rest;
 export const docToEngine = (game) => ({
     deck: game.deck,
     deckIndex: game.deckIndex,
-    hands: game.hands.map(handDocToState),
+    hands: game.hands,
     activeHandIndex: game.activeHandIndex,
     dealerCards: game.dealerCards
 });
 export const engineToDoc = (engine, game) => {
     game.deck = engine.deck;
     game.deckIndex = engine.deckIndex;
-    game.hands = engine.hands.map(handStateToDoc);
+    game.hands = engine.hands;
     game.activeHandIndex = engine.activeHandIndex;
     game.dealerCards = engine.dealerCards;
 };
