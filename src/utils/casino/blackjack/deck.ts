@@ -21,9 +21,14 @@ export type Card = {
   value: number
 }
 
-export const DECK: Card[] = SUITES.flatMap((suite) =>
-  VALUES.map(({ label, value }) => ({ suite, label, value }))
-)
+const createDeck = (deckCount: number): Card[] =>
+  Array.from({ length: deckCount }, () =>
+    SUITES.flatMap((suite) =>
+      VALUES.map(({ label, value }) => ({ suite, label, value }))
+    )
+  ).flat()
+
+export const DECK = createDeck(2) // 2 decks
 
 export const shuffleDeck = (deck: Card[]): Card[] => {
   const arr = [...deck]

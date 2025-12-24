@@ -2,18 +2,30 @@ import { Schema, model } from 'mongoose'
 
 import { Card } from '@/utils/casino/blackjack'
 
+export type TBlackjackHand = {
+  cards: Card[]
+  betAmount: number
+  finished: boolean
+  isSplitHand: boolean
+}
+
 export type TBlackjackGame = {
   userId: string
   guildId: string
   channelId: string
   messageId: string
   betId: string
-  betAmount: number
+
   deck: Card[]
   deckIndex: number
-  playerCards: Card[]
+
+  hands: TBlackjackHand[]
+  activeHandIndex: number
+
   dealerCards: Card[]
+
   createdAt: Date
+  updatedAt: Date
 }
 
 const cardSchema = {
@@ -22,6 +34,15 @@ const cardSchema = {
   value: { type: Number, required: true }
 }
 
+const handSchema = new Schema<TBlackjackHand>(
+  {
+    cards: [cardSchema],
+    betAmount: { type: Number, required: true },
+    finished: { type: Boolean, required: true, default: false }
+  },
+  { _id: false }
+)
+
 const BlackjackGameSchema = new Schema<TBlackjackGame>(
   {
     userId: { type: String, required: true, index: true },
@@ -29,10 +50,13 @@ const BlackjackGameSchema = new Schema<TBlackjackGame>(
     channelId: { type: String, required: true },
     messageId: { type: String, required: true },
     betId: { type: String, required: true, index: true },
-    betAmount: { type: Number, required: true },
+
     deck: [cardSchema],
     deckIndex: { type: Number, required: true, default: 0 },
-    playerCards: [cardSchema],
+
+    hands: { type: [handSchema], required: true, default: [] },
+    activeHandIndex: { type: Number, required: true, default: 0 },
+
     dealerCards: [cardSchema]
   },
   { timestamps: true }

@@ -1,5 +1,23 @@
 export type LogLevel = 'BOOT' | 'READY' | 'WORKER' | 'EVENT' | 'ERROR'
 
+const COLORS = {
+  reset: '\x1b[0m',
+
+  white: '\x1b[37m',
+  green: '\x1b[32m',
+  cyan: '\x1b[36m',
+  magenta: '\x1b[35m',
+  red: '\x1b[31m'
+} as const
+
+const LEVEL_COLOR: Record<LogLevel, string> = {
+  BOOT: COLORS.white,
+  READY: COLORS.green,
+  WORKER: COLORS.cyan,
+  EVENT: COLORS.magenta,
+  ERROR: COLORS.red
+}
+
 const now = (): string =>
   new Date().toLocaleTimeString('cs-CZ', {
     hour: '2-digit',
@@ -7,8 +25,11 @@ const now = (): string =>
     second: '2-digit'
   })
 
+const colorizeLevel = (level: LogLevel): string =>
+  `${LEVEL_COLOR[level]}${level}${COLORS.reset}`
+
 const format = (level: LogLevel, msg: string): string =>
-  `[${now()}] [${level}] ${msg}`
+  `[${now()}] [${colorizeLevel(level)}] ${msg}`
 
 export const logger: {
   /**

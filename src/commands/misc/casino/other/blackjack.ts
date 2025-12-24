@@ -13,6 +13,7 @@ import {
 } from '@/services'
 import {
   DECK,
+  StartBlackjackResultId,
   calculateHandValue,
   renderBlackjackButtons,
   renderBlackjackEmbed,
@@ -120,17 +121,17 @@ export async function run({ interaction }: SlashCommandProps) {
       dealerCards.length === 2 && calculateHandValue(dealerCards) === 21
 
     if (playerHasBlackjack || dealerHasBlackjack) {
-      let resultId: 'PBJ' | 'DBJ' | 'BBJ'
+      let startResultId: StartBlackjackResultId
       let payout = 0
 
       if (playerHasBlackjack && dealerHasBlackjack) {
-        resultId = 'BBJ'
+        startResultId = 'BBJ'
         payout = parsedBetAmount
       } else if (playerHasBlackjack) {
-        resultId = 'PBJ'
+        startResultId = 'PBJ'
         payout = parsedBetAmount * 2.5
       } else {
-        resultId = 'DBJ'
+        startResultId = 'DBJ'
         payout = 0
       }
 
@@ -157,18 +158,27 @@ export async function run({ interaction }: SlashCommandProps) {
         }
       }
 
+      const hands = [
+        {
+          cards: playerCards,
+          betAmount: parsedBetAmount,
+          finished: true,
+          isSplitHand: false
+        }
+      ]
+
       return interaction.editReply({
         embeds: [
           renderBlackjackEmbed({
             userId: interaction.user.id,
             guildId: interaction.guildId!,
             betId,
-            betAmount: parsedBetAmount,
-            playerCards,
+            hands,
+            activeHandIndex: -1,
             dealerCards,
             showBalance,
             userBalance: finalBalance,
-            resultId
+            result: { kind: 'START', startResultId }
           })
         ]
       })
@@ -182,20 +192,38 @@ export async function run({ interaction }: SlashCommandProps) {
       channelId: interaction.channelId,
       messageId: message.id,
       betId,
-      betAmount: parsedBetAmount,
       deck: shuffledDeck,
       deckIndex: 4,
-      playerCards,
+      hands: [
+        {
+          cards: playerCards,
+          betAmount: parsedBetAmount,
+          finished: false,
+          isSplitHand: false
+        }
+      ],
+      activeHandIndex: 0,
       dealerCards
     })
 
-    // TODO: Add logic check for can split
+    const canSplit =
+      playerCards.length === 2 && playerCards[0].label === playerCards[1].label
+
     const row = renderBlackjackButtons({
       betId,
       showBalance,
       canDouble: true,
-      canSplit: false
+      canSplit
     })
+
+    const hands = [
+      {
+        cards: playerCards,
+        betAmount: parsedBetAmount,
+        finished: true,
+        isSplitHand: false
+      }
+    ]
 
     await interaction.editReply({
       embeds: [
@@ -203,8 +231,9 @@ export async function run({ interaction }: SlashCommandProps) {
           userId: interaction.user.id,
           guildId: interaction.guildId!,
           betId,
-          betAmount: parsedBetAmount,
-          playerCards,
+          hands,
+          activeHandIndex: 0,
+          result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
           dealerCards,
           showBalance,
           dealerHideSecondCard: true

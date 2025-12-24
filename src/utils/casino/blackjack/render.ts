@@ -5,6 +5,8 @@ import {
   ColorResolvable
 } from 'discord.js'
 
+// eslint-disable-next-line no-restricted-imports
+import { TBlackjackHand } from '@/models/BlackjackGame'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import { createBetEmbed } from '@/utils/discord/createEmbed'
 
@@ -13,30 +15,146 @@ import { Card } from './deck'
 import { PlayerAction } from './engine'
 import { calculateHandValue } from './math'
 
+export type StartBlackjackResultId =
+  | 'PBJ' // player blackjack
+  | 'DBJ' // dealer blackjack
+  | 'BBJ' // both blackjack
+
+export type GamePhaseId = 'PLAYER_TURN' | 'DEALER_DRAWING'
+
+export type FinalGameResultId =
+  | 'WIN' // net > 0
+  | 'LOSS' // net < 0
+  | 'EVEN' // net === 0
+
+type RenderResult =
+  | { kind: 'START'; startResultId: StartBlackjackResultId }
+  | { kind: 'PHASE'; gamePhaseId: GamePhaseId }
+  | { kind: 'FINAL'; finalResultId: FinalGameResultId }
+
 export type RenderParams = {
   userId: string
   guildId: string
   betId: string
-  betAmount: number
-  playerCards: Card[]
+  hands: TBlackjackHand[]
+  activeHandIndex: number
   dealerCards: Card[]
   showBalance: boolean
   userBalance?: number
-  resultId?: 'PB' | 'DB' | 'PW' | 'DW' | 'PUSH' | 'PBJ' | 'DBJ' | 'BBJ'
   dealerHideSecondCard?: boolean
+  result?: RenderResult
+}
+
+const formatFinalResult = (
+  result: FinalGameResultId,
+  netProfit: number
+): {
+  color: ColorResolvable
+  text: string
+} => {
+  switch (result) {
+    case 'WIN':
+      return {
+        color: 'Green',
+        text: `You win!\n💰 Total: 🟢 **$${formatNumberToReadableString(
+          netProfit
+        )}**`
+      }
+
+    case 'LOSS':
+      return {
+        color: 'Red',
+        text: `You lose!\n💰 Total: 🔴 -**$${formatNumberToReadableString(
+          Math.abs(netProfit)
+        )}**`
+      }
+
+    case 'EVEN':
+      return {
+        color: 'Yellow',
+        text: `Break-even.\n💰 Total: 🟡 **$0**`
+      }
+  }
+}
+
+const formatPhaseResult = (
+  result: GamePhaseId
+): {
+  color: ColorResolvable
+  text: string
+} => {
+  switch (result) {
+    case 'PLAYER_TURN':
+      return {
+        color: 'Blue',
+        text: 'Player’s turn'
+      }
+
+    case 'DEALER_DRAWING':
+      return {
+        color: 'Yellow',
+        text: 'Dealer’s turn'
+      }
+  }
+}
+
+const formatStartResult = (
+  result: StartBlackjackResultId,
+  totalBet: number
+): {
+  color: ColorResolvable
+  text: string
+} => {
+  switch (result) {
+    case 'PBJ':
+      return {
+        color: 'Green',
+        text: `You have Blackjack!\n💰 Total: 🟢 **$${formatNumberToReadableString(
+          totalBet * 2.5
+        )}**`
+      }
+
+    case 'DBJ':
+      return {
+        color: 'Red',
+        text: `Dealer has Blackjack!\n💰 Total: 🔴 **$-${formatNumberToReadableString(
+          totalBet
+        )}**`
+      }
+
+    case 'BBJ':
+      return {
+        color: 'Yellow',
+        text: `Both have Blackjack.\n💰 Total: 🟡 **$0**`
+      }
+  }
 }
 
 export const renderBlackjackEmbed = ({
-  betAmount,
-  playerCards,
+  hands,
+  activeHandIndex,
   dealerCards,
   showBalance,
   userBalance,
-  resultId,
+  result,
   dealerHideSecondCard,
   betId
 }: RenderParams) => {
-  const playerTotal = calculateHandValue(playerCards)
+  const playerHandsText = hands
+    .map((hand, index) => {
+      const total = calculateHandValue(hand.cards)
+      const cards = hand.cards.map((c) => `${c.label}${c.suite}`).join(' ')
+      const isActive = activeHandIndex !== -1 && index === activeHandIndex
+      const busted = total > 21
+
+      return [
+        `**Hand ${index + 1}** ${isActive ? '👉 **ACTIVE**' : ''}`,
+        `${cards} (**${total}**)${busted ? ' 💥 BUST' : ''}`,
+        `💵 Bet: **$${formatNumberToReadableString(hand.betAmount)}**`
+      ].join('\n')
+    })
+    .join('\n\n')
+
   const dealerTotal = calculateHandValue(dealerCards)
 
   const dealerHand = dealerHideSecondCard
@@ -48,52 +166,43 @@ export const renderBlackjackEmbed = ({
   let color: ColorResolvable = 'Yellow'
   let resultText = ''
 
-  // TODO: Better result text
-  switch (resultId) {
-    case 'PBJ':
-      color = 'Green'
-      resultText = `You have Blackjack!\n💰 Total: 🟢 **$${formatNumberToReadableString(
-        betAmount * 2.5
-      )}**`
-      break
-    case 'DBJ':
-      color = 'Red'
-      resultText = `Dealer has Blackjack!\n💰 Total: 🔴 **$-${formatNumberToReadableString(
-        betAmount
-      )}**`
-      break
-    case 'BBJ':
-      resultText = `You both have Blackjack!\n💰 Total: 🟡 **$${0}**`
-      break
-    case 'PB':
-      color = 'Red'
-      resultText = `You busted!\n💰 Total: 🔴 **$-${formatNumberToReadableString(betAmount)}**`
-      break
-    case 'DB':
-      color = 'Green'
-      resultText = `Dealer busted!\n💰 Total: 🟢 **$${formatNumberToReadableString(
-        betAmount * 2
-      )}**`
-      break
-    case 'PW':
-      color = 'Green'
-      resultText = `You win!\n💰 Total: 🟢 **$${formatNumberToReadableString(betAmount * 2)}**`
-      break
-    case 'DW':
-      color = 'Red'
-      resultText = `Dealer wins!\n💰 Total: 🔴 **$-${formatNumberToReadableString(betAmount)}**`
-      break
-    case 'PUSH':
-      resultText = `It's a push!\n💰 Total: 🟡 **$${0}**`
-      break
+  const totalBet = hands.reduce((sum, h) => sum + h.betAmount, 0)
+
+  if (result) {
+    switch (result.kind) {
+      case 'START': {
+        const formatted = formatStartResult(result.startResultId, totalBet)
+        color = formatted.color
+        resultText = formatted.text
+        break
+      }
+
+      case 'PHASE': {
+        const formatted = formatPhaseResult(result.gamePhaseId)
+        color = formatted.color
+        resultText = formatted.text
+        break
+      }
+
+      case 'FINAL': {
+        const netProfit =
+          hands.reduce((sum, h) => sum + h.betAmount, 0) * -1 +
+          (result.finalResultId === 'WIN'
+            ? Math.abs(hands.reduce((sum, h) => sum + h.betAmount, 0)) * 2
+            : 0)
+
+        const formatted = formatFinalResult(result.finalResultId, netProfit)
+        color = formatted.color
+        resultText = formatted.text
+        break
+      }
+    }
   }
 
   const sections: string[] = [
-    `💵 Bet: **$${formatNumberToReadableString(betAmount)}**`,
+    `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**`,
     `**Dealer**\n${dealerHand}`,
-    `**You**\n${playerCards
-      .map((c) => `${c.label}${c.suite}`)
-      .join(' ')} (**${playerTotal}**)`
+    `**You**\n${playerHandsText}`
   ]
 
   if (resultText) {
@@ -154,13 +263,6 @@ export const renderBlackjackButtons = ({
         .setStyle(ButtonStyle.Secondary)
     )
   }
-
-  row.addComponents(
-    new ButtonBuilder()
-      .setCustomId(mk('DEV-DELETE'))
-      .setLabel('DELETE GAME FROM DB')
-      .setStyle(ButtonStyle.Danger)
-  )
 
   return row
 }

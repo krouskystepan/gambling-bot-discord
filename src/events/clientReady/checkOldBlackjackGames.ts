@@ -3,23 +3,25 @@ import { Client, TextChannel } from 'discord.js'
 import {
   createTransaction,
   deleteBlackjackGame,
-  getAllOldBlackjackGames
+  getAllOldBlackjackGames,
+  updateBlackjackGame
 } from '@/services'
 import {
   applyAction,
   dealerDrawOne,
   dealerShouldDraw,
   docToEngine,
+  engineToDoc,
   renderBlackjackEmbed,
   resolveResult
 } from '@/utils/casino/blackjack'
 import { logger } from '@/utils/logger'
 
 export default async (client: Client) => {
-  logger.boot('⏱️ Blackjack auto-stand worker started')
+  logger.boot('⌛ Blackjack auto-stand worker started')
 
   setInterval(async () => {
-    const oldGames = await getAllOldBlackjackGames(1) // Day
+    const oldGames = await getAllOldBlackjackGames(1) // 1 day
 
     for (const game of oldGames) {
       try {
@@ -40,53 +42,68 @@ export default async (client: Client) => {
 
         const engine = docToEngine(game)
 
-        const result = applyAction(engine, 'STAND')
+        applyAction(engine, 'STAND')
 
-        if (!result.finished && 'dealerTurn' in result) {
-          while (dealerShouldDraw(engine)) {
-            dealerDrawOne(engine)
+        const nextHandIndex = engine.hands.findIndex(
+          (h, i) => i > engine.activeHandIndex && !h.finished
+        )
+
+        if (nextHandIndex !== -1) {
+          engine.activeHandIndex = nextHandIndex
+          engineToDoc(engine, game)
+          await updateBlackjackGame(game)
+          continue
+        }
+
+        engine.activeHandIndex = engine.hands.length - 1
+
+        while (dealerShouldDraw(engine)) {
+          dealerDrawOne(engine)
+        }
+
+        let totalPayout = 0
+
+        for (let i = 0; i < engine.hands.length; i++) {
+          const r = resolveResult(engine, i)
+          if (r.finished) {
+            totalPayout += r.payout
           }
+        }
 
-          const finalResult = resolveResult(engine)
+        if (totalPayout > 0) {
+          await createTransaction({
+            userId: game.userId,
+            guildId: game.guildId,
+            amount: totalPayout,
+            type: 'win',
+            source: 'casino',
+            betId: game.betId
+          })
+        }
 
-          if (finalResult.finished && finalResult.payout > 0) {
-            await createTransaction({
+        await message.edit({
+          embeds: [
+            renderBlackjackEmbed({
               userId: game.userId,
               guildId: game.guildId,
-              amount: finalResult.payout,
-              type: 'win',
-              source: 'casino',
-              betId: game.betId
+              betId: game.betId,
+              hands: engine.hands,
+              activeHandIndex: engine.activeHandIndex,
+              dealerCards: engine.dealerCards,
+              showBalance: false
             })
-          }
+          ],
+          components: []
+        })
 
-          if (finalResult.finished) {
-            await message.edit({
-              embeds: [
-                renderBlackjackEmbed({
-                  userId: game.userId,
-                  guildId: game.guildId,
-                  betId: game.betId,
-                  betAmount: engine.betAmount,
-                  playerCards: engine.playerCards,
-                  dealerCards: engine.dealerCards,
-                  showBalance: false,
-                  resultId: finalResult.resultId
-                })
-              ],
-              components: []
-            })
-          }
+        await deleteBlackjackGame({
+          userId: game.userId,
+          guildId: game.guildId
+        })
 
-          await deleteBlackjackGame({
-            userId: game.userId,
-            guildId: game.guildId
-          })
-
-          logger.worker(
-            `🃏 Auto-stand executed for ${game.betId} in guild: ${game.guildId}`
-          )
-        }
+        logger.worker(
+          `🃏 Auto-stand executed for ${game.betId} in guild: ${game.guildId}`
+        )
       } catch (err) {
         logger.error('Auto-stand failed:', err)
       }

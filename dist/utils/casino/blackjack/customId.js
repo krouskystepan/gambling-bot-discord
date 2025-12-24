@@ -9,7 +9,7 @@ export const decodeId = (id) => {
     if (actionRaw !== 'HIT' &&
         actionRaw !== 'STAND' &&
         actionRaw !== 'DOUBLE' &&
-        actionRaw !== 'DEV-DELETE') {
+        actionRaw !== 'SPLIT') {
         return null;
     }
     return {

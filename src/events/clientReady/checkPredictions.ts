@@ -84,8 +84,9 @@ const ONE_DAY = 24 * 60 * 60 * 1000
 const ONE_MINUTE = 60 * 1000
 
 export default async (client: Client) => {
-  logger.boot('⏱️ Prediction cleanup & autolock workers started')
-
+  logger.boot('⌛ Prediction cleanup worker started')
   setInterval(cleanupOldPredictions, ONE_DAY)
+
+  logger.boot('⌛ Prediction autolock worker started')
   setInterval(() => autolockPredictions(client), ONE_MINUTE)
 }

@@ -1,6 +1,6 @@
 import { MessageFlags } from 'discord.js';
 import { consumeUserBalance, createTransaction, deleteBlackjackGame, getBlackjackGameByBetId, updateBlackjackGame } from '@/services';
-import { applyAction, dealerDrawOne, dealerShouldDraw, decodeId, docToEngine, engineToDoc, renderBlackjackButtons, renderBlackjackEmbed, resolveResult } from '@/utils/casino/blackjack';
+import { applyAction, calculateHandValue, canSplit, dealerDrawOne, dealerShouldDraw, decodeId, docToEngine, engineToDoc, renderBlackjackButtons, renderBlackjackEmbed, resolveResult } from '@/utils/casino/blackjack';
 import { logger } from '@/utils/logger';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export default async (interaction) => {
@@ -14,41 +14,10 @@ export default async (interaction) => {
     if (!guildId)
         return;
     try {
-        // TODO: Enhance the errors
-        const game = await getBlackjackGameByBetId({
-            betId,
-            guildId
-        });
+        const game = await getBlackjackGameByBetId({ betId, guildId });
         if (!game) {
             return interaction.reply({
                 content: 'This game no longer exists.',
-                flags: MessageFlags.Ephemeral
-            });
-        }
-        // TODO: Delete this in prod.
-        if (action === 'DEV-DELETE') {
-            const engine = docToEngine(game);
-            deleteBlackjackGame({
-                userId: game.userId,
-                guildId
-            });
-            await interaction.message.edit({
-                embeds: [
-                    renderBlackjackEmbed({
-                        userId: game.userId,
-                        guildId,
-                        betId,
-                        betAmount: engine.betAmount,
-                        playerCards: engine.playerCards,
-                        dealerCards: engine.dealerCards,
-                        showBalance,
-                        dealerHideSecondCard: false
-                    })
-                ],
-                components: []
-            });
-            return interaction.reply({
-                content: 'Game Removed. DEV ONLY!',
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -60,11 +29,12 @@ export default async (interaction) => {
         }
         await interaction.deferUpdate();
         const engine = docToEngine(game);
+        const activeHand = engine.hands[engine.activeHandIndex];
         if (action === 'DOUBLE') {
             const user = await consumeUserBalance({
                 userId: game.userId,
                 guildId,
-                amount: engine.betAmount
+                amount: activeHand.betAmount
             });
             if (!user) {
                 return interaction.followUp({
@@ -75,31 +45,75 @@ export default async (interaction) => {
             await createTransaction({
                 userId: game.userId,
                 guildId,
-                amount: engine.betAmount,
+                amount: activeHand.betAmount,
                 type: 'bet',
                 source: 'casino',
                 betId
             });
         }
-        const result = applyAction(engine, action);
-        if (!result.finished && 'dealerTurn' in result) {
+        applyAction(engine, action);
+        if (action === 'SPLIT') {
+            engineToDoc(engine, game);
+            await updateBlackjackGame(game);
+            const hand = engine.hands[engine.activeHandIndex];
             await interaction.message.edit({
                 embeds: [
                     renderBlackjackEmbed({
                         userId: game.userId,
                         guildId,
                         betId,
-                        betAmount: engine.betAmount,
-                        playerCards: engine.playerCards,
+                        hands: engine.hands,
+                        activeHandIndex: engine.activeHandIndex,
                         dealerCards: engine.dealerCards,
                         showBalance,
-                        dealerHideSecondCard: false
+                        dealerHideSecondCard: true
+                    })
+                ],
+                components: [
+                    renderBlackjackButtons({
+                        betId,
+                        showBalance,
+                        canDouble: hand.cards.length === 2,
+                        canSplit: false
+                    })
+                ]
+            });
+            return;
+        }
+        const value = calculateHandValue(activeHand.cards);
+        if (value > 21) {
+            activeHand.finished = true;
+        }
+        if (action === 'STAND' || action === 'DOUBLE') {
+            activeHand.finished = true;
+        }
+        if (activeHand.finished) {
+            const nextHandIndex = engine.hands.findIndex((h, i) => i > engine.activeHandIndex && !h.finished);
+            if (nextHandIndex !== -1) {
+                engine.activeHandIndex = nextHandIndex;
+            }
+            else {
+                engine.activeHandIndex = -1;
+            }
+        }
+        if (engine.activeHandIndex === -1) {
+            engineToDoc(engine, game);
+            await updateBlackjackGame(game);
+            await interaction.message.edit({
+                embeds: [
+                    renderBlackjackEmbed({
+                        userId: game.userId,
+                        guildId,
+                        betId,
+                        hands: engine.hands,
+                        activeHandIndex: -1,
+                        dealerCards: engine.dealerCards,
+                        showBalance,
+                        result: { kind: 'PHASE', gamePhaseId: 'DEALER_DRAWING' }
                     })
                 ],
                 components: []
             });
-            engineToDoc(engine, game);
-            await updateBlackjackGame(game);
             while (dealerShouldDraw(engine)) {
                 await sleep(700);
                 dealerDrawOne(engine);
@@ -109,56 +123,30 @@ export default async (interaction) => {
                             userId: game.userId,
                             guildId,
                             betId,
-                            betAmount: engine.betAmount,
-                            playerCards: engine.playerCards,
+                            hands: engine.hands,
+                            activeHandIndex: -1,
                             dealerCards: engine.dealerCards,
                             showBalance,
-                            dealerHideSecondCard: false
+                            result: { kind: 'PHASE', gamePhaseId: 'DEALER_DRAWING' }
                         })
                     ],
                     components: []
                 });
             }
-            const finalResult = resolveResult(engine);
-            if (finalResult.finished && finalResult.payout > 0) {
+            let totalPayout = 0;
+            for (let i = 0; i < engine.hands.length; i++) {
+                const r = resolveResult(engine, i);
+                if (r.finished)
+                    totalPayout += r.payout;
+            }
+            const totalBet = engine.hands.reduce((s, h) => s + h.betAmount, 0);
+            const net = totalPayout - totalBet;
+            const finalResultId = net > 0 ? 'WIN' : net < 0 ? 'LOSS' : 'EVEN';
+            if (totalPayout > 0) {
                 await createTransaction({
                     userId: game.userId,
                     guildId,
-                    amount: finalResult.payout,
-                    type: 'win',
-                    source: 'casino',
-                    betId
-                });
-            }
-            if (finalResult.finished) {
-                await interaction.message.edit({
-                    embeds: [
-                        renderBlackjackEmbed({
-                            userId: game.userId,
-                            guildId,
-                            betId,
-                            betAmount: engine.betAmount,
-                            playerCards: engine.playerCards,
-                            dealerCards: engine.dealerCards,
-                            showBalance,
-                            resultId: finalResult.resultId
-                        })
-                    ],
-                    components: []
-                });
-            }
-            await deleteBlackjackGame({
-                userId: game.userId,
-                guildId
-            });
-            return;
-        }
-        if (result.finished) {
-            if (result.payout > 0) {
-                await createTransaction({
-                    userId: game.userId,
-                    guildId,
-                    amount: result.payout,
+                    amount: totalPayout,
                     type: 'win',
                     source: 'casino',
                     betId
@@ -170,12 +158,11 @@ export default async (interaction) => {
                         userId: game.userId,
                         guildId,
                         betId,
-                        betAmount: engine.betAmount,
-                        playerCards: engine.playerCards,
+                        hands: engine.hands,
+                        activeHandIndex: -1,
                         dealerCards: engine.dealerCards,
                         showBalance,
-                        userBalance: undefined,
-                        resultId: result.resultId
+                        result: { kind: 'FINAL', finalResultId }
                     })
                 ],
                 components: []
@@ -186,20 +173,20 @@ export default async (interaction) => {
             });
             return;
         }
-        // 7️⃣ Persist ongoing game
         engineToDoc(engine, game);
         await updateBlackjackGame(game);
-        // 8️⃣ Render ongoing state
+        const hand = engine.hands[engine.activeHandIndex];
         await interaction.message.edit({
             embeds: [
                 renderBlackjackEmbed({
                     userId: game.userId,
                     guildId,
                     betId,
-                    betAmount: engine.betAmount,
-                    playerCards: engine.playerCards,
+                    hands: engine.hands,
+                    activeHandIndex: engine.activeHandIndex,
                     dealerCards: engine.dealerCards,
                     showBalance,
+                    result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
                     dealerHideSecondCard: true
                 })
             ],
@@ -207,8 +194,8 @@ export default async (interaction) => {
                 renderBlackjackButtons({
                     betId,
                     showBalance,
-                    canDouble: engine.playerCards.length === 2,
-                    canSplit: false
+                    canDouble: hand.cards.length === 2,
+                    canSplit: canSplit(engine)
                 })
             ]
         });

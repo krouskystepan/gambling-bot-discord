@@ -1,14 +1,19 @@
-export const docToEngine = (doc) => ({
-    deck: [...doc.deck],
-    deckIndex: doc.deckIndex,
-    playerCards: [...doc.playerCards],
-    dealerCards: [...doc.dealerCards],
-    betAmount: doc.betAmount
+const handDocToState = (hand) => ({
+    ...hand,
+    isSplitHand: false
 });
-export const engineToDoc = (engine, doc) => {
-    doc.deck = engine.deck;
-    doc.deckIndex = engine.deckIndex;
-    doc.playerCards = engine.playerCards;
-    doc.dealerCards = engine.dealerCards;
-    doc.betAmount = engine.betAmount;
+const handStateToDoc = ({ isSplitHand: _isSplitHand, ...rest }) => rest;
+export const docToEngine = (game) => ({
+    deck: game.deck,
+    deckIndex: game.deckIndex,
+    hands: game.hands.map(handDocToState),
+    activeHandIndex: game.activeHandIndex,
+    dealerCards: game.dealerCards
+});
+export const engineToDoc = (engine, game) => {
+    game.deck = engine.deck;
+    game.deckIndex = engine.deckIndex;
+    game.hands = engine.hands.map(handStateToDoc);
+    game.activeHandIndex = engine.activeHandIndex;
+    game.dealerCards = engine.dealerCards;
 };

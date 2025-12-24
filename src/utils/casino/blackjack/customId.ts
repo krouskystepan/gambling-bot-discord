@@ -21,7 +21,7 @@ export const decodeId = (id: string): BlackjackButtonId | null => {
     actionRaw !== 'HIT' &&
     actionRaw !== 'STAND' &&
     actionRaw !== 'DOUBLE' &&
-    actionRaw !== 'DEV-DELETE'
+    actionRaw !== 'SPLIT'
   ) {
     return null
   }

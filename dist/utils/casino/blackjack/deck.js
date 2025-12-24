@@ -14,7 +14,8 @@ export const VALUES = [
     { label: 'Q', value: 10 },
     { label: 'K', value: 10 }
 ];
-export const DECK = SUITES.flatMap((suite) => VALUES.map(({ label, value }) => ({ suite, label, value })));
+const createDeck = (deckCount) => Array.from({ length: deckCount }, () => SUITES.flatMap((suite) => VALUES.map(({ label, value }) => ({ suite, label, value })))).flat();
+export const DECK = createDeck(2); // 2 decks
 export const shuffleDeck = (deck) => {
     const arr = [...deck];
     for (let i = arr.length - 1; i > 0; i--) {

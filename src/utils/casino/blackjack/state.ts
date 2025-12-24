@@ -3,18 +3,18 @@ import { TBlackjackGame } from '@/models/BlackjackGame'
 
 import { EngineState } from './engine'
 
-export const docToEngine = (doc: TBlackjackGame): EngineState => ({
-  deck: [...doc.deck],
-  deckIndex: doc.deckIndex,
-  playerCards: [...doc.playerCards],
-  dealerCards: [...doc.dealerCards],
-  betAmount: doc.betAmount
+export const docToEngine = (game: TBlackjackGame): EngineState => ({
+  deck: game.deck,
+  deckIndex: game.deckIndex,
+  hands: game.hands,
+  activeHandIndex: game.activeHandIndex,
+  dealerCards: game.dealerCards
 })
 
-export const engineToDoc = (engine: EngineState, doc: TBlackjackGame): void => {
-  doc.deck = engine.deck
-  doc.deckIndex = engine.deckIndex
-  doc.playerCards = engine.playerCards
-  doc.dealerCards = engine.dealerCards
-  doc.betAmount = engine.betAmount
+export const engineToDoc = (engine: EngineState, game: TBlackjackGame) => {
+  game.deck = engine.deck
+  game.deckIndex = engine.deckIndex
+  game.hands = engine.hands
+  game.activeHandIndex = engine.activeHandIndex
+  game.dealerCards = engine.dealerCards
 }

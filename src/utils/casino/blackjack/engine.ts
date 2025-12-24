@@ -1,8 +1,10 @@
+// eslint-disable-next-line no-restricted-imports
+import { TBlackjackHand } from '@/models/BlackjackGame'
+
 import { Card } from './deck'
 import { calculateHandValue } from './math'
 
-// TODO: STAND
-export type PlayerAction = 'HIT' | 'STAND' | 'DOUBLE' | 'SPLIT' | 'DEV-DELETE'
+export type PlayerAction = 'HIT' | 'STAND' | 'DOUBLE' | 'SPLIT'
 
 export type EngineResult =
   | { finished: false }
@@ -19,9 +21,9 @@ export type EngineResult =
 export type EngineState = {
   deck: Card[]
   deckIndex: number
-  playerCards: Card[]
+  hands: TBlackjackHand[]
+  activeHandIndex: number
   dealerCards: Card[]
-  betAmount: number
 }
 
 const draw = (s: EngineState): Card => {
@@ -31,27 +33,82 @@ const draw = (s: EngineState): Card => {
   return card
 }
 
+export const canSplit = (s: EngineState): boolean => {
+  const hand = s.hands[s.activeHandIndex]
+  if (!hand) return false
+
+  if (s.hands.length > 1) return false
+
+  if (hand.cards.length !== 2) return false
+
+  return hand.cards[0].label === hand.cards[1].label
+}
+
 export const applyAction = (
   s: EngineState,
   action: PlayerAction
 ): EngineResult => {
-  if (action === 'HIT' || action === 'DOUBLE') {
-    s.playerCards.push(draw(s))
+  const hand = s.hands[s.activeHandIndex]
+  if (!hand || hand.finished) {
+    return { finished: false }
+  }
 
-    const p = calculateHandValue(s.playerCards)
+  if (action === 'HIT' || action === 'DOUBLE') {
+    hand.cards.push(draw(s))
+
+    const p = calculateHandValue(hand.cards)
     if (p > 21) {
-      return { finished: true, resultId: 'PB', payout: 0 }
+      hand.finished = true
+      return { finished: false }
     }
 
     if (action === 'DOUBLE') {
-      s.betAmount *= 2
+      hand.betAmount *= 2
+      hand.finished = true
+      return { finished: false }
+    }
+
+    return { finished: false }
+  }
+
+  if (action === 'SPLIT') {
+    if (!canSplit(s)) {
+      throw new Error('Invalid split')
+    }
+
+    const [c1, c2] = hand.cards
+    const isAceSplit = c1.label === 'A' && c2.label === 'A'
+
+    hand.cards = [c1, draw(s)]
+    hand.isSplitHand = true
+
+    const secondHand: TBlackjackHand = {
+      cards: [c2, draw(s)],
+      betAmount: hand.betAmount,
+      finished: false,
+      isSplitHand: true
+    }
+
+    s.hands.splice(s.activeHandIndex + 1, 0, secondHand)
+
+    if (isAceSplit) {
+      hand.finished = true
+      secondHand.finished = true
+
+      s.activeHandIndex = s.hands.length - 1
+
       return { finished: false, dealerTurn: true }
     }
 
     return { finished: false }
   }
 
-  return { finished: false, dealerTurn: true }
+  if (action === 'STAND') {
+    hand.finished = true
+    return { finished: false }
+  }
+
+  return { finished: false }
 }
 
 export const dealerDrawOne = (s: EngineState): void => {
@@ -62,20 +119,32 @@ export const dealerShouldDraw = (s: EngineState): boolean => {
   return calculateHandValue(s.dealerCards) < 17
 }
 
-export const resolveResult = (s: EngineState): EngineResult => {
-  const p = calculateHandValue(s.playerCards)
+export const resolveResult = (
+  s: EngineState,
+  handIndex: number
+): EngineResult => {
+  const hand = s.hands[handIndex]
+  if (!hand) {
+    return { finished: true, resultId: 'DW', payout: 0 }
+  }
+
+  const p = calculateHandValue(hand.cards)
   const d = calculateHandValue(s.dealerCards)
 
+  if (p > 21) {
+    return { finished: true, resultId: 'PB', payout: 0 }
+  }
+
   if (d > 21) {
-    return { finished: true, resultId: 'DB', payout: s.betAmount * 2 }
+    return { finished: true, resultId: 'DB', payout: hand.betAmount * 2 }
   }
 
   if (p === d) {
-    return { finished: true, resultId: 'PUSH', payout: s.betAmount }
+    return { finished: true, resultId: 'PUSH', payout: hand.betAmount }
   }
 
   if (p > d) {
-    return { finished: true, resultId: 'PW', payout: s.betAmount * 2 }
+    return { finished: true, resultId: 'PW', payout: hand.betAmount * 2 }
   }
 
   return { finished: true, resultId: 'DW', payout: 0 }
