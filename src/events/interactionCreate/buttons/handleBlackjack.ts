@@ -22,13 +22,12 @@ import {
   renderBlackjackEmbed,
   resolveResult
 } from '@/utils/casino/blackjack'
+import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-//TODO: when 21 autostand after normal hit
-//TODO: Better return interactions in whole blackjack
 export default async (interaction: Interaction) => {
   if (!interaction.isButton()) return
 
@@ -44,14 +43,19 @@ export default async (interaction: Interaction) => {
 
     if (!game) {
       return interaction.reply({
-        content: 'This game no longer exists.',
+        embeds: [
+          createErrorEmbed(
+            'Error - Invalid Game',
+            'This game no longer exists.'
+          )
+        ],
         flags: MessageFlags.Ephemeral
       })
     }
 
     if (interaction.user.id !== game.userId) {
       return interaction.reply({
-        content: 'This is not your game.',
+        embeds: [createInfoEmbed('Invalid Input', 'This is not your game.')],
         flags: MessageFlags.Ephemeral
       })
     }
@@ -70,7 +74,12 @@ export default async (interaction: Interaction) => {
 
       if (!user) {
         return interaction.followUp({
-          content: `You don't have enough balance to double.`,
+          embeds: [
+            createInfoEmbed(
+              'Insufficient Funds',
+              `You don't have enough balance to double.`
+            )
+          ],
           flags: MessageFlags.Ephemeral
         })
       }

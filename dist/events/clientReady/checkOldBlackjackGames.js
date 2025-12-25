@@ -52,6 +52,7 @@ export default async (client) => {
                     });
                 }
                 await message.edit({
+                    content: 'This game was inactive, so auto-stand was executed.',
                     embeds: [
                         renderBlackjackEmbed({
                             userId: game.userId,
