@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch --no-deprecation src/index.ts",
-    "build": "npm run clean && npm run check && npm run gdocs && tsc",
+    "build": "npm run clean && npm run check && npm run docs:commands && tsc",
     "start": "node dist/index.js",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "format:fix": "prettier --write \"src/**/*.{ts,tsx}\"",
@@ -14,7 +14,9 @@
     "check": "pnpm format:check && pnpm lint:check",
     "fix": "pnpm format:fix && pnpm lint:fix",
     "clean": "rm -rf dist",
-    "gdocs": "tsx src/scripts/generate-commands-structure.ts"
+    "docs:commands": "tsx src/scripts/generate-commands-structure.ts",
+    "audit:economy": "tsx src/scripts/audit-economy-summary.ts",
+    "audit:balance": "tsx src/scripts/audit-balances.ts"
   },
   "keywords": [],
   "author": "",

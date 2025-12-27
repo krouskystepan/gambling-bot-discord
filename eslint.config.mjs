@@ -60,7 +60,7 @@ export default [
     }
   },
   {
-    files: ['src/services/**/*.{ts,tsx}'],
+    files: ['src/services/**/*.{ts,tsx}', 'src/scripts/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': 'off'
     }
