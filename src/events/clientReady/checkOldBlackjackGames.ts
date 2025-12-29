@@ -4,9 +4,11 @@ import {
   createTransaction,
   deleteBlackjackGame,
   getAllOldBlackjackGames,
-  updateBlackjackGame
+  updateBlackjackGame,
+  updateUserBalance
 } from '@/services'
 import {
+  FinalGameResultId,
   applyAction,
   dealerDrawOne,
   dealerShouldDraw,
@@ -40,6 +42,10 @@ export default async (client: Client) => {
 
         if (!message) continue
 
+        await message.edit({
+          components: []
+        })
+
         const engine = docToEngine(game)
 
         applyAction(engine, 'STAND')
@@ -70,6 +76,21 @@ export default async (client: Client) => {
           }
         }
 
+        const totalBet = engine.hands.reduce(
+          (sum, hand) => sum + hand.betAmount,
+          0
+        )
+
+        let finalResultId: FinalGameResultId
+
+        if (totalPayout === 0) {
+          finalResultId = 'LOSS'
+        } else if (totalPayout === totalBet) {
+          finalResultId = 'EVEN'
+        } else {
+          finalResultId = 'WIN'
+        }
+
         if (totalPayout > 0) {
           await createTransaction({
             userId: game.userId,
@@ -78,6 +99,12 @@ export default async (client: Client) => {
             type: 'win',
             source: 'casino',
             betId: game.betId
+          })
+
+          await updateUserBalance({
+            userId: game.userId,
+            guildId: game.guildId,
+            amount: totalPayout
           })
         }
 
@@ -89,8 +116,9 @@ export default async (client: Client) => {
               guildId: game.guildId,
               betId: game.betId,
               hands: engine.hands,
-              activeHandIndex: engine.activeHandIndex,
+              activeHandIndex: -1,
               dealerCards: engine.dealerCards,
+              result: { kind: 'FINAL', finalResultId },
               showBalance: false
             })
           ],
@@ -109,5 +137,5 @@ export default async (client: Client) => {
         logger.error('Auto-stand failed:', err)
       }
     }
-  }, 60_000)
+  }, 600_000)
 }

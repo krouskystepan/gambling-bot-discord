@@ -97,6 +97,24 @@ export default async (interaction: Interaction) => {
     applyAction(engine, action)
 
     if (action === 'SPLIT') {
+      const user = await consumeUserBalance({
+        userId: game.userId,
+        guildId,
+        amount: activeHand.betAmount
+      })
+
+      if (!user) {
+        return interaction.followUp({
+          embeds: [
+            createInfoEmbed(
+              'Insufficient Funds',
+              `You don't have enough balance to split.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
       engineToDoc(engine, game)
       await updateBlackjackGame(game)
 
@@ -112,6 +130,7 @@ export default async (interaction: Interaction) => {
             activeHandIndex: engine.activeHandIndex,
             dealerCards: engine.dealerCards,
             showBalance,
+            result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
             dealerHideSecondCard: true
           })
         ],

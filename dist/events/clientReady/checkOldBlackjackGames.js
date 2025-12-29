@@ -1,5 +1,5 @@
 import { TextChannel } from 'discord.js';
-import { createTransaction, deleteBlackjackGame, getAllOldBlackjackGames, updateBlackjackGame } from '@/services';
+import { createTransaction, deleteBlackjackGame, getAllOldBlackjackGames, updateBlackjackGame, updateUserBalance } from '@/services';
 import { applyAction, dealerDrawOne, dealerShouldDraw, docToEngine, engineToDoc, renderBlackjackEmbed, resolveResult } from '@/utils/casino/blackjack';
 import { logger } from '@/utils/logger';
 export default async (client) => {
@@ -21,6 +21,9 @@ export default async (client) => {
                     .catch(() => null);
                 if (!message)
                     continue;
+                await message.edit({
+                    components: []
+                });
                 const engine = docToEngine(game);
                 applyAction(engine, 'STAND');
                 const nextHandIndex = engine.hands.findIndex((h, i) => i > engine.activeHandIndex && !h.finished);
@@ -41,6 +44,17 @@ export default async (client) => {
                         totalPayout += r.payout;
                     }
                 }
+                const totalBet = engine.hands.reduce((sum, hand) => sum + hand.betAmount, 0);
+                let finalResultId;
+                if (totalPayout === 0) {
+                    finalResultId = 'LOSS';
+                }
+                else if (totalPayout === totalBet) {
+                    finalResultId = 'EVEN';
+                }
+                else {
+                    finalResultId = 'WIN';
+                }
                 if (totalPayout > 0) {
                     await createTransaction({
                         userId: game.userId,
@@ -49,6 +63,11 @@ export default async (client) => {
                         type: 'win',
                         source: 'casino',
                         betId: game.betId
+                    });
+                    await updateUserBalance({
+                        userId: game.userId,
+                        guildId: game.guildId,
+                        amount: totalPayout
                     });
                 }
                 await message.edit({
@@ -59,8 +78,9 @@ export default async (client) => {
                             guildId: game.guildId,
                             betId: game.betId,
                             hands: engine.hands,
-                            activeHandIndex: engine.activeHandIndex,
+                            activeHandIndex: -1,
                             dealerCards: engine.dealerCards,
+                            result: { kind: 'FINAL', finalResultId },
                             showBalance: false
                         })
                     ],
@@ -76,5 +96,5 @@ export default async (client) => {
                 logger.error('Auto-stand failed:', err);
             }
         }
-    }, 60_000);
+    }, 600_000);
 };
