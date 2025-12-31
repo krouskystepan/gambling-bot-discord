@@ -1,15 +1,18 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import {
   ApplicationCommandOptionType,
   ChannelType,
   CommandInteractionOptionResolver,
-  MessageFlags,
+  MessageFlags
 } from 'discord.js'
-import GuildConfiguration from '../../../models/GuildConfiguration'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
+import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
 import {
   createErrorEmbed,
-  createSuccessEmbed,
-} from '../../../utils/createEmbed'
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-atm',
@@ -26,9 +29,9 @@ export const data: CommandData = {
           description: 'The channel you want to set.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'remove-actions',
@@ -40,9 +43,9 @@ export const data: CommandData = {
           name: 'channel-id',
           description: 'The ID of the channel you want to remove.',
           type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'add-logs',
@@ -54,9 +57,9 @@ export const data: CommandData = {
           description: 'The channel you want to set.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'remove-logs',
@@ -68,30 +71,30 @@ export const data: CommandData = {
           name: 'channel-id',
           description: 'The ID of the channel you want to remove.',
           type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-    },
+          required: true
+        }
+      ]
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  deleted: true,
-  devOnly: true,
+  deleted: false,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    let guildConfiguration = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    let guildConfiguration = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     if (!guildConfiguration) {
-      guildConfiguration = new GuildConfiguration({
-        guildId: interaction.guildId,
+      guildConfiguration = await createGuildConfiguration({
+        guildId: interaction.guildId!
       })
     }
 
@@ -108,9 +111,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'ATM Actions Channel Setup - Add',
               `Channel ${channel} is already set for ATM transactions.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -122,8 +125,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'ATM Actions Channel Setup - Add',
             `Channel ${channel} has been successfully set for ATM transactions.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -136,9 +139,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'ATM Actions Channel Setup - Remove',
               `Channel with ID ${channelId} is not set for ATM transactions.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -151,8 +154,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'ATM Actions Channel Setup - Remove',
             `Channel with ID ${channelId} has been successfully removed from ATM transactions.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -165,9 +168,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'ATM Logs Channel Setup - Add',
               `Channel ${channel} is already set for ATM logs.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -179,8 +182,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'ATM Logs Channel Setup - Add',
             `Channel ${channel} has been successfully set for ATM logs.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -193,9 +196,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'ATM Logs Channel Setup - Remove',
               `Channel with ID ${channelId} is not set for ATM logs.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -208,11 +211,11 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'ATM Logs Channel Setup - Remove',
             `Channel with ID ${channelId} has been successfully removed from ATM logs.`
-          ),
-        ],
+          )
+        ]
       })
     }
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

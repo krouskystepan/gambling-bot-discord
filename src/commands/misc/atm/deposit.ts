@@ -1,9 +1,3 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
-import {
-  checkUserRegistration,
-  formatNumberToReadableString,
-  parseReadableStringToNumber,
-} from '../../../utils/utils'
 import {
   ActionRowBuilder,
   ApplicationCommandOptionType,
@@ -12,14 +6,21 @@ import {
   EmbedBuilder,
   GuildMember,
   MessageFlags,
-  TextChannel,
+  TextChannel
 } from 'discord.js'
-import GuildConfiguration from '../../../models/GuildConfiguration'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
+import { checkAtmChannels, checkUserRegistration } from '@/services'
 import {
-  createErrorEmbed,
+  formatNumberToReadableString,
+  parseReadableStringToNumber
+} from '@/utils/common/utils'
+import {
   createInfoEmbed,
-  createSuccessEmbed,
-} from '../../../utils/createEmbed'
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'deposit',
@@ -29,80 +30,29 @@ export const data: CommandData = {
       name: 'amount',
       description: 'The amount you want to deposit (e.g., 1000, 2k, 10.5k).',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'account',
       description: 'The account from which you are sending money.',
       type: ApplicationCommandOptionType.String,
-      required: true,
-    },
+      required: true
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction, client }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(
-      interaction.user.id,
-      interaction.guildId!
-    )
+    const user = await checkUserRegistration({ interaction })
+    if (!user) return
 
-    if (!user) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Not registered',
-            'You are not registered yet.\nUse the `/register` command to register.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    const guildConfiguration = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
-    })
-
-    if (!guildConfiguration?.atmChannelIds.logs) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Logs Not Set Up',
-            'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (!guildConfiguration?.atmChannelIds.actions) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Actions Not Configured',
-            'This ATM command has not been set up yet.\nPlease contact an administrator to complete the setup.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    if (guildConfiguration?.atmChannelIds.actions !== interaction.channelId) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Incorrect Channel',
-            `This command can only be used in <#${guildConfiguration.atmChannelIds.actions}>.\nPlease use the correct channel to proceed.`
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const guildConfiguration = await checkAtmChannels(interaction)
+    if (!guildConfiguration) return
 
     const account = interaction.options.getString('account', true)
     const amount = interaction.options.getString('amount', true)
@@ -115,9 +65,9 @@ export async function run({ interaction, client }: SlashCommandProps) {
           createInfoEmbed(
             'Invalid Input - Not a number',
             'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -127,9 +77,9 @@ export async function run({ interaction, client }: SlashCommandProps) {
           createInfoEmbed(
             'Invalid Input - Non-positive number',
             'The number you provided must be greater than 0.\nPlease enter a positive value.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -155,9 +105,9 @@ export async function run({ interaction, client }: SlashCommandProps) {
           .setColor('Green')
           .setDescription(
             `<@${interaction.user.id}> has deposited **$${readableAmount}** from account **${account}**.`
-          ),
+          )
       ],
-      components: [],
+      components: []
     })
 
     const approveButton = new ButtonBuilder()
@@ -186,11 +136,11 @@ export async function run({ interaction, client }: SlashCommandProps) {
         createSuccessEmbed(
           'ATM - Deposit',
           `You have successfully deposited **$${readableAmount}** to your account.\nPlease wait for the transaction to be processed.`
-        ),
+        )
       ],
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral
     })
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

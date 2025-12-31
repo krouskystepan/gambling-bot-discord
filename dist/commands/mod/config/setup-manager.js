@@ -1,57 +1,54 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const discord_js_1 = require("discord.js");
-const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const createEmbed_1 = require("../../../utils/createEmbed");
-exports.data = {
+import { ApplicationCommandOptionType, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
+import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
+export const data = {
     name: 'setup-manager',
     description: 'Manage the manager role.',
     options: [
         {
             name: 'set-role',
             description: 'Set the manager role.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'role',
                     description: 'The role you want to set as manager.',
-                    type: discord_js_1.ApplicationCommandOptionType.Role,
-                    required: true,
-                },
-            ],
+                    type: ApplicationCommandOptionType.Role,
+                    required: true
+                }
+            ]
         },
         {
             name: 'remove',
             description: 'Remove the manager role using its ID.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'role-id',
                     description: 'The ID of the role you want to remove.',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
-                    required: true,
-                },
-            ],
-        },
+                    type: ApplicationCommandOptionType.String,
+                    required: true
+                }
+            ]
+        }
     ],
-    dm_permission: false,
+    dm_permission: false
 };
-exports.options = {
+export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: true,
-    devOnly: true,
+    deleted: false,
+    devOnly: true
 };
-async function run({ interaction }) {
+export async function run({ interaction }) {
     try {
-        let guildConfiguration = await GuildConfiguration_1.default.findOne({
-            guildId: interaction.guildId,
+        let guildConfiguration = await getGuildConfigByGuildId({
+            guildId: interaction.guildId
         });
         if (!guildConfiguration) {
-            guildConfiguration = new GuildConfiguration_1.default({
-                guildId: interaction.guildId,
+            guildConfiguration = await createGuildConfiguration({
+                guildId: interaction.guildId
             });
         }
         const options = interaction.options;
@@ -61,17 +58,17 @@ async function run({ interaction }) {
             if (guildConfiguration.managerRoleId === role.id) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Manager Role Setup - Set', `The manager role is already set to ${role}.`),
+                        createErrorEmbed('Manager Role Setup - Set', `The manager role is already set to ${role}.`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             guildConfiguration.managerRoleId = role.id;
             await guildConfiguration.save();
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Manager Role Setup - Set', `Manager role has been set to ${role}.`),
-                ],
+                    createSuccessEmbed('Manager Role Setup - Set', `Manager role has been set to ${role}.`)
+                ]
             });
         }
         if (subcommand === 'remove') {
@@ -79,21 +76,21 @@ async function run({ interaction }) {
             if (guildConfiguration.managerRoleId !== roleId) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Manager Role Setup - Remove', `Role with ID ${roleId} is not set as manager role.`),
+                        createErrorEmbed('Manager Role Setup - Remove', `Role with ID ${roleId} is not set as manager role.`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             guildConfiguration.managerRoleId = '';
             await guildConfiguration.save();
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Manager Role Setup - Remove', `Manager role with ID ${roleId} has been successfully removed.`),
-                ],
+                    createSuccessEmbed('Manager Role Setup - Remove', `Manager role with ID ${roleId} has been successfully removed.`)
+                ]
             });
         }
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

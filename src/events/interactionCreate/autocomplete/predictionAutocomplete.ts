@@ -1,11 +1,16 @@
-import { Client, AutocompleteInteraction } from 'discord.js'
-import Prediction from '../../../models/Prediction'
 import { DateTime } from 'luxon'
+
+import { AutocompleteInteraction, Client } from 'discord.js'
+
+import { findPredictions, getPredictionById } from '@/services'
 
 const formatDate = (date: Date) =>
   DateTime.fromJSDate(date).setZone('Europe/Prague').toFormat('dd.MM / HH:mm')
 
-export default async (interaction: AutocompleteInteraction, client: Client) => {
+export default async (
+  interaction: AutocompleteInteraction,
+  _client: Client
+) => {
   if (!interaction.isAutocomplete()) return
   if (interaction.commandName !== 'prediction') return
 
@@ -13,10 +18,10 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
   const subcommand = interaction.options.getSubcommand()
   const focusedValue = focusedOption.value
 
-  const findPredictions = async (status: string | string[]) => {
+  const searchPredictions = async (status: string | string[]) => {
     const query: Record<string, unknown> = {
       guildId: interaction.guildId,
-      title: { $regex: focusedValue, $options: 'i' },
+      title: { $regex: focusedValue, $options: 'i' }
     }
 
     if (Array.isArray(status)) {
@@ -25,19 +30,17 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
       query.status = status
     }
 
-    return await Prediction.find(query).limit(25)
+    return findPredictions(query)
   }
 
   if (subcommand === 'end') {
-    const predictions = await findPredictions('active')
+    const predictions = await searchPredictions('active')
 
-    return await interaction.respond(
+    return interaction.respond(
       predictions.length > 0
         ? predictions.map((p) => ({
-            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
-              p.createdAt
-            )}`,
-            value: p.predictionId,
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+            value: p.predictionId
           }))
         : [{ name: 'No predictions found', value: 'none' }]
     )
@@ -45,15 +48,13 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
 
   if (subcommand === 'payout') {
     if (focusedOption.name === 'prediction-id') {
-      const predictions = await findPredictions('ended')
+      const predictions = await searchPredictions('ended')
 
-      return await interaction.respond(
+      return interaction.respond(
         predictions.length > 0
           ? predictions.map((p) => ({
-              name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
-                p.createdAt
-              )}`,
-              value: p.predictionId,
+              name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+              value: p.predictionId
             }))
           : [{ name: 'No predictions found', value: 'none' }]
       )
@@ -61,13 +62,13 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
 
     if (focusedOption.name === 'winner') {
       const predictionId = interaction.options.getString('prediction-id')
-      if (!predictionId) return await interaction.respond([])
+      if (!predictionId) return interaction.respond([])
 
-      const prediction = await Prediction.findOne({
-        guildId: interaction.guildId,
-        predictionId,
+      const prediction = await getPredictionById({
+        guildId: interaction.guildId!,
+        predictionId
       })
-      if (!prediction) return await interaction.respond([])
+      if (!prediction) return interaction.respond([])
 
       const filteredChoices = prediction.choices
         .filter((c) =>
@@ -75,10 +76,10 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
         )
         .map((c) => ({
           name: `${c.choiceName} (Odds: ${c.odds})`,
-          value: c.choiceName,
+          value: c.choiceName
         }))
 
-      return await interaction.respond(
+      return interaction.respond(
         filteredChoices.length > 0
           ? filteredChoices
           : [{ name: 'No choices found', value: 'none' }]
@@ -87,30 +88,26 @@ export default async (interaction: AutocompleteInteraction, client: Client) => {
   }
 
   if (subcommand === 'cancel') {
-    const predictions = await findPredictions(['active', 'ended'])
+    const predictions = await searchPredictions(['active', 'ended'])
 
-    return await interaction.respond(
+    return interaction.respond(
       predictions.length > 0
         ? predictions.map((p) => ({
-            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
-              p.createdAt
-            )}`,
-            value: p.predictionId,
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+            value: p.predictionId
           }))
         : [{ name: 'No predictions found', value: 'none' }]
     )
   }
 
   if (subcommand === 'check') {
-    const predictions = await findPredictions(['active', 'ended'])
+    const predictions = await searchPredictions(['active', 'ended'])
 
-    return await interaction.respond(
+    return interaction.respond(
       predictions.length > 0
         ? predictions.map((p) => ({
-            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(
-              p.createdAt
-            )}`,
-            value: p.predictionId,
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+            value: p.predictionId
           }))
         : [{ name: 'No predictions found', value: 'none' }]
     )

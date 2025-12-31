@@ -1,0 +1,202 @@
+src
+├── misc
+│   ├── atm
+│   │   ├── deposit.ts
+│   │   │   └─ /deposit – Deposit money to your account.
+│   │   │      ├─ amount – The amount you want to deposit (e.g., 1000, 2k, 10.5k).
+│   │   │      ├─ account – The account from which you are sending money.
+│   │   ├── register.ts
+│   │   │   └─ /register – Register yourself in the system.
+│   │   └── withdraw.ts
+│   │       └─ /withdraw – Withdraw money from your account.
+│   │          ├─ amount – The amount you want to withdraw (e.g., 1000, 2k, 10.5k).
+│   │          ├─ account – The account you want to send the money to.
+│   ├── casino
+│   │   ├── coin-flip.ts
+│   │   │   └─ /coin-flip – Flip a coin!
+│   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
+│   │   │      ├─ side – Choose the coin side.
+│   │   │      ├─ flips – Number of flips.
+│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │   │      ├─ skip-animations – Skip game animations for faster results.
+│   │   ├── dice.ts
+│   │   │   └─ /dice – Play a dice game!
+│   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
+│   │   │      ├─ side – Choose a dice side.
+│   │   │      ├─ rolls – Number of rolls.
+│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │   │      ├─ skip-animations – Skip game animations for faster results.
+│   │   ├── goldenjackpot.ts
+│   │   │   └─ /goldenjackpot – Try your luck at the Golden Jackpot HUGEx!
+│   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
+│   │   │      ├─ entries – Number of entries (max is ${GOLDEN_JACKPOT_MAX_ENTRIES}).
+│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │   │      ├─ skip-animations – Skip game animations for faster results.
+│   │   ├── lottery.ts
+│   │   │   └─ /lottery – Play the lottery! Pick 5 numbers and see if you win.
+│   │   │      ├─ bet – Your bet amount (e.g., 100, 1k, 5k).
+│   │   │      ├─ numbers – Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).
+│   │   │      ├─ entries – Number of entries.
+│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │   │      ├─ skip-animations – Skip game animations for faster results.
+│   │   ├── other
+│   │   │   ├── blackjack.ts
+│   │   │   │   └─ /blackjack – Start a game of blackjack. You can hit, stand, or double down.
+│   │   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
+│   │   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │   │   └── rps.ts
+│   │   │       └─ /rps – Play rock, paper, scissors with another user.
+│   │   │          ├─ player – The user you want to play against.
+│   │   │          ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
+│   │   ├── roulette.ts
+│   │   │   └─ /roulette – Play Mini Roulette with multiple bets!
+│   │   │      ├─ bets – Your bets (e.g., 100 red, 50 17, 200 d2, 75 c1)
+│   │   │      ├─ spins – Number of spins.
+│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │   │      ├─ skip-animations – Skip game animations for faster results.
+│   │   └── slots.ts
+│   │       └─ /slots – Spin the slot machine!
+│   │          ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
+│   │          ├─ spins – Number of spins.
+│   │          ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │          ├─ skip-animations – Skip game animations for faster results.
+│   └── utils
+│       ├── balance.ts
+│       │   └─ /balance – Check your current balance (only you can see this).
+│       ├── bonus.ts
+│       │   └─ /bonus – Daily bonus system with streaks.
+│       │      ├─ claim – Claim your daily bonus
+│       │      ├─ check – Check your streak and next bonus
+│       ├── ping.ts
+│       │   └─ /ping – Check the bot latency.
+│       └── vip.ts
+│           └─ /vip – VIP management commands.
+│              ├─ info – Show VIP info.
+│              ├─ buy – Purchase a VIP room for a specified duration.
+│              ├─ extend – Extend your current VIP duration.
+│              ├─ add-member – Add a user to your VIP room.
+│              ├─ remove-member – Remove a user from your VIP room.
+└── mod
+    ├── auth
+    │   ├── force-register.ts
+    │   │   └─ /force-register – Force register a user.
+    │   │      ├─ user – The user you want to register.
+    │   └── force-unregister.ts
+    │       └─ /force-unregister – Unregister a user (delete from DB).
+    │          ├─ user-id – The ID of the user you want to unregister.
+    ├── config
+    │   ├── setup-atm.ts
+    │   │   └─ /setup-atm – Manage ATM actions and logs channels.
+    │   │      ├─ add-actions – Set a channel for ATM transactions (deposits and withdrawals).
+    │   │      ├─ remove-actions – Remove a channel for ATM transactions using its ID (deposits and withdrawals).
+    │   │      ├─ add-logs – Set a channel for ATM logs (transaction logs).
+    │   │      ├─ remove-logs – Remove a channel for ATM logs using its ID (transaction logs).
+    │   ├── setup-casino.ts
+    │   │   └─ /setup-casino – Manage the casino channels.
+    │   │      ├─ add – Set a channel for using casino bets.
+    │   │      ├─ remove – Remove a channel for using casino bets by ID.
+    │   ├── setup-manager.ts
+    │   │   └─ /setup-manager – Manage the manager role.
+    │   │      ├─ set-role – Set the manager role.
+    │   │      ├─ remove – Remove the manager role using its ID.
+    │   ├── setup-prediction.ts
+    │   │   └─ /setup-prediction – Manage channels for predictions (actions & logs).
+    │   │      ├─ add-actions – Add a channel where predictions can be used.
+    │   │      ├─ remove-actions – Remove a channel from prediction actions.
+    │   │      ├─ add-logs – Set a channel for prediction logs (results).
+    │   │      ├─ remove-logs – Remove the prediction logs channel.
+    │   ├── setup-settings.ts
+    │   │   └─ /setup-settings – Manage the casino settings (max, min bets and win %).
+    │   │      ├─ edit – Edit the games settings.
+    │   │      ├─ reset – Reset the casino settings to default values.
+    │   └── setup-vip.ts
+    │       └─ /setup-vip – Manage VIP settings.
+    │          ├─ add-category – Set a category for VIP rooms.
+    │          ├─ remove-category – Remove the VIP category.
+    │          ├─ add-owner-role – Set a owner role for VIP users.
+    │          ├─ remove-owner-role – Remove the owner VIP role.
+    │          ├─ add-member-role – Set a member role for VIP users.
+    │          ├─ remove-member-role – Remove the member VIP role.
+    │          ├─ set-price-per-day – Set the price per day for VIP access.
+    │          ├─ set-create-price – Set the one-time price for creating a VIP room.
+    │          ├─ set-add-member-price – Set the one-time price for adding a member to room.
+    ├── prediction.ts
+    │   └─ /prediction – Manage predictions.
+    │      ├─ create – Create a new prediction.
+    │      ├─ end – End an active prediction so no more bets can be placed.
+    │      ├─ payout – Pay out winners of a prediction.
+    │      ├─ cancel – Cancel a prediction and refund all bets.
+    │      ├─ check – Check the status of a prediction.
+    ├── test
+    │   ├── simulate-coin-flip.ts
+    │   │   └─ /simulate-coin-flip – Simulate X coin flips. WARNING: May take a long time!
+    │   │      ├─ flips – Number of flips you want to simulate.
+    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
+    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
+    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
+    │   │      ├─ multipliers – Displays multipliers.
+    │   ├── simulate-dice.ts
+    │   │   └─ /simulate-dice – Simulate X dice rolls. WARNING: May take a long time!
+    │   │      ├─ rolls – Number of rolls you want to simulate.
+    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
+    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
+    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
+    │   │      ├─ multipliers – Displays multipliers.
+    │   ├── simulate-goldenjackpot.ts
+    │   │   └─ /simulate-goldenjackpot – Simulate X goldenjackpot entries. WARNING: May take a long time!
+    │   │      ├─ entries – Number of entries you want to simulate.
+    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
+    │   │      ├─ details – Displays win details.
+    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
+    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
+    │   ├── simulate-lottery.ts
+    │   │   └─ /simulate-lottery – Simulate X lottery entries. WARNING: May take a long time!
+    │   │      ├─ entries – Number of entries.
+    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
+    │   │      ├─ details – Displays win details.
+    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
+    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
+    │   ├── simulate-slots.ts
+    │   │   └─ /simulate-slots – Simulate X spins on a slot machine. WARNING: May take a long time!
+    │   │      ├─ spins – Number of spins you want to simulate.
+    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
+    │   │      ├─ details – Displays win details.
+    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
+    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
+    │   └── simulate-transactions.ts
+    │       └─ /simulate-transactions – Simulate X transactions for testing filtering and indexing.
+    │          ├─ count – Number of transactions to simulate.
+    │          ├─ max-amount – Maximum amount per transaction (upper bound).
+    │          ├─ days – How many past days to simulate over (default: 30).
+    │          ├─ unique-users – Number of distinct users to simulate (default: auto).
+    └── utils
+        ├── casino-games.ts
+        │   └─ /casino-games – Show available casino games and how to use them.
+        ├── casino-info.ts
+        │   └─ /casino-info – Get information about the casino.
+        │      ├─ games – Show information about casino games
+        │      ├─ config – Show server casino configuration
+        │      ├─ admin – Show administrator-only information (contains sensitive data)
+        ├── manage-balance.ts
+        │   └─ /manage-balance – Manage user balances.
+        │      ├─ deposit – Add money to a user.
+        │      ├─ withdraw – Remove money from a user.
+        │      ├─ bonus – Give a bonus to a user.
+        │      ├─ check – Check a user’s balance.
+        │      ├─ reset – Reset a user’s balance to $0 and remove all their transactions in this server.
+        ├── manage-vip.ts
+        │   └─ /manage-vip – Admin commands to manage VIP rooms.
+        │      ├─ create-room – Create a VIP room for a user.
+        │      ├─ remove-room – Remove a user’s VIP room.
+        │      ├─ extend-room – Extend a user’s VIP room.
+        │      ├─ add-member – Add a member to someone’s VIP room.
+        ├── money-manager.ts
+        │   └─ /money-manager – Create an embed for manage balance.
+        │      ├─ give-balance – Create an embed for giving money.
+        │      ├─ reset-balance – Create an embed for resetting money.
+        ├── role-info.ts
+        │   └─ /role-info – Display information about a role.
+        │      ├─ role – The role you want to get information about.
+        └── who-is.ts
+            └─ /who-is – Get information about a user.
+               ├─ user – The user you want to get information about.

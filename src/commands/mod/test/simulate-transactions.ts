@@ -1,11 +1,15 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
+import { TTransaction } from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType } from 'discord.js'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
+import { createMultipleTransactions } from '@/services'
 import {
   formatNumberToReadableString,
-  parseReadableStringToNumber,
-} from '../../../utils/utils'
-import { TTransaction } from 'gambling-bot-shared'
-import Transaction from '../../../models/Transaction'
+  parseReadableStringToNumber
+} from '@/utils/common/utils'
 
 export const data: CommandData = {
   name: 'simulate-transactions',
@@ -15,68 +19,62 @@ export const data: CommandData = {
       name: 'count',
       description: 'Number of transactions to simulate.',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'max-amount',
       description: 'Maximum amount per transaction (upper bound).',
       type: ApplicationCommandOptionType.String,
-      required: false,
+      required: false
     },
     {
       name: 'days',
       description: 'How many past days to simulate over (default: 30).',
       type: ApplicationCommandOptionType.Integer,
-      required: false,
+      required: false
     },
     {
       name: 'unique-users',
       description: 'Number of distinct users to simulate (default: auto).',
       type: ApplicationCommandOptionType.Integer,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  devOnly: true,
+  devOnly: true
 }
-
-const TYPES = [
-  'deposit',
-  'withdraw',
-  'bet',
-  'win',
-  'refund',
-  'bonus',
-  'vip',
-] as const
 
 const SOURCES = ['command', 'manual', 'web', 'system', 'casino'] as const
 
 // Weighted type probabilities
-const TYPE_WEIGHTS: Record<(typeof TYPES)[number], number> = {
+const TYPE_WEIGHTS: Record<TTransaction['type'], number> = {
   bet: 30,
   win: 25,
   deposit: 15,
   withdraw: 10,
   bonus: 8,
   vip: 7,
-  refund: 5,
+  refund: 5
 }
 
-function weightedRandomChoice<T extends string>(weights: Record<T, number>): T {
-  const entries = Object.entries(weights) as [T, number][]
+function weightedRandomChoice<T extends Record<string, number>>(
+  weights: T
+): keyof T {
+  const entries = Object.entries(weights) as [keyof T, number][]
   const total = entries.reduce((sum, [, w]) => sum + w, 0)
   const rand = Math.random() * total
+
   let acc = 0
   for (const [key, weight] of entries) {
     acc += weight
     if (rand <= acc) return key
   }
+
   return entries[entries.length - 1][0]
 }
 
@@ -96,17 +94,20 @@ function randomDateWithinDays(days: number): Date {
   return new Date(now - offset)
 }
 
-function getRandomAmount(type: string, maxAmount: number): number {
-  const ranges: Record<string, [number, number]> = {
+function getRandomAmount(
+  type: TTransaction['type'],
+  maxAmount: number
+): number {
+  const ranges: Record<TTransaction['type'], [number, number]> = {
     bet: [100, Math.min(maxAmount, 1000)],
     win: [150, Math.min(maxAmount, 1200)],
     refund: [1, 50],
     deposit: [20, 200],
     withdraw: [20, 200],
     bonus: [10, 100],
-    vip: [10, 100],
+    vip: [10, 100]
   }
-  const [min, max] = ranges[type] || [1, maxAmount]
+  const [min, max] = ranges[type] ?? [1, maxAmount]
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
@@ -126,18 +127,27 @@ export async function run({ interaction }: SlashCommandProps) {
     const MAX_INPUT = 500_000
     if (count > MAX_INPUT) {
       return interaction.reply({
-        content: `⚠️ Max ${MAX_INPUT} transactions at once.`,
+        content: `⚠️ Max ${MAX_INPUT} transactions at once.`
       })
     }
 
     await interaction.deferReply()
 
     const userIds = Array.from({ length: uniqueUsers }, () => randomString(8))
-    const transactions: Partial<TTransaction>[] = []
+    const transactions: {
+      userId: string
+      guildId: string
+      amount: number
+      type: TTransaction['type']
+      source: (typeof SOURCES)[number]
+      betId?: string
+      handledBy?: string
+      createdAt: Date
+    }[] = []
     const typeCount: Record<string, number> = {}
 
     for (let i = 0; i < count; i++) {
-      const type = weightedRandomChoice(TYPE_WEIGHTS)
+      const type = weightedRandomChoice<typeof TYPE_WEIGHTS>(TYPE_WEIGHTS)
       typeCount[type] = (typeCount[type] ?? 0) + 1
 
       const userId = randomChoice(userIds)
@@ -153,11 +163,11 @@ export async function run({ interaction }: SlashCommandProps) {
           ? randomString(6)
           : undefined,
         handledBy: Math.random() < 0.25 ? randomString(6) : undefined,
-        createdAt: randomDateWithinDays(days),
+        createdAt: randomDateWithinDays(days)
       })
     }
 
-    await Transaction.insertMany(transactions)
+    await createMultipleTransactions(transactions)
 
     const summary = Object.entries(typeCount)
       .sort(([, a], [, b]) => b - a)
@@ -167,12 +177,9 @@ export async function run({ interaction }: SlashCommandProps) {
     await interaction.editReply({
       content: `✅ Simulated **${formatNumberToReadableString(
         count
-      )}** transactions across **${uniqueUsers}** users\n🗓️ Period: last **${days}** days\n\n**Breakdown:**\n${summary}`,
+      )}** transactions across **${uniqueUsers}** users\n🗓️ Period: last **${days}** days\n\n**Breakdown:**\n${summary}`
     })
   } catch (error) {
-    console.error('Error simulating transactions:', error)
-    await interaction.editReply({
-      content: '❌ Something went wrong while simulating transactions.',
-    })
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

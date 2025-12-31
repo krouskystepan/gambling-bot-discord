@@ -1,59 +1,67 @@
 import { Schema, model } from 'mongoose'
-import { Card } from '../utils/blackjackUtils'
 
-export type BlackjackGameDoc = Document & {
-  gameId: string
-  userId: string
-  guildId: string
+import { Card } from '@/utils/casino/blackjack'
+
+export type TBlackjackHand = {
+  cards: Card[]
   betAmount: number
-  deck: Card[]
-  playerCards: Card[]
-  dealerCards: Card[]
+  finished: boolean
+  isSplitHand: boolean
 }
 
-const BlackjackGameSchema = new Schema<BlackjackGameDoc>({
-  gameId: {
-    type: String,
-    required: true,
-    index: true,
+export type TBlackjackGame = {
+  userId: string
+  guildId: string
+  channelId: string
+  messageId: string
+  betId: string
+
+  deck: Card[]
+  deckIndex: number
+
+  hands: TBlackjackHand[]
+  activeHandIndex: number
+
+  dealerCards: Card[]
+
+  createdAt: Date
+  updatedAt: Date
+}
+
+const cardSchema = {
+  suite: { type: String, required: true },
+  label: { type: String, required: true },
+  value: { type: Number, required: true }
+}
+
+const handSchema = new Schema<TBlackjackHand>(
+  {
+    cards: [cardSchema],
+    betAmount: { type: Number, required: true },
+    finished: { type: Boolean, required: true, default: false }
   },
-  userId: {
-    type: String,
-    required: true,
-    index: true,
+  { _id: false }
+)
+
+const BlackjackGameSchema = new Schema<TBlackjackGame>(
+  {
+    userId: { type: String, required: true, index: true },
+    guildId: { type: String, required: true, index: true },
+    channelId: { type: String, required: true },
+    messageId: { type: String, required: true },
+    betId: { type: String, required: true, index: true },
+
+    deck: [cardSchema],
+    deckIndex: { type: Number, required: true, default: 0 },
+
+    hands: { type: [handSchema], required: true, default: [] },
+    activeHandIndex: { type: Number, required: true, default: 0 },
+
+    dealerCards: [cardSchema]
   },
-  guildId: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  betAmount: {
-    type: Number,
-    required: true,
-  },
-  deck: [
-    {
-      suite: { type: String, required: true },
-      label: { type: String, required: true },
-      value: { type: Number, required: true },
-    },
-  ],
-  playerCards: [
-    {
-      suite: { type: String, required: true },
-      label: { type: String, required: true },
-      value: { type: Number, required: true },
-    },
-  ],
-  dealerCards: [
-    {
-      suite: { type: String, required: true },
-      label: { type: String, required: true },
-      value: { type: Number, required: true },
-    },
-  ],
-})
+  { timestamps: true }
+)
 
 BlackjackGameSchema.index({ userId: 1, guildId: 1 }, { unique: true })
 
-export default model<BlackjackGameDoc>('BlackjackGame', BlackjackGameSchema)
+export default model<TBlackjackGame>('BlackjackGame', BlackjackGameSchema)

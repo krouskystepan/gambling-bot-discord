@@ -1,82 +1,79 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const discord_js_1 = require("discord.js");
-const utils_1 = require("../../../utils/utils");
-exports.data = {
+import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
+import { formatNumberToReadableString, parseReadableStringToNumber } from '@/utils/common/utils';
+export const data = {
     name: 'money-manager',
     description: 'Create an embed for manage balance.',
     options: [
         {
             name: 'give-balance',
             description: 'Create an embed for giving money.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'amount',
                     description: 'The amount of money you want to give.',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
-                    required: true,
-                },
-            ],
+                    type: ApplicationCommandOptionType.String,
+                    required: true
+                }
+            ]
         },
         {
             name: 'reset-balance',
             description: 'Create an embed for resetting money.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
-        },
+            type: ApplicationCommandOptionType.Subcommand
+        }
     ],
-    dm_permission: false,
+    dm_permission: false
 };
-exports.options = {
+export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
     deleted: false,
-    devOnly: true,
+    devOnly: true
 };
-async function run({ interaction }) {
+export async function run({ interaction }) {
     try {
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         if (subcommand === 'give-balance') {
             const amount = interaction.options.getString('amount', true);
-            const parsedAmount = (0, utils_1.parseReadableStringToNumber)(amount);
-            const readableAmount = (0, utils_1.formatNumberToReadableString)(parsedAmount);
-            const embed = new discord_js_1.EmbedBuilder()
+            const parsedAmount = parseReadableStringToNumber(amount);
+            const readableAmount = formatNumberToReadableString(parsedAmount);
+            const embed = new EmbedBuilder()
                 .setTitle('Money Generator')
-                .setColor(discord_js_1.Colors.DarkGreen)
+                .setColor(Colors.DarkGreen)
                 .setDescription(`Click to add **$${readableAmount}** to your account.\n` +
                 'You can use this money to try **CASINO** games.')
                 .setTimestamp();
-            const giveButton = new discord_js_1.ButtonBuilder()
+            const giveButton = new ButtonBuilder()
                 .setLabel(`💸 Claim Money`)
-                .setStyle(discord_js_1.ButtonStyle.Success)
+                .setStyle(ButtonStyle.Success)
                 .setCustomId(`give-money.${parsedAmount}`);
-            const row = new discord_js_1.ActionRowBuilder().addComponents(giveButton);
+            const row = new ActionRowBuilder().addComponents(giveButton);
             return interaction.reply({
                 embeds: [embed],
-                components: [row],
+                components: [row]
             });
         }
         if (subcommand === 'reset-balance') {
-            const embed = new discord_js_1.EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setTitle('Money Reset')
-                .setColor(discord_js_1.Colors.DarkRed)
+                .setColor(Colors.DarkRed)
                 .setDescription('Click to reset your account balance.')
                 .setTimestamp();
-            const resetButton = new discord_js_1.ButtonBuilder()
+            const resetButton = new ButtonBuilder()
                 .setLabel(`🔄 Reset Money`)
-                .setStyle(discord_js_1.ButtonStyle.Danger)
+                .setStyle(ButtonStyle.Danger)
                 .setCustomId(`reset-money`);
-            const row = new discord_js_1.ActionRowBuilder().addComponents(resetButton);
+            const row = new ActionRowBuilder().addComponents(resetButton);
             return interaction.reply({
                 embeds: [embed],
-                components: [row],
+                components: [row]
             });
         }
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

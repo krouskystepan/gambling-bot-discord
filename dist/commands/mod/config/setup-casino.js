@@ -1,58 +1,55 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const discord_js_1 = require("discord.js");
-const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const createEmbed_1 = require("../../../utils/createEmbed");
-exports.data = {
+import { ApplicationCommandOptionType, ChannelType, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
+import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
+export const data = {
     name: 'setup-casino',
     description: 'Manage the casino channels.',
     options: [
         {
             name: 'add',
             description: 'Set a channel for using casino bets.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'channel',
                     description: 'The channel you want to set for casino bets.',
-                    type: discord_js_1.ApplicationCommandOptionType.Channel,
-                    channel_types: [discord_js_1.ChannelType.GuildText],
-                    required: true,
-                },
-            ],
+                    type: ApplicationCommandOptionType.Channel,
+                    channel_types: [ChannelType.GuildText],
+                    required: true
+                }
+            ]
         },
         {
             name: 'remove',
             description: 'Remove a channel for using casino bets by ID.',
-            type: discord_js_1.ApplicationCommandOptionType.Subcommand,
+            type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: 'channel-id',
                     description: 'The ID of the channel you want to remove from casino bets.',
-                    type: discord_js_1.ApplicationCommandOptionType.String,
-                    required: true,
-                },
-            ],
-        },
+                    type: ApplicationCommandOptionType.String,
+                    required: true
+                }
+            ]
+        }
     ],
-    dm_permission: false,
+    dm_permission: false
 };
-exports.options = {
+export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: true,
-    devOnly: true,
+    deleted: false,
+    devOnly: true
 };
-async function run({ interaction }) {
+export async function run({ interaction }) {
     try {
-        let guildConfiguration = await GuildConfiguration_1.default.findOne({
-            guildId: interaction.guildId,
+        let guildConfiguration = await getGuildConfigByGuildId({
+            guildId: interaction.guildId
         });
         if (!guildConfiguration) {
-            guildConfiguration = new GuildConfiguration_1.default({
-                guildId: interaction.guildId,
+            guildConfiguration = await createGuildConfiguration({
+                guildId: interaction.guildId
             });
         }
         const options = interaction.options;
@@ -62,17 +59,17 @@ async function run({ interaction }) {
             if (guildConfiguration.casinoChannelIds.includes(channel.id)) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Casino Channel Setup - Add', `The channel ${channel} is already configured for casino betting commands.`),
+                        createErrorEmbed('Casino Channel Setup - Add', `The channel ${channel} is already configured for casino betting commands.`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             guildConfiguration.casinoChannelIds.push(channel.id);
             await guildConfiguration.save();
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Casino Channel Setup - Add', `The channel ${channel} has been successfully set up for casino betting commands.`),
-                ],
+                    createSuccessEmbed('Casino Channel Setup - Add', `The channel ${channel} has been successfully set up for casino betting commands.`)
+                ]
             });
         }
         if (subcommand === 'remove') {
@@ -80,9 +77,9 @@ async function run({ interaction }) {
             if (!guildConfiguration.casinoChannelIds.includes(channelId)) {
                 return interaction.reply({
                     embeds: [
-                        (0, createEmbed_1.createErrorEmbed)('Casino Channel Setup - Remove', `The channel with ID ${channelId} is not set up for casino betting commands.`),
+                        createErrorEmbed('Casino Channel Setup - Remove', `The channel with ID ${channelId} is not set up for casino betting commands.`)
                     ],
-                    flags: discord_js_1.MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             guildConfiguration.casinoChannelIds =
@@ -90,12 +87,12 @@ async function run({ interaction }) {
             await guildConfiguration.save();
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createSuccessEmbed)('Casino Channel Setup - Remove', `The channel with ID ${channelId} has been successfully removed from casino betting commands.`),
-                ],
+                    createSuccessEmbed('Casino Channel Setup - Remove', `The channel with ID ${channelId} has been successfully removed from casino betting commands.`)
+                ]
             });
         }
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

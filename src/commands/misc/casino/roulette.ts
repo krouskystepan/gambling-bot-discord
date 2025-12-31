@@ -1,28 +1,29 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  createBetEmbed,
-  createErrorEmbed,
-  createInfoEmbed,
-} from '../../../utils/createEmbed'
-import {
-  checkChannelConfiguration,
-  parseReadableStringToNumber,
-  formatNumberToReadableString,
+  checkCasinoChannels,
   checkUserRegistration,
-  checkValidBet,
-  generateBetId,
-} from '../../../utils/utils'
-import { spinRouletteWheel } from '../../../utils/casinoHelpers'
+  createTransaction,
+  updateUserBalance
+} from '@/services'
+import { spinRouletteWheel } from '@/utils/casino/rng'
 import {
-  getRouletteColor,
   RouletteBet,
-  calculateRouletteWin,
-  inferTypeFromValue,
   RouletteBetType,
-} from '../../../utils/rouletteUtils'
-import Transaction from '../../../models/Transaction'
-import User from '../../../models/User'
+  calculateRouletteWin,
+  getRouletteColor,
+  inferTypeFromValue
+} from '@/utils/casino/roulette'
+import {
+  checkValidBet,
+  formatNumberToReadableString,
+  generateBetId,
+  parseReadableStringToNumber
+} from '@/utils/common/utils'
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'roulette',
@@ -32,7 +33,7 @@ export const data: CommandData = {
       name: 'bets',
       description: 'Your bets (e.g., "100 red, 50 17, 200 d2, 75 c1")',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'spins',
@@ -41,57 +42,36 @@ export const data: CommandData = {
       required: false,
       choices: Array.from({ length: 5 }, (_, i) => ({
         name: (i + 1).toString(),
-        value: i + 1,
-      })),
+        value: i + 1
+      }))
     },
     {
       name: 'show-balance',
       description:
         'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'skip-animations',
       description: 'Skip game animations for faster results.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(
-      interaction.user.id,
-      interaction.guildId!
-    )
-    if (!user) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Not registered',
-            'You are not registered yet.\nUse the `/register` command to register.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const user = await checkUserRegistration({ interaction })
+    if (!user) return
 
-    const configReply = await checkChannelConfiguration(
-      interaction,
-      'casinoChannelIds',
-      {
-        notSet:
-          'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
-      }
-    )
+    const configReply = await checkCasinoChannels(interaction)
     if (!configReply) return
 
     const spins = interaction.options.getInteger('spins') || 1
@@ -109,9 +89,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createInfoEmbed(
               'Invalid Input - Invalid Bet Format',
               `Each bet must be in the format: "<amount> <value>". Invalid: "${betStr.trim()}"`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -120,15 +100,12 @@ export async function run({ interaction }: SlashCommandProps) {
       let type: RouletteBetType
       try {
         type = inferTypeFromValue(rawValue)
-      } catch (e: any) {
+      } catch (e) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
-              'Invalid Input - Invalid Bet Value',
-              `${e.message}`
-            ),
+            createInfoEmbed('Invalid Input - Invalid Bet Value', `${e.message}`)
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -147,9 +124,9 @@ export async function run({ interaction }: SlashCommandProps) {
           createInfoEmbed(
             'Invalid Input - No Bets Found',
             'Please provide at least one valid bet.'
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -169,23 +146,20 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const totalBet = totalOneSpin * spins
 
-    await User.findOneAndUpdate(
-      { userId: user.userId, guildId: user.guildId },
-      {
-        $inc: {
-          balance: -totalBet,
-          lockedBalance: -Math.min(user.lockedBalance, totalBet),
-        },
-      }
-    )
-    await Transaction.create({
+    await updateUserBalance({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: -totalBet,
+      lockedAmount: -Math.min(user.lockedBalance, totalBet)
+    })
+
+    await createTransaction({
       userId: user.userId,
       guildId: user.guildId,
       amount: totalBet,
       type: 'bet',
       source: 'casino',
-      betId,
-      createdAt: new Date(),
+      betId
     })
 
     let totalWinnings = 0
@@ -201,16 +175,14 @@ export async function run({ interaction }: SlashCommandProps) {
             createBetEmbed(
               '🌀 Spinning...',
               'Blue',
-              `💵 Total Bet: **$${formatNumberToReadableString(
-                totalBet
-              )}**\n\n` +
+              `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
                 `🕹 Spin Results:\n${results.join('\n\n')}\n\n` +
                 `💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
                 } **$${formatNumberToReadableString(liveResult)}**`,
               betId
-            ),
-          ],
+            )
+          ]
         })
 
         await new Promise((res) => setTimeout(res, 700))
@@ -244,21 +216,21 @@ export async function run({ interaction }: SlashCommandProps) {
       results.push(spinOutput)
     }
 
-    const updatedUser = await User.findOneAndUpdate(
-      { userId: user.userId, guildId: user.guildId },
-      { $inc: { balance: totalWinnings } },
-      { new: true }
-    )
+    const updatedUser = await updateUserBalance({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: totalWinnings
+    })
     if (!updatedUser) return
+
     if (totalWinnings > 0) {
-      await Transaction.create({
+      await createTransaction({
         userId: user.userId,
         guildId: user.guildId,
         amount: totalWinnings,
         type: 'win',
         source: 'casino',
-        betId,
-        createdAt: new Date(),
+        betId
       })
     }
 
@@ -271,8 +243,8 @@ export async function run({ interaction }: SlashCommandProps) {
           isWin
             ? '🌀 **Win!** 🎉'
             : isLoss
-            ? '🌀 **Better Luck Next Time...** ❌'
-            : '🌀 **Not Bad...** 👀',
+              ? '🌀 **Better Luck Next Time...** ❌'
+              : '🌀 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
           `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
             `🕹 **Spin Results:**\n${results.join('\n\n')}\n\n` +
@@ -280,15 +252,13 @@ export async function run({ interaction }: SlashCommandProps) {
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(
-                  updatedUser.balance
-                )}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(updatedUser.balance)}**`
               : ''),
           betId
-        ),
-      ],
+        )
+      ]
     })
   } catch (error) {
-    console.error('Error running roulette command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

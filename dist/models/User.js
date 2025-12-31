@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const gambling_bot_shared_1 = require("gambling-bot-shared");
-const mongoose_1 = require("mongoose");
-exports.default = (0, mongoose_1.model)('User', gambling_bot_shared_1.UserSchema);
+import { UserSchema } from 'gambling-bot-shared';
+import { model } from 'mongoose';
+export default model('User', UserSchema);

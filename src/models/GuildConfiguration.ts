@@ -1,6 +1,6 @@
 import {
   GuildConfigurationSchema,
-  TGuildConfiguration,
+  TGuildConfiguration
 } from 'gambling-bot-shared'
 import { model } from 'mongoose'
 

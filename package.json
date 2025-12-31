@@ -2,10 +2,21 @@
   "name": "gambling-bot-discord",
   "version": "1.0.0",
   "main": "src/index.ts",
+  "type": "module",
   "scripts": {
-    "dev": "tsx --watch --no-deprecation .",
-    "build": "tsc",
-    "start": "tsc && node dist/index.js"
+    "dev": "tsx --watch --no-deprecation src/index.ts",
+    "build": "npm run clean && npm run check && npm run docs:commands && tsc",
+    "start": "node dist/index.js",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "format:fix": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "lint:check": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "check": "pnpm format:check && pnpm lint:check",
+    "fix": "pnpm format:fix && pnpm lint:fix",
+    "clean": "rm -rf dist",
+    "docs:commands": "tsx src/scripts/generate-commands-structure.ts",
+    "audit:economy": "tsx src/scripts/audit-economy-summary.ts",
+    "audit:balance": "tsx src/scripts/audit-balances.ts"
   },
   "keywords": [],
   "author": "",
@@ -15,14 +26,21 @@
     "commandkit": "^0.1.10",
     "discord.js": "^14.25.1",
     "dotenv": "^16.6.1",
-    "gambling-bot-shared": "^0.1.9",
+    "gambling-bot-shared": "^0.1.14",
+    "lodash": "^4.17.21",
     "luxon": "^3.7.2",
     "mongoose": "^8.20.2"
   },
   "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
     "@types/lodash": "^4.17.21",
     "@types/luxon": "^3.7.1",
-    "@types/node": "^22.19.1",
+    "@types/node": "^22.19.2",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
+    "eslint": "^9.39.2",
+    "prettier": "^3.7.4",
+    "ts-morph": "^27.0.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

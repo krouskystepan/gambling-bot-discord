@@ -1,18 +1,20 @@
-import { Client } from 'discord.js'
-import { merge } from 'lodash'
-import GuildConfiguration from '../../models/GuildConfiguration'
 import { defaultCasinoSettings } from 'gambling-bot-shared'
+import merge from 'lodash/merge'
+
+import { Client } from 'discord.js'
+
+import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
+import { logger } from '@/utils/logger'
 
 export default async (client: Client) => {
   for (const guild of client.guilds.cache.values()) {
-    let dbSettings = await GuildConfiguration.findOne({ guildId: guild.id })
+    let dbSettings = await await getGuildConfigByGuildId({
+      guildId: guild.id
+    })
 
     if (!dbSettings) {
-      await GuildConfiguration.create({
-        guildId: guild.id,
-        casinoSettings: defaultCasinoSettings,
-      })
-      console.log(`🆕 Created settings => ${guild.name} (${guild.id})`)
+      await createGuildConfiguration({ guildId: guild.id })
+      logger.worker(`🆕 Created settings => ${guild.name} (${guild.id})`)
       continue
     }
 
@@ -28,7 +30,7 @@ export default async (client: Client) => {
     ) {
       dbSettings.casinoSettings = mergedSettings
       await dbSettings.save()
-      console.log(`🔧 Updated settings => ${guild.name} (${guild.id})`)
+      logger.worker(`🔧 Updated settings => ${guild.name} (${guild.id})`)
     }
   }
 }

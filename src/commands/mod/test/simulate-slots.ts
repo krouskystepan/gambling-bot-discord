@@ -1,14 +1,18 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
+import { SLOT_MAX_SIMULATE_SPINS } from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType } from 'discord.js'
-import { createBetEmbed } from '../../../utils/createEmbed'
-import { spinSlot } from '../../../utils/casinoHelpers'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
+import { getGuildConfigByGuildId } from '@/services'
+import { spinSlot } from '@/utils/casino/rng'
 import {
-  parseReadableStringToNumber,
   formatNumberToReadableString,
   formatNumberWithSpaces,
-} from '../../../utils/utils'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import { SLOT_MAX_SIMULATE_SPINS } from 'gambling-bot-shared'
+  parseReadableStringToNumber
+} from '@/utils/common/utils'
+import { createBetEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'simulate-slots',
@@ -19,47 +23,47 @@ export const data: CommandData = {
       name: 'spins',
       description: 'Number of spins you want to simulate.',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'bet',
       description: 'Enter a bet (e.g. 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'details',
       description: 'Displays win details.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'wins-losses-count',
       description: 'Displays the count of wins and losses.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'win-losses-series',
       description: 'Displays the longest winning and losing streak.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
-  devOnly: true,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const config = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    const config = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     const settings = config?.casinoSettings
@@ -87,7 +91,7 @@ export async function run({ interaction }: SlashCommandProps) {
       return interaction.editReply({
         content: `The maximum number of spins is ${formatNumberToReadableString(
           SLOT_MAX_SIMULATE_SPINS
-        )}.`,
+        )}.`
       })
     }
 
@@ -101,9 +105,7 @@ export async function run({ interaction }: SlashCommandProps) {
     await interaction.editReply(
       `Simulating **${formatNumberToReadableString(
         spins
-      )}** spins with a bet of **$${formatNumberToReadableString(
-        bet
-      )}**. Please wait...`
+      )}** spins with a bet of **$${formatNumberToReadableString(bet)}**. Please wait...`
     )
 
     const startTime = performance.now()
@@ -176,9 +178,9 @@ export async function run({ interaction }: SlashCommandProps) {
 
     await interaction.editReply({
       content: `Simulation completed.`,
-      embeds: [embed],
+      embeds: [embed]
     })
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

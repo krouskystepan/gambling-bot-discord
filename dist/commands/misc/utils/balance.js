@@ -1,37 +1,29 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const utils_1 = require("../../../utils/utils");
-const discord_js_1 = require("discord.js");
-const createEmbed_1 = require("../../../utils/createEmbed");
-exports.data = {
+import { MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
+import { checkUserRegistration } from '@/services';
+import { formatNumberToReadableString } from '@/utils/common/utils';
+import { createSuccessEmbed } from '@/utils/discord/createEmbed';
+export const data = {
     name: 'balance',
     description: 'Check your current balance (only you can see this).',
-    dm_permission: false,
+    dm_permission: false
 };
-exports.options = {
-    deleted: false,
+export const options = {
+    deleted: false
 };
-async function run({ interaction }) {
+export async function run({ interaction }) {
     try {
-        const user = await (0, utils_1.checkUserRegistration)(interaction.user.id, interaction.guildId);
-        if (!user) {
-            return interaction.reply({
-                embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'You are not registered yet.\nUse the `/register` command to register.'),
-                ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
-        }
+        const user = await checkUserRegistration({ interaction });
+        if (!user)
+            return;
         return interaction.reply({
             embeds: [
-                (0, createEmbed_1.createSuccessEmbed)('ATM - Balance', `Your balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}** ($${user.balance}).`),
+                createSuccessEmbed('ATM - Balance', `Your balance is **$${formatNumberToReadableString(user.balance)}** ($${user.balance}).`)
             ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
         });
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

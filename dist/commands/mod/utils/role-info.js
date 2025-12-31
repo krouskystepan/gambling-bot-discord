@@ -1,30 +1,26 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const discord_js_1 = require("discord.js");
-exports.data = {
+import { ApplicationCommandOptionType, EmbedBuilder, PermissionsBitField } from 'discord.js';
+export const data = {
     name: 'role-info',
     description: 'Display information about a role.',
     options: [
         {
             name: 'role',
             description: 'The role you want to get information about.',
-            type: discord_js_1.ApplicationCommandOptionType.Role,
-            required: true,
-        },
+            type: ApplicationCommandOptionType.Role,
+            required: true
+        }
     ],
-    dm_permission: false,
+    dm_permission: false
 };
-exports.options = {
+export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: false,
+    deleted: false
 };
-async function run({ interaction }) {
+export async function run({ interaction }) {
     const options = interaction.options;
     const role = options.getRole('role', true);
-    const permissions = new discord_js_1.PermissionsBitField(role.permissions.bitfield)
+    const permissions = new PermissionsBitField(role.permissions.bitfield)
         .toArray()
         .map((perm) => permissionMappings[perm] ||
         `✅ ${perm.replace(/_/g, ' ').toLowerCase()}`)
@@ -32,41 +28,41 @@ async function run({ interaction }) {
     const roleColor = role.hexColor === '#000000' ? 'No color' : role.hexColor;
     const roleCreatedAt = role.createdAt.toLocaleDateString('en-US');
     const rolePosition = role.position;
-    const embed = new discord_js_1.EmbedBuilder()
+    const embed = new EmbedBuilder()
         .setColor(role.color || 0x3498db)
         .setTitle(`ℹ️ **ROLE INFORMATION** ℹ️`)
         .addFields({
         name: '📛 Role Name',
         value: `\`\`\`${role.name}\`\`\``,
-        inline: true,
+        inline: true
     }, {
         name: '🎨 Role Color',
         value: `\`\`\`${roleColor}\`\`\``,
-        inline: true,
+        inline: true
     }, {
         name: '🆔 Role ID',
         value: `\`\`\`${role.id}\`\`\``,
-        inline: false,
+        inline: false
     }, {
         name: '🔢 Role Position',
         value: `\`\`\`${rolePosition}\`\`\``,
-        inline: true,
+        inline: true
     }, {
         name: '👥 Member Count',
         value: `\`\`\`${role.members.size}\`\`\``,
-        inline: true,
+        inline: true
     }, {
         name: '🛠️ Permissions',
         value: `\`\`\`${permissions}\`\`\``,
-        inline: false,
+        inline: false
     }, {
         name: '📅 Created',
         value: `\`\`\`${roleCreatedAt}\`\`\``,
-        inline: true,
+        inline: true
     })
         .setTimestamp();
     return interaction.reply({
-        embeds: [embed],
+        embeds: [embed]
     });
 }
 const permissionMappings = {
@@ -114,5 +110,5 @@ const permissionMappings = {
     UseExternalSounds: '✅ Use External Sounds',
     SendVoiceMessages: '✅ Send Voice Messages',
     SendPolls: '✅ Send Polls',
-    UseExternalApps: '✅ Use External Apps',
+    UseExternalApps: '✅ Use External Apps'
 };

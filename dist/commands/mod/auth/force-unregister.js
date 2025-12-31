@@ -1,72 +1,69 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.options = exports.data = void 0;
-exports.run = run;
-const discord_js_1 = require("discord.js");
-const utils_1 = require("../../../utils/utils");
-const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const createEmbed_1 = require("../../../utils/createEmbed");
-exports.data = {
+import { ApplicationCommandOptionType, EmbedBuilder, MessageFlags } from 'discord.js';
+import { handleUnexpectedInteractionError } from '@/errors';
+import { forceDeleteUser, getGuildConfigByGuildId } from '@/services';
+import { createErrorEmbed, createSuccessEmbed } from '@/utils/discord/createEmbed';
+export const data = {
     name: 'force-unregister',
     description: 'Unregister a user (delete from DB).',
     options: [
         {
             name: 'user-id',
             description: 'The ID of the user you want to unregister.',
-            type: discord_js_1.ApplicationCommandOptionType.String,
-            required: true,
-        },
+            type: ApplicationCommandOptionType.String,
+            required: true
+        }
     ],
-    dm_permission: false,
+    dm_permission: false
 };
-exports.options = {
+export const options = {
     userPermissions: ['Administrator'],
     botPermissions: ['Administrator'],
-    deleted: true,
+    deleted: false,
+    devOnly: true
 };
-async function run({ interaction, client }) {
+export async function run({ interaction, client }) {
     try {
-        const guildConfiguration = await GuildConfiguration_1.default.findOne({
-            guildId: interaction.guildId,
+        const guildConfig = await getGuildConfigByGuildId({
+            guildId: interaction.guildId
         });
-        if (!guildConfiguration?.atmChannelIds.logs) {
+        if (!guildConfig?.atmChannelIds?.logs) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Error - Logs Not Set Up', 'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'),
+                    createErrorEmbed('Error - Logs Not Set Up', 'ATM logs are not configured yet.\nPlease contact an administrator.')
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
         const userId = interaction.options.getString('user-id', true);
-        const registeredUser = await (0, utils_1.checkUserRegistration)(userId, guildConfiguration.guildId);
-        if (!registeredUser) {
+        const deletedUser = await forceDeleteUser({
+            userId,
+            guildId: interaction.guildId
+        });
+        if (!deletedUser) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('ATM Error - Not Registered.', 'User is not registered yet.'),
+                    createErrorEmbed('ATM Error - Not Registered', 'User is not registered in the system.')
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
-        const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
-        logChannel
-            .send({
+        const logChannel = client.channels.cache.get(guildConfig.atmChannelIds.logs);
+        await logChannel.send({
             embeds: [
-                new discord_js_1.EmbedBuilder()
+                new EmbedBuilder()
                     .setTitle('ATM - User Unregistered')
-                    .setDescription(`Manager <@${interaction.user.id}> has unregistered the user with ID ${userId}.`)
-                    .setColor('NotQuiteBlack'),
-            ],
-        })
-            .catch(console.error);
-        await registeredUser.deleteOne();
+                    .setDescription(`Manager <@${interaction.user.id}> has unregistered <@${userId}>.`)
+                    .setColor('NotQuiteBlack')
+            ]
+        });
         return interaction.reply({
             embeds: [
-                (0, createEmbed_1.createSuccessEmbed)('ATM Success - Unregistered', `The user with ID ${userId} has been successfully unregistered.`),
+                createSuccessEmbed('ATM Success - Unregistered', `The user <@${userId}> has been successfully unregistered.`)
             ],
-            flags: discord_js_1.MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral
         });
     }
     catch (error) {
-        console.error('Error running the command:', error);
+        await handleUnexpectedInteractionError(interaction, error);
     }
 }

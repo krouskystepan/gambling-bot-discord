@@ -1,11 +1,12 @@
-import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 import {
   ApplicationCommandOptionType,
   CommandInteractionOptionResolver,
   EmbedBuilder,
   PermissionsBitField,
-  Role,
+  Role
 } from 'discord.js'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 export const data: CommandData = {
   name: 'role-info',
@@ -15,16 +16,16 @@ export const data: CommandData = {
       name: 'role',
       description: 'The role you want to get information about.',
       type: ApplicationCommandOptionType.Role,
-      required: true,
-    },
+      required: true
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction }: SlashCommandProps) {
@@ -53,43 +54,43 @@ export async function run({ interaction }: SlashCommandProps) {
       {
         name: '📛 Role Name',
         value: `\`\`\`${role.name}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '🎨 Role Color',
         value: `\`\`\`${roleColor}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '🆔 Role ID',
         value: `\`\`\`${role.id}\`\`\``,
-        inline: false,
+        inline: false
       },
       {
         name: '🔢 Role Position',
         value: `\`\`\`${rolePosition}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '👥 Member Count',
         value: `\`\`\`${role.members.size}\`\`\``,
-        inline: true,
+        inline: true
       },
       {
         name: '🛠️ Permissions',
         value: `\`\`\`${permissions}\`\`\``,
-        inline: false,
+        inline: false
       },
       {
         name: '📅 Created',
         value: `\`\`\`${roleCreatedAt}\`\`\``,
-        inline: true,
+        inline: true
       }
     )
     .setTimestamp()
 
   return interaction.reply({
-    embeds: [embed],
+    embeds: [embed]
   })
 }
 
@@ -138,5 +139,5 @@ const permissionMappings: { [key: string]: string } = {
   UseExternalSounds: '✅ Use External Sounds',
   SendVoiceMessages: '✅ Send Voice Messages',
   SendPolls: '✅ Send Polls',
-  UseExternalApps: '✅ Use External Apps',
+  UseExternalApps: '✅ Use External Apps'
 }

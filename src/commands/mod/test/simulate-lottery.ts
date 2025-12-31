@@ -1,14 +1,18 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
+import { LOTTERY_MAX_SIMULATE_ENTRIES } from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType } from 'discord.js'
-import { createBetEmbed } from '../../../utils/createEmbed'
-import { drawLottery } from '../../../utils/casinoHelpers'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
+import { getGuildConfigByGuildId } from '@/services'
+import { drawLottery } from '@/utils/casino/rng'
 import {
-  parseReadableStringToNumber,
   formatNumberToReadableString,
   formatNumberWithSpaces,
-} from '../../../utils/utils'
-import GuildConfiguration from '../../../models/GuildConfiguration'
-import { LOTTERY_MAX_SIMULATE_ENTRIES } from 'gambling-bot-shared'
+  parseReadableStringToNumber
+} from '@/utils/common/utils'
+import { createBetEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'simulate-lottery',
@@ -18,47 +22,47 @@ export const data: CommandData = {
       name: 'entries',
       description: 'Number of entries.',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'bet',
       description: 'Enter a bet (e.g. 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'details',
       description: 'Displays win details.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'wins-losses-count',
       description: 'Displays the count of wins and losses.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
+      required: false
     },
     {
       name: 'win-losses-series',
       description: 'Displays the longest winning and losing streak.',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
   deleted: false,
-  devOnly: true,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const config = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    const config = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     const settings = config?.casinoSettings
@@ -86,7 +90,7 @@ export async function run({ interaction }: SlashCommandProps) {
       return interaction.editReply({
         content: `The maximum number of entries is ${formatNumberToReadableString(
           LOTTERY_MAX_SIMULATE_ENTRIES
-        )}.`,
+        )}.`
       })
     }
 
@@ -100,9 +104,7 @@ export async function run({ interaction }: SlashCommandProps) {
     await interaction.editReply(
       `Simulating **${formatNumberToReadableString(
         entries
-      )}** entries with a bet of **$${formatNumberToReadableString(
-        bet
-      )}**. Please wait...`
+      )}** entries with a bet of **$${formatNumberToReadableString(bet)}**. Please wait...`
     )
 
     const startTime = performance.now()
@@ -166,9 +168,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const totalTime = ((endTime - startTime) / 1000).toFixed(2)
 
     const embed = createBetEmbed(
-      `🎟️ Lottery Simulation - ${formatNumberToReadableString(
-        entries
-      )} entries`,
+      `🎟️ Lottery Simulation - ${formatNumberToReadableString(entries)} entries`,
       profitOrLoss >= 0 ? 'Green' : 'Red',
       `Total bet: **$${formatNumberToReadableString(totalBet)}**\n` +
         `Total: **$${formatNumberToReadableString(totalWinnings)}**\n` +
@@ -183,9 +183,9 @@ export async function run({ interaction }: SlashCommandProps) {
 
     await interaction.editReply({
       content: `Simulation completed.`,
-      embeds: [embed],
+      embeds: [embed]
     })
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

@@ -1,14 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const discord_js_1 = require("discord.js");
-const VipRoom_1 = require("../../models/VipRoom");
-const GuildConfiguration_1 = require("../../models/GuildConfiguration");
-const createEmbed_1 = require("../../utils/createEmbed");
-exports.default = async (client) => {
-    console.log('👀 VIP Room listener started');
+import { TextChannel } from 'discord.js';
+import { deleteVipByOwnerId, getAllOldVips, getGuildConfigByGuildId } from '@/services';
+import { createInfoEmbed } from '@/utils/discord/createEmbed';
+import { logger } from '@/utils/logger';
+export default async (client) => {
+    logger.boot('⌛ VIP room expiration worker started');
     setInterval(async () => {
-        const now = new Date();
-        const expiredRooms = await VipRoom_1.default.find({ expiresAt: { $lte: now } });
+        const expiredRooms = await getAllOldVips();
         for (const room of expiredRooms) {
             const guild = await client.guilds.fetch(room.guildId).catch(() => null);
             if (!guild)
@@ -16,36 +13,54 @@ exports.default = async (client) => {
             const channel = await guild.channels
                 .fetch(room.channelId)
                 .catch(() => null);
-            if (!channel || !(channel instanceof discord_js_1.TextChannel))
+            if (!channel || !(channel instanceof TextChannel))
                 continue;
-            if (room.userId) {
+            if (room.ownerId) {
                 await channel.permissionOverwrites
-                    .edit(room.userId, {
-                    SendMessages: false,
-                })
+                    .edit(room.ownerId, { SendMessages: false })
                     .catch(() => null);
             }
-            await channel
-                .send({
-                content: `<@${room.userId}>`,
-                embeds: [
-                    (0, createEmbed_1.createInfoEmbed)('VIP Channel Expired', '⏰ Your VIP time has expired. You no longer have access to this channel.'),
-                ],
-            })
-                .catch(() => null);
-            const guildConfig = await GuildConfiguration_1.default.findOne({
-                guildId: room.guildId,
-            });
-            if (guildConfig?.vipSettings?.roleId && room.userId) {
-                const member = await guild.members.fetch(room.userId).catch(() => null);
-                if (member) {
-                    await member.roles
-                        .remove(guildConfig.vipSettings.roleId, 'VIP expired')
+            if (room.memberIds?.length) {
+                for (const memberId of room.memberIds) {
+                    await channel.permissionOverwrites
+                        .edit(memberId, { SendMessages: false })
                         .catch(() => null);
                 }
             }
-            await VipRoom_1.default.deleteOne({ _id: room._id });
-            console.log(`VIP channel ${room.channelId} expired.`);
+            await channel
+                .send({
+                content: room.ownerId ? `<@${room.ownerId}>` : undefined,
+                embeds: [
+                    createInfoEmbed('VIP Channel Expired', '⏰ Your VIP time has expired. You no longer have access to this channel.')
+                ]
+            })
+                .catch(() => null);
+            const guildConfig = await getGuildConfigByGuildId({
+                guildId: room.guildId
+            });
+            if (guildConfig?.vipSettings?.roleOwnerId && room.ownerId) {
+                const owner = await guild.members.fetch(room.ownerId).catch(() => null);
+                if (owner) {
+                    await owner.roles
+                        .remove(guildConfig.vipSettings.roleOwnerId, 'VIP expired')
+                        .catch(() => null);
+                }
+            }
+            if (guildConfig?.vipSettings?.roleMemberId && room.memberIds?.length) {
+                for (const memberId of room.memberIds) {
+                    const member = await guild.members.fetch(memberId).catch(() => null);
+                    if (member) {
+                        await member.roles
+                            .remove(guildConfig.vipSettings.roleMemberId, 'VIP expired')
+                            .catch(() => null);
+                    }
+                }
+            }
+            await deleteVipByOwnerId({
+                ownerId: room.ownerId,
+                guildId: room.guildId
+            });
+            logger.worker(`VIP channel ${room.channelId} expired.`);
         }
     }, 60_000);
 };

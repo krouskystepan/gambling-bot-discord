@@ -1,6 +1,8 @@
 .env
+.env.*
 .DS_store
 /node_modules
 /temp
+/logs
 
 # /dist

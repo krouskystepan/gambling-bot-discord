@@ -1,15 +1,18 @@
-import type { CommandData, SlashCommandProps, CommandOptions } from 'commandkit'
 import {
   ApplicationCommandOptionType,
   ChannelType,
   CommandInteractionOptionResolver,
-  MessageFlags,
+  MessageFlags
 } from 'discord.js'
-import GuildConfiguration from '../../../models/GuildConfiguration'
+
+import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
+import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
 import {
   createErrorEmbed,
-  createSuccessEmbed,
-} from '../../../utils/createEmbed'
+  createSuccessEmbed
+} from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'setup-casino',
@@ -25,9 +28,9 @@ export const data: CommandData = {
           description: 'The channel you want to set for casino bets.',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     },
     {
       name: 'remove',
@@ -39,30 +42,30 @@ export const data: CommandData = {
           description:
             'The ID of the channel you want to remove from casino bets.',
           type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-      ],
-    },
+          required: true
+        }
+      ]
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
   userPermissions: ['Administrator'],
   botPermissions: ['Administrator'],
-  deleted: true,
-  devOnly: true,
+  deleted: false,
+  devOnly: true
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    let guildConfiguration = await GuildConfiguration.findOne({
-      guildId: interaction.guildId,
+    let guildConfiguration = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
     })
 
     if (!guildConfiguration) {
-      guildConfiguration = new GuildConfiguration({
-        guildId: interaction.guildId,
+      guildConfiguration = await createGuildConfiguration({
+        guildId: interaction.guildId!
       })
     }
 
@@ -79,9 +82,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Casino Channel Setup - Add',
               `The channel ${channel} is already configured for casino betting commands.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -93,8 +96,8 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Casino Channel Setup - Add',
             `The channel ${channel} has been successfully set up for casino betting commands.`
-          ),
-        ],
+          )
+        ]
       })
     }
 
@@ -107,9 +110,9 @@ export async function run({ interaction }: SlashCommandProps) {
             createErrorEmbed(
               'Casino Channel Setup - Remove',
               `The channel with ID ${channelId} is not set up for casino betting commands.`
-            ),
+            )
           ],
-          flags: MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -123,11 +126,11 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'Casino Channel Setup - Remove',
             `The channel with ID ${channelId} has been successfully removed from casino betting commands.`
-          ),
-        ],
+          )
+        ]
       })
     }
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

@@ -1,94 +1,100 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const discord_js_1 = require("discord.js");
-const User_1 = require("../../../models/User");
-const GuildConfiguration_1 = require("../../../models/GuildConfiguration");
-const createEmbed_1 = require("../../../utils/createEmbed");
-const utils_1 = require("../../../utils/utils");
+import { EmbedBuilder, MessageFlags } from 'discord.js';
+import { getGuildConfigByGuildId, getUser, resetUserBalance, updateUserBalance } from '@/services';
+import { formatNumberToReadableString } from '@/utils/common/utils';
+import { createErrorEmbed } from '@/utils/discord/createEmbed';
+import { logger } from '@/utils/logger';
 //! DB TRANSACTIONS
 //! Rare condition - no .save()
-exports.default = async (interaction, client) => {
+export default async (interaction, client) => {
     if (!interaction.isButton() || !interaction.customId)
         return;
     try {
         const [type, amount] = interaction.customId.split('.');
         if (type !== 'give-money' && type !== 'reset-money')
             return;
-        const guildConfiguration = await GuildConfiguration_1.default.findOne({
-            guildId: interaction.guildId,
+        const guildConfiguration = await getGuildConfigByGuildId({
+            guildId: interaction.guildId
         });
         if (!guildConfiguration?.atmChannelIds.logs) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Error - Not Configured', 'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.'),
+                    createErrorEmbed('Error - Not Configured', 'ATM logs are not configured yet.\nPlease contact an administrator to complete the setup.')
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
-        const user = await User_1.default.findOne({
-            userId: interaction.user.id,
+        const user = await getUser({
             guildId: interaction.guildId,
+            userId: interaction.user.id
         });
         if (!user) {
             return interaction.reply({
                 embeds: [
-                    (0, createEmbed_1.createErrorEmbed)('Error - Not registered', 'You are not registered yet.\nUse the `/register` command to register.'),
+                    createErrorEmbed('Error - Not registered', 'You are not registered yet.\nUse the `/register` command to register.')
                 ],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
         if (type === 'give-money') {
             if (!amount)
                 return;
             const parsedAmount = parseInt(amount);
-            user.balance += parsedAmount;
-            user.save();
+            const updatedUser = await updateUserBalance({
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                amount: parsedAmount
+            });
+            if (!updatedUser)
+                return;
             const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
             logChannel
                 .send({
                 embeds: [
-                    new discord_js_1.EmbedBuilder()
+                    new EmbedBuilder()
                         .setTitle('ATM - Money Generator')
-                        .setDescription(`<@${interaction.user.id}> has added **$${(0, utils_1.formatNumberToReadableString)(parsedAmount)}** to their account.`)
-                        .setColor('DarkGreen'),
-                ],
+                        .setDescription(`<@${interaction.user.id}> has added **$${formatNumberToReadableString(updatedUser.balance)}** to their account.`)
+                        .setColor('DarkGreen')
+                ]
             })
-                .catch(console.error);
-            const embed = new discord_js_1.EmbedBuilder()
+                .catch((err) => logger.error('Failed to send the message', err));
+            const embed = new EmbedBuilder()
                 .setTitle('ATM - Money Generator')
-                .setDescription(`Server has added **$${(0, utils_1.formatNumberToReadableString)(parsedAmount)}** to your account.\nYour new balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`)
+                .setDescription(`Server has added **$${formatNumberToReadableString(parsedAmount)}** to your account.\nYour new balance is **$${formatNumberToReadableString(updatedUser.balance)}**.`)
                 .setColor('DarkGreen');
             await interaction.reply({
                 embeds: [embed],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
         if (type === 'reset-money') {
-            user.balance = 0;
-            user.lockedBalance = 0;
-            user.save();
+            const newUser = await resetUserBalance({
+                userId: interaction.user.id,
+                guildId: interaction.guildId
+            });
+            if (!newUser)
+                return;
             const logChannel = client.channels.cache.get(guildConfiguration.atmChannelIds.logs);
             logChannel
                 .send({
                 embeds: [
-                    new discord_js_1.EmbedBuilder()
+                    new EmbedBuilder()
                         .setTitle('ATM - Money Reset')
                         .setDescription(`<@${interaction.user.id}> has reset their account balance.`)
-                        .setColor('DarkRed'),
-                ],
+                        .setColor('DarkRed')
+                ]
             })
-                .catch(console.error);
-            const embed = new discord_js_1.EmbedBuilder()
+                .catch((err) => logger.error('Failed to send the message', err));
+            const embed = new EmbedBuilder()
                 .setTitle('ATM - Money Reset')
-                .setDescription(`Server has reset your account balance.\nYour new balance is **$${(0, utils_1.formatNumberToReadableString)(user.balance)}**.`)
+                .setDescription(`Server has reset your account balance.\nYour new balance is **$${formatNumberToReadableString(newUser.balance)}**.`)
                 .setColor('DarkRed');
             await interaction.reply({
                 embeds: [embed],
-                flags: discord_js_1.MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
     }
     catch (error) {
-        console.error('Error in handleGiveMoney.ts', error);
+        logger.error('Error in handleGiveMoney.ts', error);
     }
 };

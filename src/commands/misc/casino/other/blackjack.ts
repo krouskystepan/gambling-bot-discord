@@ -1,31 +1,30 @@
+import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
+
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  ActionRowBuilder,
-  ApplicationCommandOptionType,
-  ButtonBuilder,
-  ButtonStyle,
-  MessageFlags,
-} from 'discord.js'
-import { createErrorEmbed } from '../../../../utils/createEmbed'
-import {
-  shuffleDeck,
-  DECK,
-  calculateHandValue,
-  createBlackjackEmbed,
-  BJResults,
-} from '../../../../utils/blackjackUtils'
-import BlackjackGame from '../../../../models/BlackjackGame'
-import { drawNextCard } from '../../../../utils/casinoHelpers'
-import {
+  checkCasinoChannels,
   checkUserRegistration,
-  checkChannelConfiguration,
-  parseReadableStringToNumber,
-  formatNumberToReadableString,
+  createTransaction,
+  getBlackjackGameByUserAndGuild,
+  updateUserBalance,
+  upsertBlackjackGame
+} from '@/services'
+import {
+  DECK,
+  StartBlackjackResultId,
+  calculateHandValue,
+  renderBlackjackButtons,
+  renderBlackjackEmbed,
+  shuffleDeck
+} from '@/utils/casino/blackjack'
+import {
   checkValidBet,
   generateBetId,
-} from '../../../../utils/utils'
-import Transaction from '../../../../models/Transaction'
-import User from '../../../../models/User'
+  parseReadableStringToNumber
+} from '@/utils/common/utils'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'blackjack',
@@ -35,57 +34,34 @@ export const data: CommandData = {
       name: 'bet',
       description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: true
     },
     {
       name: 'show-balance',
       description:
         'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
       type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
+      required: false
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(
-      interaction.user.id,
-      interaction.guildId!
-    )
+    const user = await checkUserRegistration({ interaction })
+    if (!user) return
 
-    if (!user) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Not registered',
-            'You are not registered yet.\nUse the `/register` command to register.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-
-    const configReply = await checkChannelConfiguration(
-      interaction,
-      'casinoChannelIds',
-      {
-        notSet:
-          'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
-      }
-    )
-
+    const configReply = await checkCasinoChannels(interaction)
     if (!configReply) return
 
-    const existingGame = await BlackjackGame.findOne({
-      guildId: interaction.guild?.id,
+    const existingGame = await getBlackjackGameByUserAndGuild({
       userId: interaction.user.id,
+      guildId: interaction.guildId!
     })
 
     if (existingGame) {
@@ -94,15 +70,14 @@ export async function run({ interaction }: SlashCommandProps) {
           createErrorEmbed(
             'Blackjack Already Active',
             `You already have an active Blackjack game running! 🃏`
-          ),
+          )
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
-    const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance') || false
 
     const isBetValid = checkValidBet(
@@ -119,159 +94,154 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const betId = generateBetId()
 
-    await User.findOneAndUpdate(
-      { userId: user.userId, guildId: user.guildId },
-      {
-        $inc: {
-          balance: -parsedBetAmount,
-          lockedBalance: -Math.min(user.lockedBalance, parsedBetAmount),
-        },
-      }
-    )
-    await Transaction.create({
+    await updateUserBalance({
+      userId: user.userId,
+      guildId: user.guildId,
+      amount: -parsedBetAmount,
+      lockedAmount: -Math.min(user.lockedBalance, parsedBetAmount)
+    })
+
+    await createTransaction({
       userId: user.userId,
       guildId: user.guildId,
       amount: parsedBetAmount,
       type: 'bet',
       source: 'casino',
-      betId,
-      createdAt: new Date(),
+      betId
     })
 
     const shuffledDeck = shuffleDeck(DECK)
-    const playerCards = [
-      drawNextCard(shuffledDeck, 0),
-      drawNextCard(shuffledDeck, 1),
-    ]
-    const dealerCards = [
-      drawNextCard(shuffledDeck, 2),
-      drawNextCard(shuffledDeck, 3),
-    ]
+    const playerCards = [shuffledDeck[0], shuffledDeck[1]]
+    const dealerCards = [shuffledDeck[2], shuffledDeck[3]]
 
-    const playerTotal = calculateHandValue(playerCards)
-    const dealerTotal = calculateHandValue(dealerCards)
+    const playerHasBlackjack =
+      playerCards.length === 2 && calculateHandValue(playerCards) === 21
 
-    const playerHasBlackjack = playerCards.length === 2 && playerTotal === 21
-    const dealerHasBlackjack = dealerCards.length === 2 && dealerTotal === 21
-
-    let resultId: BJResults
+    const dealerHasBlackjack =
+      dealerCards.length === 2 && calculateHandValue(dealerCards) === 21
 
     if (playerHasBlackjack || dealerHasBlackjack) {
-      let balanceIncrement = 0
+      let startResultId: StartBlackjackResultId
+      let payout = 0
 
       if (playerHasBlackjack && dealerHasBlackjack) {
-        resultId = 'BBJ'
-        balanceIncrement = parsedBetAmount
+        startResultId = 'BBJ'
+        payout = parsedBetAmount
       } else if (playerHasBlackjack) {
-        resultId = 'PBJ'
-        balanceIncrement = parsedBetAmount * 2.5
-      } else if (dealerHasBlackjack) {
-        resultId = 'DBJ'
-        balanceIncrement = 0
+        startResultId = 'PBJ'
+        payout = parsedBetAmount * 2.5
+      } else {
+        startResultId = 'DBJ'
+        payout = 0
       }
 
       let finalBalance = user.balance - parsedBetAmount
 
-      if (balanceIncrement > 0) {
-        const updatedUser = await User.findOneAndUpdate(
-          { userId: user.userId, guildId: user.guildId },
-          { $inc: { balance: balanceIncrement } },
-          { new: true }
-        )
-
-        if (!updatedUser) {
-          throw new Error('User not found when paying out Blackjack')
-        }
-
-        await Transaction.create({
+      if (payout > 0) {
+        const updatedUser = await updateUserBalance({
           userId: user.userId,
           guildId: user.guildId,
-          amount: balanceIncrement,
-          type: 'win',
-          source: 'casino',
-          betId,
-          createdAt: new Date(),
+          amount: payout
         })
 
-        finalBalance = updatedUser.balance
+        if (updatedUser) {
+          await createTransaction({
+            userId: user.userId,
+            guildId: user.guildId,
+            amount: payout,
+            type: 'win',
+            source: 'casino',
+            betId
+          })
+
+          finalBalance = updatedUser.balance
+        }
       }
+
+      const hands = [
+        {
+          cards: playerCards,
+          betAmount: parsedBetAmount,
+          finished: true,
+          isSplitHand: false
+        }
+      ]
 
       return interaction.editReply({
         embeds: [
-          createBlackjackEmbed(
-            readableBetAmount,
+          renderBlackjackEmbed({
+            userId: interaction.user.id,
+            guildId: interaction.guildId!,
+            betId,
+            hands,
+            activeHandIndex: -1,
             dealerCards,
-            dealerTotal,
-            playerCards,
-            playerTotal,
-            resultId!,
             showBalance,
-            finalBalance,
-            betId
-          ),
-        ],
+            userBalance: finalBalance,
+            result: { kind: 'START', startResultId }
+          })
+        ]
       })
     }
 
     const message = await interaction.fetchReply()
 
-    await BlackjackGame.findOneAndUpdate(
-      { userId: interaction.user.id, guildId: interaction.guildId },
-      {
-        gameId: message.id,
-        betAmount: parsedBetAmount,
-        deck: shuffledDeck,
-        playerCards,
-        dealerCards,
-      },
-      { upsert: true }
-    )
-
-    const hitButton = new ButtonBuilder()
-      .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.hit.${showBalance}`
-      )
-      .setLabel('Hit')
-      .setStyle(ButtonStyle.Success)
-
-    const standButton = new ButtonBuilder()
-      .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.stand.${showBalance}`
-      )
-      .setLabel('Stand')
-      .setStyle(ButtonStyle.Danger)
-
-    const doubleButton = new ButtonBuilder()
-      .setCustomId(
-        `blackjack.${message.id}-${interaction.user.id}-${interaction.guildId}-${betId}.double.${showBalance}`
-      )
-      .setLabel('Double')
-      .setStyle(ButtonStyle.Primary)
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      hitButton,
-      standButton,
-      doubleButton
-    )
-
-    interaction.editReply({
-      embeds: [
-        createBlackjackEmbed(
-          readableBetAmount,
-          dealerCards,
-          dealerTotal,
-          playerCards,
-          playerTotal,
-          undefined,
-          false,
-          0,
-          betId,
-          true
-        ),
+    await upsertBlackjackGame({
+      userId: interaction.user.id,
+      guildId: interaction.guildId!,
+      channelId: interaction.channelId,
+      messageId: message.id,
+      betId,
+      deck: shuffledDeck,
+      deckIndex: 4,
+      hands: [
+        {
+          cards: playerCards,
+          betAmount: parsedBetAmount,
+          finished: false,
+          isSplitHand: false
+        }
       ],
-      components: [row],
+      activeHandIndex: 0,
+      dealerCards
+    })
+
+    const canSplit =
+      playerCards.length === 2 && playerCards[0].label === playerCards[1].label
+
+    const row = renderBlackjackButtons({
+      betId,
+      showBalance,
+      canDouble: true,
+      canSplit
+    })
+
+    const hands = [
+      {
+        cards: playerCards,
+        betAmount: parsedBetAmount,
+        finished: true,
+        isSplitHand: false
+      }
+    ]
+
+    await interaction.editReply({
+      embeds: [
+        renderBlackjackEmbed({
+          userId: interaction.user.id,
+          guildId: interaction.guildId!,
+          betId,
+          hands,
+          activeHandIndex: 0,
+          result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
+          dealerCards,
+          showBalance,
+          dealerHideSecondCard: true
+        })
+      ],
+      components: [row]
     })
   } catch (error) {
-    console.error('Error running the command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

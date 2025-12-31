@@ -1,9 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const Prediction_1 = require("../../../models/Prediction");
-const luxon_1 = require("luxon");
-const formatDate = (date) => luxon_1.DateTime.fromJSDate(date).setZone('Europe/Prague').toFormat('dd.MM / HH:mm');
-exports.default = async (interaction, client) => {
+import { DateTime } from 'luxon';
+import { findPredictions, getPredictionById } from '@/services';
+const formatDate = (date) => DateTime.fromJSDate(date).setZone('Europe/Prague').toFormat('dd.MM / HH:mm');
+export default async (interaction, _client) => {
     if (!interaction.isAutocomplete())
         return;
     if (interaction.commandName !== 'prediction')
@@ -11,10 +9,10 @@ exports.default = async (interaction, client) => {
     const focusedOption = interaction.options.getFocused(true);
     const subcommand = interaction.options.getSubcommand();
     const focusedValue = focusedOption.value;
-    const findPredictions = async (status) => {
+    const searchPredictions = async (status) => {
         const query = {
             guildId: interaction.guildId,
-            title: { $regex: focusedValue, $options: 'i' },
+            title: { $regex: focusedValue, $options: 'i' }
         };
         if (Array.isArray(status)) {
             query.status = { $in: status };
@@ -22,63 +20,63 @@ exports.default = async (interaction, client) => {
         else {
             query.status = status;
         }
-        return await Prediction_1.default.find(query).limit(25);
+        return findPredictions(query);
     };
     if (subcommand === 'end') {
-        const predictions = await findPredictions('active');
-        return await interaction.respond(predictions.length > 0
+        const predictions = await searchPredictions('active');
+        return interaction.respond(predictions.length > 0
             ? predictions.map((p) => ({
                 name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
-                value: p.predictionId,
+                value: p.predictionId
             }))
             : [{ name: 'No predictions found', value: 'none' }]);
     }
     if (subcommand === 'payout') {
         if (focusedOption.name === 'prediction-id') {
-            const predictions = await findPredictions('ended');
-            return await interaction.respond(predictions.length > 0
+            const predictions = await searchPredictions('ended');
+            return interaction.respond(predictions.length > 0
                 ? predictions.map((p) => ({
                     name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
-                    value: p.predictionId,
+                    value: p.predictionId
                 }))
                 : [{ name: 'No predictions found', value: 'none' }]);
         }
         if (focusedOption.name === 'winner') {
             const predictionId = interaction.options.getString('prediction-id');
             if (!predictionId)
-                return await interaction.respond([]);
-            const prediction = await Prediction_1.default.findOne({
+                return interaction.respond([]);
+            const prediction = await getPredictionById({
                 guildId: interaction.guildId,
-                predictionId,
+                predictionId
             });
             if (!prediction)
-                return await interaction.respond([]);
+                return interaction.respond([]);
             const filteredChoices = prediction.choices
                 .filter((c) => c.choiceName.toLowerCase().includes(focusedValue.toLowerCase()))
                 .map((c) => ({
                 name: `${c.choiceName} (Odds: ${c.odds})`,
-                value: c.choiceName,
+                value: c.choiceName
             }));
-            return await interaction.respond(filteredChoices.length > 0
+            return interaction.respond(filteredChoices.length > 0
                 ? filteredChoices
                 : [{ name: 'No choices found', value: 'none' }]);
         }
     }
     if (subcommand === 'cancel') {
-        const predictions = await findPredictions(['active', 'ended']);
-        return await interaction.respond(predictions.length > 0
+        const predictions = await searchPredictions(['active', 'ended']);
+        return interaction.respond(predictions.length > 0
             ? predictions.map((p) => ({
                 name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
-                value: p.predictionId,
+                value: p.predictionId
             }))
             : [{ name: 'No predictions found', value: 'none' }]);
     }
     if (subcommand === 'check') {
-        const predictions = await findPredictions(['active', 'ended']);
-        return await interaction.respond(predictions.length > 0
+        const predictions = await searchPredictions(['active', 'ended']);
+        return interaction.respond(predictions.length > 0
             ? predictions.map((p) => ({
                 name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
-                value: p.predictionId,
+                value: p.predictionId
             }))
             : [{ name: 'No predictions found', value: 'none' }]);
     }

@@ -3,29 +3,31 @@ import {
   ApplicationCommandOptionType,
   ButtonBuilder,
   ButtonStyle,
-  MessageFlags,
+  MessageFlags
 } from 'discord.js'
+
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
+
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  createBetEmbed,
-  createErrorEmbed,
-  createInfoEmbed,
-} from '../../../../utils/createEmbed'
-import {
-  checkChannelConfiguration,
+  checkCasinoChannels,
+  checkTargetUserRegistration,
   checkUserRegistration,
+  createTransaction,
+  updateUserBalance
+} from '@/services'
+import {
   checkValidBet,
   formatNumberToReadableString,
   generateBetId,
-  parseReadableStringToNumber,
-} from '../../../../utils/utils'
-import Transaction from '../../../../models/Transaction'
-import User from '../../../../models/User'
+  parseReadableStringToNumber
+} from '@/utils/common/utils'
+import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
 const choices = [
   { name: 'rock', emoji: '🪨', beats: 'scissors' },
   { name: 'scissors', emoji: '✂️', beats: 'paper' },
-  { name: 'paper', emoji: '📄', beats: 'rock' },
+  { name: 'paper', emoji: '📄', beats: 'rock' }
 ]
 
 export const data: CommandData = {
@@ -36,72 +38,44 @@ export const data: CommandData = {
       name: 'player',
       description: 'The user you want to play against.',
       type: ApplicationCommandOptionType.User,
-      required: true,
+      required: true
     },
     {
       name: 'bet',
       description: 'Enter a bet (e.g. 1000, 2k, 4.5k).',
       type: ApplicationCommandOptionType.String,
-      required: true,
-    },
+      required: true
+    }
   ],
-  dm_permission: false,
+  dm_permission: false
 }
 
 export const options: CommandOptions = {
-  deleted: false,
+  deleted: false
 }
 
 export async function run({ interaction }: SlashCommandProps) {
   try {
-    const user = await checkUserRegistration(
-      interaction.user.id,
-      interaction.guildId!
-    )
-    if (!user) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed('Error - Not registered', 'Use `/register` first.'),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const user = await checkUserRegistration({ interaction })
+    if (!user) return
 
     const targetDiscordUser = interaction.options.getUser('player', true)
-    const targetUser = await checkUserRegistration(
-      targetDiscordUser.id,
-      interaction.guildId!
-    )
-    if (!targetUser) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Error - Not registered',
-            'Target user not registered.'
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      })
-    }
+    const targetUser = await checkTargetUserRegistration({
+      interaction,
+      targetUserId: targetDiscordUser.id
+    })
+    if (!targetUser) return
 
     if (interaction.user.id === targetDiscordUser.id || targetDiscordUser.bot) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed('Invalid Input', 'Cannot play against this user.'),
+          createInfoEmbed('Invalid Input', 'Cannot play against this user.')
         ],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral
       })
     }
 
-    const configReply = await checkChannelConfiguration(
-      interaction,
-      'casinoChannelIds',
-      {
-        notSet:
-          'This server has not been configured for betting commands yet.\nSet it up using web dashboard.',
-        notAllowed: `This channel is not configured for betting commands.\nTry one of these channels:`,
-      }
-    )
+    const configReply = await checkCasinoChannels(interaction)
     if (!configReply) return
 
     const betAmount = parseReadableStringToNumber(
@@ -140,13 +114,13 @@ export async function run({ interaction }: SlashCommandProps) {
     const reply = await interaction.reply({
       content: `${targetDiscordUser}, you’ve been challenged by ${interaction.user} to a game of Rock, Paper, Scissors for **$${readableBetAmount}**!\nChoose one of the options to start the game.`,
       embeds: [embed],
-      components: [row],
+      components: [row]
     })
 
     const targetInteraction = await reply
       .awaitMessageComponent({
         filter: (i) => i.user.id === targetDiscordUser.id,
-        time: 30_000,
+        time: 30_000
       })
       .catch(async () => {
         embed
@@ -164,7 +138,7 @@ export async function run({ interaction }: SlashCommandProps) {
     )!
     await targetInteraction.reply({
       content: `You chose ${targetChoice.name} ${targetChoice.emoji}.`,
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral
     })
 
     embed.setDescription(`Now it's ${interaction.user}'s turn.`)
@@ -173,7 +147,7 @@ export async function run({ interaction }: SlashCommandProps) {
     const initiatorInteraction = await reply
       .awaitMessageComponent({
         filter: (i) => i.user.id === interaction.user.id,
-        time: 30_000,
+        time: 30_000
       })
       .catch(async () => {
         embed
@@ -201,62 +175,60 @@ export async function run({ interaction }: SlashCommandProps) {
     } else if (initiatorChoice.beats === targetChoice.name) {
       winnerUser = user
       loserUser = targetUser
-      resultText = `${
-        interaction.user
-      } won and took **$${formatNumberToReadableString(
+      resultText = `${interaction.user} won and took **$${formatNumberToReadableString(
         realWinAmount
       )}** from ${targetDiscordUser}!`
     }
 
     if (winnerUser && loserUser) {
+      const now = new Date()
+
       await Promise.all([
-        User.findOneAndUpdate(
-          { userId: winnerUser.userId, guildId: winnerUser.guildId },
-          {
-            $inc: {
-              balance: realWinAmount,
-              lockedBalance: -Math.min(winnerUser.lockedBalance, betAmount),
-            },
-          }
-        ),
-        User.findOneAndUpdate(
-          { userId: loserUser.userId, guildId: loserUser.guildId },
-          {
-            $inc: {
-              balance: -betAmount,
-              lockedBalance: -Math.min(loserUser.lockedBalance, betAmount),
-            },
-          }
-        ),
-        Transaction.insertMany([
-          {
-            userId: winnerUser.userId,
-            guildId: winnerUser.guildId,
-            amount: betAmount,
-            type: 'bet',
-            source: 'casino',
-            betId,
-            createdAt: new Date(),
-          },
-          {
-            userId: loserUser.userId,
-            guildId: loserUser.guildId,
-            amount: betAmount,
-            type: 'bet',
-            source: 'casino',
-            betId,
-            createdAt: new Date(),
-          },
-          {
-            userId: winnerUser.userId,
-            guildId: winnerUser.guildId,
-            amount: realWinAmount,
-            type: 'win',
-            source: 'casino',
-            betId,
-            createdAt: new Date(),
-          },
-        ]),
+        updateUserBalance({
+          userId: winnerUser.userId,
+          guildId: winnerUser.guildId,
+          amount: realWinAmount,
+          lockedAmount: -Math.min(winnerUser.lockedBalance, betAmount)
+        }),
+
+        updateUserBalance({
+          userId: loserUser.userId,
+          guildId: loserUser.guildId,
+          amount: -betAmount,
+          lockedAmount: -Math.min(loserUser.lockedBalance, betAmount)
+        }),
+
+        createTransaction({
+          userId: winnerUser.userId,
+          guildId: winnerUser.guildId,
+          amount: betAmount,
+          type: 'bet',
+          source: 'casino',
+          betId,
+          meta: { role: 'winner' },
+          createdAt: now
+        }),
+
+        createTransaction({
+          userId: loserUser.userId,
+          guildId: loserUser.guildId,
+          amount: betAmount,
+          type: 'bet',
+          source: 'casino',
+          betId,
+          meta: { role: 'loser' },
+          createdAt: now
+        }),
+
+        createTransaction({
+          userId: winnerUser.userId,
+          guildId: winnerUser.guildId,
+          amount: realWinAmount,
+          type: 'win',
+          source: 'casino',
+          betId,
+          createdAt: now
+        })
       ])
     }
 
@@ -265,6 +237,6 @@ export async function run({ interaction }: SlashCommandProps) {
     )
     await reply.edit({ content: '', embeds: [embed], components: [] })
   } catch (error) {
-    console.error('Error running RPS command:', error)
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }
