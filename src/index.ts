@@ -24,12 +24,14 @@ const client = new Client({
 async function startApp(client: Client) {
   await connectToDatabase()
 
+  const isProd = process.env.NODE_ENV === 'production'
+
   new CommandKit({
     client,
     commandsPath: path.join(__dirname, 'commands'),
     eventsPath: path.join(__dirname, 'events'),
-    devGuildIds: ['1298805664654561340', '1450512306302746820'],
-    devUserIds: ['563799503056928768'],
+    devGuildIds: isProd ? [] : ['1298805664654561340'],
+    devUserIds: isProd ? [] : ['563799503056928768'],
     bulkRegister: true
   })
 
