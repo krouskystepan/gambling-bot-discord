@@ -119,9 +119,13 @@ export async function run({ interaction }: SlashCommandProps) {
       const matchedNumbers = userNumbers.filter((n: number) =>
         lotteryNumbers.includes(n)
       ).length
-      winnings = bet * settings.lottery.winMultipliers[matchedNumbers]
 
-      if (settings.lottery.winMultipliers[matchedNumbers]) {
+      const matchKey =
+        matchedNumbers as keyof typeof settings.lottery.winMultipliers
+
+      winnings = bet * settings.lottery.winMultipliers[matchKey]
+
+      if (settings.lottery.winMultipliers[matchKey]) {
         wins++
         winCounts[matchedNumbers] = (winCounts[matchedNumbers] || 0) + 1
 

@@ -1,3 +1,5 @@
+import { TCasinoSettings } from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
@@ -174,7 +176,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const matchedNumbers = userNumbers.filter((n) =>
         lotteryNumbers.includes(n)
-      ).length
+      ).length as keyof TCasinoSettings['lottery']['winMultipliers']
 
       const winnings =
         parsedBetAmount *

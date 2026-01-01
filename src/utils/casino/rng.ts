@@ -1,14 +1,15 @@
 import {
   LOTTERY_NUM_TO_DRAW,
   LOTTERY_TOTAL_NUMBERS,
-  MINI_NUMBERS
+  MINI_NUMBERS,
+  TCasinoSettings
 } from 'gambling-bot-shared'
 
 import { Card } from './blackjack'
 
 export const spinSlot = (slotConfig: {
-  symbolWeights: Record<string, number>
-}): string => {
+  symbolWeights: TCasinoSettings['slots']['symbolWeights']
+}): keyof TCasinoSettings['slots']['winMultipliers'] => {
   const weightedSymbols = Object.entries(slotConfig.symbolWeights).flatMap(
     ([symbol, weight]) => Array(Number(weight)).fill(symbol)
   )

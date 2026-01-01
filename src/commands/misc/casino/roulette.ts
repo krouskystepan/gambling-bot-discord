@@ -101,9 +101,11 @@ export async function run({ interaction }: SlashCommandProps) {
       try {
         type = inferTypeFromValue(rawValue)
       } catch (e) {
+        const message = e instanceof Error ? e.message : 'Unknown error'
+
         return interaction.reply({
           embeds: [
-            createInfoEmbed('Invalid Input - Invalid Bet Value', `${e.message}`)
+            createInfoEmbed('Invalid Input - Invalid Bet Value', message)
           ],
           flags: MessageFlags.Ephemeral
         })

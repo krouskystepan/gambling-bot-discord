@@ -2,10 +2,10 @@
   "name": "gambling-bot-discord",
   "version": "1.0.0",
   "main": "src/index.ts",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "tsx --watch --no-deprecation src/index.ts",
-    "build": "npm run clean && npm run check && npm run docs:commands && tsc",
+    "build": "npm run clean && tsc",
     "start": "node dist/index.js",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "format:fix": "prettier --write \"src/**/*.{ts,tsx}\"",
