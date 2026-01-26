@@ -13,7 +13,7 @@ import {
   updateUserBalance
 } from '@/services'
 import { formatNumberToReadableString } from '@/utils/common/utils'
-import { createErrorEmbed } from '@/utils/discord/createEmbed'
+import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 //! DB TRANSACTIONS
@@ -63,6 +63,18 @@ export default async (interaction: Interaction, client: Client) => {
       if (!amount) return
 
       const parsedAmount = parseInt(amount)
+
+      if (user.balance > parsedAmount * 5) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed(
+              'Balance too high',
+              `You can only receive money if your balance is below **$${formatNumberToReadableString(parsedAmount * 5)}**.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
 
       const updatedUser = await updateUserBalance({
         userId: interaction.user.id,
