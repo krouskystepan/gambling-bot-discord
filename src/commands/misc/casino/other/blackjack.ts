@@ -186,6 +186,15 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const message = await interaction.fetchReply()
 
+    const hands = [
+      {
+        cards: playerCards,
+        betAmount: parsedBetAmount,
+        finished: false,
+        isSplitHand: false
+      }
+    ]
+
     await upsertBlackjackGame({
       userId: interaction.user.id,
       guildId: interaction.guildId!,
@@ -194,15 +203,9 @@ export async function run({ interaction }: SlashCommandProps) {
       betId,
       deck: shuffledDeck,
       deckIndex: 4,
-      hands: [
-        {
-          cards: playerCards,
-          betAmount: parsedBetAmount,
-          finished: false,
-          isSplitHand: false
-        }
-      ],
+      hands,
       activeHandIndex: 0,
+      phase: 'PLAYER',
       dealerCards
     })
 
@@ -215,15 +218,6 @@ export async function run({ interaction }: SlashCommandProps) {
       canDouble: true,
       canSplit
     })
-
-    const hands = [
-      {
-        cards: playerCards,
-        betAmount: parsedBetAmount,
-        finished: true,
-        isSplitHand: false
-      }
-    ]
 
     await interaction.editReply({
       embeds: [

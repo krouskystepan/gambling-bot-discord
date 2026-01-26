@@ -1,5 +1,6 @@
-import BlackjackGame, { TBlackjackHand } from '@/models/BlackjackGame'
+import BlackjackGame from '@/models/BlackjackGame'
 import { TGetBlackjackGame } from '@/types/types'
+import { EngineState } from '@/utils/casino/blackjack'
 
 export const getBlackjackGameByUserAndGuild = async ({
   userId,
@@ -42,6 +43,7 @@ export const upsertBlackjackGame = async ({
   deckIndex,
   hands,
   activeHandIndex,
+  phase,
   dealerCards
 }: {
   userId: string
@@ -49,12 +51,7 @@ export const upsertBlackjackGame = async ({
   channelId: string
   messageId: string
   betId: string
-  deck: unknown[]
-  deckIndex: number
-  hands: TBlackjackHand[]
-  activeHandIndex: number
-  dealerCards: unknown[]
-}) => {
+} & EngineState) => {
   return BlackjackGame.findOneAndUpdate(
     { userId, guildId },
     {
@@ -66,6 +63,7 @@ export const upsertBlackjackGame = async ({
         deckIndex,
         hands,
         activeHandIndex,
+        phase,
         dealerCards
       }
     },

@@ -4,7 +4,10 @@ import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { checkUserRegistration } from '@/services'
-import { formatNumberToReadableString } from '@/utils/common/utils'
+import {
+  formatNumberToReadableString,
+  formatNumberWithSpaces
+} from '@/utils/common/utils'
 import { createSuccessEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
@@ -26,7 +29,7 @@ export async function run({ interaction }: SlashCommandProps) {
       embeds: [
         createSuccessEmbed(
           'ATM - Balance',
-          `Your balance is **$${formatNumberToReadableString(user.balance)}** ($${user.balance}).`
+          `Your balance is **$${formatNumberToReadableString(user.balance)}** ($${formatNumberWithSpaces(user.balance)}).`
         )
       ],
       flags: MessageFlags.Ephemeral

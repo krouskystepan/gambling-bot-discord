@@ -19,11 +19,14 @@ export type EngineResult =
       dealerTurn: true
     }
 
+export type GamePhase = 'PLAYER' | 'DEALER' | 'FINISHED'
+
 export type EngineState = {
   deck: Card[]
   deckIndex: number
   hands: TBlackjackHand[]
   activeHandIndex: number
+  phase: GamePhase
   dealerCards: Card[]
 }
 

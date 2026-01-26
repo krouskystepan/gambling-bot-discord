@@ -8,6 +8,7 @@ export const docToEngine = (game: TBlackjackGame): EngineState => ({
   deckIndex: game.deckIndex,
   hands: game.hands,
   activeHandIndex: game.activeHandIndex,
+  phase: game.phase,
   dealerCards: game.dealerCards
 })
 
@@ -16,5 +17,6 @@ export const engineToDoc = (engine: EngineState, game: TBlackjackGame) => {
   game.deckIndex = engine.deckIndex
   game.hands = engine.hands
   game.activeHandIndex = engine.activeHandIndex
+  game.phase = engine.phase
   game.dealerCards = engine.dealerCards
 }

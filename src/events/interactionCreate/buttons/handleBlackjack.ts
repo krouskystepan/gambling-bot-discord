@@ -60,9 +60,21 @@ export default async (interaction: Interaction) => {
       })
     }
 
-    await interaction.deferUpdate()
-
     const engine = docToEngine(game)
+
+    if (engine.phase !== 'PLAYER') {
+      return interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Game not active',
+            'This Blackjack game is no longer accepting actions.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+
+    await interaction.deferUpdate()
     const activeHand = engine.hands[engine.activeHandIndex]
 
     if (action === 'DOUBLE') {
@@ -169,11 +181,50 @@ export default async (interaction: Interaction) => {
       if (nextHandIndex !== -1) {
         engine.activeHandIndex = nextHandIndex
       } else {
-        engine.activeHandIndex = -1
+        engine.phase = 'DEALER'
       }
     }
 
-    if (engine.activeHandIndex === -1) {
+    if (engine.phase === 'DEALER') {
+      const allPlayerHandsBusted = engine.hands.every(
+        (h) => calculateHandValue(h.cards) > 21
+      )
+
+      if (allPlayerHandsBusted) {
+        let totalPayout = 0
+        for (let i = 0; i < engine.hands.length; i++) {
+          const r = resolveResult(engine, i)
+          if (r.finished) totalPayout += r.payout
+        }
+
+        const totalBet = engine.hands.reduce((s, h) => s + h.betAmount, 0)
+        const net = totalPayout - totalBet
+        const finalResultId = net > 0 ? 'WIN' : net < 0 ? 'LOSS' : 'EVEN'
+
+        const finalUser = await getUser({ userId: game.userId, guildId })
+        if (!finalUser) return
+
+        await interaction.message.edit({
+          embeds: [
+            renderBlackjackEmbed({
+              userId: game.userId,
+              guildId,
+              betId,
+              hands: engine.hands,
+              activeHandIndex: -1,
+              dealerCards: engine.dealerCards,
+              showBalance,
+              userBalance: finalUser.balance,
+              result: { kind: 'FINAL', finalResultId }
+            })
+          ],
+          components: []
+        })
+
+        await deleteBlackjackGame({ userId: game.userId, guildId })
+        return
+      }
+
       engineToDoc(engine, game)
       await updateBlackjackGame(game)
 

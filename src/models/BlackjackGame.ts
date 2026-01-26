@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose'
 
-import { Card } from '@/utils/casino/blackjack'
+import { Card, GamePhase } from '@/utils/casino/blackjack'
 
 export type TBlackjackHand = {
   cards: Card[]
@@ -21,6 +21,7 @@ export type TBlackjackGame = {
 
   hands: TBlackjackHand[]
   activeHandIndex: number
+  phase: GamePhase
 
   dealerCards: Card[]
 
@@ -55,6 +56,12 @@ const BlackjackGameSchema = new Schema<TBlackjackGame>(
     deckIndex: { type: Number, required: true, default: 0 },
 
     hands: { type: [handSchema], required: true, default: [] },
+    phase: {
+      type: String,
+      enum: ['PLAYER', 'DEALER', 'FINISHED'],
+      required: true,
+      default: 'PLAYER'
+    },
     activeHandIndex: { type: Number, required: true, default: 0 },
 
     dealerCards: [cardSchema]

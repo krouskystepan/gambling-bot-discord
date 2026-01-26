@@ -83,7 +83,7 @@ export default async (interaction: Interaction, client: Client) => {
               .setTitle('ATM - Money Generator')
               .setDescription(
                 `<@${interaction.user.id}> has added **$${formatNumberToReadableString(
-                  updatedUser.balance
+                  parsedAmount
                 )}** to their account.`
               )
               .setColor('DarkGreen')
