@@ -25,11 +25,13 @@ export async function run({ interaction }: SlashCommandProps) {
     const user = await checkUserRegistration({ interaction })
     if (!user) return
 
+    const roundedBalance = Math.round(user.balance * 100) / 100
+
     return interaction.reply({
       embeds: [
         createSuccessEmbed(
           'ATM - Balance',
-          `Your balance is **$${formatNumberToReadableString(user.balance)}** ($${formatNumberWithSpaces(user.balance)}).`
+          `Your balance is **$${formatNumberToReadableString(roundedBalance)}** ($${formatNumberWithSpaces(roundedBalance)}).`
         )
       ],
       flags: MessageFlags.Ephemeral

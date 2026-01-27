@@ -80,6 +80,7 @@ export default async (client: Client) => {
           (sum, hand) => sum + hand.betAmount,
           0
         )
+        const net = totalPayout - totalBet
 
         let finalResultId: FinalGameResultId
 
@@ -118,7 +119,7 @@ export default async (client: Client) => {
               hands: engine.hands,
               activeHandIndex: -1,
               dealerCards: engine.dealerCards,
-              result: { kind: 'FINAL', finalResultId },
+              result: { kind: 'FINAL', finalResultId, netProfit: net },
               showBalance: false
             })
           ],

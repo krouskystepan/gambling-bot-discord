@@ -30,7 +30,7 @@ export type FinalGameResultId =
 type RenderResult =
   | { kind: 'START'; startResultId: StartBlackjackResultId }
   | { kind: 'PHASE'; gamePhaseId: GamePhaseId }
-  | { kind: 'FINAL'; finalResultId: FinalGameResultId }
+  | { kind: 'FINAL'; finalResultId: FinalGameResultId; netProfit: number }
 
 export type RenderParams = {
   userId: string
@@ -185,13 +185,10 @@ export const renderBlackjackEmbed = ({
       }
 
       case 'FINAL': {
-        const netProfit =
-          hands.reduce((sum, h) => sum + h.betAmount, 0) * -1 +
-          (result.finalResultId === 'WIN'
-            ? Math.abs(hands.reduce((sum, h) => sum + h.betAmount, 0)) * 2
-            : 0)
-
-        const formatted = formatFinalResult(result.finalResultId, netProfit)
+        const formatted = formatFinalResult(
+          result.finalResultId,
+          result.netProfit
+        )
         color = formatted.color
         resultText = formatted.text
         break

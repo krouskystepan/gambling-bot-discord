@@ -215,7 +215,7 @@ export default async (interaction: Interaction) => {
               dealerCards: engine.dealerCards,
               showBalance,
               userBalance: finalUser.balance,
-              result: { kind: 'FINAL', finalResultId }
+              result: { kind: 'FINAL', finalResultId, netProfit: net }
             })
           ],
           components: []
@@ -311,7 +311,7 @@ export default async (interaction: Interaction) => {
             dealerCards: engine.dealerCards,
             showBalance,
             userBalance: finalUser.balance,
-            result: { kind: 'FINAL', finalResultId }
+            result: { kind: 'FINAL', finalResultId, netProfit: net }
           })
         ],
         components: []

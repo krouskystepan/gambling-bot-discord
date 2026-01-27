@@ -98,13 +98,23 @@ export const checkValidBet = (
   minBet: number,
   userBalance: number,
   xTimes?: number
-) => {
-  if (isNaN(betAmount)) {
+): boolean => {
+  const MIN_CURRENCY_UNIT = 0.01
+
+  if (!Number.isFinite(betAmount)) {
+    interaction.reply({
+      embeds: [createInfoEmbed('Invalid Input', 'Bet must be a valid number.')],
+      flags: MessageFlags.Ephemeral
+    })
+    return false
+  }
+
+  if (betAmount < MIN_CURRENCY_UNIT) {
     interaction.reply({
       embeds: [
         createInfoEmbed(
-          'Invalid Input - Not a number',
-          'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
+          'Invalid Bet Amount',
+          `Minimum possible bet is **$${formatNumberToReadableString(MIN_CURRENCY_UNIT)}**.`
         )
       ],
       flags: MessageFlags.Ephemeral
@@ -112,20 +122,20 @@ export const checkValidBet = (
     return false
   }
 
-  if (betAmount <= 0) {
+  const betCents = Math.floor(betAmount * 100)
+  const balanceCents = Math.floor(userBalance * 100)
+  const minBetCents = Math.floor(minBet * 100)
+  const maxBetCents = Math.floor(maxBet * 100)
+
+  if (betCents <= 0) {
     interaction.reply({
-      embeds: [
-        createInfoEmbed(
-          'Invalid Input - Non-positive number',
-          'The number you provided must be greater than 0.\nPlease enter a positive value.'
-        )
-      ],
+      embeds: [createInfoEmbed('Invalid Input', 'Bet must be greater than 0.')],
       flags: MessageFlags.Ephemeral
     })
     return false
   }
 
-  if (maxBet > 0 && betAmount > maxBet) {
+  if (maxBetCents > 0 && betCents > maxBetCents) {
     interaction.reply({
       embeds: [
         createInfoEmbed(
@@ -138,7 +148,7 @@ export const checkValidBet = (
     return false
   }
 
-  if (minBet > 0 && betAmount < minBet) {
+  if (minBetCents > 0 && betCents < minBetCents) {
     interaction.reply({
       embeds: [
         createInfoEmbed(
@@ -151,7 +161,7 @@ export const checkValidBet = (
     return false
   }
 
-  if (userBalance < betAmount) {
+  if (balanceCents < betCents) {
     interaction.reply({
       embeds: [
         createInfoEmbed(
@@ -166,16 +176,16 @@ export const checkValidBet = (
     return false
   }
 
-  if (xTimes) {
-    const totalBet = xTimes * betAmount
+  if (typeof xTimes === 'number' && xTimes > 0) {
+    const totalBetCents = betCents * xTimes
 
-    if (userBalance < totalBet) {
+    if (balanceCents < totalBetCents) {
       interaction.reply({
         embeds: [
           createInfoEmbed(
             'Insufficient Funds',
             `You don't have enough money to place this bet for ${xTimes} spins (you need **$${formatNumberToReadableString(
-              totalBet
+              totalBetCents / 100
             )}**).\nYour current balance is **$${formatNumberToReadableString(userBalance)}**.`
           )
         ],
