@@ -6,7 +6,7 @@ import {
   TVipRoom
 } from 'gambling-bot-shared'
 
-import { Card } from '@/utils/casino/blackjack'
+import { EngineState } from '@/utils/casino/blackjack'
 
 // Create
 export type TCreateUser = Pick<TUser, 'userId' | 'guildId'>
@@ -24,6 +24,7 @@ export type TCreatePrediction = Omit<TPrediction, 'createdAt' | 'updatedAt'>
 export type TGetUser = Pick<TUser, 'userId' | 'guildId'>
 export type TGetVip = Pick<TVipRoom, 'guildId' | 'ownerId'>
 export type TGetBlackjackGame = Pick<TUser, 'userId' | 'guildId'>
+export type TGetRaffle = Pick<TUser, 'userId' | 'guildId'>
 export type TGetGuildcongifuration = Pick<TUser, 'guildId'>
 export type TGetPrediction = Pick<TPrediction, 'predictionId' | 'guildId'>
 export type TGetOldPredictions = {
@@ -48,15 +49,19 @@ export type TUpdatePredictionStatus = Pick<
 export type TDeleteAllTransactions = Pick<TUser, 'userId' | 'guildId'>
 
 // Other
-export type TUpsertBlackjackGame = Pick<TUser, 'userId' | 'guildId'> & {
-  channelId: string
-  messageId: string
-  betId: string
-  betAmount: number
-  deck: Card[]
-  deckIndex: number
-  playerCards: Card[]
-  dealerCards: Card[]
+export type TUpsertBlackjackGame = Pick<TUser, 'userId' | 'guildId'> &
+  EngineState & {
+    channelId: string
+    messageId: string
+    betId: string
+    betAmount: number
+  }
+
+export type TAddRaffleTickets = {
+  raffleId: string
+  guildId: string
+  userId: string
+  tickets: number
 }
 
 export type TWithdrawResult =

@@ -148,3 +148,39 @@ export const checkPredictionChannels = async (
 
   return config
 }
+
+export const checkRaffleChannels = async (
+  interaction: ChatInputCommandInteraction
+): Promise<TGuildConfiguration | false> => {
+  const config = await getGuildConfigByGuildId({
+    guildId: interaction.guildId!
+  })
+
+  if (!config?.raffleChannelIds?.actions || !config.raffleChannelIds.logs) {
+    await interaction.reply({
+      embeds: [
+        createErrorEmbed(
+          'Error - Not Configured',
+          'Raffle channels are not configured yet.'
+        )
+      ],
+      flags: MessageFlags.Ephemeral
+    })
+    return false
+  }
+
+  if (interaction.channelId !== config.raffleChannelIds.actions) {
+    await interaction.reply({
+      embeds: [
+        createErrorEmbed(
+          'Error - Incorrect Channel',
+          `This command can only be used in <#${config.raffleChannelIds.actions}>.`
+        )
+      ],
+      flags: MessageFlags.Ephemeral
+    })
+    return false
+  }
+
+  return config
+}

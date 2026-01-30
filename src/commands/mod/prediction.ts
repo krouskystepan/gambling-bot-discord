@@ -212,7 +212,7 @@ export async function run({ interaction }: SlashCommandProps) {
             embeds: [
               createErrorEmbed(
                 'Invalid Input - Invalid Autolock Date/Time',
-                'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 18:00` or `09.09.2025 18:00`'
+                'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 05:00` or `09.09.2025 18:00`'
               )
             ],
             flags: MessageFlags.Ephemeral

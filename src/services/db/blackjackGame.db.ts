@@ -1,6 +1,5 @@
 import BlackjackGame from '@/models/BlackjackGame'
-import { TGetBlackjackGame } from '@/types/types'
-import { EngineState } from '@/utils/casino/blackjack'
+import { TGetBlackjackGame, TUpsertBlackjackGame } from '@/types/types'
 
 export const getBlackjackGameByUserAndGuild = async ({
   userId,
@@ -45,13 +44,7 @@ export const upsertBlackjackGame = async ({
   activeHandIndex,
   phase,
   dealerCards
-}: {
-  userId: string
-  guildId: string
-  channelId: string
-  messageId: string
-  betId: string
-} & EngineState) => {
+}: TUpsertBlackjackGame) => {
   return BlackjackGame.findOneAndUpdate(
     { userId, guildId },
     {
