@@ -117,7 +117,7 @@ export const consumeUserBalance = async ({
         }
       }
     ],
-    { new: true }
+    { new: true, updatePipeline: true }
   )
 }
 

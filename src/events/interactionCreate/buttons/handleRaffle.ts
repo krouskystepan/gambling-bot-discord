@@ -1,5 +1,3 @@
-import console from 'console'
-
 import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 
 import {
@@ -18,6 +16,8 @@ import { logger } from '@/utils/logger'
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+
   try {
     const [type, raffleId] = interaction.customId.split('.')
     if (type !== 'raffle' || !raffleId) return
@@ -26,11 +26,8 @@ export default async (interaction: Interaction) => {
       raffleId,
       guildId: interaction.guildId!
     })
-    console.log(raffle)
 
     if (!raffle || !interaction.channel) return
-
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
     const guildConfig = await getGuildConfigByGuildId({
       guildId: interaction.guildId!
@@ -131,8 +128,6 @@ export default async (interaction: Interaction) => {
       const raffleMessage = await interaction.channel.messages
         .fetch(updatedRaffle.raffleId)
         .catch(() => null)
-
-      console.log(raffleMessage)
 
       if (raffleMessage) {
         await raffleMessage.edit({ embeds: [updatedEmbed] })
