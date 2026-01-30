@@ -1,5 +1,4 @@
-import { TPrediction } from 'gambling-bot-shared'
-import { PredictionSchema } from 'gambling-bot-shared/server'
+import { PredictionSchema, TPrediction } from 'gambling-bot-shared'
 import mongoose from 'mongoose'
 
 export default (mongoose.models.Prediction as mongoose.Model<TPrediction>) ||

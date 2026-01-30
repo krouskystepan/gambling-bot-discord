@@ -25,7 +25,7 @@
     "commandkit": "^0.1.10",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
-    "gambling-bot-shared": "^0.1.24",
+    "gambling-bot-shared": "^0.1.25",
     "lodash": "^4.17.21",
     "luxon": "^3.7.2",
     "mongoose": "^9.1.5",
