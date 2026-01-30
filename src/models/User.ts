@@ -1,4 +1,6 @@
-import { TUser, UserSchema } from 'gambling-bot-shared'
-import { model } from 'mongoose'
+import { TUser } from 'gambling-bot-shared'
+import { UserSchema } from 'gambling-bot-shared/server'
+import mongoose from 'mongoose'
 
-export default model<TUser>('User', UserSchema)
+export default (mongoose.models.User as mongoose.Model<TUser>) ||
+  mongoose.model<TUser>('User', UserSchema)

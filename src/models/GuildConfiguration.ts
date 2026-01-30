@@ -1,10 +1,10 @@
-import {
-  GuildConfigurationSchema,
-  TGuildConfiguration
-} from 'gambling-bot-shared'
-import { model } from 'mongoose'
+import { TGuildConfiguration } from 'gambling-bot-shared'
+import { GuildConfigurationSchema } from 'gambling-bot-shared/server'
+import mongoose from 'mongoose'
 
-export default model<TGuildConfiguration>(
-  'GuildConfiguration',
-  GuildConfigurationSchema
-)
+export default (mongoose.models
+  .GuildConfiguration as mongoose.Model<TGuildConfiguration>) ||
+  mongoose.model<TGuildConfiguration>(
+    'GuildConfiguration',
+    GuildConfigurationSchema
+  )
