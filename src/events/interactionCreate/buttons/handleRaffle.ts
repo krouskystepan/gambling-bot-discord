@@ -16,12 +16,12 @@ import { logger } from '@/utils/logger'
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
+  const [type, raffleId] = interaction.customId.split('.')
+  if (type !== 'raffle' || !raffleId) return
+
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
   try {
-    const [type, raffleId] = interaction.customId.split('.')
-    if (type !== 'raffle' || !raffleId) return
-
     const raffle = await getRaffleById({
       raffleId,
       guildId: interaction.guildId!

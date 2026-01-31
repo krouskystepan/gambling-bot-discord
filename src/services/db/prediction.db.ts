@@ -1,6 +1,3 @@
-import { TPrediction } from 'gambling-bot-shared'
-import { FilterQuery } from 'mongoose'
-
 import Prediction from '@/models/Prediction'
 import {
   TAddPredictionBet,
@@ -91,10 +88,10 @@ export const deletePrediction = async ({
   Prediction.deleteOne({ predictionId })
 }
 
-export const findPredictions = async (query: FilterQuery<TPrediction>) => {
-  const predictions = await Prediction.find(query).limit(25)
-
-  return predictions
+export const findPredictions = async (
+  query: Parameters<typeof Prediction.find>[0]
+) => {
+  return Prediction.find(query).limit(25)
 }
 
 export const addPredictionBet = async ({
