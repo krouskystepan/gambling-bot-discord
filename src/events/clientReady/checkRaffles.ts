@@ -112,7 +112,10 @@ const processRaffles = async (client: Client) => {
         )
         .setTimestamp()
 
-      await thread.send({ embeds: [resultEmbed] })
+      await thread.send({
+        content: winnerId ? `<@${winnerId}>` : '',
+        embeds: [resultEmbed]
+      })
 
       const nextDrawAt = new Date(
         raffle.nextDrawAt.getTime() + raffle.drawIntervalMs
@@ -142,6 +145,20 @@ const processRaffles = async (client: Client) => {
         lastDrawAt: raffle.nextDrawAt,
         nextDrawAt
       })
+
+      if (refunded) {
+        logger.worker(
+          `Raffle ${raffle.raffleId} [guild:${raffle.guildId}] refunded — participants:${participants.length}, tickets:${totalTickets}, pot:$${pot}`
+        )
+      } else if (winnerId) {
+        logger.worker(
+          `Raffle ${raffle.raffleId} [guild:${raffle.guildId}] drawn — winner:${winnerId}, participants:${participants.length}, tickets:${totalTickets}, pot:$${pot}`
+        )
+      } else {
+        logger.worker(
+          `Raffle ${raffle.raffleId} [guild:${raffle.guildId}] closed — no valid participants`
+        )
+      }
     } catch (err) {
       logger.error(`Failed processing raffle ${raffle.raffleId}`, err)
     }
