@@ -16,8 +16,10 @@ import { logger } from '@/utils/logger'
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
-  const [type, raffleId] = interaction.customId.split('.')
-  if (type !== 'raffle' || !raffleId) return
+  const [type, raffleId, ticketAmountString] = interaction.customId.split('.')
+  if (type !== 'raffle' || !raffleId || !ticketAmountString) return
+
+  const ticketAmount = Number(ticketAmountString)
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
@@ -40,7 +42,6 @@ export default async (interaction: Interaction) => {
     )
 
     const currentTickets = existingEntry ? existingEntry.tickets : 0
-    const ticketAmount = 1
 
     if (
       raffle.maxTicketsPerUser > 0 &&

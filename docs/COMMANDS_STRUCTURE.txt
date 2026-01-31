@@ -105,10 +105,12 @@ src
     │   │      ├─ remove-actions – Remove a channel from prediction actions.
     │   │      ├─ add-logs – Set a channel for prediction logs (results).
     │   │      ├─ remove-logs – Remove the prediction logs channel.
-    │   ├── setup-settings.ts
-    │   │   └─ /setup-settings – Manage the casino settings (max, min bets and win %).
-    │   │      ├─ edit – Edit the games settings.
-    │   │      ├─ reset – Reset the casino settings to default values.
+    │   ├── setup-raffle.ts
+    │   │   └─ /setup-raffle – Manage channels for raffles (actions & logs).
+    │   │      ├─ add-actions – Add a channel where raffles can be used.
+    │   │      ├─ remove-actions – Remove a channel from raffle actions.
+    │   │      ├─ add-logs – Set a channel for raffle logs (results).
+    │   │      ├─ remove-logs – Remove the raffle logs channel.
     │   └── setup-vip.ts
     │       └─ /setup-vip – Manage VIP settings.
     │          ├─ add-category – Set a category for VIP rooms.
@@ -127,6 +129,11 @@ src
     │      ├─ payout – Pay out winners of a prediction.
     │      ├─ cancel – Cancel a prediction and refund all bets.
     │      ├─ check – Check the status of a prediction.
+    ├── raffle.ts
+    │   └─ /raffle – Manage global ticket raffles.
+    │      ├─ create – Create a new scheduled raffle.
+    │      ├─ cancel – Cancel raffle and refund all tickets.
+    │      ├─ check – Check how many tickets each user has bought in a raffle.
     ├── test
     │   ├── simulate-coin-flip.ts
     │   │   └─ /simulate-coin-flip – Simulate X coin flips. WARNING: May take a long time!

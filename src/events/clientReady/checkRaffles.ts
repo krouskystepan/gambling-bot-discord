@@ -26,30 +26,53 @@ const processRaffles = async (client: Client) => {
 
   for (const raffle of raffles) {
     try {
-      const winnerId = pickWinner(raffle.participants)
-
-      const totalTickets = raffle.participants.reduce(
-        (sum, p) => sum + p.tickets,
-        0
-      )
-
+      const participants = raffle.participants.filter((p) => p.tickets > 0)
+      const totalTickets = participants.reduce((sum, p) => sum + p.tickets, 0)
       const pot = totalTickets * raffle.ticketPrice
 
-      if (winnerId && pot > 0) {
-        await createTransaction({
-          userId: winnerId,
-          guildId: raffle.guildId,
-          amount: pot,
-          type: 'win',
-          source: 'casino',
-          betId: raffle.raffleId
-        })
+      let winnerId: string | null = null
+      let refunded = false
 
-        await updateUserBalance({
-          userId: winnerId,
-          guildId: raffle.guildId,
-          amount: pot
-        })
+      if (participants.length < 2 || pot <= 0) {
+        refunded = true
+
+        for (const p of participants) {
+          const refundAmount = p.tickets * raffle.ticketPrice
+
+          await createTransaction({
+            userId: p.userId,
+            guildId: raffle.guildId,
+            amount: refundAmount,
+            type: 'refund',
+            source: 'casino',
+            betId: raffle.raffleId
+          })
+
+          await updateUserBalance({
+            userId: p.userId,
+            guildId: raffle.guildId,
+            amount: refundAmount
+          })
+        }
+      } else {
+        winnerId = pickWinner(participants)
+
+        if (winnerId) {
+          await createTransaction({
+            userId: winnerId,
+            guildId: raffle.guildId,
+            amount: pot,
+            type: 'win',
+            source: 'casino',
+            betId: raffle.raffleId
+          })
+
+          await updateUserBalance({
+            userId: winnerId,
+            guildId: raffle.guildId,
+            amount: pot
+          })
+        }
       }
 
       const channel = await client.channels
@@ -60,7 +83,6 @@ const processRaffles = async (client: Client) => {
       const raffleMessage = await channel.messages
         .fetch(raffle.raffleId)
         .catch(() => null)
-
       if (!raffleMessage) continue
 
       const thread = raffleMessage.hasThread
@@ -73,16 +95,20 @@ const processRaffles = async (client: Client) => {
       if (!thread || !thread.isTextBased()) continue
 
       const resultEmbed = new EmbedBuilder()
-        .setColor(winnerId ? Colors.Gold : Colors.Red)
+        .setColor(
+          refunded ? Colors.Orange : winnerId ? Colors.Gold : Colors.Red
+        )
         .setTitle('🎉 Raffle Draw Result')
         .setDescription(
-          winnerId
-            ? [
-                `🏆 **Winner:** <@${winnerId}>`,
-                `🎟️ Tickets Sold: **${totalTickets}**`,
-                `💰 Pot: **$${pot.toLocaleString()}**`
-              ].join('\n')
-            : 'No participants this round.'
+          refunded
+            ? 'Not enough participants — all tickets refunded.'
+            : winnerId
+              ? [
+                  `🏆 **Winner:** <@${winnerId}>`,
+                  `🎟️ Tickets Sold: **${totalTickets}**`,
+                  `💰 Pot: **$${pot.toLocaleString()}**`
+                ].join('\n')
+              : 'No participants this round.'
         )
         .setTimestamp()
 

@@ -1,3 +1,5 @@
+import mongoose from 'mongoose'
+
 import Prediction from '@/models/Prediction'
 import {
   TAddPredictionBet,
@@ -88,8 +90,9 @@ export const deletePrediction = async ({
   Prediction.deleteOne({ predictionId })
 }
 
+type PredictionDoc = mongoose.InferSchemaType<typeof Prediction.schema>
 export const findPredictions = async (
-  query: Parameters<typeof Prediction.find>[0]
+  query: mongoose.mongo.Filter<PredictionDoc>
 ) => {
   return Prediction.find(query).limit(25)
 }

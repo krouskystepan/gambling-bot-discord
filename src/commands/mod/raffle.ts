@@ -32,6 +32,7 @@ import {
 } from '@/utils/common/utils'
 import {
   createErrorEmbed,
+  createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
@@ -73,6 +74,20 @@ export const data: CommandData = {
     {
       name: 'cancel',
       description: 'Cancel raffle and refund all tickets.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'raffle-id',
+          description: 'ID of the raffle.',
+          type: ApplicationCommandOptionType.String,
+          required: true,
+          autocomplete: true
+        }
+      ]
+    },
+    {
+      name: 'check',
+      description: 'Check how many tickets each user has bought in a raffle.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
@@ -219,11 +234,13 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`raffle.${messageReply.id}`)
+          .setCustomId(`raffle.${messageReply.id}.1`)
           .setLabel('Buy Ticket')
           .setEmoji('🎫')
           .setStyle(ButtonStyle.Success)
       )
+
+      // Add more buttons with more tickets
 
       await interaction.editReply({
         embeds: [embed],
@@ -302,6 +319,46 @@ export async function run({ interaction }: SlashCommandProps) {
             'Raffle canceled and all tickets refunded.'
           )
         ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+
+    if (sub === 'check') {
+      const raffleId = opts.getString('raffle-id', true)
+
+      const raffle = await getRaffleById({
+        raffleId,
+        guildId: interaction.guildId!
+      })
+
+      if (!raffle) {
+        return interaction.reply({
+          embeds: [createErrorEmbed('Not Found', 'Raffle does not exist.')],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
+      if (!raffle.participants.length) {
+        return interaction.reply({
+          embeds: [
+            createInfoEmbed('No Tickets', 'No one has bought tickets yet.')
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
+      const lines = raffle.participants
+        .filter((p) => p.tickets > 0)
+        .map((p) => `<@${p.userId}> — Tickets bought: **${p.tickets}**`)
+
+      const embed = new EmbedBuilder()
+        .setColor(Colors.Blurple)
+        .setTitle('🎫 Raffle Ticket Overview')
+        .setDescription(lines.join('\n'))
+        .setFooter({ text: `Raffle ID: ${raffleId}` })
+
+      return interaction.reply({
+        embeds: [embed],
         flags: MessageFlags.Ephemeral
       })
     }

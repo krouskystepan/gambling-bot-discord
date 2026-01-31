@@ -17,9 +17,7 @@ export default async (
   const subcommand = interaction.options.getSubcommand()
   const focused = interaction.options.getFocused().toLowerCase()
 
-  if (subcommand !== 'cancel') {
-    return interaction.respond([])
-  }
+  if (subcommand !== 'cancel' && subcommand !== 'check') return
 
   const raffles = await searchRafflesForAutocomplete({
     guildId: interaction.guildId!,
