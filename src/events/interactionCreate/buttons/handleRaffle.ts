@@ -17,9 +17,9 @@ export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
   const [type, raffleId, ticketAmountString] = interaction.customId.split('.')
-  if (type !== 'raffle' || !raffleId || !ticketAmountString) return
+  if (type !== 'raffle' || !raffleId) return
 
-  const ticketAmount = Number(ticketAmountString)
+  const ticketAmount = Number(ticketAmountString || 1)
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
