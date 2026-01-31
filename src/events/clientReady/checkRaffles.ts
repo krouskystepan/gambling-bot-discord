@@ -21,8 +21,18 @@ const pickWinner = (participants: { userId: string; tickets: number }[]) => {
 }
 
 const processRaffles = async (client: Client) => {
+  logger.worker(`[RAFFLE] Tick at ${new Date().toISOString()}`)
+
   const raffles = await getRafflesReadyToDraw()
+  logger.worker(`[RAFFLE] Ready raffles: ${raffles.length}`)
+
   if (!raffles.length) return
+
+  raffles.forEach((r) =>
+    logger.worker(
+      `[RAFFLE] Raffle ${r.raffleId} nextDrawAt=${r.nextDrawAt.toISOString()}`
+    )
+  )
 
   for (const raffle of raffles) {
     try {
