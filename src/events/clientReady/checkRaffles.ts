@@ -21,18 +21,8 @@ const pickWinner = (participants: { userId: string; tickets: number }[]) => {
 }
 
 const processRaffles = async (client: Client) => {
-  logger.worker(`[RAFFLE] Tick at ${new Date().toISOString()}`)
-
   const raffles = await getRafflesReadyToDraw()
-  logger.worker(`[RAFFLE] Ready raffles: ${raffles.length}`)
-
   if (!raffles.length) return
-
-  raffles.forEach((r) =>
-    logger.worker(
-      `[RAFFLE] Raffle ${r.raffleId} nextDrawAt=${r.nextDrawAt.toISOString()}`
-    )
-  )
 
   for (const raffle of raffles) {
     try {
@@ -43,7 +33,7 @@ const processRaffles = async (client: Client) => {
       let winnerId: string | null = null
       let refunded = false
 
-      if (participants.length < 2 || pot <= 0) {
+      if (participants.length === 1) {
         refunded = true
 
         for (const p of participants) {
@@ -127,9 +117,12 @@ const processRaffles = async (client: Client) => {
         embeds: [resultEmbed]
       })
 
-      const nextDrawAt = new Date(
-        raffle.nextDrawAt.getTime() + raffle.drawIntervalMs
-      )
+      const now = Date.now()
+      const lastScheduled = raffle.nextDrawAt.getTime()
+      const interval = raffle.drawIntervalMs
+
+      const intervalsMissed = Math.floor((now - lastScheduled) / interval) + 1
+      const nextDrawAt = new Date(lastScheduled + intervalsMissed * interval)
       const nextDrawUnix = Math.floor(nextDrawAt.getTime() / 1000)
 
       const resetEmbed = new EmbedBuilder()
@@ -137,10 +130,10 @@ const processRaffles = async (client: Client) => {
         .setTitle('🎫 Global Raffle')
         .setDescription(
           [
-            `💰 **Ticket Price:** $${raffle.ticketPrice.toLocaleString()}`,
-            `🎟️ **Ticket Limit:** ${raffle.maxTicketsPerUser}`,
+            `💰 Ticket Price: **$${raffle.ticketPrice.toLocaleString()}**`,
+            `🎟️ Ticket Limit: **${raffle.maxTicketsPerUser}**`,
             '',
-            `🗓️ **Next Draw:** <t:${nextDrawUnix}:F>`,
+            `🗓️ Next Draw: **<t:${nextDrawUnix}:F>**`,
             '',
             '💸 Current Pot: **$0**'
           ].join('\n')

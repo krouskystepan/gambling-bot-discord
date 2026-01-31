@@ -232,15 +232,20 @@ export async function run({ interaction }: SlashCommandProps) {
         )
         .setFooter({ text: `ID: ${messageReply.id}` })
 
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`raffle.${messageReply.id}.1`)
-          .setLabel('Buy Ticket')
-          .setEmoji('🎫')
-          .setStyle(ButtonStyle.Success)
-      )
+      const row = new ActionRowBuilder<ButtonBuilder>()
 
-      // Add more buttons with more tickets
+      const ticketOptions = [1, 5, 10]
+      for (const qty of ticketOptions) {
+        if (maxTickets >= qty) {
+          row.addComponents(
+            new ButtonBuilder()
+              .setCustomId(`raffle.${messageReply.id}.${qty}`)
+              .setLabel(`Buy ${qty} Ticket${qty > 1 ? 's' : ''}`)
+              .setEmoji('🎫')
+              .setStyle(ButtonStyle.Success)
+          )
+        }
+      }
 
       await interaction.editReply({
         embeds: [embed],

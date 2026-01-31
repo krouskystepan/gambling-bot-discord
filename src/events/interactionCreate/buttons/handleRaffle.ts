@@ -70,7 +70,7 @@ export default async (interaction: Interaction) => {
             'Insufficient Funds',
             `You need **$${formatNumberToReadableString(
               raffle.ticketPrice
-            )}** to buy ticket.`
+            )}** to buy ticket/s.`
           )
         ]
       })
@@ -89,7 +89,7 @@ export default async (interaction: Interaction) => {
       raffleId,
       guildId: interaction.guildId!,
       userId: interaction.user.id,
-      tickets: 1
+      tickets: ticketAmount
     })
 
     const updatedRaffle = await getRaffleById({
@@ -138,9 +138,9 @@ export default async (interaction: Interaction) => {
     await interaction.editReply({
       embeds: [
         createSuccessEmbed(
-          'Ticket Purchased',
-          `You bought **1** ticket for **$${formatNumberToReadableString(
-            raffle.ticketPrice
+          'Ticket/s Purchased',
+          `You bought **${ticketAmount}** ticket/s for **$${formatNumberToReadableString(
+            raffle.ticketPrice * ticketAmount
           )}**`
         )
       ]
