@@ -102,8 +102,10 @@ export default async (interaction: Interaction) => {
         (sum, p) => sum + p.tickets,
         0
       )
+      const rawPot = totalTickets * raffle.ticketPrice
 
-      const pot = totalTickets * raffle.ticketPrice
+      const houseCut = guildConfig.casinoSettings.raffle.casinoCut
+      const pot = rawPot * (1 - houseCut)
 
       const drawUnix = Math.floor(
         new Date(updatedRaffle.nextDrawAt).getTime() / 1000

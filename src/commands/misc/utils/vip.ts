@@ -22,11 +22,13 @@ import {
   formatNumberToReadableString,
   parseTimeToSeconds
 } from '@/utils/common/utils'
+import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
   createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const data: CommandData = {
   name: 'vip',
@@ -442,23 +444,33 @@ export async function run({ interaction }: SlashCommandProps) {
         }
       })
 
-      const vipChannel = await interaction.guild!.channels.fetch(
-        existingVip.channelId
-      )
+      const vipChannel = await interaction
+        .guild!.channels.fetch(existingVip.channelId)
+        .catch(() => null)
 
-      if (vipChannel?.isTextBased()) {
-        const extendMsg = await vipChannel.send({
-          content: `Your VIP has been extended, ${interaction.user}! 🎉`,
+      if (!isGuildSendableChannel(vipChannel)) {
+        return interaction.reply({
           embeds: [
-            createSuccessEmbed(
-              'VIP Channel Extended',
-              `New expiry: <t:${Math.floor(existingVip.expiresAt.getTime() / 1000)}:f>`
+            createErrorEmbed(
+              'Wrong Discord Configuration',
+              'Log channel misconfigured or inaccessible.'
             )
-          ]
+          ],
+          flags: MessageFlags.Ephemeral
         })
-
-        await extendMsg.pin()
       }
+
+      const extendMsg = await vipChannel.send({
+        content: `Your VIP has been extended, ${interaction.user}! 🎉`,
+        embeds: [
+          createSuccessEmbed(
+            'VIP Channel Extended',
+            `New expiry: <t:${Math.floor(existingVip.expiresAt.getTime() / 1000)}:f>`
+          )
+        ]
+      })
+
+      await extendMsg.pin()
 
       return interaction.reply({
         embeds: [
@@ -574,17 +586,22 @@ export async function run({ interaction }: SlashCommandProps) {
         memberId: userToAdd.id
       })
 
-      const guild = interaction.guild!
-      const member = await guild.members.fetch(userToAdd.id)
+      const member = await interaction.guild!.members.fetch(userToAdd.id)
       await member.roles.add(vipRoleMemberId)
 
-      const channel = guild.channels.cache.get(vipRoom.channelId)
-      if (channel && channel.isTextBased() && !channel.isThread()) {
-        await channel.permissionOverwrites.edit(userToAdd.id, {
-          ViewChannel: true,
-          SendMessages: true
-        })
+      const channel = await interaction
+        .guild!.channels.fetch(vipRoom.channelId)
+        .catch(() => null)
+
+      if (!channel || !channel.isTextBased() || channel.isThread()) {
+        logger.error(`VIP room channel invalid: ${vipRoom.channelId}`)
+        return
       }
+
+      await channel.permissionOverwrites.edit(userToAdd.id, {
+        ViewChannel: true,
+        SendMessages: true
+      })
 
       await createTransaction({
         userId: user.userId,
@@ -649,23 +666,22 @@ export async function run({ interaction }: SlashCommandProps) {
         memberId: userToRemove.id
       })
 
-      const guild = interaction.guild!
-      const member = await guild.members
-        .fetch(userToRemove.id)
+      const member = await interaction.guild!.members.fetch(userToRemove.id)
+      await member.roles.remove(vipRoleMemberId).catch(() => undefined)
+
+      const channel = await interaction
+        .guild!.channels.fetch(vipRoom.channelId)
         .catch(() => null)
-      if (member) {
-        await member.roles.remove(vipRoleMemberId).catch(() => undefined)
+
+      if (!channel || !channel.isTextBased() || channel.isThread()) {
+        logger.error(`VIP room channel invalid: ${vipRoom.channelId}`)
+        return
       }
 
-      const channel = guild.channels.cache.get(vipRoom.channelId)
-      if (channel && channel.isTextBased() && !channel.isThread()) {
-        await channel.permissionOverwrites
-          .edit(userToRemove.id, {
-            ViewChannel: false,
-            SendMessages: false
-          })
-          .catch(() => undefined)
-      }
+      await channel.permissionOverwrites.edit(userToRemove.id, {
+        ViewChannel: false,
+        SendMessages: false
+      })
 
       await createTransaction({
         userId: interaction.user.id,

@@ -8,7 +8,7 @@ import { logger } from '@/utils/logger'
 
 export default async (client: Client) => {
   for (const guild of client.guilds.cache.values()) {
-    let dbSettings = await await getGuildConfigByGuildId({
+    let dbSettings = await getGuildConfigByGuildId({
       guildId: guild.id
     })
 

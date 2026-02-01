@@ -85,6 +85,15 @@ const ONE_MINUTE = 60 * 1000
 
 export default async (client: Client) => {
   logger.boot('⌛ Prediction cleanup worker started')
+
+  await cleanupOldPredictions().catch((err) =>
+    logger.error('[PREDICTION] Initial run failed', err)
+  )
+
+  await autolockPredictions(client).catch((err) =>
+    logger.error('[PREDICTION] Initial run failed', err)
+  )
+
   setInterval(cleanupOldPredictions, ONE_DAY)
 
   logger.boot('⌛ Prediction autolock worker started')

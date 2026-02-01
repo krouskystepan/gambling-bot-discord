@@ -1,9 +1,10 @@
-import { EmbedBuilder, MessageFlags, TextChannel } from 'discord.js'
+import { EmbedBuilder, MessageFlags } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { checkAtmChannels, createUser, getUser } from '@/services'
+import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
   createSuccessEmbed
@@ -20,7 +21,7 @@ export const options: CommandOptions = {
   deleted: false
 }
 
-export async function run({ interaction, client }: SlashCommandProps) {
+export async function run({ interaction }: SlashCommandProps) {
   try {
     const guildConfiguration = await checkAtmChannels(interaction)
     if (!guildConfiguration) return
@@ -47,9 +48,21 @@ export async function run({ interaction, client }: SlashCommandProps) {
       guildId: interaction.guildId!
     })
 
-    const logChannel = client.channels.cache.get(
-      guildConfiguration.atmChannelIds.logs
-    ) as TextChannel
+    const logChannel = await interaction
+      .guild!.channels.fetch(guildConfiguration.atmChannelIds.logs)
+      .catch(() => null)
+
+    if (!isGuildSendableChannel(logChannel)) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Wrong Discord Configuration',
+            'Log channel misconfigured or inaccessible.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
 
     logChannel
       .send({

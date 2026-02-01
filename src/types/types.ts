@@ -54,7 +54,6 @@ export type TUpsertBlackjackGame = Pick<TUser, 'userId' | 'guildId'> &
     channelId: string
     messageId: string
     betId: string
-    betAmount: number
   }
 
 export type TAddRaffleTickets = {

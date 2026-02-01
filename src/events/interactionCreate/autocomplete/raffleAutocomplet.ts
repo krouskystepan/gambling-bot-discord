@@ -5,7 +5,9 @@ import { AutocompleteInteraction, Client } from 'discord.js'
 import { searchRafflesForAutocomplete } from '@/services/db/raffle.db'
 
 const formatDate = (date: Date) =>
-  DateTime.fromJSDate(date).toFormat('dd.LL.yyyy HH:mm')
+  DateTime.fromJSDate(date, { zone: 'utc' })
+    .setZone('Europe/Prague')
+    .toFormat('dd.LL.yyyy HH:mm')
 
 export default async (
   interaction: AutocompleteInteraction,

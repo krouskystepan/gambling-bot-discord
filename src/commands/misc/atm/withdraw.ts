@@ -5,8 +5,7 @@ import {
   ButtonStyle,
   EmbedBuilder,
   GuildMember,
-  MessageFlags,
-  TextChannel
+  MessageFlags
 } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
@@ -21,7 +20,9 @@ import {
   formatNumberToReadableString,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
+import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
+  createErrorEmbed,
   createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
@@ -50,7 +51,7 @@ export const options: CommandOptions = {
   deleted: false
 }
 
-export async function run({ interaction, client }: SlashCommandProps) {
+export async function run({ interaction }: SlashCommandProps) {
   try {
     const user = await checkUserRegistration({ interaction })
     if (!user) return
@@ -128,9 +129,21 @@ export async function run({ interaction, client }: SlashCommandProps) {
       }
     }
 
-    const logChannel = client.channels.cache.get(
-      guildConfiguration.atmChannelIds.logs
-    ) as TextChannel
+    const logChannel = await interaction
+      .guild!.channels.fetch(guildConfiguration.atmChannelIds.logs)
+      .catch(() => null)
+
+    if (!isGuildSendableChannel(logChannel)) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Wrong Discord Configuration',
+            'Log channel misconfigured or inaccessible.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
 
     const member = interaction.member as GuildMember | null
     const displayName =

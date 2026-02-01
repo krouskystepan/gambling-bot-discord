@@ -1,23 +1,31 @@
+import { TGuildConfiguration } from 'gambling-bot-shared'
+
 import { Client, Colors, EmbedBuilder } from 'discord.js'
 
-import { createTransaction, updateUserBalance } from '@/services'
+import {
+  createTransaction,
+  getGuildConfigByGuildId,
+  updateUserBalance
+} from '@/services'
 import {
   completeRaffleDraw,
   getRafflesReadyToDraw
 } from '@/services/db/raffle.db'
+import { formatNumberWithSpaces } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
 const ONE_MINUTE = 60 * 1000
 
 const pickWinner = (participants: { userId: string; tickets: number }[]) => {
-  const pool: string[] = []
+  const total = participants.reduce((s, p) => s + p.tickets, 0)
+  if (total <= 0) return null
 
+  let r = Math.random() * total
   for (const p of participants) {
-    for (let i = 0; i < p.tickets; i++) pool.push(p.userId)
+    r -= p.tickets
+    if (r <= 0) return p.userId
   }
-
-  if (!pool.length) return null
-  return pool[Math.floor(Math.random() * pool.length)]
+  return null
 }
 
 const processRaffles = async (client: Client) => {
@@ -26,9 +34,20 @@ const processRaffles = async (client: Client) => {
 
   for (const raffle of raffles) {
     try {
+      const guildConfig: TGuildConfiguration | null =
+        await getGuildConfigByGuildId({ guildId: raffle.guildId })
+
+      if (!guildConfig) {
+        logger.error(`[RAFFLE] Missing guild config ${raffle.guildId}`)
+        continue
+      }
+
       const participants = raffle.participants.filter((p) => p.tickets > 0)
-      const totalTickets = participants.reduce((sum, p) => sum + p.tickets, 0)
-      const pot = totalTickets * raffle.ticketPrice
+      const totalTickets = participants.reduce((s, p) => s + p.tickets, 0)
+      const rawPot = totalTickets * raffle.ticketPrice
+
+      const houseCut = guildConfig.casinoSettings.raffle.casinoCut
+      const pot = rawPot * (1 - houseCut)
 
       let winnerId: string | null = null
       let refunded = false
@@ -36,61 +55,78 @@ const processRaffles = async (client: Client) => {
       if (participants.length === 1) {
         refunded = true
 
-        for (const p of participants) {
-          const refundAmount = p.tickets * raffle.ticketPrice
-
-          await createTransaction({
-            userId: p.userId,
-            guildId: raffle.guildId,
-            amount: refundAmount,
-            type: 'refund',
-            source: 'casino',
-            betId: raffle.raffleId
+        await Promise.all(
+          participants.map((p) => {
+            const refundAmount = p.tickets * raffle.ticketPrice
+            return Promise.all([
+              createTransaction({
+                userId: p.userId,
+                guildId: raffle.guildId,
+                amount: refundAmount,
+                type: 'refund',
+                source: 'casino',
+                betId: raffle.raffleId
+              }),
+              updateUserBalance({
+                userId: p.userId,
+                guildId: raffle.guildId,
+                amount: refundAmount
+              })
+            ])
           })
-
-          await updateUserBalance({
-            userId: p.userId,
-            guildId: raffle.guildId,
-            amount: refundAmount
-          })
-        }
+        )
       } else {
         winnerId = pickWinner(participants)
 
         if (winnerId) {
-          await createTransaction({
-            userId: winnerId,
-            guildId: raffle.guildId,
-            amount: pot,
-            type: 'win',
-            source: 'casino',
-            betId: raffle.raffleId
-          })
-
-          await updateUserBalance({
-            userId: winnerId,
-            guildId: raffle.guildId,
-            amount: pot
-          })
+          await Promise.all([
+            createTransaction({
+              userId: winnerId,
+              guildId: raffle.guildId,
+              amount: pot,
+              type: 'win',
+              source: 'casino',
+              betId: raffle.raffleId
+            }),
+            updateUserBalance({
+              userId: winnerId,
+              guildId: raffle.guildId,
+              amount: pot
+            })
+          ])
         }
       }
 
       const channel = await client.channels
         .fetch(raffle.channelId)
-        .catch(() => null)
+        .catch((err) => {
+          logger.error(`[RAFFLE] Channel fetch failed ${raffle.channelId}`, err)
+          return null
+        })
       if (!channel || !channel.isTextBased()) continue
 
       const raffleMessage = await channel.messages
         .fetch(raffle.raffleId)
-        .catch(() => null)
+        .catch((err) => {
+          logger.error(`[RAFFLE] Message fetch failed ${raffle.raffleId}`, err)
+          return null
+        })
       if (!raffleMessage) continue
 
       const thread = raffleMessage.hasThread
         ? raffleMessage.thread
-        : await raffleMessage.startThread({
-            name: '🎉 Raffle Results',
-            autoArchiveDuration: 1440
-          })
+        : await raffleMessage
+            .startThread({
+              name: '🎉 Raffle Results',
+              autoArchiveDuration: 1440
+            })
+            .catch((err) => {
+              logger.error(
+                `[RAFFLE] Thread creation failed ${raffle.raffleId}`,
+                err
+              )
+              return null
+            })
 
       if (!thread || !thread.isTextBased()) continue
 
@@ -106,21 +142,22 @@ const processRaffles = async (client: Client) => {
               ? [
                   `🏆 **Winner:** <@${winnerId}>`,
                   `🎟️ Tickets Sold: **${totalTickets}**`,
-                  `💰 Pot: **$${pot.toLocaleString()}**`
+                  `💰 Pot: **$${formatNumberWithSpaces(pot)}**`
                 ].join('\n')
               : 'No participants this round.'
         )
         .setTimestamp()
 
-      await thread.send({
-        content: winnerId ? `<@${winnerId}>` : '',
-        embeds: [resultEmbed]
-      })
+      await thread
+        .send({
+          content: winnerId ? `<@${winnerId}>` : '',
+          embeds: [resultEmbed]
+        })
+        .catch((err) => logger.error(`[RAFFLE] Thread send failed`, err))
 
       const now = Date.now()
       const lastScheduled = raffle.nextDrawAt.getTime()
       const interval = raffle.drawIntervalMs
-
       const intervalsMissed = Math.floor((now - lastScheduled) / interval) + 1
       const nextDrawAt = new Date(lastScheduled + intervalsMissed * interval)
       const nextDrawUnix = Math.floor(nextDrawAt.getTime() / 1000)
@@ -141,7 +178,9 @@ const processRaffles = async (client: Client) => {
         .setFooter({ text: `ID: ${raffle.raffleId}` })
         .setTimestamp()
 
-      await raffleMessage.edit({ embeds: [resetEmbed] })
+      await raffleMessage
+        .edit({ embeds: [resetEmbed] })
+        .catch((err) => logger.error(`[RAFFLE] Message edit failed`, err))
 
       await completeRaffleDraw({
         raffleId: raffle.raffleId,
@@ -149,26 +188,19 @@ const processRaffles = async (client: Client) => {
         nextDrawAt
       })
 
-      if (refunded) {
-        logger.worker(
-          `Raffle ${raffle.raffleId} [guild:${raffle.guildId}] refunded — participants:${participants.length}, tickets:${totalTickets}, pot:$${pot}`
-        )
-      } else if (winnerId) {
-        logger.worker(
-          `Raffle ${raffle.raffleId} [guild:${raffle.guildId}] drawn — winner:${winnerId}, participants:${participants.length}, tickets:${totalTickets}, pot:$${pot}`
-        )
-      } else {
-        logger.worker(
-          `Raffle ${raffle.raffleId} [guild:${raffle.guildId}] closed — no valid participants`
-        )
-      }
+      refunded
+        ? logger.worker(`Raffle ${raffle.raffleId} refunded`)
+        : winnerId
+          ? logger.worker(`Raffle ${raffle.raffleId} winner ${winnerId}`)
+          : null
     } catch (err) {
-      logger.error(`Failed processing raffle ${raffle.raffleId}`, err)
+      logger.error(`[RAFFLE] Fatal error ${raffle.raffleId}`, err)
     }
   }
 }
 
 export default async (client: Client) => {
   logger.boot('⌛ Raffle auto-draw worker started')
+
   setInterval(() => processRaffles(client), ONE_MINUTE)
 }
