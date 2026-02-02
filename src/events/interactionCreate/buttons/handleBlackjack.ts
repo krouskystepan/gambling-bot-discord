@@ -104,6 +104,8 @@ export default async (interaction: Interaction) => {
         source: 'casino',
         betId
       })
+
+      activeHand.betAmount *= 2
     }
 
     applyAction(engine, action)

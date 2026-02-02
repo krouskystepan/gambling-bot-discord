@@ -67,7 +67,6 @@ export const applyAction = (
     }
 
     if (action === 'DOUBLE') {
-      hand.betAmount *= 2
       hand.finished = true
       return { finished: false }
     }
