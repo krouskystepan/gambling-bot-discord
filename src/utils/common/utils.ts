@@ -101,7 +101,7 @@ export const checkValidBet = (
   userBalance: number,
   xTimes?: number
 ): boolean => {
-  const MIN_CURRENCY_UNIT = 0.01
+  const MIN_CURRENCY_UNIT_CENTS = 1 // $0.01
 
   if (!Number.isFinite(betAmount)) {
     interaction.reply({
@@ -111,12 +111,15 @@ export const checkValidBet = (
     return false
   }
 
-  if (betAmount < MIN_CURRENCY_UNIT) {
+  const betCentsRaw = betAmount * 100
+  const betCents = Math.round(betCentsRaw)
+
+  if (Math.abs(betCentsRaw - betCents) > 1e-6) {
     interaction.reply({
       embeds: [
         createInfoEmbed(
           'Invalid Bet Amount',
-          `Minimum possible bet is **$${formatNumberToReadableString(MIN_CURRENCY_UNIT)}**.`
+          'Bet must have at most 2 decimal places.'
         )
       ],
       flags: MessageFlags.Ephemeral
@@ -124,14 +127,18 @@ export const checkValidBet = (
     return false
   }
 
-  const betCents = Math.floor(betAmount * 100)
   const balanceCents = Math.floor(userBalance * 100)
   const minBetCents = Math.floor(minBet * 100)
   const maxBetCents = Math.floor(maxBet * 100)
 
-  if (betCents <= 0) {
+  if (betCents < MIN_CURRENCY_UNIT_CENTS) {
     interaction.reply({
-      embeds: [createInfoEmbed('Invalid Input', 'Bet must be greater than 0.')],
+      embeds: [
+        createInfoEmbed(
+          'Invalid Bet Amount',
+          `Minimum possible bet is **$${formatNumberToReadableString(0.01)}**.`
+        )
+      ],
       flags: MessageFlags.Ephemeral
     })
     return false
