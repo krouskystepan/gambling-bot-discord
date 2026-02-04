@@ -11,13 +11,7 @@ export const dropPlinkoPath = (rows: number, bias = 0.5): number[] => {
   return path
 }
 
-const getBinSymbol = (mult: number): string => {
-  if (mult >= 5) return 'U' // diamond
-  if (mult >= 2) return 'V' // green tier
-  if (mult >= 1) return 'X' // yellow tier
-  if (mult >= 0.5) return 'Y' // orange tier
-  return 'Z' // red tier
-}
+const BIN_SYMBOLS = ['Z', 'Y', 'X', 'V', 'X', 'Y', 'Z']
 
 export const renderBoardFrame = (
   rows: number,
@@ -33,12 +27,10 @@ export const renderBoardFrame = (
 
   const lines: string[] = []
 
-  // 🔵 Ball start above board
   const startRow = Array(width).fill(' ')
   if (step === 0) startRow[centerCol] = '○'
   lines.push(startRow.join(spacer))
 
-  // 🔻 Peg rows
   for (let r = 0; r < rows; r++) {
     const row = Array(width).fill(' ')
     const left = centerCol - r
@@ -55,39 +47,31 @@ export const renderBoardFrame = (
     lines.push(row.join(spacer))
   }
 
-  // 🎯 Bottom bins — pegs + symbols in the gaps (TRUE bin positions)
+  // Bottom bins
   const binRow = Array(width).fill(' ')
   const left = centerCol - rows
 
-  for (let i = 0; i <= rows; i++) {
-    const pegCol = left + i * 2 + 1 // peg positions (keep these)
-    const binCol = pegCol - 1 // gap BEFORE each peg = bin
+  for (let i = 0; i < BIN_SYMBOLS.length; i++) {
+    const pegCol = left + i * 2 + 1
+    const binCol = pegCol - 1
 
-    // draw peg markers
-    if (pegCol >= 0 && pegCol < width) {
-      binRow[pegCol] = '|'
-    }
-
-    // draw bin symbol in the gap
-    if (binCol >= 0 && binCol < width) {
-      binRow[binCol] = getBinSymbol(binMultipliers[i] ?? 0)
-    }
+    if (pegCol >= 0 && pegCol < width) binRow[pegCol] = '|'
+    if (binCol >= 0 && binCol < width) binRow[binCol] = BIN_SYMBOLS[i]
   }
 
   lines.push(binRow.join(spacer))
 
-  // 📖 LEGEND — GENERATED FROM CONFIG
-  const uniqueTiers = [...new Set(Object.values(binMultipliers))].sort(
-    (a, b) => b - a
-  )
+  const legend: string[] = ['Legend:']
 
-  const legend: string[] = []
+  const seen = new Set<string>()
 
-  legend.push('')
-  legend.push('Legend:')
+  for (let i = 0; i < BIN_SYMBOLS.length; i++) {
+    const symbol = BIN_SYMBOLS[i]
+    if (seen.has(symbol)) continue
+    seen.add(symbol)
 
-  for (const mult of uniqueTiers) {
-    legend.push(`**${getBinSymbol(mult)}** x${mult.toFixed(2)}`)
+    const mult = binMultipliers[i] ?? 0
+    legend.push(`**${symbol}** x${mult.toFixed(2)}`)
   }
 
   return `\`\`\`${lines.join('\n')}\`\`\`${legend.join('\n')}`
