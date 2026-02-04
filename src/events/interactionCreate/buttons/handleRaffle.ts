@@ -82,7 +82,7 @@ export default async (interaction: Interaction) => {
       amount: raffle.ticketPrice,
       type: 'bet',
       source: 'casino',
-      betId: raffleId
+      betId: raffle.drawId
     })
 
     await addRaffleTickets({
@@ -126,7 +126,7 @@ export default async (interaction: Interaction) => {
             `💸 Current Pot: **$${formatNumberToReadableString(pot)}**`
           ].join('\n')
         )
-        .setFooter({ text: `ID: ${raffleId}` })
+        .setFooter({ text: `ID: ${raffle.drawId}` })
 
       const raffleMessage = await interaction.channel.messages
         .fetch(updatedRaffle.raffleId)

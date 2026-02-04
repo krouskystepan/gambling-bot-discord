@@ -27,6 +27,7 @@ import {
 } from '@/services/db/raffle.db'
 import {
   formatNumberToReadableString,
+  generateBetId,
   parseReadableStringToNumber,
   parseTimeToSeconds
 } from '@/utils/common/utils'
@@ -204,7 +205,10 @@ export async function run({ interaction }: SlashCommandProps) {
       await interaction.deferReply()
       const messageReply = (await interaction.fetchReply()) as Message
 
+      const betId = generateBetId()
+
       await upsertRaffle({
+        drawId: betId,
         raffleId: messageReply.id,
         creatorId: interaction.user.id,
         guildId: interaction.guildId!,
@@ -230,7 +234,7 @@ export async function run({ interaction }: SlashCommandProps) {
             '💸 Current Pot: **$0**'
           ].join('\n')
         )
-        .setFooter({ text: `ID: ${messageReply.id}` })
+        .setFooter({ text: `ID: ${betId}` })
 
       const row = new ActionRowBuilder<ButtonBuilder>()
 

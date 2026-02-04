@@ -11,7 +11,7 @@ import {
   completeRaffleDraw,
   getRafflesReadyToDraw
 } from '@/services/db/raffle.db'
-import { formatNumberWithSpaces } from '@/utils/common/utils'
+import { formatNumberWithSpaces, generateBetId } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
 const ONE_MINUTE = 60 * 1000
@@ -65,7 +65,7 @@ const processRaffles = async (client: Client) => {
                 amount: refundAmount,
                 type: 'refund',
                 source: 'casino',
-                betId: raffle.raffleId
+                betId: raffle.drawId
               }),
               updateUserBalance({
                 userId: p.userId,
@@ -86,7 +86,7 @@ const processRaffles = async (client: Client) => {
               amount: pot,
               type: 'win',
               source: 'casino',
-              betId: raffle.raffleId
+              betId: raffle.drawId
             }),
             updateUserBalance({
               userId: winnerId,
@@ -146,6 +146,7 @@ const processRaffles = async (client: Client) => {
                 ].join('\n')
               : 'No participants this round.'
         )
+        .setFooter({ text: `ID: ${raffle.drawId}` })
         .setTimestamp()
 
       await thread
@@ -161,6 +162,7 @@ const processRaffles = async (client: Client) => {
       const intervalsMissed = Math.floor((now - lastScheduled) / interval) + 1
       const nextDrawAt = new Date(lastScheduled + intervalsMissed * interval)
       const nextDrawUnix = Math.floor(nextDrawAt.getTime() / 1000)
+      const newBetId = generateBetId()
 
       const resetEmbed = new EmbedBuilder()
         .setColor(Colors.Gold)
@@ -175,7 +177,7 @@ const processRaffles = async (client: Client) => {
             '💸 Current Pot: **$0**'
           ].join('\n')
         )
-        .setFooter({ text: `ID: ${raffle.raffleId}` })
+        .setFooter({ text: `ID: ${newBetId}` })
         .setTimestamp()
 
       await raffleMessage
@@ -185,7 +187,8 @@ const processRaffles = async (client: Client) => {
       await completeRaffleDraw({
         raffleId: raffle.raffleId,
         lastDrawAt: raffle.nextDrawAt,
-        nextDrawAt
+        nextDrawAt,
+        drawId: newBetId
       })
 
       refunded

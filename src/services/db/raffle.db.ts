@@ -13,6 +13,7 @@ export const getRaffleById = async ({
 
 export const upsertRaffle = async ({
   guildId,
+  drawId,
   raffleId,
   creatorId,
   channelId,
@@ -22,6 +23,7 @@ export const upsertRaffle = async ({
   drawIntervalMs
 }: {
   raffleId: string
+  drawId: string
   guildId: string
   creatorId: string
   channelId: string
@@ -34,6 +36,7 @@ export const upsertRaffle = async ({
     { raffleId, guildId },
     {
       $set: {
+        drawId,
         creatorId,
         channelId,
         ticketPrice,
@@ -111,11 +114,13 @@ export const getRafflesReadyToDraw = async () => {
 export const completeRaffleDraw = async ({
   raffleId,
   nextDrawAt,
-  lastDrawAt
+  lastDrawAt,
+  drawId
 }: {
   raffleId: string
   nextDrawAt: Date
   lastDrawAt: Date
+  drawId: string
 }) => {
   await Raffle.updateOne(
     { raffleId },
@@ -123,7 +128,8 @@ export const completeRaffleDraw = async ({
       $set: {
         nextDrawAt,
         lastDrawAt,
-        participants: []
+        participants: [],
+        drawId
       }
     }
   )

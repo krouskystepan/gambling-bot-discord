@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose'
 
 type TRaffle = {
+  drawId: string
   raffleId: string
   guildId: string
   channelId: string
@@ -24,6 +25,7 @@ type TRaffle = {
 
 const RaffleSchema = new Schema<TRaffle>(
   {
+    drawId: { type: String, required: true },
     raffleId: { type: String, required: true },
     guildId: { type: String, required: true, index: true },
     channelId: { type: String, required: true },

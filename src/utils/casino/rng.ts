@@ -59,3 +59,11 @@ export const drawNextCard = (deck: Card[], cardIndex: number): Card => {
 
   return deck[cardIndex]
 }
+
+export const dropPlinkoBall = (rows: number, bias = 0.5): number => {
+  let rights = 0
+  for (let i = 0; i < rows; i++) {
+    if (Math.random() < bias) rights++
+  }
+  return rights // bin index
+}
