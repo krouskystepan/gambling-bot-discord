@@ -227,11 +227,8 @@ export async function run({ interaction }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Deposit',
-            `You have successfully added **$${readableAmount}** to <@${
-              user.id
-            }>.\nTheir new balance is now: **$${formatNumberToReadableString(
-              updatedUser!.balance
-            )}**.`
+            `An administrator has added **$${readableAmount}** to <@${user.id}>'s balance.\n` +
+              `**New Balance:** $${formatNumberToReadableString(updatedUser!.balance)}`
           )
         ]
       })
@@ -284,55 +281,54 @@ export async function run({ interaction }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Withdraw',
-            `Removed **$${readableAmount}** from <@${
-              user.id
-            }>.\nNew balance: **$${formatNumberToReadableString(updatedUser!.balance)}**.`
+            `An administrator has removed **$${readableAmount}** from <@${user.id}>'s balance.\n` +
+              `**New Balance:** $${formatNumberToReadableString(updatedUser!.balance)}`
           )
         ]
       })
     }
 
     // TODO Fix this
-    if (subcommand === 'bonus') {
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        return interaction.reply({
-          embeds: [
-            createInfoEmbed('Invalid Input', 'Enter a positive number.')
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
+    // if (subcommand === 'bonus') {
+    //   if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    //     return interaction.reply({
+    //       embeds: [
+    //         createInfoEmbed('Invalid Input', 'Enter a positive number.')
+    //       ],
+    //       flags: MessageFlags.Ephemeral
+    //     })
+    //   }
 
-      await updateUserBalance({
-        userId: user.id,
-        guildId: interaction.guildId!,
-        amount: parsedAmount,
-        lockedAmount: parsedAmount
-      })
+    //   await updateUserBalance({
+    //     userId: user.id,
+    //     guildId: interaction.guildId!,
+    //     amount: parsedAmount,
+    //     lockedAmount: parsedAmount
+    //   })
 
-      await createTransaction({
-        userId: user.id,
-        guildId: interaction.guildId!,
-        amount: parsedAmount,
-        type: 'bonus',
-        source: 'command',
-        handledBy: interaction.user.id
-      })
+    //   await createTransaction({
+    //     userId: user.id,
+    //     guildId: interaction.guildId!,
+    //     amount: parsedAmount,
+    //     type: 'bonus',
+    //     source: 'command',
+    //     handledBy: interaction.user.id
+    //   })
 
-      return interaction.reply({
-        content: `<@${user.id}>`,
-        embeds: [
-          createSuccessEmbed(
-            'ATM - Bonus Given',
-            `You have successfully given **$${readableAmount}** bonus to <@${
-              user.id
-            }>.\nTheir new balance is now: **$${formatNumberToReadableString(
-              targetUser.balance
-            )}**.`
-          )
-        ]
-      })
-    }
+    //   return interaction.reply({
+    //     content: `<@${user.id}>`,
+    //     embeds: [
+    //       createSuccessEmbed(
+    //         'ATM - Bonus Given',
+    //         `You have successfully given **$${readableAmount}** bonus to <@${
+    //           user.id
+    //         }>.\nTheir new balance is now: **$${formatNumberToReadableString(
+    //           targetUser.balance
+    //         )}**.`
+    //       )
+    //     ]
+    //   })
+    // }
 
     // TODO Fix this
     // if (subcommand === 'remove-bonus') {
@@ -406,7 +402,8 @@ export async function run({ interaction }: SlashCommandProps) {
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Reset',
-            `Reset balance and cleared transactions of <@${user.id}>.`
+            `An administrator has reset <@${user.id}>'s balance and cleared transaction history.\n` +
+              `**New Balance:** $0`
           )
         ]
       })
@@ -423,7 +420,8 @@ export async function run({ interaction }: SlashCommandProps) {
               targetUser.lockedBalance
             )}**`
           )
-        ]
+        ],
+        flags: MessageFlags.Ephemeral
       })
     }
   } catch (error) {
