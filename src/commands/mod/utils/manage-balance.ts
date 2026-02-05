@@ -1,7 +1,8 @@
 import {
   ApplicationCommandOptionType,
   CommandInteractionOptionResolver,
-  MessageFlags
+  MessageFlags,
+  TextChannel
 } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
@@ -24,6 +25,7 @@ import {
   createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const data: CommandData = {
   name: 'manage-balance',
@@ -146,7 +148,7 @@ export const options: CommandOptions = {
   deleted: false
 }
 
-export async function run({ interaction }: SlashCommandProps) {
+export async function run({ interaction, client }: SlashCommandProps) {
   try {
     const configReply = await checkAtmChannels(interaction)
     if (!configReply) return
@@ -196,6 +198,39 @@ export async function run({ interaction }: SlashCommandProps) {
     })
     if (!targetUser) return
 
+    const actionChannel = client.channels.cache.get(
+      configReply.atmChannelIds.actions
+    ) as TextChannel
+
+    const sendMessageToUser = async (
+      atmAction: 'deposit' | 'withdraw' | 'reset',
+      amount: number,
+      newAmount: number,
+      targetUserId: string
+    ) => {
+      const readableAmount = `$${formatNumberToReadableString(amount)}`
+      const readableNewAmount = `$${formatNumberToReadableString(newAmount)}`
+
+      const actionMessages: Record<'deposit' | 'withdraw' | 'reset', string> = {
+        deposit: `An administrator has added **${readableAmount}** to your balance.`,
+        withdraw: `An administrator has removed **${readableAmount}** from your balance.`,
+        reset: `An administrator has reset your balance.`
+      }
+
+      const description =
+        `${actionMessages[atmAction]}\n` +
+        `**New Balance:** ${readableNewAmount}`
+
+      const embed = createSuccessEmbed('Balance Updated', description)
+
+      await actionChannel
+        .send({
+          content: `<@${targetUserId}>`,
+          embeds: [embed]
+        })
+        .catch((err) => logger.error('Failed to send the message', err))
+    }
+
     if (subcommand === 'deposit') {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
@@ -211,6 +246,7 @@ export async function run({ interaction }: SlashCommandProps) {
         guildId: interaction.guildId!,
         amount: parsedAmount
       })
+      if (!updatedUser) return
 
       await createTransaction({
         userId: user.id,
@@ -220,6 +256,8 @@ export async function run({ interaction }: SlashCommandProps) {
         source: 'command',
         handledBy: interaction.user.id
       })
+
+      sendMessageToUser('deposit', parsedAmount, updatedUser?.balance, user.id)
 
       return interaction.reply({
         embeds: [
@@ -266,6 +304,7 @@ export async function run({ interaction }: SlashCommandProps) {
         guildId: interaction.guildId!,
         amount: -parsedAmount
       })
+      if (!updatedUser) return
 
       await createTransaction({
         userId: user.id,
@@ -275,6 +314,8 @@ export async function run({ interaction }: SlashCommandProps) {
         source: 'command',
         handledBy: interaction.user.id
       })
+
+      sendMessageToUser('withdraw', parsedAmount, updatedUser.balance, user.id)
 
       return interaction.reply({
         embeds: [
@@ -288,6 +329,7 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
+    // TODO Add send message to user
     if (subcommand === 'bonus') {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
@@ -328,6 +370,7 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
+    // TODO Add send message to user and fix this
     // if (subcommand === 'remove-bonus') {
     //   if (isNaN(parsedAmount) || parsedAmount <= 0) {
     //     return interaction.reply({
@@ -392,6 +435,8 @@ export async function run({ interaction }: SlashCommandProps) {
         userId: user.id,
         guildId: interaction.guildId!
       })
+
+      sendMessageToUser('reset', 0, 0, user.id)
 
       return interaction.reply({
         embeds: [

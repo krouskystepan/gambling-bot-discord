@@ -24,6 +24,7 @@ import {
 } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
+// TODO: fix and test the predictions
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
