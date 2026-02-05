@@ -79,7 +79,7 @@ export default async (interaction: Interaction) => {
     await createTransaction({
       userId: interaction.user.id,
       guildId: interaction.guildId!,
-      amount: raffle.ticketPrice,
+      amount: raffle.ticketPrice * ticketAmount,
       type: 'bet',
       source: 'casino',
       betId: raffle.drawId

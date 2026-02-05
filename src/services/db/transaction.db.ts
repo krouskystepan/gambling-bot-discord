@@ -13,6 +13,7 @@ export const createTransaction = async ({
   source,
   betId,
   meta,
+  handledBy,
   createdAt = new Date()
 }: TCreateTransaction) => {
   const transaction = await Transaction.create({
@@ -23,6 +24,7 @@ export const createTransaction = async ({
     source,
     betId,
     meta,
+    handledBy,
     createdAt
   })
 
