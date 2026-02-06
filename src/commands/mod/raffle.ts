@@ -156,6 +156,18 @@ export async function run({ interaction }: SlashCommandProps) {
       const drawInput = opts.getString('draw-time', true)
       const intervalInput = opts.getString('interval', true)
 
+      if (maxTickets >= 100) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Ticket Limit Exceeded',
+              'Maximum allowed tickets is 100.'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
       const intervalSeconds = parseTimeToSeconds(intervalInput)
       if (intervalSeconds <= 0) {
         return interaction.reply({
@@ -238,7 +250,7 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const row = new ActionRowBuilder<ButtonBuilder>()
 
-      const ticketOptions = [1, 5, 10]
+      const ticketOptions = [1, 5, 10, 25, 50, 100]
       for (const qty of ticketOptions) {
         if (maxTickets >= qty) {
           row.addComponents(
