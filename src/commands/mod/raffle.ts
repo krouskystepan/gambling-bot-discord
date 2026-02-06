@@ -156,7 +156,7 @@ export async function run({ interaction }: SlashCommandProps) {
       const drawInput = opts.getString('draw-time', true)
       const intervalInput = opts.getString('interval', true)
 
-      if (maxTickets >= 100) {
+      if (maxTickets > 100) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
