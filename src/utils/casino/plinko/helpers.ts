@@ -11,7 +11,7 @@ export const dropPlinkoPath = (rows: number, bias = 0.5): number[] => {
   return path
 }
 
-const BIN_SYMBOLS = ['Z', 'Y', 'X', 'V', 'X', 'Y', 'Z']
+const BIN_SYMBOLS = ['A', 'B', 'C', 'D', 'E', 'D', 'C', 'B', 'A']
 
 export const renderBoardFrame = (
   rows: number,
@@ -19,7 +19,7 @@ export const renderBoardFrame = (
   step: number,
   binMultipliers: Record<number, number>
 ): string => {
-  const H_SPACING = 1
+  const H_SPACING = 0
   const spacer = ' '.repeat(H_SPACING)
 
   const width = rows * 2 + 1
