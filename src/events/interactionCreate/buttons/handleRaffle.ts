@@ -69,7 +69,7 @@ export default async (interaction: Interaction) => {
           createInfoEmbed(
             'Insufficient Funds',
             `You need **$${formatNumberToReadableString(
-              raffle.ticketPrice
+              raffle.ticketPrice * ticketAmount
             )}** to buy ticket/s.`
           )
         ]

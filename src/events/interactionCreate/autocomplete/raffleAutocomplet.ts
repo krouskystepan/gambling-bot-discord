@@ -3,6 +3,7 @@ import { DateTime } from 'luxon'
 import { AutocompleteInteraction, Client } from 'discord.js'
 
 import { searchRafflesForAutocomplete } from '@/services/db/raffle.db'
+import { formatNumberToReadableString } from '@/utils/common/utils'
 
 const formatDate = (date: Date) =>
   DateTime.fromJSDate(date, { zone: 'utc' })
@@ -32,7 +33,7 @@ export default async (
 
   return interaction.respond(
     raffles.map((r) => ({
-      name: `ID: ${r.raffleId} • Next Draw: ${formatDate(r.nextDrawAt)}`,
+      name: `ID: ${r.raffleId} • Ticket Price: ${formatNumberToReadableString(r.ticketPrice)} • Next Draw: ${formatDate(r.nextDrawAt)}`,
       value: r.raffleId
     }))
   )

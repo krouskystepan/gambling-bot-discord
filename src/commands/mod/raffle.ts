@@ -250,17 +250,15 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const row = new ActionRowBuilder<ButtonBuilder>()
 
-      const ticketOptions = [1, 5, 10, 25, 50, 100]
+      const ticketOptions = [1, 5, 10, 25, 50]
       for (const qty of ticketOptions) {
-        if (maxTickets >= qty) {
-          row.addComponents(
-            new ButtonBuilder()
-              .setCustomId(`raffle.${messageReply.id}.${qty}`)
-              .setLabel(`Buy ${qty} Ticket${qty > 1 ? 's' : ''}`)
-              .setEmoji('🎫')
-              .setStyle(ButtonStyle.Success)
-          )
-        }
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`raffle.${messageReply.id}.${qty}`)
+            .setLabel(`Buy ${qty} Ticket${qty > 1 ? 's' : ''}`)
+            .setEmoji('🎫')
+            .setStyle(ButtonStyle.Success)
+        )
       }
 
       await interaction.editReply({

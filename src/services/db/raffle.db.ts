@@ -101,7 +101,7 @@ export const searchRafflesForAutocomplete = async ({
   })
     .sort({ createdAt: -1 })
     .limit(25)
-    .select('raffleId nextDrawAt')
+    .select('raffleId nextDrawAt ticketPrice')
     .lean()
 }
 
