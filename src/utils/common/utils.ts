@@ -101,8 +101,6 @@ export const checkValidBet = (
   userBalance: number,
   xTimes?: number
 ): boolean => {
-  const MIN_CURRENCY_UNIT_CENTS = 1 // $0.01
-
   if (!Number.isFinite(betAmount)) {
     interaction.reply({
       embeds: [createInfoEmbed('Invalid Input', 'Bet must be a valid number.')],
@@ -131,13 +129,10 @@ export const checkValidBet = (
   const minBetCents = Math.floor(minBet * 100)
   const maxBetCents = Math.floor(maxBet * 100)
 
-  if (betCents < MIN_CURRENCY_UNIT_CENTS) {
+  if (betAmount < 1) {
     interaction.reply({
       embeds: [
-        createInfoEmbed(
-          'Invalid Bet Amount',
-          `Minimum possible bet is **$${formatNumberToReadableString(0.01)}**.`
-        )
+        createInfoEmbed('Invalid Bet Amount', `Minimum possible bet is **$1**.`)
       ],
       flags: MessageFlags.Ephemeral
     })

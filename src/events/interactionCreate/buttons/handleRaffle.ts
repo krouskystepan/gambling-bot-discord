@@ -60,7 +60,7 @@ export default async (interaction: Interaction) => {
     const updatedUser = await consumeUserBalance({
       userId: interaction.user.id,
       guildId: interaction.guildId!,
-      amount: raffle.ticketPrice
+      amount: raffle.ticketPrice * ticketAmount
     })
 
     if (!updatedUser) {
