@@ -33,7 +33,7 @@ export const data: CommandData = {
       description: 'How many balls to drop.',
       type: ApplicationCommandOptionType.Integer,
       required: false,
-      choices: Array.from({ length: 5 }, (_, i) => ({
+      choices: Array.from({ length: 10 }, (_, i) => ({
         name: (i + 1).toString(),
         value: i + 1
       }))
@@ -122,7 +122,7 @@ export async function run({ interaction }: SlashCommandProps) {
       paths.push(dropPlinkoPath(rows))
     }
 
-    const SPAWN_DELAY_STEPS = 2 // 2 ticks between balls
+    const SPAWN_DELAY_STEPS = 2 // X ticks between balls
     const pathLength = rows + 1
     const totalTimelineSteps = pathLength + SPAWN_DELAY_STEPS * (balls - 1)
 
