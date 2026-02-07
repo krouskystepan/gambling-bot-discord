@@ -248,22 +248,37 @@ export async function run({ interaction }: SlashCommandProps) {
         )
         .setFooter({ text: `ID: ${betId}` })
 
-      const row = new ActionRowBuilder<ButtonBuilder>()
+      const ticketOptions = [1, 5, 10, 25, 50, 100]
 
-      const ticketOptions = [1, 5, 10, 25, 50]
-      for (const qty of ticketOptions) {
-        row.addComponents(
+      const allowedOptions = ticketOptions.filter((qty) => qty <= maxTickets)
+
+      const rows: ActionRowBuilder<ButtonBuilder>[] = []
+      let currentRow = new ActionRowBuilder<ButtonBuilder>()
+
+      for (let i = 0; i < allowedOptions.length; i++) {
+        const qty = allowedOptions[i]
+
+        currentRow.addComponents(
           new ButtonBuilder()
             .setCustomId(`raffle.${messageReply.id}.${qty}`)
             .setLabel(`Buy ${qty} Ticket${qty > 1 ? 's' : ''}`)
             .setEmoji('🎫')
             .setStyle(ButtonStyle.Success)
         )
+
+        if ((i + 1) % 3 === 0) {
+          rows.push(currentRow)
+          currentRow = new ActionRowBuilder<ButtonBuilder>()
+        }
+      }
+
+      if (currentRow.components.length > 0) {
+        rows.push(currentRow)
       }
 
       await interaction.editReply({
         embeds: [embed],
-        components: [row]
+        components: rows
       })
     }
 

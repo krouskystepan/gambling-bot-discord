@@ -6,6 +6,9 @@ import {
 
 import { createInfoEmbed } from '../discord/createEmbed'
 
+export const sleep = (ms: number) =>
+  new Promise<void>((res) => setTimeout(res, ms))
+
 export const generateBetId = (): string => {
   const timestamp = Date.now().toString(36)
   const random = Math.floor(Math.random() * 1_000_000)

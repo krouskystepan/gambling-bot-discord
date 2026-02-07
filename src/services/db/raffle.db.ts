@@ -95,14 +95,43 @@ export const searchRafflesForAutocomplete = async ({
   guildId: string
   query: string
 }) => {
-  return Raffle.find({
-    guildId,
-    raffleId: { $regex: query, $options: 'i' }
-  })
-    .sort({ createdAt: -1 })
-    .limit(25)
-    .select('raffleId nextDrawAt ticketPrice')
-    .lean()
+  return Raffle.aggregate([
+    {
+      $match: {
+        guildId,
+        raffleId: { $regex: query, $options: 'i' }
+      }
+    },
+    { $sort: { createdAt: -1 } },
+    { $limit: 25 },
+    {
+      $addFields: {
+        totalTickets: {
+          $sum: {
+            $map: {
+              input: '$participants',
+              as: 'p',
+              in: '$$p.tickets'
+            }
+          }
+        }
+      }
+    },
+    {
+      $addFields: {
+        totalPot: { $multiply: ['$totalTickets', '$ticketPrice'] }
+      }
+    },
+    {
+      $project: {
+        raffleId: 1,
+        nextDrawAt: 1,
+        ticketPrice: 1,
+        maxTicketsPerUser: 1,
+        totalPot: 1
+      }
+    }
+  ])
 }
 
 export const getRafflesReadyToDraw = async () => {

@@ -33,7 +33,7 @@ export default async (
 
   return interaction.respond(
     raffles.map((r) => ({
-      name: `ID: ${r.raffleId} • Ticket Price: ${formatNumberToReadableString(r.ticketPrice)} • Next Draw: ${formatDate(r.nextDrawAt)}`,
+      name: `TP: ${formatNumberToReadableString(r.ticketPrice)} • TL: ${r.maxTicketsPerUser} • ND: ${formatDate(r.nextDrawAt)} | CP: ${r.totalPot}`,
       value: r.raffleId
     }))
   )

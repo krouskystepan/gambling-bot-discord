@@ -460,12 +460,14 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
+      const newExpiryUnix = Math.floor(newExpiry.getTime() / 1000)
+
       const extendMsg = await vipChannel.send({
         content: `Your VIP has been extended, ${interaction.user}! 🎉`,
         embeds: [
           createSuccessEmbed(
             'VIP Channel Extended',
-            `New expiry: <t:${Math.floor(existingVip.expiresAt.getTime() / 1000)}:f>`
+            `New expiry: <t:${newExpiryUnix}:f>`
           )
         ]
       })
@@ -477,7 +479,7 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'VIP Extended',
             `Your VIP has been extended by **${durationDays} day(s)**.\n` +
-              `New expiry: <t:${Math.floor(existingVip.expiresAt.getTime() / 1000)}:f>\n` +
+              `New expiry: <t:${newExpiryUnix}:f>\n` +
               `You have been charged **$${formatNumberToReadableString(totalPrice)}**.`
           )
         ],

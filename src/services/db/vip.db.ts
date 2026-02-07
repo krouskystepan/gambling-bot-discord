@@ -35,10 +35,8 @@ export const getAllActiveVips = async () => {
 }
 
 export const getAllOldVips = async () => {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-
   const vipInfos = await VipRoom.find({
-    expiresAt: { $lt: sevenDaysAgo }
+    expiresAt: { $lt: new Date() }
   })
 
   return vipInfos
