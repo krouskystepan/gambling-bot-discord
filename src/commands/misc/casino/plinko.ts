@@ -116,30 +116,46 @@ export async function run({ interaction }: SlashCommandProps) {
 
     await interaction.deferReply({ withResponse: true })
 
+    // Pre-generate all paths
+    const paths: number[][] = []
     for (let i = 0; i < balls; i++) {
-      const path = dropPlinkoPath(rows)
+      paths.push(dropPlinkoPath(rows))
+    }
 
-      if (!skipAnimations) {
-        for (let step = 0; step < path.length; step++) {
-          await interaction.editReply({
-            embeds: [
-              createBetEmbed(
-                `🎯 Ball ${i + 1} dropping...`,
-                'Blue',
-                `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
-                  renderBoardFrame(rows, path[step], step, binMultipliers) +
-                  `\n\n💰 Total: ${
-                    liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                  } **$${formatNumberToReadableString(liveResult)}**`,
-                betId
-              )
-            ]
-          })
+    const SPAWN_DELAY_STEPS = 2 // 2 ticks between balls
+    const pathLength = rows + 1
+    const totalTimelineSteps = pathLength + SPAWN_DELAY_STEPS * (balls - 1)
 
-          await new Promise((res) => setTimeout(res, 350))
-        }
+    if (!skipAnimations) {
+      for (let globalStep = 0; globalStep < totalTimelineSteps; globalStep++) {
+        await interaction.editReply({
+          embeds: [
+            createBetEmbed(
+              `🎯 Balls dropping...`,
+              'Blue',
+              `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+                renderBoardFrame(
+                  rows,
+                  paths,
+                  globalStep,
+                  SPAWN_DELAY_STEPS,
+                  binMultipliers
+                ) +
+                `\n\n💰 Total: ${
+                  liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+                } **$${formatNumberToReadableString(liveResult)}**`,
+              betId
+            )
+          ]
+        })
+
+        await new Promise((res) => setTimeout(res, 350))
       }
+    }
 
+    // Calculate results AFTER animation
+    for (let i = 0; i < balls; i++) {
+      const path = paths[i]
       const finalBin = path[path.length - 1]
       const multiplier = binMultipliers[finalBin] ?? 0
       const formattedMultiplier = Number(multiplier).toFixed(2)
