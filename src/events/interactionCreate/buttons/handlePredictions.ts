@@ -9,10 +9,10 @@ import {
 
 import {
   addPredictionBet,
-  consumeUserBalance,
   createTransaction,
   getGuildConfigByGuildId,
-  getPredictionById
+  getPredictionById,
+  updateUserBalanceAtomic
 } from '@/services'
 import {
   formatNumberToReadableString,
@@ -161,10 +161,12 @@ export default async (interaction: Interaction) => {
       })
     }
 
-    const updatedUser = await consumeUserBalance({
-      userId: interaction.user.id,
+    const updatedUser = await updateUserBalanceAtomic({
+      userId: modalInteraction.user.id,
       guildId: interaction.guildId!,
-      amount: parsedBetAmount
+      balanceDelta: -parsedBetAmount,
+      lockedDelta: parsedBetAmount,
+      requireAvailableGte: parsedBetAmount
     })
 
     if (!updatedUser) {
@@ -172,7 +174,7 @@ export default async (interaction: Interaction) => {
         embeds: [
           createInfoEmbed(
             'Insufficient Funds',
-            `You don't have enough money to place this bet.`
+            `You don't have enough available balance to place this bet.`
           )
         ]
       })

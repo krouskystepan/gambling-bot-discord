@@ -14,6 +14,8 @@ type TRaffle = {
   lastDrawAt?: Date
   drawIntervalMs: number
 
+  status: 'active' | 'canceled'
+
   participants: {
     userId: string
     tickets: number
@@ -37,6 +39,13 @@ const RaffleSchema = new Schema<TRaffle>(
     nextDrawAt: { type: Date, required: true },
     lastDrawAt: { type: Date },
     drawIntervalMs: { type: Number, required: true, min: 1 },
+
+    status: {
+      type: String,
+      enum: ['active', 'canceled'],
+      default: 'active',
+      index: true
+    },
 
     participants: [
       {

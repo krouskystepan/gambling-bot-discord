@@ -1,13 +1,12 @@
 import { Interaction, MessageFlags } from 'discord.js'
 
 import {
-  consumeUserBalance,
   createTransaction,
   deleteBlackjackGame,
   getBlackjackGameByBetId,
   getUser,
   updateBlackjackGame,
-  updateUserBalance
+  updateUserBalanceAtomic
 } from '@/services'
 import {
   applyAction,
@@ -78,13 +77,16 @@ export default async (interaction: Interaction) => {
     const activeHand = engine.hands[engine.activeHandIndex]
 
     if (action === 'DOUBLE') {
-      const user = await consumeUserBalance({
+      const extraBet = activeHand.betAmount
+
+      const updatedUser = await updateUserBalanceAtomic({
         userId: game.userId,
         guildId,
-        amount: activeHand.betAmount
+        balanceDelta: -extraBet,
+        requireAvailableGte: extraBet
       })
 
-      if (!user) {
+      if (!updatedUser) {
         return interaction.followUp({
           embeds: [
             createInfoEmbed(
@@ -99,25 +101,26 @@ export default async (interaction: Interaction) => {
       await createTransaction({
         userId: game.userId,
         guildId,
-        amount: activeHand.betAmount,
+        amount: extraBet,
         type: 'bet',
         source: 'casino',
         betId
       })
 
-      activeHand.betAmount *= 2
+      activeHand.betAmount += extraBet
     }
 
-    applyAction(engine, action)
-
     if (action === 'SPLIT') {
-      const user = await consumeUserBalance({
+      const splitBet = activeHand.betAmount
+
+      const updatedUser = await updateUserBalanceAtomic({
         userId: game.userId,
         guildId,
-        amount: activeHand.betAmount
+        balanceDelta: -splitBet,
+        requireAvailableGte: splitBet
       })
 
-      if (!user) {
+      if (!updatedUser) {
         return interaction.followUp({
           embeds: [
             createInfoEmbed(
@@ -129,37 +132,17 @@ export default async (interaction: Interaction) => {
         })
       }
 
-      engineToDoc(engine, game)
-      await updateBlackjackGame(game)
-
-      const hand = engine.hands[engine.activeHandIndex]
-
-      await interaction.message.edit({
-        embeds: [
-          renderBlackjackEmbed({
-            userId: game.userId,
-            guildId,
-            betId,
-            hands: engine.hands,
-            activeHandIndex: engine.activeHandIndex,
-            dealerCards: engine.dealerCards,
-            showBalance,
-            result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
-            dealerHideSecondCard: true
-          })
-        ],
-        components: [
-          renderBlackjackButtons({
-            betId,
-            showBalance,
-            canDouble: hand.cards.length === 2,
-            canSplit: false
-          })
-        ]
+      await createTransaction({
+        userId: game.userId,
+        guildId,
+        amount: splitBet,
+        type: 'bet',
+        source: 'casino',
+        betId
       })
-
-      return
     }
+
+    applyAction(engine, action)
 
     const value = calculateHandValue(activeHand.cards)
 
@@ -288,19 +271,20 @@ export default async (interaction: Interaction) => {
           betId
         })
 
-        await updateUserBalance({
+        await updateUserBalanceAtomic({
           userId: game.userId,
           guildId,
-          amount: totalPayout
+          balanceDelta: totalPayout,
+          lockedDelta: -totalBet
         })
       }
 
-      const finalUser = await getUser({
-        userId: game.userId,
-        guildId
-      })
+      let userBalance: number | undefined
 
-      if (!finalUser) return
+      if (showBalance) {
+        const user = await getUser({ userId: game.userId, guildId })
+        if (user) userBalance = user.balance
+      }
 
       await interaction.message.edit({
         embeds: [
@@ -312,7 +296,7 @@ export default async (interaction: Interaction) => {
             activeHandIndex: -1,
             dealerCards: engine.dealerCards,
             showBalance,
-            userBalance: finalUser.balance,
+            userBalance,
             result: { kind: 'FINAL', finalResultId, netProfit: net }
           })
         ],

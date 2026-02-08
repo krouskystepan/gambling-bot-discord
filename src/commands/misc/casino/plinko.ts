@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord.js'
+import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
@@ -6,17 +6,19 @@ import { handleUnexpectedInteractionError } from '@/errors'
 import {
   checkCasinoChannels,
   checkUserRegistration,
-  createTransaction,
-  updateUserBalance
+  getUser,
+  reserveCasinoBet,
+  settleCasinoWinnings
 } from '@/services'
 import { dropPlinkoPath, renderBoardFrame } from '@/utils/casino/plinko'
+import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import {
   checkValidBet,
   formatNumberToReadableString,
-  generateBetId,
+  generateId,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
-import { createBetEmbed } from '@/utils/discord/createEmbed'
+import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const data: CommandData = {
   name: 'plinko',
@@ -59,9 +61,31 @@ export const options: CommandOptions = {
 }
 
 export async function run({ interaction }: SlashCommandProps) {
+  let betSettled = false
+
+  let userId: string | null = null
+  let guildId: string | null = null
+  let totalBet = 0
+  let totalWinnings = 0
+  let betId: string | null = null
+
   try {
     const user = await checkUserRegistration({ interaction })
     if (!user) return
+    userId = user.userId
+    guildId = user.guildId
+
+    if (isUserOnCooldown(user.userId)) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Slow Down',
+            'Wait a moment before starting another game.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
 
     const configReply = await checkCasinoChannels(interaction)
     if (!configReply) return
@@ -72,35 +96,43 @@ export async function run({ interaction }: SlashCommandProps) {
     const showBalance = interaction.options.getBoolean('show-balance')
     const skipAnimations = interaction.options.getBoolean('skip-animations')
 
-    const totalBet = betAmount * balls
-
     const isBetValid = checkValidBet(
       interaction,
       betAmount,
       configReply.casinoSettings.plinko.maxBet,
-      configReply.casinoSettings.plinko.minBet,
-      user.balance,
-      balls
+      configReply.casinoSettings.plinko.minBet
     )
     if (!isBetValid) return
 
-    const betId = generateBetId()
+    totalBet = betAmount * balls
+    betId = generateId()
 
-    await updateUserBalance({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: -totalBet,
-      lockedAmount: -Math.min(user.lockedBalance, totalBet)
-    })
+    try {
+      await reserveCasinoBet({
+        userId,
+        guildId,
+        totalBet,
+        betId
+      })
+    } catch (err) {
+      if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
+        const freshUser = await getUser({
+          userId,
+          guildId
+        })
 
-    await createTransaction({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: totalBet,
-      type: 'bet',
-      source: 'casino',
-      betId
-    })
+        return await interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Insufficient Funds',
+              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+      throw err
+    }
 
     const { binMultipliers } = configReply.casinoSettings.plinko
 
@@ -114,9 +146,8 @@ export async function run({ interaction }: SlashCommandProps) {
     let liveResult = 0
     const results: string[] = []
 
-    await interaction.deferReply({ withResponse: true })
+    await interaction.deferReply()
 
-    // Pre-generate all paths
     const paths: number[][] = []
     for (let i = 0; i < balls; i++) {
       paths.push(dropPlinkoPath(rows))
@@ -153,7 +184,6 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     }
 
-    // Calculate results AFTER animation
     for (let i = 0; i < balls; i++) {
       const path = paths[i]
       const finalBin = path[path.length - 1]
@@ -176,23 +206,14 @@ export async function run({ interaction }: SlashCommandProps) {
       )
     }
 
-    const updatedUser = await updateUserBalance({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: totalWinnings
+    const finalBalance = await settleCasinoWinnings({
+      userId,
+      guildId,
+      totalBet,
+      winnings: totalWinnings,
+      betId
     })
-    if (!updatedUser) return
-
-    if (totalWinnings > 0) {
-      await createTransaction({
-        userId: user.userId,
-        guildId: user.guildId,
-        amount: totalWinnings,
-        type: 'win',
-        source: 'casino',
-        betId
-      })
-    }
+    betSettled = true
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -212,13 +233,25 @@ export async function run({ interaction }: SlashCommandProps) {
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(updatedUser.balance)}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
               : ''),
           betId
         )
       ]
     })
   } catch (error) {
+    if (!betSettled && userId && guildId && betId) {
+      try {
+        await settleCasinoWinnings({
+          userId,
+          guildId,
+          totalBet,
+          winnings: totalWinnings,
+          betId
+        })
+      } catch {}
+    }
+
     await handleUnexpectedInteractionError(interaction, error)
   }
 }

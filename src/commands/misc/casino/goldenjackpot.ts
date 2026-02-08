@@ -6,17 +6,19 @@ import { handleUnexpectedInteractionError } from '@/errors'
 import {
   checkCasinoChannels,
   checkUserRegistration,
-  createTransaction,
-  updateUserBalance
+  getUser,
+  reserveCasinoBet,
+  settleCasinoWinnings
 } from '@/services'
 import { drawGoldenJackpot } from '@/utils/casino/rng'
+import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import {
   checkValidBet,
   formatNumberToReadableString,
-  generateBetId,
+  generateId,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
-import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
+import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 
 const GOLDEN_JACKPOT_MAX_ENTRIES = 100
 
@@ -58,9 +60,31 @@ export const options: CommandOptions = {
 }
 
 export async function run({ interaction }: SlashCommandProps) {
+  let betSettled = false
+
+  let userId: string | null = null
+  let guildId: string | null = null
+  let totalBet = 0
+  let totalWinnings = 0
+  let betId: string | null = null
+
   try {
     const user = await checkUserRegistration({ interaction })
     if (!user) return
+    userId = user.userId
+    guildId = user.guildId
+
+    if (isUserOnCooldown(user.userId)) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Slow Down',
+            'Wait a moment before starting another game.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
 
     const configReply = await checkCasinoChannels(interaction)
     if (!configReply) return
@@ -74,7 +98,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (entries > GOLDEN_JACKPOT_MAX_ENTRIES || entries < 1) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Entries',
             `The number of entries must be between 1 and ${GOLDEN_JACKPOT_MAX_ENTRIES}.`
           )
@@ -87,55 +111,65 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.goldenJackpot.maxBet,
-      configReply.casinoSettings.goldenJackpot.minBet,
-      user.balance,
-      entries
+      configReply.casinoSettings.goldenJackpot.minBet
     )
 
     if (!isBetValid) return
 
-    const betId = generateBetId()
+    totalBet = parsedBetAmount * entries
+    betId = generateId()
 
-    const totalBet = parsedBetAmount * entries
+    try {
+      await reserveCasinoBet({
+        userId,
+        guildId,
+        totalBet,
+        betId
+      })
+    } catch (err) {
+      if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
+        const freshUser = await getUser({
+          userId,
+          guildId
+        })
 
-    await updateUserBalance({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: -totalBet,
-      lockedAmount: -Math.min(user.lockedBalance, totalBet)
-    })
-
-    await createTransaction({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: totalBet,
-      type: 'bet',
-      source: 'casino',
-      betId
-    })
+        return await interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Insufficient Funds',
+              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+      throw err
+    }
 
     const initialTickets = entries
-    let totalWinnings = 0
     let liveResult = 0
     let jackpotTries: string[] = []
 
-    await interaction.deferReply({ withResponse: true })
+    await interaction.deferReply()
 
-    await interaction.editReply({
-      embeds: [
-        createBetEmbed(
-          `🤑 Drawing...`,
-          'Blue',
-          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
-            `🎟️ Tickets left: **${initialTickets}**\n` +
-            `\n💰 Total: ${
-              liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(liveResult)}**`,
-          betId
-        )
-      ]
-    })
-    await new Promise((res) => setTimeout(res, 1000))
+    if (!skipAnimations) {
+      await interaction.editReply({
+        embeds: [
+          createBetEmbed(
+            `🤑 Drawing...`,
+            'Blue',
+            `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+              `🎟️ Tickets left: **${initialTickets}**\n` +
+              `\n💰 Total: ${
+                liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
+              } **$${formatNumberToReadableString(liveResult)}**`,
+            betId
+          )
+        ]
+      })
+
+      await new Promise((res) => setTimeout(res, 1000))
+    }
 
     let step = 1
     if (entries > 50) step = 10
@@ -165,12 +199,12 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       if (!skipAnimations) {
-        let ticketsLeft = initialTickets - tryNumber
+        let ticketsLeft = Math.max(1, initialTickets - tryNumber)
         if (initialTickets > 10) {
-          ticketsLeft = Math.ceil(ticketsLeft / step) * step
+          ticketsLeft = Math.max(step, Math.ceil(ticketsLeft / step) * step)
         }
 
-        if (tryNumber % step === 0 || tryNumber === entries) {
+        if (!skipAnimations && tryNumber < entries && tryNumber % step === 0) {
           await interaction.editReply({
             embeds: [
               createBetEmbed(
@@ -193,23 +227,14 @@ export async function run({ interaction }: SlashCommandProps) {
       }
     }
 
-    const updatedUser = await updateUserBalance({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: totalWinnings
+    const finalBalance = await settleCasinoWinnings({
+      userId,
+      guildId,
+      totalBet,
+      winnings: totalWinnings,
+      betId
     })
-    if (!updatedUser) return
-
-    if (totalWinnings > 0) {
-      await createTransaction({
-        userId: user.userId,
-        guildId: user.guildId,
-        amount: totalWinnings,
-        type: 'win',
-        source: 'casino',
-        betId
-      })
-    }
+    betSettled = true
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -229,13 +254,25 @@ export async function run({ interaction }: SlashCommandProps) {
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(updatedUser.balance)}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
               : ''),
           betId
         )
       ]
     })
   } catch (error) {
+    if (!betSettled && userId && guildId && betId) {
+      try {
+        await settleCasinoWinnings({
+          userId,
+          guildId,
+          totalBet,
+          winnings: totalWinnings,
+          betId
+        })
+      } catch {}
+    }
+
     await handleUnexpectedInteractionError(interaction, error)
   }
 }

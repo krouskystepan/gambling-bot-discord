@@ -1,0 +1,196 @@
+import mongoose from 'mongoose'
+
+import Transaction from '@/models/Transaction'
+import User from '@/models/User'
+
+export async function reserveCasinoBet({
+  userId,
+  guildId,
+  totalBet,
+  betId
+}: {
+  userId: string
+  guildId: string
+  totalBet: number
+  betId: string
+}) {
+  const session = await mongoose.startSession()
+
+  try {
+    await session.withTransaction(async () => {
+      const result = await User.updateOne(
+        { userId, guildId, balance: { $gte: totalBet } },
+        {
+          $inc: {
+            balance: -totalBet,
+            lockedBalance: totalBet
+          }
+        },
+        { session }
+      )
+
+      if (result.modifiedCount === 0) {
+        throw new Error('INSUFFICIENT_FUNDS')
+      }
+
+      await Transaction.create(
+        [
+          {
+            userId,
+            guildId,
+            amount: totalBet,
+            type: 'bet',
+            source: 'casino',
+            betId
+          }
+        ],
+        { session }
+      )
+    })
+  } catch (err) {
+    if (err.code === 11000) {
+      throw new Error('BET_ALREADY_EXISTS')
+    }
+    throw err
+  } finally {
+    session.endSession()
+  }
+}
+
+export async function settleCasinoWinnings({
+  userId,
+  guildId,
+  totalBet,
+  winnings,
+  betId
+}: {
+  userId: string
+  guildId: string
+  totalBet: number
+  winnings: number
+  betId: string
+}) {
+  const session = await mongoose.startSession()
+
+  try {
+    let finalBalance = 0
+
+    await session.withTransaction(async () => {
+      const user = await User.findOne({ userId, guildId }).session(session)
+
+      if (!user) throw new Error('USER_NOT_FOUND')
+
+      if (user.lockedBalance < totalBet) {
+        finalBalance = user.balance + user.lockedBalance
+        return
+      }
+
+      user.lockedBalance -= totalBet
+
+      if (winnings > 0) {
+        user.balance += winnings
+
+        await Transaction.create(
+          [
+            {
+              userId,
+              guildId,
+              amount: winnings,
+              type: 'win',
+              source: 'casino',
+              betId
+            }
+          ],
+          { session }
+        )
+      }
+
+      await user.save({ session })
+
+      finalBalance = user.balance + user.lockedBalance
+    })
+
+    return finalBalance
+  } catch (err) {
+    if (err.code === 11000) {
+      const user = await User.findOne({ userId, guildId })
+      return user!.balance + user!.lockedBalance
+    }
+    throw err
+  } finally {
+    session.endSession()
+  }
+}
+
+export async function settleRpsGameAtomic({
+  p1UserId,
+  p1GuildId,
+  p2UserId,
+  p2GuildId,
+  betAmount,
+  winnerUserId, // null = draw
+  casinoCut,
+  betId
+}: {
+  p1UserId: string
+  p1GuildId: string
+  p2UserId: string
+  p2GuildId: string
+  betAmount: number
+  winnerUserId: string | null
+  casinoCut: number
+  betId: string
+}) {
+  const session = await mongoose.startSession()
+
+  try {
+    await session.withTransaction(async () => {
+      const alreadySettled = await Transaction.findOne({
+        betId,
+        type: 'win'
+      }).session(session)
+
+      if (alreadySettled) return
+
+      const [p1, p2] = await Promise.all([
+        User.findOne({ userId: p1UserId, guildId: p1GuildId }).session(session),
+        User.findOne({ userId: p2UserId, guildId: p2GuildId }).session(session)
+      ])
+
+      if (!p1 || !p2) throw new Error('USER_NOT_FOUND')
+
+      if (p1.lockedBalance < betAmount || p2.lockedBalance < betAmount) return
+      p1.lockedBalance -= betAmount
+      p2.lockedBalance -= betAmount
+
+      if (winnerUserId === null) {
+        p1.balance += betAmount
+        p2.balance += betAmount
+      } else {
+        const pot = betAmount * 2
+        const payout = pot * (1 - casinoCut)
+
+        const winner = winnerUserId === p1.userId ? p1 : p2
+        winner.balance += payout
+
+        await Transaction.create(
+          [
+            {
+              userId: winner.userId,
+              guildId: winner.guildId,
+              amount: payout,
+              type: 'win',
+              source: 'casino',
+              betId
+            }
+          ],
+          { session }
+        )
+      }
+
+      await Promise.all([p1.save({ session }), p2.save({ session })])
+    })
+  } finally {
+    session.endSession()
+  }
+}

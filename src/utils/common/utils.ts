@@ -9,7 +9,7 @@ import { createInfoEmbed } from '../discord/createEmbed'
 export const sleep = (ms: number) =>
   new Promise<void>((res) => setTimeout(res, ms))
 
-export const generateBetId = (): string => {
+export const generateId = (): string => {
   const timestamp = Date.now().toString(36)
   const random = Math.floor(Math.random() * 1_000_000)
     .toString(36)
@@ -100,9 +100,7 @@ export const checkValidBet = (
   interaction: ChatInputCommandInteraction<CacheType>,
   betAmount: number,
   maxBet: number,
-  minBet: number,
-  userBalance: number,
-  xTimes?: number
+  minBet: number
 ): boolean => {
   if (!Number.isFinite(betAmount)) {
     interaction.reply({
@@ -128,7 +126,6 @@ export const checkValidBet = (
     return false
   }
 
-  const balanceCents = Math.floor(userBalance * 100)
   const minBetCents = Math.floor(minBet * 100)
   const maxBetCents = Math.floor(maxBet * 100)
 
@@ -166,40 +163,6 @@ export const checkValidBet = (
       flags: MessageFlags.Ephemeral
     })
     return false
-  }
-
-  if (balanceCents < betCents) {
-    interaction.reply({
-      embeds: [
-        createInfoEmbed(
-          'Insufficient Funds',
-          `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(
-            userBalance
-          )}**.`
-        )
-      ],
-      flags: MessageFlags.Ephemeral
-    })
-    return false
-  }
-
-  if (typeof xTimes === 'number' && xTimes > 0) {
-    const totalBetCents = betCents * xTimes
-
-    if (balanceCents < totalBetCents) {
-      interaction.reply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You don't have enough money to place this bet for ${xTimes} spins (you need **$${formatNumberToReadableString(
-              totalBetCents / 100
-            )}**).\nYour current balance is **$${formatNumberToReadableString(userBalance)}**.`
-          )
-        ],
-        flags: MessageFlags.Ephemeral
-      })
-      return false
-    }
   }
 
   return true

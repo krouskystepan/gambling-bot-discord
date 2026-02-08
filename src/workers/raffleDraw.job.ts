@@ -5,17 +5,13 @@ import { Client, Colors, EmbedBuilder } from 'discord.js'
 import {
   createTransaction,
   getGuildConfigByGuildId,
-  updateUserBalance
+  updateUserBalanceAtomic
 } from '@/services'
 import {
   completeRaffleDraw,
   getRafflesReadyToDraw
 } from '@/services/db/raffle.db'
-import {
-  formatNumberWithSpaces,
-  generateBetId,
-  sleep
-} from '@/utils/common/utils'
+import { formatNumberWithSpaces, generateId, sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
 const pickWinner = (participants: { userId: string; tickets: number }[]) => {
@@ -68,10 +64,10 @@ export const raffleDrawJob = async (client: Client) => {
             betId: raffle.drawId
           })
 
-          await updateUserBalance({
+          await updateUserBalanceAtomic({
             userId: p.userId,
             guildId: raffle.guildId,
-            amount: refundAmount
+            balanceDelta: refundAmount
           })
         }
       } else {
@@ -87,10 +83,10 @@ export const raffleDrawJob = async (client: Client) => {
             betId: raffle.drawId
           })
 
-          await updateUserBalance({
+          await updateUserBalanceAtomic({
             userId: winnerId,
             guildId: raffle.guildId,
-            amount: pot
+            balanceDelta: pot
           })
         }
       }
@@ -141,7 +137,7 @@ export const raffleDrawJob = async (client: Client) => {
       const interval = raffle.drawIntervalMs
       const intervalsMissed = Math.floor((now - lastScheduled) / interval) + 1
       const nextDrawAt = new Date(lastScheduled + intervalsMissed * interval)
-      const newBetId = generateBetId()
+      const newBetId = generateId()
 
       const nextDrawUnix = Math.floor(nextDrawAt.getTime() / 1000)
 

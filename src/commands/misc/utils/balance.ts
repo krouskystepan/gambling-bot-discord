@@ -26,12 +26,13 @@ export async function run({ interaction }: SlashCommandProps) {
     if (!user) return
 
     const roundedBalance = Math.round(user.balance * 100) / 100
+    const roundedLockedBalance = Math.round(user.lockedBalance * 100) / 100
 
     return interaction.reply({
       embeds: [
         createSuccessEmbed(
           'ATM - Balance',
-          `Your balance is **$${formatNumberToReadableString(roundedBalance)}** ($${formatNumberWithSpaces(roundedBalance)}).`
+          `Your balance is **$${formatNumberToReadableString(roundedBalance)}** ($${formatNumberWithSpaces(roundedBalance)}).\nYour locked balance is **$${formatNumberToReadableString(roundedLockedBalance)}** ($${formatNumberWithSpaces(roundedLockedBalance)}).\n`
         )
       ],
       flags: MessageFlags.Ephemeral

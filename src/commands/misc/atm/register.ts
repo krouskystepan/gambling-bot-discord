@@ -3,7 +3,7 @@ import { EmbedBuilder, MessageFlags } from 'discord.js'
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { checkAtmChannels, createUser, getUser } from '@/services'
+import { checkAtmChannels, createUserIfNotExists } from '@/services'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
@@ -26,12 +26,12 @@ export async function run({ interaction }: SlashCommandProps) {
     const guildConfiguration = await checkAtmChannels(interaction)
     if (!guildConfiguration) return
 
-    const user = await getUser({
+    const wasCreated = await createUserIfNotExists({
       userId: interaction.user.id,
       guildId: interaction.guildId!
     })
 
-    if (user) {
+    if (!wasCreated) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
@@ -42,11 +42,6 @@ export async function run({ interaction }: SlashCommandProps) {
         flags: MessageFlags.Ephemeral
       })
     }
-
-    await createUser({
-      userId: interaction.user.id,
-      guildId: interaction.guildId!
-    })
 
     const logChannel = await interaction
       .guild!.channels.fetch(guildConfiguration.atmChannelIds.logs)

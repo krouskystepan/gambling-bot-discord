@@ -1,4 +1,5 @@
 export * from './db'
+export * from './casino'
 export * from './guildConfiguration'
 export * from './user'
 export * from './vip'

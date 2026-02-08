@@ -5,21 +5,28 @@ import {
   ButtonStyle,
   EmbedBuilder,
   GuildMember,
+  Message,
   MessageFlags
 } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { checkAtmChannels, checkUserRegistration } from '@/services'
+import {
+  attachAtmRequestMessage,
+  checkAtmChannels,
+  checkUserRegistration,
+  createAtmRequest,
+  deleteAtmRequest
+} from '@/services'
 import {
   formatNumberToReadableString,
+  generateId,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
-  createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
@@ -63,7 +70,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (isNaN(parsedAmount)) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Not a number',
             'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
           )
@@ -75,7 +82,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (parsedAmount <= 0) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Non-positive number',
             'The number you provided must be greater than 0.\nPlease enter a positive value.'
           )
@@ -108,32 +115,47 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const managerRole = guildConfiguration.managerRoleId
 
-    const logMessage = await logChannel.send({
-      content: `${managerRole ? `<@&${managerRole}>` : ''}`,
-      embeds: [
-        new EmbedBuilder()
-          .setTitle(
-            `ATM - Deposit by ${displayName} (${interaction.user.username})`
-          )
-          .setColor('Green')
-          .setDescription(
-            `<@${interaction.user.id}> has deposited **$${readableAmount}** from account **${account}**.`
-          )
-      ],
-      components: []
+    const requestId = generateId()
+
+    await createAtmRequest({
+      requestId,
+      userId: interaction.user.id,
+      guildId: interaction.guildId!,
+      type: 'deposit',
+      amount: parsedAmount,
+      account
     })
 
+    let logMessage: Message<true>
+
+    try {
+      logMessage = await logChannel.send({
+        content: `${managerRole ? `<@&${managerRole}>` : ''}`,
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(
+              `ATM - Deposit by ${displayName} (${interaction.user.username})`
+            )
+            .setColor('Green')
+            .setDescription(
+              `<@${interaction.user.id}> requested a deposit of **$${readableAmount}** from account **${account}**.`
+            )
+        ]
+      })
+    } catch (err) {
+      await deleteAtmRequest(requestId)
+      throw err
+    }
+
+    await attachAtmRequestMessage(requestId, logChannel.id, logMessage.id)
+
     const approveButton = new ButtonBuilder()
-      .setCustomId(
-        `atm-deposit.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
-      )
+      .setCustomId(`atm.approve.${requestId}`)
       .setLabel('Approve')
       .setStyle(ButtonStyle.Success)
 
     const rejectButton = new ButtonBuilder()
-      .setCustomId(
-        `atm-deposit.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
-      )
+      .setCustomId(`atm.reject.${requestId}`)
       .setLabel('Reject')
       .setStyle(ButtonStyle.Danger)
 

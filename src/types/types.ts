@@ -61,30 +61,9 @@ export type TAddRaffleTickets = {
   guildId: string
   userId: string
   tickets: number
+  maxTicketsPerUser: number
 }
 
-export type TWithdrawResult =
-  | {
-      ok: true
-      user: TUser
-    }
-  | {
-      ok: false
-      reason: 'INSUFFICIENT_BALANCE'
-      balance: TUser['balance']
-    }
-  | {
-      ok: false
-      reason: 'INSUFFICIENT_WITHDRAWABLE'
-      withdrawable: number
-      locked: TUser['balance']
-    }
-export type TWithdrawBalance = Pick<TUser, 'userId' | 'guildId'> & {
-  amount: number
-}
-export type TConsumeUserBalance = Pick<TUser, 'userId' | 'guildId'> & {
-  amount: number
-}
 export type TAddPredictionBet = Pick<
   TPrediction,
   'predictionId' | 'guildId'

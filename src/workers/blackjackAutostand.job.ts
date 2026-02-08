@@ -5,7 +5,7 @@ import {
   deleteBlackjackGame,
   getAllOldBlackjackGames,
   updateBlackjackGame,
-  updateUserBalance
+  updateUserBalanceAtomic
 } from '@/services'
 import {
   FinalGameResultId,
@@ -84,13 +84,14 @@ export const blackjackAutostandJob = async (client: Client) => {
           source: 'casino',
           betId: game.betId
         })
-
-        await updateUserBalance({
-          userId: game.userId,
-          guildId: game.guildId,
-          amount: totalPayout
-        })
       }
+
+      await updateUserBalanceAtomic({
+        userId: game.userId,
+        guildId: game.guildId,
+        balanceDelta: totalPayout,
+        lockedDelta: -totalBet
+      })
 
       await message.edit({
         content: 'This game was inactive, so auto-stand was executed.',

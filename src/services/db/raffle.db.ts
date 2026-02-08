@@ -56,36 +56,88 @@ export const addRaffleTickets = async ({
   raffleId,
   guildId,
   userId,
-  tickets
-}: TAddRaffleTickets) => {
-  const result = await Raffle.updateOne(
+  tickets,
+  maxTicketsPerUser
+}: TAddRaffleTickets): Promise<boolean> => {
+  const now = new Date()
+
+  const updateExisting = await Raffle.updateOne(
     {
       raffleId,
       guildId,
-      'participants.userId': userId
+      status: 'active',
+      nextDrawAt: { $gt: now },
+      'participants.userId': userId,
+      $expr: {
+        $lte: [
+          {
+            $add: [
+              {
+                $ifNull: [
+                  {
+                    $first: {
+                      $map: {
+                        input: {
+                          $filter: {
+                            input: '$participants',
+                            as: 'p',
+                            cond: { $eq: ['$$p.userId', userId] }
+                          }
+                        },
+                        as: 'p',
+                        in: '$$p.tickets'
+                      }
+                    }
+                  },
+                  0
+                ]
+              },
+              tickets
+            ]
+          },
+          maxTicketsPerUser
+        ]
+      }
     },
-    {
-      $inc: { 'participants.$.tickets': tickets }
-    }
+    { $inc: { 'participants.$.tickets': tickets } }
   )
 
-  if (result.matchedCount === 0) {
-    await Raffle.updateOne(
-      { raffleId, guildId },
-      {
-        $push: {
-          participants: {
-            userId,
-            tickets
-          }
-        }
+  if (updateExisting.modifiedCount > 0) return true
+
+  const addNew = await Raffle.updateOne(
+    {
+      raffleId,
+      guildId,
+      status: 'active',
+      nextDrawAt: { $gt: now },
+      participants: { $not: { $elemMatch: { userId } } },
+      $expr: {
+        $lte: [
+          {
+            $cond: [{ $gte: [tickets, 0] }, tickets, maxTicketsPerUser]
+          },
+          maxTicketsPerUser
+        ]
       }
-    )
-  }
+    },
+    { $push: { participants: { userId, tickets } } }
+  )
+
+  return addNew.modifiedCount > 0
 }
 
-export const deleteRaffle = async ({ raffleId }: { raffleId: string }) => {
-  await Raffle.findOneAndDelete({ raffleId })
+export const cancelRaffleAtomic = async ({
+  raffleId,
+  guildId
+}: {
+  raffleId: string
+  guildId: string
+}) => {
+  return Raffle.findOneAndUpdate(
+    { raffleId, guildId, status: { $ne: 'canceled' } },
+    { $set: { status: 'canceled' } },
+    { new: true }
+  )
 }
 
 export const searchRafflesForAutocomplete = async ({

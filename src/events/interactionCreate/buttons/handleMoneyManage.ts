@@ -10,7 +10,7 @@ import {
   getGuildConfigByGuildId,
   getUser,
   resetUserBalance,
-  updateUserBalance
+  updateUserBalanceAtomic
 } from '@/services'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
@@ -76,10 +76,10 @@ export default async (interaction: Interaction, client: Client) => {
         })
       }
 
-      const updatedUser = await updateUserBalance({
+      const updatedUser = await updateUserBalanceAtomic({
         userId: interaction.user.id,
         guildId: interaction.guildId!,
-        amount: parsedAmount
+        balanceDelta: parsedAmount
       })
 
       if (!updatedUser) return

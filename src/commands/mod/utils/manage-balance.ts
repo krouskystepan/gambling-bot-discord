@@ -13,7 +13,7 @@ import {
   createTransaction,
   deleteAllTransactionsByUserId,
   resetUserBalance,
-  updateUserBalance
+  updateUserBalanceAtomic
 } from '@/services'
 import {
   formatNumberToReadableString,
@@ -21,7 +21,6 @@ import {
 } from '@/utils/common/utils'
 import {
   createErrorEmbed,
-  createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
@@ -177,7 +176,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (user.bot) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Bot user',
             'This command cannot target a bot.'
           )
@@ -200,18 +199,28 @@ export async function run({ interaction }: SlashCommandProps) {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed('Invalid Input', 'Enter a positive number.')
+            createErrorEmbed('Invalid Input', 'Enter a positive number.')
           ],
           flags: MessageFlags.Ephemeral
         })
       }
 
-      const updatedUser = await updateUserBalance({
+      const updatedUser = await updateUserBalanceAtomic({
         userId: user.id,
         guildId: interaction.guildId!,
-        amount: parsedAmount
+        balanceDelta: parsedAmount
       })
-      if (!updatedUser) return
+      if (!updatedUser) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Balance Update Failed',
+              'Could not update balance.'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
 
       await createTransaction({
         userId: user.id,
@@ -238,7 +247,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed('Invalid Input', 'Enter a positive number.')
+            createErrorEmbed('Invalid Input', 'Enter a positive number.')
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -249,7 +258,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (withdrawable < parsedAmount) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Insufficient Withdrawable Funds',
               `You cannot withdraw **$${readableAmount}** because **$${formatNumberToReadableString(
                 targetUser.lockedBalance
@@ -260,12 +269,24 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      const updatedUser = await updateUserBalance({
+      const updatedUser = await updateUserBalanceAtomic({
         userId: user.id,
         guildId: interaction.guildId!,
-        amount: -parsedAmount
+        balanceDelta: -parsedAmount,
+        requireAvailableGte: parsedAmount
       })
-      if (!updatedUser) return
+
+      if (!updatedUser) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Insufficient Withdrawable Funds',
+              `User does not have **$${readableAmount}** available to withdraw.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
 
       await createTransaction({
         userId: user.id,
@@ -293,7 +314,7 @@ export async function run({ interaction }: SlashCommandProps) {
     //   if (isNaN(parsedAmount) || parsedAmount <= 0) {
     //     return interaction.reply({
     //       embeds: [
-    //         createInfoEmbed('Invalid Input', 'Enter a positive number.')
+    //         createErrorEmbed('Invalid Input', 'Enter a positive number.')
     //       ],
     //       flags: MessageFlags.Ephemeral
     //     })
@@ -330,12 +351,35 @@ export async function run({ interaction }: SlashCommandProps) {
     //   })
     // }
 
+    // const updatedUser = await updateUserBalanceAtomic({
+    //   userId: user.id,
+    //   guildId: interaction.guildId!,
+    //   balanceDelta: parsedAmount,
+    //   lockedDelta: parsedAmount
+    // })
+
+    // if (!updatedUser) {
+    //   return interaction.reply({
+    //     embeds: [createErrorEmbed('Bonus Failed', 'Could not apply bonus.')],
+    //     flags: MessageFlags.Ephemeral
+    //   })
+    // }
+
+    // await createTransaction({
+    //   userId: user.id,
+    //   guildId: interaction.guildId!,
+    //   amount: parsedAmount,
+    //   type: 'bonus',
+    //   source: 'command',
+    //   handledBy: interaction.user.id
+    // })
+
     // TODO Fix this
     // if (subcommand === 'remove-bonus') {
     //   if (isNaN(parsedAmount) || parsedAmount <= 0) {
     //     return interaction.reply({
     //       embeds: [
-    //         createInfoEmbed('Invalid Input', 'Enter a positive number.'),
+    //         createErrorEmbed('Invalid Input', 'Enter a positive number.'),
     //       ],
     //       flags: MessageFlags.Ephemeral,
     //     })
@@ -344,7 +388,7 @@ export async function run({ interaction }: SlashCommandProps) {
     //   if (userDocument.lockedBalance < parsedAmount) {
     //     return interaction.reply({
     //       embeds: [
-    //         createInfoEmbed(
+    //         createErrorEmbed(
     //           'Insufficient Bonus Funds',
     //           `User <@${user.id}> only has **$${formatNumberToReadableString(
     //             userDocument.lockedBalance

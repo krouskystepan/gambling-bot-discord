@@ -38,6 +38,7 @@ export const data: CommandData = {
 export const options: CommandOptions = { deleted: false }
 
 // TODO: fix and test the bonuses
+// DO NOT USE LOCKED BALANCE - CHECK IF CAN IDK
 export async function run({ interaction }: SlashCommandProps) {
   try {
     const subcommand = interaction.options.getSubcommand()
