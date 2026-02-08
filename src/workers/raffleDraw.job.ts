@@ -3,9 +3,9 @@ import { TGuildConfiguration } from 'gambling-bot-shared'
 import { Client, Colors, EmbedBuilder } from 'discord.js'
 
 import {
-  createTransaction,
   getGuildConfigByGuildId,
-  updateUserBalanceAtomic
+  refundLockedBet,
+  settleCasinoWinnings
 } from '@/services'
 import {
   completeRaffleDraw,
@@ -55,38 +55,23 @@ export const raffleDrawJob = async (client: Client) => {
         for (const p of participants) {
           const refundAmount = p.tickets * raffle.ticketPrice
 
-          await createTransaction({
+          await refundLockedBet({
             userId: p.userId,
             guildId: raffle.guildId,
             amount: refundAmount,
-            type: 'refund',
-            source: 'casino',
             betId: raffle.drawId
-          })
-
-          await updateUserBalanceAtomic({
-            userId: p.userId,
-            guildId: raffle.guildId,
-            balanceDelta: refundAmount
           })
         }
       } else {
         winnerId = pickWinner(participants)
 
         if (winnerId) {
-          await createTransaction({
+          await settleCasinoWinnings({
             userId: winnerId,
             guildId: raffle.guildId,
-            amount: pot,
-            type: 'win',
-            source: 'casino',
+            totalBet: rawPot,
+            winnings: pot,
             betId: raffle.drawId
-          })
-
-          await updateUserBalanceAtomic({
-            userId: winnerId,
-            guildId: raffle.guildId,
-            balanceDelta: pot
           })
         }
       }

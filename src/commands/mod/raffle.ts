@@ -15,11 +15,7 @@ import {
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import {
-  checkRaffleChannels,
-  createTransaction,
-  updateUserBalanceAtomic
-} from '@/services'
+import { checkRaffleChannels, refundRafflePurchase } from '@/services'
 import {
   cancelRaffleAtomic,
   getRaffleById,
@@ -318,20 +314,11 @@ export async function run({ interaction }: SlashCommandProps) {
       for (const entry of raffle.participants) {
         const refundAmount = entry.tickets * ticketPrice
 
-        await createTransaction({
+        await refundRafflePurchase({
           userId: entry.userId,
           guildId: interaction.guildId!,
           amount: refundAmount,
-          type: 'refund',
-          source: 'casino',
-          betId: raffle.drawId
-        })
-
-        await updateUserBalanceAtomic({
-          userId: entry.userId,
-          guildId: interaction.guildId!,
-          balanceDelta: refundAmount,
-          lockedDelta: 0
+          raffleId: raffle.drawId
         })
       }
 

@@ -91,7 +91,7 @@ export const data: CommandData = {
     },
     {
       name: 'remove-bonus',
-      description: 'Remove bonus funds from a user (admin only).',
+      description: 'Remove bonus funds from a user.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {

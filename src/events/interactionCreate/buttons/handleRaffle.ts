@@ -4,7 +4,7 @@ import {
   addRaffleTickets,
   getGuildConfigByGuildId,
   getRaffleById,
-  reserveCasinoBet
+  spendCasinoBalance
 } from '@/services'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import {
@@ -79,10 +79,10 @@ export default async (interaction: Interaction) => {
     const totalCost = raffle.ticketPrice * ticketAmount
 
     try {
-      await reserveCasinoBet({
+      await spendCasinoBalance({
         userId: interaction.user.id,
         guildId: interaction.guildId!,
-        totalBet: totalCost,
+        amount: totalCost,
         betId: raffle.drawId
       })
     } catch {

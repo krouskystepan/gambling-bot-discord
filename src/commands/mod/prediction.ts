@@ -22,6 +22,7 @@ import {
   createPrediction,
   createTransaction,
   getPredictionById,
+  refundLockedBet,
   updatePredictionStatus,
   updateUserBalanceAtomic
 } from '@/services'
@@ -384,19 +385,17 @@ export async function run({ interaction }: SlashCommandProps) {
       const predictionId = options.getString('prediction-id', true)
       const winnerChoice = options.getString('winner', true)
 
-      const prediction = await updatePredictionStatus({
+      const prediction = await getPredictionById({
         predictionId,
-        guildId: interaction.guildId!,
-        fromStatus: 'ended',
-        toStatus: 'paid'
+        guildId: interaction.guildId!
       })
 
-      if (!prediction) {
+      if (!prediction || prediction.status !== 'ended') {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Already Processing',
-              'This prediction is already being paid out or is not in ENDED state.'
+              'Prediction Not Ready',
+              'Prediction is not in ENDED state.'
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -406,12 +405,36 @@ export async function run({ interaction }: SlashCommandProps) {
       const winner = prediction.choices.find(
         (c) => c.choiceName === winnerChoice
       )
+
+      const allBets = prediction.choices.flatMap((c) => c.bets)
+
       if (!winner) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
               'Invalid Choice',
               `The winner "${winnerChoice}" does not exist in this prediction.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
+      if (winner.bets.length === 0) {
+        for (const bet of allBets) {
+          await refundLockedBet({
+            userId: bet.userId,
+            guildId: interaction.guildId!,
+            amount: bet.amount,
+            betId: prediction.predictionId
+          })
+        }
+
+        return interaction.reply({
+          embeds: [
+            createSuccessEmbed(
+              'Prediction Refunded',
+              'No one bet on the winning option. All bets were refunded.'
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -555,6 +578,13 @@ export async function run({ interaction }: SlashCommandProps) {
         }
       }
 
+      await updatePredictionStatus({
+        predictionId,
+        guildId: interaction.guildId!,
+        fromStatus: 'ended',
+        toStatus: 'paid'
+      })
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
@@ -590,20 +620,11 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const allBets = updatedPrediction.choices.flatMap((c) => c.bets)
       for (const bet of allBets) {
-        await createTransaction({
+        await refundLockedBet({
           userId: bet.userId,
           guildId: interaction.guildId!,
           amount: bet.amount,
-          type: 'refund',
-          source: 'casino',
-          betId: updatedPrediction.predictionId
-        })
-
-        await updateUserBalanceAtomic({
-          userId: bet.userId,
-          guildId: interaction.guildId!,
-          balanceDelta: bet.amount,
-          lockedDelta: -bet.amount
+          betId: predictionId
         })
       }
 

@@ -190,3 +190,143 @@ export async function settleRpsGameAtomic({
     session.endSession()
   }
 }
+
+export async function refundLockedBet({
+  userId,
+  guildId,
+  amount,
+  betId
+}: {
+  userId: string
+  guildId: string
+  amount: number
+  betId: string
+}) {
+  const session = await mongoose.startSession()
+
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findOne({ userId, guildId }).session(session)
+      if (!user) throw new Error('USER_NOT_FOUND')
+
+      if (user.lockedBalance < amount) {
+        return
+      }
+
+      user.lockedBalance -= amount
+      user.balance += amount
+
+      await user.save({ session })
+
+      await Transaction.create(
+        [
+          {
+            userId,
+            guildId,
+            amount,
+            type: 'refund',
+            source: 'casino',
+            betId
+          }
+        ],
+        { session }
+      )
+    })
+  } finally {
+    session.endSession()
+  }
+}
+
+// NOTE:
+// Raffle cancellation is an admin override.
+// All refunded amounts are returned to NORMAL balance,
+// even if bonus funds were used during purchase.
+export async function refundRafflePurchase({
+  userId,
+  guildId,
+  amount,
+  raffleId
+}: {
+  userId: string
+  guildId: string
+  amount: number
+  raffleId: string
+}) {
+  const session = await mongoose.startSession()
+
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findOne({ userId, guildId }).session(session)
+      if (!user) throw new Error('USER_NOT_FOUND')
+
+      user.balance += amount
+
+      await user.save({ session })
+
+      await Transaction.create(
+        [
+          {
+            userId,
+            guildId,
+            amount,
+            type: 'refund',
+            source: 'casino',
+            betId: raffleId
+          }
+        ],
+        { session }
+      )
+    })
+  } finally {
+    session.endSession()
+  }
+}
+
+export async function spendCasinoBalance({
+  userId,
+  guildId,
+  amount,
+  betId
+}: {
+  userId: string
+  guildId: string
+  amount: number
+  betId: string
+}) {
+  const session = await mongoose.startSession()
+
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findOne({ userId, guildId }).session(session)
+      if (!user) throw new Error('USER_NOT_FOUND')
+
+      const bonusUsed = Math.min(user.bonusBalance ?? 0, amount)
+      const cashUsed = amount - bonusUsed
+
+      if (user.balance < cashUsed) {
+        throw new Error('INSUFFICIENT_FUNDS')
+      }
+
+      user.bonusBalance -= bonusUsed
+      user.balance -= cashUsed
+
+      await user.save({ session })
+
+      await Transaction.create(
+        [
+          {
+            userId,
+            guildId,
+            amount,
+            type: 'bet',
+            source: 'casino',
+            betId
+          }
+        ],
+        { session }
+      )
+    })
+  } finally {
+    session.endSession()
+  }
+}

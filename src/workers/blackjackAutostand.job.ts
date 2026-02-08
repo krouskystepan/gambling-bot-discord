@@ -1,11 +1,10 @@
 import { Client, TextChannel } from 'discord.js'
 
 import {
-  createTransaction,
   deleteBlackjackGame,
   getAllOldBlackjackGames,
-  updateBlackjackGame,
-  updateUserBalanceAtomic
+  settleCasinoWinnings,
+  updateBlackjackGame
 } from '@/services'
 import {
   FinalGameResultId,
@@ -75,22 +74,12 @@ export const blackjackAutostandJob = async (client: Client) => {
       let finalResultId: FinalGameResultId =
         totalPayout === 0 ? 'LOSS' : totalPayout === totalBet ? 'EVEN' : 'WIN'
 
-      if (totalPayout > 0) {
-        await createTransaction({
-          userId: game.userId,
-          guildId: game.guildId,
-          amount: totalPayout,
-          type: 'win',
-          source: 'casino',
-          betId: game.betId
-        })
-      }
-
-      await updateUserBalanceAtomic({
+      await settleCasinoWinnings({
         userId: game.userId,
         guildId: game.guildId,
-        balanceDelta: totalPayout,
-        lockedDelta: -totalBet
+        totalBet,
+        winnings: totalPayout,
+        betId: game.betId
       })
 
       await message.edit({
