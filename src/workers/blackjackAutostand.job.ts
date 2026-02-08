@@ -1,11 +1,10 @@
 import { Client, TextChannel } from 'discord.js'
 
 import {
-  createTransaction,
   deleteBlackjackGame,
   getAllOldBlackjackGames,
-  updateBlackjackGame,
-  updateUserBalance
+  settleCasinoWinnings,
+  updateBlackjackGame
 } from '@/services'
 import {
   FinalGameResultId,
@@ -75,22 +74,13 @@ export const blackjackAutostandJob = async (client: Client) => {
       let finalResultId: FinalGameResultId =
         totalPayout === 0 ? 'LOSS' : totalPayout === totalBet ? 'EVEN' : 'WIN'
 
-      if (totalPayout > 0) {
-        await createTransaction({
-          userId: game.userId,
-          guildId: game.guildId,
-          amount: totalPayout,
-          type: 'win',
-          source: 'casino',
-          betId: game.betId
-        })
-
-        await updateUserBalance({
-          userId: game.userId,
-          guildId: game.guildId,
-          amount: totalPayout
-        })
-      }
+      await settleCasinoWinnings({
+        userId: game.userId,
+        guildId: game.guildId,
+        totalBet,
+        winnings: totalPayout,
+        betId: game.betId
+      })
 
       await message.edit({
         content: 'This game was inactive, so auto-stand was executed.',

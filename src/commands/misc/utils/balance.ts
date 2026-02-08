@@ -26,12 +26,23 @@ export async function run({ interaction }: SlashCommandProps) {
     if (!user) return
 
     const roundedBalance = Math.round(user.balance * 100) / 100
+    const roundedLockedBalance = Math.round(user.lockedBalance * 100) / 100
+    const roundedBonusBalance = Math.round(user.bonusBalance * 100) / 100
 
     return interaction.reply({
       embeds: [
         createSuccessEmbed(
           'ATM - Balance',
-          `Your balance is **$${formatNumberToReadableString(roundedBalance)}** ($${formatNumberWithSpaces(roundedBalance)}).`
+          [
+            `💰 Available Balance: **$${formatNumberToReadableString(roundedBalance)}** ($${formatNumberWithSpaces(roundedBalance)})`,
+            `🔒 Locked Balance: **$${formatNumberToReadableString(roundedLockedBalance)}** ($${formatNumberWithSpaces(roundedLockedBalance)})`,
+            `🎁 Bonus Balance: **$${formatNumberToReadableString(roundedBonusBalance)}** ($${formatNumberWithSpaces(roundedBonusBalance)})`,
+            '',
+            '**What this means:**',
+            '- **Available Balance** - money you can freely bet and withdraw.',
+            '- **Locked Balance** - money currently tied to active bets or games.',
+            '- **Bonus Balance** - promotional funds that must be wagered before withdrawal.'
+          ].join('\n')
         )
       ],
       flags: MessageFlags.Ephemeral

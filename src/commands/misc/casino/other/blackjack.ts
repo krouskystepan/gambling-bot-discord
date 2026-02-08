@@ -6,9 +6,10 @@ import { handleUnexpectedInteractionError } from '@/errors'
 import {
   checkCasinoChannels,
   checkUserRegistration,
-  createTransaction,
   getBlackjackGameByUserAndGuild,
-  updateUserBalance,
+  getUser,
+  reserveCasinoBet,
+  settleCasinoWinnings,
   upsertBlackjackGame
 } from '@/services'
 import {
@@ -21,7 +22,8 @@ import {
 } from '@/utils/casino/blackjack'
 import {
   checkValidBet,
-  generateBetId,
+  formatNumberToReadableString,
+  generateId,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
@@ -84,31 +86,41 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.blackjack.maxBet,
-      configReply.casinoSettings.blackjack.minBet,
-      user.balance
+      configReply.casinoSettings.blackjack.minBet
     )
 
     if (!isBetValid) return
 
     await interaction.deferReply()
 
-    const betId = generateBetId()
+    const betId = generateId()
 
-    await updateUserBalance({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: -parsedBetAmount,
-      lockedAmount: -Math.min(user.lockedBalance, parsedBetAmount)
-    })
+    try {
+      await reserveCasinoBet({
+        userId: user.userId,
+        guildId: user.guildId,
+        totalBet: parsedBetAmount,
+        betId
+      })
+    } catch (err) {
+      if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
+        const freshUser = await getUser({
+          userId: user.userId,
+          guildId: user.guildId
+        })
 
-    await createTransaction({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: parsedBetAmount,
-      type: 'bet',
-      source: 'casino',
-      betId
-    })
+        return await interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Insufficient Funds',
+              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+      throw err
+    }
 
     const shuffledDeck = shuffleDeck(DECK)
     const playerCards = [shuffledDeck[0], shuffledDeck[1]]
@@ -135,28 +147,13 @@ export async function run({ interaction }: SlashCommandProps) {
         payout = 0
       }
 
-      let finalBalance = user.balance - parsedBetAmount
-
-      if (payout > 0) {
-        const updatedUser = await updateUserBalance({
-          userId: user.userId,
-          guildId: user.guildId,
-          amount: payout
-        })
-
-        if (updatedUser) {
-          await createTransaction({
-            userId: user.userId,
-            guildId: user.guildId,
-            amount: payout,
-            type: 'win',
-            source: 'casino',
-            betId
-          })
-
-          finalBalance = updatedUser.balance
-        }
-      }
+      const finalBalance = await settleCasinoWinnings({
+        userId: user.userId,
+        guildId: user.guildId,
+        totalBet: parsedBetAmount,
+        winnings: payout,
+        betId
+      })
 
       const hands = [
         {

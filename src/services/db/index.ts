@@ -1,8 +1,10 @@
 export * from './base.db'
 
+export * from './atmRequest.db'
 export * from './blackjackGame.db'
 export * from './guildConfiguration.db'
 export * from './prediction.db'
+export * from './raffle.db'
 export * from './transaction.db'
 export * from './user.db'
 export * from './vip.db'

@@ -1,13 +1,14 @@
 import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 
 import {
-  consumeUserBalance,
-  createTransaction,
-  getGuildConfigByGuildId
+  addRaffleTickets,
+  getGuildConfigByGuildId,
+  getRaffleById,
+  spendCasinoBalance
 } from '@/services'
-import { addRaffleTickets, getRaffleById } from '@/services/db/raffle.db'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import {
+  createErrorEmbed,
   createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
@@ -28,8 +29,26 @@ export default async (interaction: Interaction) => {
       raffleId,
       guildId: interaction.guildId!
     })
-
     if (!raffle || !interaction.channel) return
+
+    if (raffle.status === 'canceled') {
+      return interaction.editReply({
+        embeds: [
+          createInfoEmbed('Raffle Canceled', 'This raffle is no longer active.')
+        ]
+      })
+    }
+
+    if (new Date() >= new Date(raffle.nextDrawAt)) {
+      return interaction.editReply({
+        embeds: [
+          createInfoEmbed(
+            'Raffle Closed',
+            'Ticket sales are closed for this raffle.'
+          )
+        ]
+      })
+    }
 
     const guildConfig = await getGuildConfigByGuildId({
       guildId: interaction.guildId!
@@ -57,40 +76,38 @@ export default async (interaction: Interaction) => {
       })
     }
 
-    const updatedUser = await consumeUserBalance({
-      userId: interaction.user.id,
-      guildId: interaction.guildId!,
-      amount: raffle.ticketPrice * ticketAmount
-    })
+    const totalCost = raffle.ticketPrice * ticketAmount
 
-    if (!updatedUser) {
+    try {
+      await spendCasinoBalance({
+        userId: interaction.user.id,
+        guildId: interaction.guildId!,
+        amount: totalCost,
+        betId: raffle.drawId
+      })
+    } catch {
       return interaction.editReply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Insufficient Funds',
-            `You need **$${formatNumberToReadableString(
-              raffle.ticketPrice * ticketAmount
-            )}** to buy ticket/s.`
+            `You need **$${formatNumberToReadableString(totalCost)}** to buy tickets.`
           )
         ]
       })
     }
 
-    await createTransaction({
-      userId: interaction.user.id,
-      guildId: interaction.guildId!,
-      amount: raffle.ticketPrice * ticketAmount,
-      type: 'bet',
-      source: 'casino',
-      betId: raffle.drawId
-    })
-
-    await addRaffleTickets({
+    const added = await addRaffleTickets({
       raffleId,
       guildId: interaction.guildId!,
       userId: interaction.user.id,
-      tickets: ticketAmount
+      tickets: ticketAmount,
+      maxTicketsPerUser: raffle.maxTicketsPerUser
     })
+
+    if (!added) {
+      // This should NEVER happen after validation
+      throw new Error('RAFFLE_STATE_CHANGED_AFTER_VALIDATION')
+    }
 
     const updatedRaffle = await getRaffleById({
       raffleId,
@@ -142,7 +159,7 @@ export default async (interaction: Interaction) => {
         createSuccessEmbed(
           'Ticket/s Purchased',
           `You bought **${ticketAmount}** ticket/s for **$${formatNumberToReadableString(
-            raffle.ticketPrice * ticketAmount
+            totalCost
           )}**`
         )
       ]

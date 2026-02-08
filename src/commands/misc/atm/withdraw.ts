@@ -5,6 +5,7 @@ import {
   ButtonStyle,
   EmbedBuilder,
   GuildMember,
+  Message,
   MessageFlags
 } from 'discord.js'
 
@@ -12,18 +13,21 @@ import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  attachAtmRequestMessage,
   checkAtmChannels,
   checkUserRegistration,
-  withdrawBalance
+  createAtmRequest,
+  deleteAtmRequest,
+  previewWithdraw
 } from '@/services'
 import {
   formatNumberToReadableString,
+  generateId,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
-  createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
@@ -67,7 +71,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (isNaN(parsedAmount)) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Not a number',
             'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
           )
@@ -79,7 +83,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (parsedAmount <= 0) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Non-positive number',
             'The number you provided must be greater than 0.\nPlease enter a positive value.'
           )
@@ -88,45 +92,42 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    const result = await withdrawBalance({
+    const preview = await previewWithdraw({
       userId: interaction.user.id,
       guildId: interaction.guildId!,
       amount: parsedAmount
     })
 
-    if (!result.ok) {
-      if (result.reason === 'INSUFFICIENT_BALANCE') {
+    if (!preview.ok) {
+      if (preview.reason === 'INSUFFICIENT_BALANCE') {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough funds to withdraw **$${readableAmount}**.\nYour current balance is **$${formatNumberToReadableString(
-                result.balance
-              )}**.`
+              `You don't have enough funds to withdraw **$${readableAmount}**.\nYour current balance is **$${formatNumberToReadableString(preview.balance)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
         })
       }
 
-      if (result.reason === 'INSUFFICIENT_WITHDRAWABLE') {
+      if (preview.reason === 'INSUFFICIENT_WITHDRAWABLE') {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Insufficient Withdrawable Funds',
-              `You requested **$${readableAmount}**, but you can only withdraw up to **$${formatNumberToReadableString(
-                result.withdrawable
-              )}**.\n` +
-                (result.locked > 0
-                  ? `**$${formatNumberToReadableString(
-                      result.locked
-                    )}** of your balance is locked (e.g., bonuses).\n\nYou need to wager those bonuses before you can withdraw them.`
-                  : '')
+              `You requested **$${readableAmount}**, but you can only withdraw **$${formatNumberToReadableString(preview.withdrawable)}**.\n` +
+                `**$${formatNumberToReadableString(preview.locked)}** is currently locked.`
             )
           ],
           flags: MessageFlags.Ephemeral
         })
       }
+
+      return interaction.reply({
+        embeds: [createErrorEmbed('Error', 'Unable to process withdrawal.')],
+        flags: MessageFlags.Ephemeral
+      })
     }
 
     const logChannel = await interaction
@@ -145,6 +146,17 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
+    const requestId = generateId()
+
+    await createAtmRequest({
+      requestId,
+      userId: interaction.user.id,
+      guildId: interaction.guildId!,
+      type: 'withdraw',
+      amount: parsedAmount,
+      account
+    })
+
     const member = interaction.member as GuildMember | null
     const displayName =
       member?.displayName ||
@@ -153,38 +165,39 @@ export async function run({ interaction }: SlashCommandProps) {
 
     const managerRole = guildConfiguration.managerRoleId
 
-    const logMessage = await logChannel.send({
-      content: managerRole ? `<@&${managerRole}>` : '',
-      embeds: [
-        new EmbedBuilder()
-          .setTitle(
-            `ATM - Withdrawal by ${displayName} (${interaction.user.username})`
-          )
-          .setColor('Red')
-          .setDescription(
-            `<@${interaction.user.id}> wants to withdraw **$${readableAmount}** into account **${account}**.`
-          )
-      ],
-      components: []
-    })
+    let logMessage: Message<true>
 
-    const approveButton = new ButtonBuilder()
-      .setCustomId(
-        `atm-withdraw.approve._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
-      )
-      .setLabel('Approve')
-      .setStyle(ButtonStyle.Success)
+    try {
+      logMessage = await logChannel.send({
+        content: managerRole ? `<@&${managerRole}>` : '',
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(
+              `ATM - Withdrawal by ${displayName} (${interaction.user.username})`
+            )
+            .setColor('Red')
+            .setDescription(
+              `<@${interaction.user.id}> requested a withdrawal of **$${readableAmount}** to account **${account}**.`
+            )
+        ],
+        components: []
+      })
+    } catch (err) {
+      await deleteAtmRequest(requestId)
+      throw err
+    }
 
-    const rejectButton = new ButtonBuilder()
-      .setCustomId(
-        `atm-withdraw.reject._.${interaction.user.id}-${logMessage.id}.${parsedAmount}`
-      )
-      .setLabel('Reject')
-      .setStyle(ButtonStyle.Danger)
+    await attachAtmRequestMessage(requestId, logChannel.id, logMessage.id)
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      approveButton,
-      rejectButton
+      new ButtonBuilder()
+        .setCustomId(`atm.approve.${requestId}`)
+        .setLabel('Approve')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`atm.reject.${requestId}`)
+        .setLabel('Reject')
+        .setStyle(ButtonStyle.Danger)
     )
 
     await logMessage.edit({ components: [row] })

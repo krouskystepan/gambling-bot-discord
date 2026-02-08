@@ -22,8 +22,9 @@ import {
   createPrediction,
   createTransaction,
   getPredictionById,
+  refundLockedBet,
   updatePredictionStatus,
-  updateUserBalance
+  updateUserBalanceAtomic
 } from '@/services'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import {
@@ -135,6 +136,7 @@ export const options: CommandOptions = {
   deleted: false
 }
 
+// TODO: Make this safe, add paying state or lock when paying, smth like this
 export async function run({ interaction }: SlashCommandProps) {
   try {
     const configReply = await checkPredictionChannels(interaction)
@@ -383,34 +385,56 @@ export async function run({ interaction }: SlashCommandProps) {
       const predictionId = options.getString('prediction-id', true)
       const winnerChoice = options.getString('winner', true)
 
-      const updatedPrediction = await updatePredictionStatus({
+      const prediction = await getPredictionById({
         predictionId,
-        guildId: interaction.guildId!,
-        fromStatus: 'ended',
-        toStatus: 'paid'
+        guildId: interaction.guildId!
       })
 
-      if (!updatedPrediction) {
+      if (!prediction || prediction.status !== 'ended') {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Not Ended or Already Paid',
-              `Prediction **${predictionId}** is either not ended yet or has already been paid.`
+              'Prediction Not Ready',
+              'Prediction is not in ENDED state.'
             )
           ],
           flags: MessageFlags.Ephemeral
         })
       }
 
-      const winner = updatedPrediction.choices.find(
+      const winner = prediction.choices.find(
         (c) => c.choiceName === winnerChoice
       )
+
+      const allBets = prediction.choices.flatMap((c) => c.bets)
+
       if (!winner) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
               'Invalid Choice',
               `The winner "${winnerChoice}" does not exist in this prediction.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
+      if (winner.bets.length === 0) {
+        for (const bet of allBets) {
+          await refundLockedBet({
+            userId: bet.userId,
+            guildId: interaction.guildId!,
+            amount: bet.amount,
+            betId: prediction.predictionId
+          })
+        }
+
+        return interaction.reply({
+          embeds: [
+            createSuccessEmbed(
+              'Prediction Refunded',
+              'No one bet on the winning option. All bets were refunded.'
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -424,14 +448,32 @@ export async function run({ interaction }: SlashCommandProps) {
           amount: bet.amount * winner.odds,
           type: 'win',
           source: 'casino',
-          betId: updatedPrediction.predictionId
+          betId: prediction.predictionId
         })
 
-        await updateUserBalance({
+        const profit = bet.amount * (winner.odds - 1)
+
+        await updateUserBalanceAtomic({
           userId: bet.userId,
           guildId: interaction.guildId!,
-          amount: bet.amount * winner.odds
+          balanceDelta: profit,
+          lockedDelta: -bet.amount
         })
+      }
+
+      const losingChoices = prediction.choices.filter(
+        (c) => c.choiceName !== winnerChoice
+      )
+
+      for (const choice of losingChoices) {
+        for (const bet of choice.bets) {
+          await updateUserBalanceAtomic({
+            userId: bet.userId,
+            guildId: interaction.guildId!,
+            balanceDelta: 0,
+            lockedDelta: -bet.amount
+          })
+        }
       }
 
       const logChannel = interaction.client.channels.cache.get(
@@ -441,7 +483,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (!logChannel) {
         logger.error('Log channel not found!')
       } else {
-        const totalBets = updatedPrediction.choices.flatMap((c) => c.bets)
+        const totalBets = prediction.choices.flatMap((c) => c.bets)
 
         const winners = winner.bets.map((b) => ({
           userId: b.userId,
@@ -449,7 +491,7 @@ export async function run({ interaction }: SlashCommandProps) {
           winAmount: b.amount * winner.odds
         }))
 
-        const losers = updatedPrediction.choices
+        const losers = prediction.choices
           .filter((c) => c.choiceName !== winnerChoice)
           .flatMap((c) =>
             c.bets.map((b) => ({
@@ -486,7 +528,7 @@ export async function run({ interaction }: SlashCommandProps) {
         )
 
         const embed = new EmbedBuilder()
-          .setTitle(`Prediction Payout - ${updatedPrediction.title}`)
+          .setTitle(`Prediction Payout - ${prediction.title}`)
           .setColor(casinoProfit >= 0 ? Colors.Green : Colors.Red)
           .addFields(
             {
@@ -517,12 +559,10 @@ export async function run({ interaction }: SlashCommandProps) {
       }
 
       const channel = await interaction.client.channels.fetch(
-        updatedPrediction.channelId
+        prediction.channelId
       )
       if (channel?.isTextBased()) {
-        const message = await channel.messages.fetch(
-          updatedPrediction.predictionId
-        )
+        const message = await channel.messages.fetch(prediction.predictionId)
         if (message) {
           const embed = message.embeds[0]?.toJSON() || {}
           const editedEmbed = {
@@ -537,6 +577,13 @@ export async function run({ interaction }: SlashCommandProps) {
           })
         }
       }
+
+      await updatePredictionStatus({
+        predictionId,
+        guildId: interaction.guildId!,
+        fromStatus: 'ended',
+        toStatus: 'paid'
+      })
 
       return interaction.reply({
         embeds: [
@@ -573,20 +620,11 @@ export async function run({ interaction }: SlashCommandProps) {
 
       const allBets = updatedPrediction.choices.flatMap((c) => c.bets)
       for (const bet of allBets) {
-        await createTransaction({
+        await refundLockedBet({
           userId: bet.userId,
           guildId: interaction.guildId!,
           amount: bet.amount,
-          type: 'refund',
-          source: 'casino',
-          betId: updatedPrediction.predictionId
-        })
-
-        await updateUserBalance({
-          userId: bet.userId,
-          guildId: interaction.guildId!,
-          amount: bet.amount,
-          lockedAmount: bet.amount
+          betId: predictionId
         })
       }
 

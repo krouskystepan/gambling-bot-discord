@@ -21,7 +21,6 @@ import {
 import { parseTimeToSeconds } from '@/utils/common/utils'
 import {
   createErrorEmbed,
-  createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
@@ -162,7 +161,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (targetedUser.bot) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Bot user',
               'You cannot create a VIP room for bots.'
             )
@@ -197,7 +196,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (!/^(\d+[dw])+$/i.test(durationInput)) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Invalid Duration',
               'Format is invalid. Use whole numbers only, e.g., 1d, 2w.'
             )
@@ -210,7 +209,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (durationSeconds < 86400) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Duration Too Short',
               'The duration must be at least 1 day (1d).'
             )
@@ -228,16 +227,43 @@ export async function run({ interaction }: SlashCommandProps) {
       const day = now.getDate().toString().padStart(2, '0')
       const month = (now.getMonth() + 1).toString().padStart(2, '0')
 
-      const channel = await guild.channels.create({
-        name: `vip-${targetedUser.username}-${day}-${month}`,
-        type: ChannelType.GuildText,
-        parent: categoryId
-      })
+      let channel: TextChannel | null = null
 
-      await channel.permissionOverwrites.edit(targetedUser.id, {
-        ViewChannel: true,
-        SendMessages: true
-      })
+      try {
+        channel = await guild.channels.create({
+          name: `vip-${targetedUser.username}-${day}-${month}`,
+          type: ChannelType.GuildText,
+          parent: categoryId
+        })
+
+        await channel.permissionOverwrites.edit(targetedUser.id, {
+          ViewChannel: true,
+          SendMessages: true
+        })
+
+        await createVip({
+          ownerId: targetedUser.id,
+          guildId: interaction.guildId!,
+          channelId: channel.id,
+          expiresAt
+        })
+
+        await createTransaction({
+          userId: targetedUser.id,
+          guildId: interaction.guildId!,
+          amount: 0,
+          type: 'vip',
+          source: 'command',
+          handledBy: interaction.user.id,
+          meta: {
+            adminAction: 'admin-buy',
+            durationDays: Math.floor(durationSeconds / 86400)
+          }
+        })
+      } catch (err) {
+        if (channel) await channel.delete().catch(() => null)
+        throw err
+      }
 
       const vipChannelCreatedMsg = await channel.send({
         content: `Welcome to your VIP channel, <@${targetedUser.id}>! 🎉`,
@@ -259,26 +285,6 @@ export async function run({ interaction }: SlashCommandProps) {
         `VIP created by admin ${interaction.user}`
       )
 
-      await createVip({
-        ownerId: targetedUser.id,
-        guildId: interaction.guildId!,
-        channelId: channel.id,
-        expiresAt
-      })
-
-      await createTransaction({
-        userId: targetedUser.id,
-        guildId: interaction.guildId!,
-        amount: 0,
-        type: 'vip',
-        source: 'command',
-        handledBy: interaction.user.id,
-        meta: {
-          adminAction: 'admin-buy',
-          durationDays: Math.floor(durationSeconds / 86400)
-        }
-      })
-
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
@@ -297,7 +303,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (targetedUser.bot) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Bot user',
               'You cannot remove a VIP room for bot.'
             )
@@ -338,10 +344,9 @@ export async function run({ interaction }: SlashCommandProps) {
           .send({
             content: `<@${targetedUser.id}>`,
             embeds: [
-              createInfoEmbed(
+              createErrorEmbed(
                 'VIP Channel Removed',
-                '⏰ Your VIP access has been removed. You no longer have permission to send messages in this channel.\n\n' +
-                  '📆 You will keep **read-only access for 1 week**. After this period, the channel will be **automatically removed**.'
+                '⏰ Your VIP access has been removed. You no longer have permission to send messages in this channel. You will keep **read-only access**'
               )
             ]
           })
@@ -365,12 +370,27 @@ export async function run({ interaction }: SlashCommandProps) {
           const member = await interaction
             .guild!.members.fetch(memberId)
             .catch(() => null)
-
           if (!member) continue
+
+          const channel = await interaction
+            .guild!.channels.fetch(existingVip.channelId)
+            .catch(() => null)
+
+          if (channel && channel.isTextBased() && !channel.isThread()) {
+            await channel.permissionOverwrites
+              .delete(memberId)
+              .catch(() => null)
+          }
 
           await member.roles
             .remove(vipRoleMemberId, 'VIP Member removed by admin')
             .catch(() => null)
+
+          if (channel && channel.isTextBased() && !channel.isThread()) {
+            await channel.permissionOverwrites
+              .edit(targetedUser.id, { SendMessages: false })
+              .catch(() => null)
+          }
         }
       }
 
@@ -384,8 +404,7 @@ export async function run({ interaction }: SlashCommandProps) {
           createSuccessEmbed(
             'VIP Removed',
             `The VIP of <@${targetedUser.id}> has been removed.\n` +
-              `Channel is no longer accessible for them.\n\n` +
-              `They will keep read-only access for one week. After that, the channel will be deleted.`
+              `Channel is no longer accessible for them. They will keep read-only access.`
           )
         ],
         flags: MessageFlags.Ephemeral
@@ -399,7 +418,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (targetedUser.bot) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Bot user',
               'You cannot extend VIP for bots.'
             )
@@ -411,7 +430,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (!/^(\d+[dw])+$/i.test(durationInput)) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Invalid Format',
               'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'
             )
@@ -424,9 +443,26 @@ export async function run({ interaction }: SlashCommandProps) {
       if (durationSeconds < 86400) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Duration Too Short',
               'The duration must be at least 1 day (1d).'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
+      const existingVip = await getActiveVipByOwner({
+        ownerId: targetedUser.id,
+        guildId: interaction.guildId!
+      })
+
+      if (!existingVip) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'VIP Not Found',
+              `User <@${targetedUser.id}> does not currently have an active VIP room.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -436,7 +472,9 @@ export async function run({ interaction }: SlashCommandProps) {
       const updatedVip = await extendVipExpiry({
         ownerId: targetedUser.id,
         guildId: interaction.guildId!,
-        newExpiry: new Date(Date.now() + durationSeconds * 1000)
+        newExpiry: new Date(
+          existingVip.expiresAt.getTime() + durationSeconds * 1000
+        )
       })
 
       if (!updatedVip) {
@@ -503,7 +541,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (userToAdd.bot) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Bot User',
               'You cannot add bot users to VIP rooms.'
             )
@@ -532,7 +570,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (userToAdd.id === ownerUser.id) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Not Allowed',
               'The owner is already part of the VIP room.'
             )
@@ -544,7 +582,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (vipRoom.memberIds.includes(userToAdd.id)) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Already Added',
               `${userToAdd} is already a member of this VIP room.`
             )

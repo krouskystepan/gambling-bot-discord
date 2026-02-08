@@ -3,19 +3,15 @@ import { TGuildConfiguration } from 'gambling-bot-shared'
 import { Client, Colors, EmbedBuilder } from 'discord.js'
 
 import {
-  createTransaction,
   getGuildConfigByGuildId,
-  updateUserBalance
+  refundLockedBet,
+  settleCasinoWinnings
 } from '@/services'
 import {
   completeRaffleDraw,
   getRafflesReadyToDraw
 } from '@/services/db/raffle.db'
-import {
-  formatNumberWithSpaces,
-  generateBetId,
-  sleep
-} from '@/utils/common/utils'
+import { formatNumberWithSpaces, generateId, sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
 const pickWinner = (participants: { userId: string; tickets: number }[]) => {
@@ -53,44 +49,29 @@ export const raffleDrawJob = async (client: Client) => {
       let winnerId: string | null = null
       let refunded = false
 
-      if (participants.length <= 1) {
+      if (participants.length === 1) {
         refunded = true
 
         for (const p of participants) {
           const refundAmount = p.tickets * raffle.ticketPrice
 
-          await createTransaction({
+          await refundLockedBet({
             userId: p.userId,
             guildId: raffle.guildId,
             amount: refundAmount,
-            type: 'refund',
-            source: 'casino',
             betId: raffle.drawId
-          })
-
-          await updateUserBalance({
-            userId: p.userId,
-            guildId: raffle.guildId,
-            amount: refundAmount
           })
         }
       } else {
         winnerId = pickWinner(participants)
 
         if (winnerId) {
-          await createTransaction({
+          await settleCasinoWinnings({
             userId: winnerId,
             guildId: raffle.guildId,
-            amount: pot,
-            type: 'win',
-            source: 'casino',
+            totalBet: rawPot,
+            winnings: pot,
             betId: raffle.drawId
-          })
-
-          await updateUserBalance({
-            userId: winnerId,
-            guildId: raffle.guildId,
-            amount: pot
           })
         }
       }
@@ -141,7 +122,7 @@ export const raffleDrawJob = async (client: Client) => {
       const interval = raffle.drawIntervalMs
       const intervalsMissed = Math.floor((now - lastScheduled) / interval) + 1
       const nextDrawAt = new Date(lastScheduled + intervalsMissed * interval)
-      const newBetId = generateBetId()
+      const newBetId = generateId()
 
       const nextDrawUnix = Math.floor(nextDrawAt.getTime() / 1000)
 

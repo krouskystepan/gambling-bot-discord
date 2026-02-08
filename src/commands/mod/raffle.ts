@@ -15,25 +15,20 @@ import {
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
+import { checkRaffleChannels, refundRafflePurchase } from '@/services'
 import {
-  checkRaffleChannels,
-  createTransaction,
-  updateUserBalance
-} from '@/services'
-import {
-  deleteRaffle,
+  cancelRaffleAtomic,
   getRaffleById,
   upsertRaffle
 } from '@/services/db/raffle.db'
 import {
   formatNumberToReadableString,
-  generateBetId,
+  generateId,
   parseReadableStringToNumber,
   parseTimeToSeconds
 } from '@/utils/common/utils'
 import {
   createErrorEmbed,
-  createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
@@ -181,6 +176,18 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
+      if (intervalSeconds < 60) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Interval Too Short',
+              'Minimum interval is 1 minute.'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
       const intervalMs = intervalSeconds * 1000
 
       const dateTimeRegex = /^(\d{1,2})\.(\d{1,2})\.(\d{4}) (\d{2}):(\d{2})$/
@@ -217,7 +224,7 @@ export async function run({ interaction }: SlashCommandProps) {
       await interaction.deferReply()
       const messageReply = (await interaction.fetchReply()) as Message
 
-      const betId = generateBetId()
+      const betId = generateId()
 
       await upsertRaffle({
         drawId: betId,
@@ -285,14 +292,19 @@ export async function run({ interaction }: SlashCommandProps) {
     if (sub === 'cancel') {
       const raffleId = opts.getString('raffle-id', true)
 
-      const raffle = await getRaffleById({
+      const raffle = await cancelRaffleAtomic({
         raffleId,
         guildId: interaction.guildId!
       })
 
       if (!raffle) {
         return interaction.reply({
-          embeds: [createErrorEmbed('Not Found', 'Raffle does not exist.')],
+          embeds: [
+            createErrorEmbed(
+              'Already Canceled',
+              'This raffle was already canceled.'
+            )
+          ],
           flags: MessageFlags.Ephemeral
         })
       }
@@ -302,19 +314,11 @@ export async function run({ interaction }: SlashCommandProps) {
       for (const entry of raffle.participants) {
         const refundAmount = entry.tickets * ticketPrice
 
-        await createTransaction({
+        await refundRafflePurchase({
           userId: entry.userId,
           guildId: interaction.guildId!,
           amount: refundAmount,
-          type: 'refund',
-          source: 'casino',
-          betId: raffleId
-        })
-
-        await updateUserBalance({
-          userId: entry.userId,
-          guildId: interaction.guildId!,
-          amount: refundAmount
+          raffleId: raffle.drawId
         })
       }
 
@@ -343,8 +347,6 @@ export async function run({ interaction }: SlashCommandProps) {
           components: []
         })
       }
-
-      await deleteRaffle({ raffleId })
 
       return interaction.reply({
         embeds: [
@@ -375,7 +377,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (!raffle.participants.length) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed('No Tickets', 'No one has bought tickets yet.')
+            createErrorEmbed('No Tickets', 'No one has bought tickets yet.')
           ],
           flags: MessageFlags.Ephemeral
         })

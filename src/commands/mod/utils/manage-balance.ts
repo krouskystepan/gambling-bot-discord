@@ -8,12 +8,13 @@ import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  addUserBonus,
   checkAtmChannels,
   checkTargetUserRegistration,
   createTransaction,
   deleteAllTransactionsByUserId,
   resetUserBalance,
-  updateUserBalance
+  updateUserBalanceAtomic
 } from '@/services'
 import {
   formatNumberToReadableString,
@@ -21,7 +22,6 @@ import {
 } from '@/utils/common/utils'
 import {
   createErrorEmbed,
-  createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
@@ -70,7 +70,7 @@ export const data: CommandData = {
       ]
     },
     {
-      name: 'bonus',
+      name: 'add-bonus',
       description: 'Give a bonus to a user.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
@@ -89,26 +89,26 @@ export const data: CommandData = {
         }
       ]
     },
-    // {
-    //   name: 'remove-bonus',
-    //   description: 'Remove bonus funds from a user (admin only).',
-    //   type: ApplicationCommandOptionType.Subcommand,
-    //   options: [
-    //     {
-    //       name: 'user',
-    //       description: 'The user whose bonus you want to remove.',
-    //       type: ApplicationCommandOptionType.User,
-    //       required: true,
-    //     },
-    //     {
-    //       name: 'amount',
-    //       description:
-    //         'The amount of bonus to remove. (You can also enter 1000, 2.5k, 2M).',
-    //       type: ApplicationCommandOptionType.String,
-    //       required: true,
-    //     },
-    //   ],
-    // },
+    {
+      name: 'remove-bonus',
+      description: 'Remove bonus funds from a user.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: [
+        {
+          name: 'user',
+          description: 'The user whose bonus you want to remove.',
+          type: ApplicationCommandOptionType.User,
+          required: true
+        },
+        {
+          name: 'amount',
+          description:
+            'The amount of bonus to remove. (You can also enter 1000, 2.5k, 2M).',
+          type: ApplicationCommandOptionType.String,
+          required: true
+        }
+      ]
+    },
     {
       name: 'check',
       description: 'Check a user’s balance.',
@@ -177,7 +177,7 @@ export async function run({ interaction }: SlashCommandProps) {
     if (user.bot) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Bot user',
             'This command cannot target a bot.'
           )
@@ -200,18 +200,28 @@ export async function run({ interaction }: SlashCommandProps) {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed('Invalid Input', 'Enter a positive number.')
+            createErrorEmbed('Invalid Input', 'Enter a positive number.')
           ],
           flags: MessageFlags.Ephemeral
         })
       }
 
-      const updatedUser = await updateUserBalance({
+      const updatedUser = await updateUserBalanceAtomic({
         userId: user.id,
         guildId: interaction.guildId!,
-        amount: parsedAmount
+        balanceDelta: parsedAmount
       })
-      if (!updatedUser) return
+      if (!updatedUser) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Balance Update Failed',
+              'Could not update balance.'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
 
       await createTransaction({
         userId: user.id,
@@ -238,7 +248,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed('Invalid Input', 'Enter a positive number.')
+            createErrorEmbed('Invalid Input', 'Enter a positive number.')
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -249,7 +259,7 @@ export async function run({ interaction }: SlashCommandProps) {
       if (withdrawable < parsedAmount) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Insufficient Withdrawable Funds',
               `You cannot withdraw **$${readableAmount}** because **$${formatNumberToReadableString(
                 targetUser.lockedBalance
@@ -260,12 +270,24 @@ export async function run({ interaction }: SlashCommandProps) {
         })
       }
 
-      const updatedUser = await updateUserBalance({
+      const updatedUser = await updateUserBalanceAtomic({
         userId: user.id,
         guildId: interaction.guildId!,
-        amount: -parsedAmount
+        balanceDelta: -parsedAmount,
+        requireAvailableGte: parsedAmount
       })
-      if (!updatedUser) return
+
+      if (!updatedUser) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Insufficient Withdrawable Funds',
+              `User does not have **$${readableAmount}** available to withdraw.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
 
       await createTransaction({
         userId: user.id,
@@ -288,104 +310,6 @@ export async function run({ interaction }: SlashCommandProps) {
       })
     }
 
-    // TODO Fix this
-    // if (subcommand === 'bonus') {
-    //   if (isNaN(parsedAmount) || parsedAmount <= 0) {
-    //     return interaction.reply({
-    //       embeds: [
-    //         createInfoEmbed('Invalid Input', 'Enter a positive number.')
-    //       ],
-    //       flags: MessageFlags.Ephemeral
-    //     })
-    //   }
-
-    //   await updateUserBalance({
-    //     userId: user.id,
-    //     guildId: interaction.guildId!,
-    //     amount: parsedAmount,
-    //     lockedAmount: parsedAmount
-    //   })
-
-    //   await createTransaction({
-    //     userId: user.id,
-    //     guildId: interaction.guildId!,
-    //     amount: parsedAmount,
-    //     type: 'bonus',
-    //     source: 'command',
-    //     handledBy: interaction.user.id
-    //   })
-
-    //   return interaction.reply({
-    //     content: `<@${user.id}>`,
-    //     embeds: [
-    //       createSuccessEmbed(
-    //         'ATM - Bonus Given',
-    //         `You have successfully given **$${readableAmount}** bonus to <@${
-    //           user.id
-    //         }>.\nTheir new balance is now: **$${formatNumberToReadableString(
-    //           targetUser.balance
-    //         )}**.`
-    //       )
-    //     ]
-    //   })
-    // }
-
-    // TODO Fix this
-    // if (subcommand === 'remove-bonus') {
-    //   if (isNaN(parsedAmount) || parsedAmount <= 0) {
-    //     return interaction.reply({
-    //       embeds: [
-    //         createInfoEmbed('Invalid Input', 'Enter a positive number.'),
-    //       ],
-    //       flags: MessageFlags.Ephemeral,
-    //     })
-    //   }
-
-    //   if (userDocument.lockedBalance < parsedAmount) {
-    //     return interaction.reply({
-    //       embeds: [
-    //         createInfoEmbed(
-    //           'Insufficient Bonus Funds',
-    //           `User <@${user.id}> only has **$${formatNumberToReadableString(
-    //             userDocument.lockedBalance
-    //           )}** in bonus funds.`
-    //         ),
-    //       ],
-    //       flags: MessageFlags.Ephemeral,
-    //     })
-    //   }
-
-    //   const updatedUser = await User.findOneAndUpdate(
-    //     { userId: user.id, guildId: interaction.guildId },
-    //     { $inc: { balance: -parsedAmount, lockedBalance: -parsedAmount } },
-    //     { new: true }
-    //   )
-
-    //   await Transaction.create({
-    //     userId: user.id,
-    //     guildId: interaction.guildId,
-    //     amount: parsedAmount,
-    //     type: 'remove-bonus',
-    //     source: 'command',
-    //     handledBy: interaction.user.id,
-    //     createdAt: new Date(),
-    //   })
-
-    //   return interaction.reply({
-    //     content: `<@${user.id}>`,
-    //     embeds: [
-    //       createSuccessEmbed(
-    //         'ATM - Bonus Removed',
-    //         `Removed **$${readableAmount}** bonus from <@${
-    //           user.id
-    //         }>.\nNew balance: **$${formatNumberToReadableString(
-    //           updatedUser!.balance
-    //         )}**.`
-    //       ),
-    //     ],
-    //   })
-    // }
-
     if (subcommand === 'reset') {
       await resetUserBalance({
         userId: user.id,
@@ -404,6 +328,52 @@ export async function run({ interaction }: SlashCommandProps) {
             'ATM - Admin Reset',
             `An administrator has reset <@${user.id}>'s balance and cleared transaction history.\n` +
               `**New Balance:** $0`
+          )
+        ]
+      })
+    }
+
+    if (subcommand === 'add-bonus') {
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed('Invalid Input', 'Enter a positive number.')
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
+      const updatedUser = await addUserBonus({
+        userId: user.id,
+        guildId: interaction.guildId!,
+        amount: parsedAmount
+      })
+
+      if (!updatedUser) {
+        return interaction.reply({
+          embeds: [createErrorEmbed('Bonus Failed', 'Could not apply bonus.')],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
+      await createTransaction({
+        userId: user.id,
+        guildId: interaction.guildId!,
+        amount: parsedAmount,
+        type: 'bonus',
+        source: 'command',
+        handledBy: interaction.user.id
+      })
+
+      return interaction.reply({
+        content: `<@${user.id}>`,
+        embeds: [
+          createSuccessEmbed(
+            'ATM - Bonus Given',
+            `Granted **$${readableAmount}** bonus to <@${user.id}>.\n` +
+              `Bonus balance: **$${formatNumberToReadableString(
+                updatedUser.bonusBalance ?? 0
+              )}**`
           )
         ]
       })

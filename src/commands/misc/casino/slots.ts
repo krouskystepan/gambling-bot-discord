@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord.js'
+import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
 import { CommandData, CommandOptions, SlashCommandProps } from 'commandkit'
 
@@ -6,17 +6,19 @@ import { handleUnexpectedInteractionError } from '@/errors'
 import {
   checkCasinoChannels,
   checkUserRegistration,
-  createTransaction,
-  updateUserBalance
+  getUser,
+  reserveCasinoBet,
+  settleCasinoWinnings
 } from '@/services'
 import { spinSlot } from '@/utils/casino/rng'
+import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import {
   checkValidBet,
   formatNumberToReadableString,
-  generateBetId,
+  generateId,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
-import { createBetEmbed } from '@/utils/discord/createEmbed'
+import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 import { slotEmojis, spinSlotEmotes } from '@/utils/discord/customEmotes'
 
 export const data: CommandData = {
@@ -61,9 +63,31 @@ export const options: CommandOptions = {
 }
 
 export async function run({ interaction }: SlashCommandProps) {
+  let betSettled = false
+
+  let userId: string | null = null
+  let guildId: string | null = null
+  let totalBet = 0
+  let totalWinnings = 0
+  let betId: string | null = null
+
   try {
     const user = await checkUserRegistration({ interaction })
     if (!user) return
+    userId = user.userId
+    guildId = user.guildId
+
+    if (isUserOnCooldown(user.userId)) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Slow Down',
+            'Wait a moment before starting another game.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
 
     const configReply = await checkCasinoChannels(interaction)
     if (!configReply) return
@@ -79,38 +103,46 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.slots.maxBet,
-      configReply.casinoSettings.slots.minBet,
-      user.balance,
-      spins
+      configReply.casinoSettings.slots.minBet
     )
 
     if (!isBetValid) return
 
-    const betId = generateBetId()
+    totalBet = parsedBetAmount * spins
+    betId = generateId()
 
-    const totalBet = parsedBetAmount * spins
+    try {
+      await reserveCasinoBet({
+        userId,
+        guildId,
+        totalBet,
+        betId
+      })
+    } catch (err) {
+      if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
+        const freshUser = await getUser({
+          userId,
+          guildId
+        })
 
-    await updateUserBalance({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: -totalBet,
-      lockedAmount: -Math.min(user.lockedBalance, totalBet)
-    })
-
-    await createTransaction({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: totalBet,
-      type: 'bet',
-      source: 'casino',
-      betId
-    })
+        return await interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Insufficient Funds',
+              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+      throw err
+    }
 
     let totalWinnings = 0
     let liveResult = 0
     const results: string[] = []
 
-    await interaction.deferReply({ withResponse: true })
+    await interaction.deferReply()
 
     for (let i = 0; i < spins; i++) {
       if (!skipAnimations) {
@@ -159,23 +191,15 @@ export async function run({ interaction }: SlashCommandProps) {
       totalWinnings += winnings
       liveResult += winnings - parsedBetAmount
     }
-    const updatedUser = await updateUserBalance({
-      userId: user.userId,
-      guildId: user.guildId,
-      amount: totalWinnings
-    })
-    if (!updatedUser) return
 
-    if (totalWinnings > 0) {
-      await createTransaction({
-        userId: user.userId,
-        guildId: user.guildId,
-        amount: totalWinnings,
-        type: 'win',
-        source: 'casino',
-        betId
-      })
-    }
+    const finalBalance = await settleCasinoWinnings({
+      userId,
+      guildId,
+      totalBet,
+      winnings: totalWinnings,
+      betId
+    })
+    betSettled = true
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -195,13 +219,25 @@ export async function run({ interaction }: SlashCommandProps) {
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
             } **$${formatNumberToReadableString(liveResult)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(updatedUser.balance)}**`
+              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
               : ''),
           betId
         )
       ]
     })
   } catch (error) {
+    if (!betSettled && userId && guildId && betId) {
+      try {
+        await settleCasinoWinnings({
+          userId,
+          guildId,
+          totalBet,
+          winnings: totalWinnings,
+          betId
+        })
+      } catch {}
+    }
+
     await handleUnexpectedInteractionError(interaction, error)
   }
 }

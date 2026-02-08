@@ -13,16 +13,20 @@ import {
   checkCasinoChannels,
   checkTargetUserRegistration,
   checkUserRegistration,
-  createTransaction,
-  updateUserBalance
+  reserveCasinoBet,
+  settleRpsGameAtomic
 } from '@/services'
 import {
   checkValidBet,
   formatNumberToReadableString,
-  generateBetId,
+  generateId,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
-import { createBetEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
+import {
+  createBetEmbed,
+  createErrorEmbed,
+  createInfoEmbed
+} from '@/utils/discord/createEmbed'
 
 const choices = [
   { name: 'rock', emoji: '🪨', beats: 'scissors' },
@@ -55,6 +59,10 @@ export const options: CommandOptions = {
 }
 
 export async function run({ interaction }: SlashCommandProps) {
+  let p1Reserved = false
+  let p2Reserved = false
+  let refundBoth!: () => Promise<void>
+
   try {
     const user = await checkUserRegistration({ interaction })
     if (!user) return
@@ -89,12 +97,61 @@ export async function run({ interaction }: SlashCommandProps) {
       interaction,
       betAmount,
       configReply.casinoSettings.rps.maxBet,
-      configReply.casinoSettings.rps.minBet,
-      user.balance
+      configReply.casinoSettings.rps.minBet
     )
     if (!isBetValid) return
 
-    const betId = generateBetId()
+    await interaction.deferReply()
+
+    const betId = generateId()
+
+    refundBoth = async () => {
+      if (!p1Reserved && !p2Reserved) return
+
+      await settleRpsGameAtomic({
+        p1UserId: user.userId,
+        p1GuildId: user.guildId,
+        p2UserId: targetUser.userId,
+        p2GuildId: targetUser.guildId,
+        betAmount,
+        winnerUserId: null, // draw = full refund
+        casinoCut: 0,
+        betId
+      })
+
+      p1Reserved = false
+      p2Reserved = false
+    }
+
+    try {
+      await reserveCasinoBet({
+        userId: user.userId,
+        guildId: user.guildId,
+        totalBet: betAmount,
+        betId
+      })
+      p1Reserved = true
+
+      await reserveCasinoBet({
+        userId: targetUser.userId,
+        guildId: targetUser.guildId,
+        totalBet: betAmount,
+        betId
+      })
+      p2Reserved = true
+    } catch {
+      await refundBoth()
+
+      return interaction.editReply({
+        embeds: [
+          createErrorEmbed(
+            'Bet Failed',
+            'One of the players no longer has enough balance to place this bet.'
+          )
+        ]
+      })
+    }
+
     const embed = createBetEmbed(
       'Rock, paper, scissors!',
       'Yellow',
@@ -111,7 +168,7 @@ export async function run({ interaction }: SlashCommandProps) {
       )
     )
 
-    const reply = await interaction.reply({
+    const reply = await interaction.editReply({
       content: `${targetDiscordUser}, you’ve been challenged by ${interaction.user} to a game of Rock, Paper, Scissors for **$${readableBetAmount}**!\nChoose one of the options to start the game.`,
       embeds: [embed],
       components: [row]
@@ -123,11 +180,12 @@ export async function run({ interaction }: SlashCommandProps) {
         time: 30_000
       })
       .catch(async () => {
-        embed
-          .setDescription(
-            `Game canceled. ${targetDiscordUser} did not respond.`
-          )
-          .setColor('Red')
+        await refundBoth()
+
+        embed.setDescription(
+          `Game canceled. ${targetDiscordUser} did not respond.`
+        )
+        embed.setColor('Red')
         await reply.edit({ content: '', embeds: [embed], components: [] })
         return null
       })
@@ -150,6 +208,8 @@ export async function run({ interaction }: SlashCommandProps) {
         time: 30_000
       })
       .catch(async () => {
+        await refundBoth()
+
         embed
           .setDescription(`Game canceled. ${interaction.user} did not respond.`)
           .setColor('Red')
@@ -181,55 +241,23 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (winnerUser && loserUser) {
-      const now = new Date()
+      await settleRpsGameAtomic({
+        p1UserId: user.userId,
+        p1GuildId: user.guildId,
+        p2UserId: targetUser.userId,
+        p2GuildId: targetUser.guildId,
+        betAmount,
+        winnerUserId: winnerUser ? winnerUser.userId : null,
+        casinoCut: configReply.casinoSettings.rps.casinoCut,
+        betId
+      })
 
-      await Promise.all([
-        updateUserBalance({
-          userId: winnerUser.userId,
-          guildId: winnerUser.guildId,
-          amount: realWinAmount,
-          lockedAmount: -Math.min(winnerUser.lockedBalance, betAmount)
-        }),
+      p1Reserved = false
+      p2Reserved = false
+    }
 
-        updateUserBalance({
-          userId: loserUser.userId,
-          guildId: loserUser.guildId,
-          amount: -betAmount,
-          lockedAmount: -Math.min(loserUser.lockedBalance, betAmount)
-        }),
-
-        createTransaction({
-          userId: winnerUser.userId,
-          guildId: winnerUser.guildId,
-          amount: betAmount,
-          type: 'bet',
-          source: 'casino',
-          betId,
-          meta: { role: 'winner' },
-          createdAt: now
-        }),
-
-        createTransaction({
-          userId: loserUser.userId,
-          guildId: loserUser.guildId,
-          amount: betAmount,
-          type: 'bet',
-          source: 'casino',
-          betId,
-          meta: { role: 'loser' },
-          createdAt: now
-        }),
-
-        createTransaction({
-          userId: winnerUser.userId,
-          guildId: winnerUser.guildId,
-          amount: realWinAmount,
-          type: 'win',
-          source: 'casino',
-          betId,
-          createdAt: now
-        })
-      ])
+    if (!winnerUser && !loserUser) {
+      await refundBoth()
     }
 
     embed.setDescription(
@@ -237,6 +265,10 @@ export async function run({ interaction }: SlashCommandProps) {
     )
     await reply.edit({ content: '', embeds: [embed], components: [] })
   } catch (error) {
+    try {
+      await refundBoth()
+    } catch {}
+
     await handleUnexpectedInteractionError(interaction, error)
   }
 }

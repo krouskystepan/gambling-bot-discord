@@ -9,10 +9,9 @@ import {
 
 import {
   addPredictionBet,
-  consumeUserBalance,
-  createTransaction,
   getGuildConfigByGuildId,
-  getPredictionById
+  getPredictionById,
+  reserveCasinoBet
 } from '@/services'
 import {
   formatNumberToReadableString,
@@ -161,39 +160,24 @@ export default async (interaction: Interaction) => {
       })
     }
 
-    const updatedUser = await consumeUserBalance({
-      userId: interaction.user.id,
-      guildId: interaction.guildId!,
-      amount: parsedBetAmount
-    })
-
-    if (!updatedUser) {
-      return modalInteraction.editReply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You don't have enough money to place this bet.`
-          )
-        ]
-      })
-    }
-
-    await createTransaction({
+    await reserveCasinoBet({
       userId: modalInteraction.user.id,
       guildId: interaction.guildId!,
-      amount: parsedBetAmount,
-      type: 'bet',
-      source: 'casino',
+      totalBet: parsedBetAmount,
       betId: predictionId
     })
 
-    await addPredictionBet({
+    const added = await addPredictionBet({
       predictionId,
       guildId: modalInteraction.guildId!,
       userId: modalInteraction.user.id,
       amount: parsedBetAmount,
       choiceName
     })
+
+    if (!added) {
+      throw new Error('PREDICTION_STATE_CHANGED_AFTER_VALIDATION')
+    }
 
     await modalInteraction.editReply({
       embeds: [
