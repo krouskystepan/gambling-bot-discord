@@ -33,7 +33,7 @@ src
 │   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
 │   │   │      ├─ skip-animations – Skip game animations for faster results.
 │   │   ├── lottery.ts
-│   │   │   └─ /lottery – Play the lottery! Pick 5 numbers and see if you win.
+│   │   │   └─ /lottery – Play the lottery! Pick 4 numbers and see if you win.
 │   │   │      ├─ bet – Your bet amount (e.g., 100, 1k, 5k).
 │   │   │      ├─ numbers – Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).
 │   │   │      ├─ entries – Number of entries.
@@ -48,6 +48,12 @@ src
 │   │   │       └─ /rps – Play rock, paper, scissors with another user.
 │   │   │          ├─ player – The user you want to play against.
 │   │   │          ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
+│   │   ├── plinko.ts
+│   │   │   └─ /plinko – Drop balls down the Plinko board!
+│   │   │      ├─ bet – Bet per ball (e.g., 1000, 2k, 4.5k).
+│   │   │      ├─ balls – How many balls to drop.
+│   │   │      ├─ show-balance – Displays the current balance (VISIBLE TO EVERYONE).
+│   │   │      ├─ skip-animations – Skip animations for faster results.
 │   │   ├── roulette.ts
 │   │   │   └─ /roulette – Play Mini Roulette with multiple bets!
 │   │   │      ├─ bets – Your bets (e.g., 100 red, 50 17, 200 d2, 75 c1)
@@ -188,7 +194,8 @@ src
         │   └─ /manage-balance – Manage user balances.
         │      ├─ deposit – Add money to a user.
         │      ├─ withdraw – Remove money from a user.
-        │      ├─ bonus – Give a bonus to a user.
+        │      ├─ add-bonus – Give a bonus to a user.
+        │      ├─ remove-bonus – Remove bonus funds from a user (admin only).
         │      ├─ check – Check a user’s balance.
         │      ├─ reset – Reset a user’s balance to $0 and remove all their transactions in this server.
         ├── manage-vip.ts

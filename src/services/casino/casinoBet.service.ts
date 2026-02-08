@@ -18,20 +18,21 @@ export async function reserveCasinoBet({
 
   try {
     await session.withTransaction(async () => {
-      const result = await User.updateOne(
-        { userId, guildId, balance: { $gte: totalBet } },
-        {
-          $inc: {
-            balance: -totalBet,
-            lockedBalance: totalBet
-          }
-        },
-        { session }
-      )
+      const user = await User.findOne({ userId, guildId }).session(session)
+      if (!user) throw new Error('USER_NOT_FOUND')
 
-      if (result.modifiedCount === 0) {
+      const bonusUsed = Math.min(user.bonusBalance ?? 0, totalBet)
+      const cashUsed = totalBet - bonusUsed
+
+      if (user.balance < cashUsed) {
         throw new Error('INSUFFICIENT_FUNDS')
       }
+
+      user.bonusBalance -= bonusUsed
+      user.balance -= cashUsed
+      user.lockedBalance += totalBet
+
+      await user.save({ session })
 
       await Transaction.create(
         [
@@ -47,11 +48,6 @@ export async function reserveCasinoBet({
         { session }
       )
     })
-  } catch (err) {
-    if (err.code === 11000) {
-      throw new Error('BET_ALREADY_EXISTS')
-    }
-    throw err
   } finally {
     session.endSession()
   }

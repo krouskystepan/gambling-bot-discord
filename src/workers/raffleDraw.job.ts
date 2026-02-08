@@ -49,7 +49,7 @@ export const raffleDrawJob = async (client: Client) => {
       let winnerId: string | null = null
       let refunded = false
 
-      if (participants.length <= 1) {
+      if (participants.length === 1) {
         refunded = true
 
         for (const p of participants) {

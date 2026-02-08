@@ -1,12 +1,12 @@
 import { Interaction, MessageFlags } from 'discord.js'
 
 import {
-  createTransaction,
   deleteBlackjackGame,
   getBlackjackGameByBetId,
   getUser,
-  updateBlackjackGame,
-  updateUserBalanceAtomic
+  reserveCasinoBet,
+  settleCasinoWinnings,
+  updateBlackjackGame
 } from '@/services'
 import {
   applyAction,
@@ -21,7 +21,7 @@ import {
   renderBlackjackEmbed,
   resolveResult
 } from '@/utils/casino/blackjack'
-import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 const sleep = (ms: number) =>
@@ -54,7 +54,7 @@ export default async (interaction: Interaction) => {
 
     if (interaction.user.id !== game.userId) {
       return interaction.reply({
-        embeds: [createInfoEmbed('Invalid Input', 'This is not your game.')],
+        embeds: [createErrorEmbed('Invalid Input', 'This is not your game.')],
         flags: MessageFlags.Ephemeral
       })
     }
@@ -64,7 +64,7 @@ export default async (interaction: Interaction) => {
     if (engine.phase !== 'PLAYER') {
       return interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Game not active',
             'This Blackjack game is no longer accepting actions.'
           )
@@ -79,33 +79,24 @@ export default async (interaction: Interaction) => {
     if (action === 'DOUBLE') {
       const extraBet = activeHand.betAmount
 
-      const updatedUser = await updateUserBalanceAtomic({
-        userId: game.userId,
-        guildId,
-        balanceDelta: -extraBet,
-        requireAvailableGte: extraBet
-      })
-
-      if (!updatedUser) {
+      try {
+        await reserveCasinoBet({
+          userId: game.userId,
+          guildId,
+          totalBet: extraBet,
+          betId
+        })
+      } catch {
         return interaction.followUp({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough balance to double.`
+              `You don't have enough funds to double.`
             )
           ],
           flags: MessageFlags.Ephemeral
         })
       }
-
-      await createTransaction({
-        userId: game.userId,
-        guildId,
-        amount: extraBet,
-        type: 'bet',
-        source: 'casino',
-        betId
-      })
 
       activeHand.betAmount += extraBet
     }
@@ -113,33 +104,24 @@ export default async (interaction: Interaction) => {
     if (action === 'SPLIT') {
       const splitBet = activeHand.betAmount
 
-      const updatedUser = await updateUserBalanceAtomic({
-        userId: game.userId,
-        guildId,
-        balanceDelta: -splitBet,
-        requireAvailableGte: splitBet
-      })
-
-      if (!updatedUser) {
+      try {
+        await reserveCasinoBet({
+          userId: game.userId,
+          guildId,
+          totalBet: splitBet,
+          betId
+        })
+      } catch {
         return interaction.followUp({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough balance to split.`
+              `You don't have enough funds to split.`
             )
           ],
           flags: MessageFlags.Ephemeral
         })
       }
-
-      await createTransaction({
-        userId: game.userId,
-        guildId,
-        amount: splitBet,
-        type: 'bet',
-        source: 'casino',
-        betId
-      })
     }
 
     applyAction(engine, action)
@@ -261,23 +243,13 @@ export default async (interaction: Interaction) => {
 
       const finalResultId = net > 0 ? 'WIN' : net < 0 ? 'LOSS' : 'EVEN'
 
-      if (totalPayout > 0) {
-        await createTransaction({
-          userId: game.userId,
-          guildId,
-          amount: totalPayout,
-          type: 'win',
-          source: 'casino',
-          betId
-        })
-
-        await updateUserBalanceAtomic({
-          userId: game.userId,
-          guildId,
-          balanceDelta: totalPayout,
-          lockedDelta: -totalBet
-        })
-      }
+      await settleCasinoWinnings({
+        userId: game.userId,
+        guildId,
+        totalBet,
+        winnings: totalPayout,
+        betId
+      })
 
       let userBalance: number | undefined
 

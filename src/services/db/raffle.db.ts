@@ -151,7 +151,8 @@ export const searchRafflesForAutocomplete = async ({
     {
       $match: {
         guildId,
-        raffleId: { $regex: query, $options: 'i' }
+        raffleId: { $regex: query, $options: 'i' },
+        status: 'active'
       }
     },
     { $sort: { createdAt: -1 } },
@@ -188,6 +189,7 @@ export const searchRafflesForAutocomplete = async ({
 
 export const getRafflesReadyToDraw = async () => {
   return Raffle.find({
+    status: 'active',
     nextDrawAt: { $lte: new Date() }
   })
 }
@@ -204,7 +206,10 @@ export const completeRaffleDraw = async ({
   drawId: string
 }) => {
   await Raffle.updateOne(
-    { raffleId },
+    {
+      raffleId,
+      status: 'active'
+    },
     {
       $set: {
         nextDrawAt,

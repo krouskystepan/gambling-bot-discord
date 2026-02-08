@@ -267,8 +267,8 @@ export async function run({ interaction }: SlashCommandProps) {
             inline: true
           },
           {
-            name: '💰 New Balance',
-            value: `$${formatNumberToReadableString(updatedUser.balance)}`,
+            name: '🎁 Bonus Balance',
+            value: `$${formatNumberToReadableString(updatedUser.bonusBalance)}`,
             inline: true
           }
         )

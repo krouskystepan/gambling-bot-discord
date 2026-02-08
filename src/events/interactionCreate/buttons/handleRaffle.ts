@@ -2,13 +2,13 @@ import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 
 import {
   addRaffleTickets,
-  createTransaction,
   getGuildConfigByGuildId,
   getRaffleById,
-  updateUserBalanceAtomic
+  reserveCasinoBet
 } from '@/services'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import {
+  createErrorEmbed,
   createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
@@ -78,6 +78,24 @@ export default async (interaction: Interaction) => {
 
     const totalCost = raffle.ticketPrice * ticketAmount
 
+    try {
+      await reserveCasinoBet({
+        userId: interaction.user.id,
+        guildId: interaction.guildId!,
+        totalBet: totalCost,
+        betId: raffle.drawId
+      })
+    } catch {
+      return interaction.editReply({
+        embeds: [
+          createErrorEmbed(
+            'Insufficient Funds',
+            `You need **$${formatNumberToReadableString(totalCost)}** to buy tickets.`
+          )
+        ]
+      })
+    }
+
     const added = await addRaffleTickets({
       raffleId,
       guildId: interaction.guildId!,
@@ -87,51 +105,9 @@ export default async (interaction: Interaction) => {
     })
 
     if (!added) {
-      return interaction.editReply({
-        embeds: [
-          createInfoEmbed(
-            'Ticket Limit Reached',
-            'You cannot buy more tickets for this raffle.'
-          )
-        ]
-      })
+      // This should NEVER happen after validation
+      throw new Error('RAFFLE_STATE_CHANGED_AFTER_VALIDATION')
     }
-
-    const updatedUser = await updateUserBalanceAtomic({
-      userId: interaction.user.id,
-      guildId: interaction.guildId!,
-      balanceDelta: -totalCost,
-      lockedDelta: 0,
-      requireAvailableGte: totalCost
-    })
-
-    if (!updatedUser) {
-      await addRaffleTickets({
-        raffleId,
-        guildId: interaction.guildId!,
-        userId: interaction.user.id,
-        tickets: -ticketAmount,
-        maxTicketsPerUser: raffle.maxTicketsPerUser
-      })
-
-      return interaction.editReply({
-        embeds: [
-          createInfoEmbed(
-            'Insufficient Funds',
-            `You need **$${formatNumberToReadableString(totalCost)}** available to buy tickets.`
-          )
-        ]
-      })
-    }
-
-    await createTransaction({
-      userId: interaction.user.id,
-      guildId: interaction.guildId!,
-      amount: totalCost,
-      type: 'bet',
-      source: 'casino',
-      betId: raffle.drawId
-    })
 
     const updatedRaffle = await getRaffleById({
       raffleId,

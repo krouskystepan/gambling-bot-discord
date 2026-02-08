@@ -22,7 +22,7 @@ export const resetUserBalance = async ({
 }): Promise<TUser | null> => {
   const updatedUser = await User.findOneAndUpdate(
     { userId, guildId },
-    { $set: { balance: 0, lockedBalance: 0 } },
+    { $set: { balance: 0, lockedBalance: 0, bonusBalance: 0 } },
     { new: true }
   )
 
@@ -84,7 +84,8 @@ export const createUserIfNotExists = async ({
         userId,
         guildId,
         balance: 0,
-        lockedBalance: 0
+        lockedBalance: 0,
+        bonusBalance: 0
       }
     },
     { upsert: true }
