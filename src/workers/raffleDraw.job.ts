@@ -4,8 +4,8 @@ import { Client, Colors, EmbedBuilder } from 'discord.js'
 
 import {
   getGuildConfigByGuildId,
-  refundLockedBet,
-  settleCasinoWinnings
+  payRaffleWinner,
+  refundRafflePurchase
 } from '@/services'
 import {
   completeRaffleDraw,
@@ -53,25 +53,22 @@ export const raffleDrawJob = async (client: Client) => {
         refunded = true
 
         for (const p of participants) {
-          const refundAmount = p.tickets * raffle.ticketPrice
-
-          await refundLockedBet({
+          await refundRafflePurchase({
             userId: p.userId,
             guildId: raffle.guildId,
-            amount: refundAmount,
-            betId: raffle.drawId
+            amount: p.tickets * raffle.ticketPrice,
+            raffleId: raffle.drawId
           })
         }
       } else {
         winnerId = pickWinner(participants)
 
         if (winnerId) {
-          await settleCasinoWinnings({
+          await payRaffleWinner({
             userId: winnerId,
             guildId: raffle.guildId,
-            totalBet: rawPot,
-            winnings: pot,
-            betId: raffle.drawId
+            amount: pot,
+            raffleId: raffle.drawId
           })
         }
       }

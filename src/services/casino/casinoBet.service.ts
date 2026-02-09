@@ -282,6 +282,46 @@ export async function refundRafflePurchase({
   }
 }
 
+export async function payRaffleWinner({
+  userId,
+  guildId,
+  amount,
+  raffleId
+}: {
+  userId: string
+  guildId: string
+  amount: number
+  raffleId: string
+}) {
+  const session = await mongoose.startSession()
+
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findOne({ userId, guildId }).session(session)
+      if (!user) throw new Error('USER_NOT_FOUND')
+
+      user.balance += amount
+      await user.save({ session })
+
+      await Transaction.create(
+        [
+          {
+            userId,
+            guildId,
+            amount,
+            type: 'win',
+            source: 'casino',
+            betId: raffleId
+          }
+        ],
+        { session }
+      )
+    })
+  } finally {
+    session.endSession()
+  }
+}
+
 export async function spendCasinoBalance({
   userId,
   guildId,

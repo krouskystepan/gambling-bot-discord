@@ -18,6 +18,7 @@ import {
 } from '@/services'
 import {
   formatNumberToReadableString,
+  formatNumberWithSpaces,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
 import {
@@ -380,15 +381,30 @@ export async function run({ interaction }: SlashCommandProps) {
     }
 
     if (subcommand === 'check') {
+      const roundedBalance = Math.floor(targetUser.balance)
+      const roundedLockedBalance = Math.floor(targetUser.lockedBalance)
+      const roundedBonusBalance = Math.floor(targetUser.bonusBalance)
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'ATM - Admin Check',
-            `Balance of <@${user.id}>: **$${formatNumberToReadableString(
-              targetUser.balance
-            )}**\nBonus (locked) balance: **$${formatNumberToReadableString(
-              targetUser.lockedBalance
-            )}**`
+            'ATM - Balance',
+            [
+              `💰 Available Balance: **$${formatNumberToReadableString(
+                roundedBalance
+              )}** ($${formatNumberWithSpaces(roundedBalance)})`,
+              `🔒 Locked Balance: **$${formatNumberToReadableString(
+                roundedLockedBalance
+              )}** ($${formatNumberWithSpaces(roundedLockedBalance)})`,
+              `🎁 Bonus Balance: **$${formatNumberToReadableString(
+                roundedBonusBalance
+              )}** ($${formatNumberWithSpaces(roundedBonusBalance)})`,
+              '',
+              '**What this means:**',
+              '- **Available Balance** - money you can freely bet and withdraw.',
+              '- **Locked Balance** - money currently tied to active bets or games.',
+              '- **Bonus Balance** - promotional funds that must be wagered before withdrawal.'
+            ].join('\n')
           )
         ],
         flags: MessageFlags.Ephemeral

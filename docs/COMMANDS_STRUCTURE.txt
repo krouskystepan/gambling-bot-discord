@@ -189,13 +189,13 @@ src
         │   └─ /casino-info – Get information about the casino.
         │      ├─ games – Show information about casino games
         │      ├─ config – Show server casino configuration
-        │      ├─ admin – Show administrator-only information (contains sensitive data)
+        │      ├─ admin – Show administrator-only information
         ├── manage-balance.ts
         │   └─ /manage-balance – Manage user balances.
         │      ├─ deposit – Add money to a user.
         │      ├─ withdraw – Remove money from a user.
         │      ├─ add-bonus – Give a bonus to a user.
-        │      ├─ remove-bonus – Remove bonus funds from a user (admin only).
+        │      ├─ remove-bonus – Remove bonus funds from a user.
         │      ├─ check – Check a user’s balance.
         │      ├─ reset – Reset a user’s balance to $0 and remove all their transactions in this server.
         ├── manage-vip.ts
