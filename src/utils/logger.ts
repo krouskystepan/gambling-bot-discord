@@ -18,12 +18,7 @@ const LEVEL_COLOR: Record<LogLevel, string> = {
   ERROR: COLORS.red
 }
 
-const now = (): string =>
-  new Date().toLocaleTimeString('cs-CZ', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
+const now = (): string => new Date().toISOString()
 
 const colorizeLevel = (level: LogLevel): string =>
   `${LEVEL_COLOR[level]}${level}${COLORS.reset}`
