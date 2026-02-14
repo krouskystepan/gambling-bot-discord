@@ -1,12 +1,14 @@
 import { Client } from 'discord.js'
 
-import { blackjackAutostandJob } from '@/workers/blackjackAutostand.job'
-import { guildSettingsSyncJob } from '@/workers/guildSettingsSync.job'
-import { autolockPredictions } from '@/workers/predictionAutolock.job'
-import { cleanupOldPredictions } from '@/workers/predictionCleanup.job'
-import { raffleDrawJob } from '@/workers/raffleDraw.job'
-import { vipExpirationJob } from '@/workers/vipExpiration.job'
-import { runWorkerLoop } from '@/workers/workerLoop.util'
+import {
+  blackjackAutostandJob,
+  guildSettingsSyncJob,
+  predictionAutolockJob,
+  predictionCleanupJob,
+  raffleDrawJob,
+  runWorkerLoop,
+  vipExpirationJob
+} from '@/workers'
 
 const THIRTY_SECONDS = 30 * 1000
 const ONE_MINUTE = 60 * 1000
@@ -22,7 +24,7 @@ export default (client: Client) => {
   )
 
   void runWorkerLoop('Prediction autolock', ONE_MINUTE, () =>
-    autolockPredictions(client)
+    predictionAutolockJob(client)
   )
 
   void runWorkerLoop('Raffle auto-draw', ONE_MINUTE, () =>
@@ -40,6 +42,6 @@ export default (client: Client) => {
   }, THIRTY_SECONDS)
 
   setTimeout(() => {
-    void runWorkerLoop('Prediction cleanup', ONE_DAY, cleanupOldPredictions)
+    void runWorkerLoop('Prediction cleanup', ONE_DAY, predictionCleanupJob)
   }, ONE_MINUTE)
 }

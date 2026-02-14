@@ -2,7 +2,7 @@ import { deletePrediction, getOldPredictions } from '@/services'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
-export const cleanupOldPredictions = async () => {
+export const predictionCleanupJob = async () => {
   const oldPredictions = await getOldPredictions({
     statuses: ['canceled', 'paid'],
     olderThanDays: 7
