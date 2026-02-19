@@ -4,7 +4,7 @@ import { getPredictionToLock, updatePredictionStatus } from '@/services'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
-export const autolockPredictions = async (client: Client) => {
+export const predictionAutolockJob = async (client: Client) => {
   const predictions = await getPredictionToLock({
     status: 'active',
     useAutolock: true

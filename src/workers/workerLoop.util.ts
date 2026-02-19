@@ -14,7 +14,7 @@ export const runWorkerLoop = async (
   }
 
   runningWorkers.add(name)
-  logger.boot(`⌛ ${name} worker started`)
+  logger.worker(`⌛ ${name} worker started`)
 
   while (true) {
     const start = Date.now()

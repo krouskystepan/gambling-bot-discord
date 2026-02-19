@@ -24,7 +24,6 @@ export type TCreatePrediction = Omit<TPrediction, 'createdAt' | 'updatedAt'>
 export type TGetUser = Pick<TUser, 'userId' | 'guildId'>
 export type TGetVip = Pick<TVipRoom, 'guildId' | 'ownerId'>
 export type TGetBlackjackGame = Pick<TUser, 'userId' | 'guildId'>
-export type TGetRaffle = Pick<TUser, 'userId' | 'guildId'>
 export type TGetGuildcongifuration = Pick<TUser, 'guildId'>
 export type TGetPrediction = Pick<TPrediction, 'predictionId' | 'guildId'>
 export type TGetOldPredictions = {
