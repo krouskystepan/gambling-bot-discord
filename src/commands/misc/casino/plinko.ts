@@ -190,18 +190,34 @@ export async function run({ interaction }: SlashCommandProps) {
       const multiplier = binMultipliers[finalBin] ?? 0
       const formattedMultiplier = Number(multiplier).toFixed(2)
       const winnings = betAmount * multiplier
+      const netForBall = winnings - betAmount
 
       totalWinnings += winnings
-      liveResult += winnings - betAmount
+      liveResult += netForBall
+
+      let displayValue: number
+      let emoji: string
+
+      if (multiplier > 1) {
+        displayValue = winnings
+        emoji = '🎉'
+      } else if (multiplier < 1) {
+        displayValue = netForBall
+        emoji = '❌'
+      } else {
+        displayValue = 0
+        emoji = '➖'
+      }
+
+      const isNegative = displayValue < 0
+      const formattedAmount = formatNumberToReadableString(
+        Math.abs(displayValue)
+      )
 
       results.push(
-        `Ball **${i + 1}** - x${formattedMultiplier} | ${
-          liveResult > 0
-            ? `🎉 | **+$${formatNumberToReadableString(winnings)}**`
-            : liveResult < 0
-              ? `❌ | **-$${formatNumberToReadableString(Math.abs(liveResult))}**`
-              : `➖ | **$0**`
-        }`
+        `Ball **${i + 1}** - x${formattedMultiplier} | ${emoji} | ${
+          isNegative ? '-' : ''
+        }$${formattedAmount}`
       )
     }
 
