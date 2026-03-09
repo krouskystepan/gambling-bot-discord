@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { Project, SyntaxKind } from 'ts-morph'
 
-const ROOT = path.resolve('src/commands')
+const ROOT = path.resolve('src/app/commands')
 const project = new Project({ tsConfigFilePath: 'tsconfig.json' })
 
 let output = ''
@@ -28,7 +28,7 @@ function walk(dir: string, prefix = '') {
     const source = project.getSourceFile(fullPath)
     if (!source) return
 
-    const dataVar = source.getVariableDeclaration('data')
+    const dataVar = source.getVariableDeclaration('command')
     if (!dataVar) return
 
     const init = dataVar.getInitializerIfKind(

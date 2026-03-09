@@ -1,14 +1,12 @@
-import {
-  CacheType,
-  ChatInputCommandInteraction,
-  MessageFlags
-} from 'discord.js'
+import { MessageFlags } from 'discord.js'
+
+import { ChatInputCommand } from 'commandkit'
 
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 export const handleUnexpectedInteractionError = async (
-  interaction: ChatInputCommandInteraction<CacheType>,
+  interaction: Parameters<ChatInputCommand>[0]['interaction'],
   error: unknown
 ) => {
   logger.error('Unexpected interaction error', {

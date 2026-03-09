@@ -1,8 +1,6 @@
-import {
-  CacheType,
-  ChatInputCommandInteraction,
-  MessageFlags
-} from 'discord.js'
+import { MessageFlags } from 'discord.js'
+
+import { ChatInputCommand } from 'commandkit'
 
 import { createInfoEmbed } from '../discord/createEmbed'
 
@@ -97,7 +95,7 @@ export const parseTimeToSeconds = (time: string): number => {
 }
 
 export const checkValidBet = (
-  interaction: ChatInputCommandInteraction<CacheType>,
+  interaction: Parameters<ChatInputCommand>[0]['interaction'],
   betAmount: number,
   maxBet: number,
   minBet: number

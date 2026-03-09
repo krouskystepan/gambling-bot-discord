@@ -1,11 +1,12 @@
 {
   "name": "gambling-bot-discord",
   "version": "1.0.0",
-  "main": "src/index.ts",
-  "type": "commonjs",
+  "main": "src/app.ts",
+  "type": "module",
   "scripts": {
-    "dev": "tsx --watch --no-deprecation src/index.ts",
-    "start": "tsx src/index.ts",
+    "dev": "commandkit dev",
+    "build": "commandkit build",
+    "start": "commandkit start",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "format:fix": "prettier --write \"src/**/*.{ts,tsx}\"",
     "lint:check": "eslint src",

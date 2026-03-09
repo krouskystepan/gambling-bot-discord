@@ -1,5 +1,5 @@
 import { defaultCasinoSettings } from 'gambling-bot-shared'
-import merge from 'lodash/merge'
+import merge from 'lodash/merge.js'
 
 import { Client } from 'discord.js'
 

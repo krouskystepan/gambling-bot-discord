@@ -107,8 +107,12 @@ export async function settleCasinoWinnings({
     })
 
     return finalBalance
-  } catch (err) {
-    if (err.code === 11000) {
+  } catch (err: unknown) {
+    if (
+      err instanceof Error &&
+      'code' in err &&
+      (err as { code: number }).code === 11000
+    ) {
       const user = await User.findOne({ userId, guildId })
       return user!.balance + user!.lockedBalance
     }
