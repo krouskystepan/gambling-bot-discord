@@ -2,9 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'gambling-bot',
-      script: 'src/index.ts',
+      script: 'dist/app.js',
       interpreter: 'node',
-      interpreter_args: '--import tsx',
       cwd: '/var/www/apps/gambling-bot-discord',
 
       exec_mode: 'fork',

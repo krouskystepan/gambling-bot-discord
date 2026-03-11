@@ -44,9 +44,7 @@ const formatCommand = (
 const renderSection = (title: string, lines: string) => {
   return `## ${title}\n${lines}`
 }
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   const sections = [
     renderSection(
       '🪙 Coin Flip',

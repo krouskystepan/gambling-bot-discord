@@ -21,9 +21,7 @@ export const metadata: CommandMetadata = {
   botPermissions: ['Administrator']
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   const options = interaction.options
 
   const roleOption = options.getRole('role', true)

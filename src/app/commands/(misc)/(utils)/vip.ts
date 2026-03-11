@@ -94,9 +94,7 @@ export const command: CommandData = {
   ]
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const guildConfiguration = await getGuildConfigByGuildId({
       guildId: interaction.guildId!
@@ -187,7 +185,9 @@ export const chatInput: ChatInputCommand = async (ctx) => {
       let totalPrice = durationDays * pricePerDay
       if (pricePerCreate > 0) totalPrice += pricePerCreate
 
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+      await interaction.deferReply({
+        flags: MessageFlags.Ephemeral
+      })
 
       const purchaseId = generateId()
       const expiresAt = new Date(Date.now() + durationSeconds * 1000)

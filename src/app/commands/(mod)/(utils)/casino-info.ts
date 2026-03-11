@@ -212,9 +212,7 @@ const buildConfigSections = (
       : ['- None'])
   ])
 ]
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   const config = await getGuildConfigByGuildId({
     guildId: interaction.guildId!
   })

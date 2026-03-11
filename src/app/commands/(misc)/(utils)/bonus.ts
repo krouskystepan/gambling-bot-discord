@@ -37,9 +37,7 @@ export const command: CommandData = {
 
 // TODO: fix and test the bonuses
 // DO NOT USE LOCKED BALANCE - CHECK IF CAN IDK
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const subcommand = interaction.options.getSubcommand()
     const user = await checkUserRegistration({ interaction })

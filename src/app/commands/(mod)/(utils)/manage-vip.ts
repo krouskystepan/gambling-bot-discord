@@ -113,9 +113,7 @@ export const metadata: CommandMetadata = {
   botPermissions: ['Administrator']
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const guildConfiguration = await getGuildConfigByGuildId({
       guildId: interaction.guildId!

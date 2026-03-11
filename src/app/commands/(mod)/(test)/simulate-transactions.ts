@@ -112,9 +112,7 @@ function getRandomAmount(
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const count = parseReadableStringToNumber(
       interaction.options.getString('count', true)

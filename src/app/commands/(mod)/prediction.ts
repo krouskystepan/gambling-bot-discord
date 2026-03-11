@@ -135,9 +135,7 @@ export const metadata: CommandMetadata = {
 }
 
 // TODO: Make this safe, add paying state or lock when paying, smth like this
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const configReply = await checkPredictionChannels(interaction)
 

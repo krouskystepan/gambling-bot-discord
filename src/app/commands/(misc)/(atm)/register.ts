@@ -17,9 +17,7 @@ export const command: CommandData = {
   dm_permission: false
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const guildConfiguration = await checkAtmChannels(interaction)
     if (!guildConfiguration) return

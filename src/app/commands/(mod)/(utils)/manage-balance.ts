@@ -141,9 +141,7 @@ export const command: CommandData = {
 export const metadata: CommandMetadata = {
   botPermissions: ['Administrator']
 }
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const configReply = await checkAtmChannels(interaction)
     if (!configReply) return

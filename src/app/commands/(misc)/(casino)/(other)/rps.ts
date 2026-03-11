@@ -54,9 +54,7 @@ export const command: CommandData = {
   dm_permission: false
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   let p1Reserved = false
   let p2Reserved = false
   let refundBoth!: () => Promise<void>

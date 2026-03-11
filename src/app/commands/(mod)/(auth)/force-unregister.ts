@@ -36,9 +36,7 @@ export const metadata: CommandMetadata = {
   guilds: DEV_GUILDS
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const guildConfig = await getGuildConfigByGuildId({
       guildId: interaction.guildId!

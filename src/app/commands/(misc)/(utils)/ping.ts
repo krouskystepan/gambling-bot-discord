@@ -1,3 +1,5 @@
+import { MessageFlags } from 'discord.js'
+
 import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { createSuccessEmbed } from '@/utils/discord/createEmbed'
@@ -24,12 +26,12 @@ const formatUptime = (ms: number) => {
     .join(' ')
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction, client } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction, client }) => {
   const start = Date.now()
 
-  await interaction.deferReply({ ephemeral: true })
+  await interaction.deferReply({
+    flags: MessageFlags.Ephemeral
+  })
 
   const clientPing = Date.now() - start
   const wsPing = client.ws.ping ?? 0

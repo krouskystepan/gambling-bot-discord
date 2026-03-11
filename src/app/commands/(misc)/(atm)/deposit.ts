@@ -51,9 +51,7 @@ export const command: CommandData = {
   dm_permission: false
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const user = await checkUserRegistration({ interaction })
     if (!user) return

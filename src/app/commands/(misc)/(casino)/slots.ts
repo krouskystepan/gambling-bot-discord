@@ -58,9 +58,7 @@ export const command: CommandData = {
   dm_permission: false
 }
 
-export const chatInput: ChatInputCommand = async (ctx) => {
-  const { interaction } = ctx
-
+export const chatInput: ChatInputCommand = async ({ interaction }) => {
   let betSettled = false
 
   let userId: string | null = null
