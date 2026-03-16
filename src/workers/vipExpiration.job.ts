@@ -1,4 +1,6 @@
-import { Client, TextChannel } from 'discord.js'
+import { TextChannel } from 'discord.js'
+
+import { Client } from 'commandkit'
 
 import {
   deleteVipByOwnerId,
@@ -9,7 +11,7 @@ import { sleep } from '@/utils/common/utils'
 import { createInfoEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
-export const vipExpirationJob = async (client: Client) => {
+export const vipExpirationJob = async (client: Client<true>) => {
   const expiredRooms = await getAllOldVips()
   if (!expiredRooms.length) return
 

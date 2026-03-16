@@ -1,6 +1,8 @@
 import { TGuildConfiguration } from 'gambling-bot-shared'
 
-import { Client, Colors, EmbedBuilder } from 'discord.js'
+import { Colors, EmbedBuilder } from 'discord.js'
+
+import { Client } from 'commandkit'
 
 import {
   getGuildConfigByGuildId,
@@ -26,7 +28,7 @@ const pickWinner = (participants: { userId: string; tickets: number }[]) => {
   return null
 }
 
-export const raffleDrawJob = async (client: Client) => {
+export const raffleDrawJob = async (client: Client<true>) => {
   const raffles = await getRafflesReadyToDraw()
   if (!raffles.length) return
 

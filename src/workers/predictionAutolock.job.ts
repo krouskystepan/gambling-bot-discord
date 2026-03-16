@@ -1,10 +1,12 @@
-import { Client, Colors } from 'discord.js'
+import { Colors } from 'discord.js'
+
+import { Client } from 'commandkit'
 
 import { getPredictionToLock, updatePredictionStatus } from '@/services'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
-export const predictionAutolockJob = async (client: Client) => {
+export const predictionAutolockJob = async (client: Client<true>) => {
   const predictions = await getPredictionToLock({
     status: 'active',
     useAutolock: true

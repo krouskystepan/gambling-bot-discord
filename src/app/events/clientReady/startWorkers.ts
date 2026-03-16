@@ -1,4 +1,4 @@
-import { Client } from 'discord.js'
+import { EventHandler } from 'commandkit'
 
 import {
   blackjackAutostandJob,
@@ -18,7 +18,7 @@ const SIX_HOURS = 6 * ONE_HOUR
 
 const ONE_DAY = 24 * 60 * ONE_MINUTE
 
-export default (client: Client) => {
+const handler: EventHandler<'clientReady'> = (client) => {
   void runWorkerLoop('VIP expiration', ONE_MINUTE, () =>
     vipExpirationJob(client)
   )
@@ -45,3 +45,5 @@ export default (client: Client) => {
     void runWorkerLoop('Prediction cleanup', ONE_DAY, predictionCleanupJob)
   }, ONE_MINUTE)
 }
+
+export default handler

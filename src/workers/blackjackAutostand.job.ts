@@ -1,4 +1,6 @@
-import { Client, TextChannel } from 'discord.js'
+import { TextChannel } from 'discord.js'
+
+import { Client } from 'commandkit'
 
 import {
   deleteBlackjackGame,
@@ -19,7 +21,7 @@ import {
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
-export const blackjackAutostandJob = async (client: Client) => {
+export const blackjackAutostandJob = async (client: Client<true>) => {
   const oldGames = await getAllOldBlackjackGames(1) // older than 1 day
 
   for (const game of oldGames) {

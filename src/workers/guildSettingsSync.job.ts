@@ -1,12 +1,12 @@
 import { defaultCasinoSettings } from 'gambling-bot-shared'
 import merge from 'lodash/merge.js'
 
-import { Client } from 'discord.js'
+import { Client } from 'commandkit'
 
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
 import { logger } from '@/utils/logger'
 
-export const guildSettingsSyncJob = async (client: Client) => {
+export const guildSettingsSyncJob = async (client: Client<true>) => {
   for (const guild of client.guilds.cache.values()) {
     try {
       let dbSettings = await getGuildConfigByGuildId({ guildId: guild.id })
