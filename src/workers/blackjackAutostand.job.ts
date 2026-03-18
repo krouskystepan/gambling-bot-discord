@@ -1,4 +1,4 @@
-import { TextChannel } from 'discord.js'
+import { ChannelType } from 'discord.js'
 
 import { Client } from 'commandkit'
 
@@ -32,7 +32,8 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
       const channel = await guild.channels
         .fetch(game.channelId)
         .catch(() => null)
-      if (!channel || !(channel instanceof TextChannel)) continue
+
+      if (!channel || channel.type !== ChannelType.GuildText) continue
 
       const message = await channel.messages
         .fetch(game.messageId)

@@ -42,7 +42,9 @@ const handler: EventHandler<'clientReady'> = (client) => {
   }, THIRTY_SECONDS)
 
   setTimeout(() => {
-    void runWorkerLoop('Prediction cleanup', ONE_DAY, predictionCleanupJob)
+    void runWorkerLoop('Prediction cleanup', ONE_DAY, () =>
+      predictionCleanupJob()
+    )
   }, ONE_MINUTE)
 }
 
