@@ -18,8 +18,8 @@ importers:
         specifier: ^17.3.1
         version: 17.3.1
       gambling-bot-shared:
-        specifier: ^0.1.32
-        version: 0.1.32(discord.js@14.25.1)(mongoose@9.3.1)
+        specifier: ^0.1.35
+        version: 0.1.35(discord.js@14.25.1)(mongoose@9.3.1)
       lodash:
         specifier: ^4.17.23
         version: 4.17.23
@@ -980,8 +980,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  gambling-bot-shared@0.1.32:
-    resolution: {integrity: sha512-x3ol7PZTfRGScNpQatWMgp9UBlbwXhN5UBUDJWZ8oD4I6bAXyy1BpQK4yrZfpgJogJdAitAeX64oZDFU+pjubQ==}
+  gambling-bot-shared@0.1.35:
+    resolution: {integrity: sha512-X8OiM/DGIlmXqZWWrCJG3LIk0K+3HjY+M3cEKXh7lwFCvbuF2khm70+KQNs51YWujNMLompkanai5qfCBHRQkA==}
     peerDependencies:
       discord.js: ^14.25.1
       mongoose: ^9.0.0
@@ -2441,7 +2441,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  gambling-bot-shared@0.1.32(discord.js@14.25.1)(mongoose@9.3.1):
+  gambling-bot-shared@0.1.35(discord.js@14.25.1)(mongoose@9.3.1):
     dependencies:
       discord.js: 14.25.1
       mongoose: 9.3.1

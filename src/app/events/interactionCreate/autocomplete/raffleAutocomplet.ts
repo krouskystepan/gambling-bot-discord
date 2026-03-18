@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 
-import { AutocompleteInteraction, Client } from 'discord.js'
+import { AutocompleteCommand } from 'commandkit'
 
 import { searchRafflesForAutocomplete } from '@/services/db/raffle.db'
 import { formatNumberToReadableString } from '@/utils/common/utils'
@@ -10,10 +10,7 @@ const formatDate = (date: Date) =>
     .setZone('Europe/Prague')
     .toFormat('dd.LL.yyyy HH:mm')
 
-export default async (
-  interaction: AutocompleteInteraction,
-  _client: Client
-) => {
+const autocomplete: AutocompleteCommand = async ({ interaction }) => {
   if (!interaction.isAutocomplete()) return
   if (interaction.commandName !== 'raffle') return
 
@@ -38,3 +35,5 @@ export default async (
     }))
   )
 }
+
+export default autocomplete

@@ -1,16 +1,13 @@
 import { DateTime } from 'luxon'
 
-import { AutocompleteInteraction, Client } from 'discord.js'
+import { AutocompleteCommand } from 'commandkit'
 
 import { findPredictions, getPredictionById } from '@/services'
 
 const formatDate = (date: Date) =>
   DateTime.fromJSDate(date).setZone('Europe/Prague').toFormat('dd.MM / HH:mm')
 
-export default async (
-  interaction: AutocompleteInteraction,
-  _client: Client
-) => {
+const autocomplete: AutocompleteCommand = async ({ interaction }) => {
   if (!interaction.isAutocomplete()) return
   if (interaction.commandName !== 'prediction') return
 
@@ -113,3 +110,5 @@ export default async (
     )
   }
 }
+
+export default autocomplete
