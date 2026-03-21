@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'gambling-bot',
-      script: 'dist/app.js',
-      interpreter: 'node',
+      script: 'pnpm',
+      args: 'start',
       cwd: '/var/www/apps/gambling-bot-discord',
 
       exec_mode: 'fork',
