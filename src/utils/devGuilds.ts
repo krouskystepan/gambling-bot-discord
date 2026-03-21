@@ -1,0 +1,1 @@
+export const DEV_GUILDS = ['1298805664654561340']

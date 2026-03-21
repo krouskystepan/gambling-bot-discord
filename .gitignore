@@ -1,6 +1,7 @@
 .env
 .env.*
 .DS_store
+.commandkit
 /node_modules
 /temp
 /logs

@@ -1,10 +1,8 @@
 import { TUser } from 'gambling-bot-shared'
 
-import {
-  CacheType,
-  ChatInputCommandInteraction,
-  MessageFlags
-} from 'discord.js'
+import { MessageFlags } from 'discord.js'
+
+import { ChatInputCommand } from 'commandkit'
 
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
@@ -13,7 +11,7 @@ import { getUser } from '../db/user.db'
 export const checkUserRegistration = async ({
   interaction
 }: {
-  interaction: ChatInputCommandInteraction<CacheType>
+  interaction: Parameters<ChatInputCommand>[0]['interaction']
 }): Promise<TUser | false> => {
   const user = await getUser({
     userId: interaction.user.id,
@@ -40,7 +38,7 @@ export const checkTargetUserRegistration = async ({
   interaction,
   targetUserId
 }: {
-  interaction: ChatInputCommandInteraction<CacheType>
+  interaction: Parameters<ChatInputCommand>[0]['interaction']
   targetUserId: string
 }): Promise<TUser | false> => {
   const targetUser = await getUser({

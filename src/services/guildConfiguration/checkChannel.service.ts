@@ -1,6 +1,8 @@
 import { TGuildConfiguration } from 'gambling-bot-shared'
 
-import { ChatInputCommandInteraction, MessageFlags } from 'discord.js'
+import { MessageFlags } from 'discord.js'
+
+import { ChatInputCommand } from 'commandkit'
 
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
@@ -8,7 +10,7 @@ import { getGuildConfigByGuildId } from '../db/guildConfiguration.db'
 import { getActiveVipChannels } from '../vip/getActiveVipChannels.service'
 
 export const checkAtmChannels = async (
-  interaction: ChatInputCommandInteraction
+  interaction: Parameters<ChatInputCommand>[0]['interaction']
 ): Promise<TGuildConfiguration | false> => {
   const config = await getGuildConfigByGuildId({
     guildId: interaction.guildId!
@@ -57,7 +59,7 @@ export const checkAtmChannels = async (
 }
 
 export const checkCasinoChannels = async (
-  interaction: ChatInputCommandInteraction
+  interaction: Parameters<ChatInputCommand>[0]['interaction']
 ): Promise<TGuildConfiguration | false> => {
   const config = await getGuildConfigByGuildId({
     guildId: interaction.guildId!
@@ -111,7 +113,7 @@ export const checkCasinoChannels = async (
 }
 
 export const checkPredictionChannels = async (
-  interaction: ChatInputCommandInteraction
+  interaction: Parameters<ChatInputCommand>[0]['interaction']
 ): Promise<TGuildConfiguration | false> => {
   const config = await getGuildConfigByGuildId({
     guildId: interaction.guildId!
@@ -150,7 +152,7 @@ export const checkPredictionChannels = async (
 }
 
 export const checkRaffleChannels = async (
-  interaction: ChatInputCommandInteraction
+  interaction: Parameters<ChatInputCommand>[0]['interaction']
 ): Promise<TGuildConfiguration | false> => {
   const config = await getGuildConfigByGuildId({
     guildId: interaction.guildId!
