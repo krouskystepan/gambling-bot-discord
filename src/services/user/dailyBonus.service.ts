@@ -30,7 +30,7 @@ export const claimDailyBonus = async ({
       $inc: { bonusBalance: reward },
       $set: { lastDailyClaim: now, dailyStreak: streak }
     },
-    { new: true }
+    { returnDocument: 'after' }
   ).lean()
 }
 
@@ -46,7 +46,7 @@ export const addUserBonus = async ({
   return User.findOneAndUpdate(
     { userId, guildId },
     { $inc: { bonusBalance: amount } },
-    { new: true }
+    { returnDocument: 'after' }
   )
 }
 

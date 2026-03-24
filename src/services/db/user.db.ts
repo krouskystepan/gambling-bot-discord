@@ -23,7 +23,7 @@ export const resetUserBalance = async ({
   const updatedUser = await User.findOneAndUpdate(
     { userId, guildId },
     { $set: { balance: 0, lockedBalance: 0, bonusBalance: 0 } },
-    { new: true }
+    { returnDocument: 'after' }
   )
 
   return updatedUser
@@ -191,5 +191,5 @@ export const updateUserBalanceAtomic = async ({
     }
   }
 
-  return User.findOneAndUpdate(query, update, { new: true })
+  return User.findOneAndUpdate(query, update, { returnDocument: 'after' })
 }
