@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon'
+
 import { MessageFlags } from 'discord.js'
 
 import { ChatInputCommand } from 'commandkit'
@@ -61,6 +63,11 @@ export const formatNumberWithSpaces = (num: number): string => {
 export const formatNumberToPercentage = (num: number): string => {
   return (num * 100).toFixed(2) + '%'
 }
+
+export const formatDate = (date: Date) =>
+  DateTime.fromJSDate(date, { zone: 'utc' })
+    .setZone('Europe/Prague')
+    .toFormat('dd.LL.yyyy HH:mm')
 
 export const parseTimeToSeconds = (time: string): number => {
   const regex = /(\d+)([mhdw])/gi

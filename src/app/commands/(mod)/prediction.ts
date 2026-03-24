@@ -12,19 +12,25 @@ import {
   MessageFlags
 } from 'discord.js'
 
-import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
+import {
+  AutocompleteCommand,
+  ChatInputCommand,
+  CommandData,
+  CommandMetadata
+} from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
   checkPredictionChannels,
   createPrediction,
   createTransaction,
+  findPredictions,
   getPredictionById,
   refundLockedBet,
   updatePredictionStatus,
   updateUserBalanceAtomic
 } from '@/services'
-import { formatNumberToReadableString } from '@/utils/common/utils'
+import { formatDate, formatNumberToReadableString } from '@/utils/common/utils'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
@@ -751,5 +757,109 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     }
   } catch (error) {
     await handleUnexpectedInteractionError(interaction, error)
+  }
+}
+
+export const autocomplete: AutocompleteCommand = async ({ interaction }) => {
+  if (!interaction.isAutocomplete()) return
+  if (interaction.commandName !== 'prediction') return
+
+  const focusedOption = interaction.options.getFocused(true)
+  const subcommand = interaction.options.getSubcommand()
+  const focusedValue = focusedOption.value
+
+  const searchPredictions = async (status: string | string[]) => {
+    const query: Record<string, unknown> = {
+      guildId: interaction.guildId,
+      title: { $regex: focusedValue, $options: 'i' }
+    }
+
+    if (Array.isArray(status)) {
+      query.status = { $in: status }
+    } else {
+      query.status = status
+    }
+
+    return findPredictions(query)
+  }
+
+  if (subcommand === 'end') {
+    const predictions = await searchPredictions('active')
+
+    return interaction.respond(
+      predictions.length > 0
+        ? predictions.map((p) => ({
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+            value: p.predictionId
+          }))
+        : [{ name: 'No predictions found', value: 'none' }]
+    )
+  }
+
+  if (subcommand === 'payout') {
+    if (focusedOption.name === 'prediction-id') {
+      const predictions = await searchPredictions('ended')
+
+      return interaction.respond(
+        predictions.length > 0
+          ? predictions.map((p) => ({
+              name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+              value: p.predictionId
+            }))
+          : [{ name: 'No predictions found', value: 'none' }]
+      )
+    }
+
+    if (focusedOption.name === 'winner') {
+      const predictionId = interaction.options.getString('prediction-id')
+      if (!predictionId) return interaction.respond([])
+
+      const prediction = await getPredictionById({
+        guildId: interaction.guildId!,
+        predictionId
+      })
+      if (!prediction) return interaction.respond([])
+
+      const filteredChoices = prediction.choices
+        .filter((c) =>
+          c.choiceName.toLowerCase().includes(focusedValue.toLowerCase())
+        )
+        .map((c) => ({
+          name: `${c.choiceName} (Odds: ${c.odds})`,
+          value: c.choiceName
+        }))
+
+      return interaction.respond(
+        filteredChoices.length > 0
+          ? filteredChoices
+          : [{ name: 'No choices found', value: 'none' }]
+      )
+    }
+  }
+
+  if (subcommand === 'cancel') {
+    const predictions = await searchPredictions(['active', 'ended'])
+
+    return interaction.respond(
+      predictions.length > 0
+        ? predictions.map((p) => ({
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+            value: p.predictionId
+          }))
+        : [{ name: 'No predictions found', value: 'none' }]
+    )
+  }
+
+  if (subcommand === 'check') {
+    const predictions = await searchPredictions(['active', 'ended'])
+
+    return interaction.respond(
+      predictions.length > 0
+        ? predictions.map((p) => ({
+            name: `${p.title} • ${p.status.toUpperCase()} • ${formatDate(p.createdAt)}`,
+            value: p.predictionId
+          }))
+        : [{ name: 'No predictions found', value: 'none' }]
+    )
   }
 }

@@ -344,31 +344,54 @@ export async function spendCasinoBalance({
       const user = await User.findOne({ userId, guildId }).session(session)
       if (!user) throw new Error('USER_NOT_FOUND')
 
-      const bonusUsed = Math.min(user.bonusBalance ?? 0, amount)
+      const bonusBalance = user.bonusBalance ?? 0
+      const bonusUsed = Math.min(bonusBalance, amount)
       const cashUsed = amount - bonusUsed
 
-      if (user.balance < cashUsed) {
+      const result = await User.updateOne(
+        {
+          userId,
+          guildId,
+          balance: { $gte: cashUsed }
+        },
+        {
+          $inc: {
+            balance: -cashUsed,
+            bonusBalance: -bonusUsed
+          }
+        },
+        { session }
+      )
+
+      if (result.modifiedCount === 0) {
         throw new Error('INSUFFICIENT_FUNDS')
       }
 
-      user.bonusBalance -= bonusUsed
-      user.balance -= cashUsed
+      try {
+        await Transaction.create(
+          [
+            {
+              userId,
+              guildId,
+              amount,
+              type: 'bet',
+              source: 'casino',
+              betId
+            }
+          ],
+          { session }
+        )
+      } catch (err: unknown) {
+        if (
+          err instanceof Error &&
+          'code' in err &&
+          (err as { code: number }).code === 11000
+        ) {
+          throw new Error('DUPLICATE_BET')
+        }
 
-      await user.save({ session })
-
-      await Transaction.create(
-        [
-          {
-            userId,
-            guildId,
-            amount,
-            type: 'bet',
-            source: 'casino',
-            betId
-          }
-        ],
-        { session }
-      )
+        throw err
+      }
     })
   } finally {
     session.endSession()
