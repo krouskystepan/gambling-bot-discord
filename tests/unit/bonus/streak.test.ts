@@ -23,6 +23,10 @@ describe('daily bonus streak helpers', () => {
     expect(canClaimDailyBonus(lastClaim, now)).toBe(true)
   })
 
+  it('starts streak at 1 when never claimed before', () => {
+    expect(getStreakAfterClaim(null, now, 9)).toBe(1)
+  })
+
   it('increments streak when claimed within 48 hours', () => {
     const lastClaim = new Date('2026-05-19T14:00:00Z')
     expect(getStreakAfterClaim(lastClaim, now, 4)).toBe(5)
@@ -31,6 +35,13 @@ describe('daily bonus streak helpers', () => {
   it('resets streak after 48 hours', () => {
     const lastClaim = new Date('2026-05-17T12:00:00Z')
     expect(getStreakAfterClaim(lastClaim, now, 9)).toBe(1)
+  })
+
+  it('shows first streak when never claimed', () => {
+    expect(getStreakDisplay(null, now, 0)).toEqual({
+      currentStreak: 0,
+      nextStreak: 1
+    })
   })
 
   it('shows next streak while still in window', () => {

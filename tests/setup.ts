@@ -1,3 +1,15 @@
+import { vi } from 'vitest'
+
+vi.mock('@/utils/logger', () => ({
+  logger: {
+    boot: vi.fn(),
+    ready: vi.fn(),
+    worker: vi.fn(),
+    event: vi.fn(),
+    error: vi.fn()
+  }
+}))
+
 /**
  * Fail tests on unexpected process warnings (e.g. deprecations).
  */

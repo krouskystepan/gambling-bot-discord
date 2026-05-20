@@ -35,6 +35,10 @@ describe('calculateRouletteWin', () => {
     )
   })
 
+  it('loses color on mismatched color', () => {
+    expect(calculateRouletteWin(bet('color', 'red'), '2', payouts)).toBe(0)
+  })
+
   it('loses color on zero', () => {
     expect(calculateRouletteWin(bet('color', 'red'), '0', payouts)).toBe(0)
   })
@@ -45,12 +49,32 @@ describe('calculateRouletteWin', () => {
     )
   })
 
+  it('loses parity on mismatched parity', () => {
+    expect(calculateRouletteWin(bet('parity', 'odd'), '2', payouts)).toBe(0)
+  })
+
+  it('pays parity on odd result', () => {
+    expect(calculateRouletteWin(bet('parity', 'odd'), '3', payouts)).toBe(
+      100 * payouts.parity
+    )
+  })
+
   it('loses parity on zero', () => {
     expect(calculateRouletteWin(bet('parity', 'even'), '0', payouts)).toBe(0)
   })
 
   it('pays range on non-zero result', () => {
     expect(calculateRouletteWin(bet('range', 'low'), '5', payouts)).toBe(
+      100 * payouts.range
+    )
+  })
+
+  it('loses range on mismatched range', () => {
+    expect(calculateRouletteWin(bet('range', 'high'), '5', payouts)).toBe(0)
+  })
+
+  it('pays range on high result', () => {
+    expect(calculateRouletteWin(bet('range', 'high'), '10', payouts)).toBe(
       100 * payouts.range
     )
   })
@@ -75,7 +99,26 @@ describe('calculateRouletteWin', () => {
     )
   })
 
+  it('loses column on mismatched column', () => {
+    expect(calculateRouletteWin(bet('column', '1'), '5', payouts)).toBe(0)
+  })
+
   it('loses column on zero', () => {
     expect(calculateRouletteWin(bet('column', '2'), '0', payouts)).toBe(0)
+  })
+
+  it('loses dozen on mismatched dozen', () => {
+    expect(calculateRouletteWin(bet('dozen', '2'), '5', payouts)).toBe(0)
+  })
+
+  it('returns zero for unknown bet type', () => {
+    const unknown = {
+      type: 'unknown',
+      value: 'x',
+      amount: 100,
+      displayValue: 'x'
+    } as unknown as RouletteBet
+
+    expect(calculateRouletteWin(unknown, '5', payouts)).toBeUndefined()
   })
 })

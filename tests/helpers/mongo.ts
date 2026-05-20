@@ -5,10 +5,14 @@ import { afterAll, beforeAll, beforeEach } from 'vitest'
 import '@/models/Transaction'
 import '@/models/User'
 import '@/models/Prediction'
+import '@/models/VipRoom'
+import '@/models/Raffle'
 
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
 import Prediction from '@/models/Prediction'
+import VipRoom from '@/models/VipRoom'
+import Raffle from '@/models/Raffle'
 
 let replSet: MongoMemoryReplSet
 
@@ -61,4 +65,4 @@ export const createTestUser = async ({
   })
 }
 
-export { Transaction, User, Prediction }
+export { Transaction, User, Prediction, VipRoom, Raffle }

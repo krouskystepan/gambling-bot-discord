@@ -46,6 +46,30 @@ describe('calculateDailyReward', () => {
     expect(reward).toBe(350)
   })
 
+  it('resets linear streak when maxReward exceeded with resetOnMax', () => {
+    const reward = calculateDailyReward(5, {
+      rewardMode: 'linear',
+      baseReward: 100,
+      streakIncrement: 100,
+      maxReward: 300,
+      resetOnMax: true
+    })
+
+    expect(reward).toBe(200)
+  })
+
+  it('resets exponential streak when maxReward exceeded with resetOnMax', () => {
+    const reward = calculateDailyReward(6, {
+      rewardMode: 'exponential',
+      baseReward: 100,
+      streakMultiplier: 2,
+      maxReward: 500,
+      resetOnMax: true
+    })
+
+    expect(reward).toBe(400)
+  })
+
   it('adds monthly milestone on day 28', () => {
     const reward = calculateDailyReward(28, {
       rewardMode: 'linear',

@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+import TransactionModel from '@/models/Transaction'
 
 import {
   refundLockedBet,
   reserveCasinoBet,
-  settleCasinoWinnings
+  settleCasinoWinnings,
+  settleRpsGameAtomic,
+  spendCasinoBalance
 } from '@/services/casino/casinoBet.service'
 
 import {
@@ -35,6 +39,54 @@ describe('casinoBet.service', () => {
     expect(tx?.amount).toBe(80)
   })
 
+  it('throws USER_NOT_FOUND on reserve', async () => {
+    await expect(
+      reserveCasinoBet({
+        userId: 'missing',
+        guildId: 'guild-1',
+        totalBet: 10,
+        betId: 'reserve-missing'
+      })
+    ).rejects.toThrow('USER_NOT_FOUND')
+  })
+
+  it('reserves when bonusBalance is null on user document', async () => {
+    await User.collection.insertOne({
+      userId: 'null-bonus',
+      guildId: 'guild-1',
+      balance: 100,
+      lockedBalance: 0,
+      bonusBalance: null
+    })
+
+    await reserveCasinoBet({
+      userId: 'null-bonus',
+      guildId: 'guild-1',
+      totalBet: 20,
+      betId: 'null-bonus-bet'
+    })
+
+    const user = await User.findOne({ userId: 'null-bonus', guildId: 'guild-1' })
+    expect(user?.balance).toBe(80)
+    expect(user?.lockedBalance).toBe(20)
+  })
+
+  it('reserves using bonus only when cash balance is zero', async () => {
+    await createTestUser({ balance: 0, bonusBalance: 80 })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 50,
+      betId: 'bonus-only'
+    })
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.balance).toBe(0)
+    expect(user?.bonusBalance).toBe(30)
+    expect(user?.lockedBalance).toBe(50)
+  })
+
   it('throws when funds are insufficient', async () => {
     await createTestUser({ balance: 10, bonusBalance: 0 })
 
@@ -46,6 +98,35 @@ describe('casinoBet.service', () => {
         betId: 'bet-2'
       })
     ).rejects.toThrow('INSUFFICIENT_FUNDS')
+  })
+
+  it('throws USER_NOT_FOUND on settle', async () => {
+    await expect(
+      settleCasinoWinnings({
+        userId: 'missing',
+        guildId: 'guild-1',
+        totalBet: 10,
+        winnings: 0,
+        betId: 'settle-missing'
+      })
+    ).rejects.toThrow('USER_NOT_FOUND')
+  })
+
+  it('settles with zero winnings without creating win transaction', async () => {
+    await createTestUser({ balance: 500, lockedBalance: 100 })
+
+    const finalBalance = await settleCasinoWinnings({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      winnings: 0,
+      betId: 'bet-zero-win'
+    })
+
+    expect(finalBalance).toBe(500)
+    expect(
+      await Transaction.countDocuments({ betId: 'bet-zero-win', type: 'win' })
+    ).toBe(0)
   })
 
   it('settles winnings and unlocks bet', async () => {
@@ -87,5 +168,565 @@ describe('casinoBet.service', () => {
       type: 'refund'
     })
     expect(refundTx?.amount).toBe(75)
+  })
+
+  it('does not refund when locked balance is insufficient', async () => {
+    await createTestUser({ balance: 400, lockedBalance: 10 })
+
+    await refundLockedBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      amount: 75,
+      betId: 'bet-5'
+    })
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.balance).toBe(400)
+    expect(user?.lockedBalance).toBe(10)
+    expect(await Transaction.countDocuments({ betId: 'bet-5' })).toBe(0)
+  })
+
+  it('settles without unlocking when locked balance is below totalBet', async () => {
+    await createTestUser({ balance: 500, lockedBalance: 50 })
+
+    const finalBalance = await settleCasinoWinnings({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      winnings: 200,
+      betId: 'bet-6'
+    })
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.lockedBalance).toBe(50)
+    expect(user?.balance).toBe(500)
+    expect(finalBalance).toBe(550)
+    expect(await Transaction.countDocuments({ betId: 'bet-6', type: 'win' })).toBe(
+      0
+    )
+  })
+
+  it('spends casino balance using bonus then cash', async () => {
+    await createTestUser({ balance: 100, bonusBalance: 40 })
+
+    await spendCasinoBalance({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      amount: 60,
+      betId: 'spend-1'
+    })
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.balance).toBe(80)
+    expect(user?.bonusBalance).toBe(0)
+  })
+
+  it('throws USER_NOT_FOUND on spendCasinoBalance', async () => {
+    await expect(
+      spendCasinoBalance({
+        userId: 'missing',
+        guildId: 'guild-1',
+        amount: 10,
+        betId: 'spend-missing'
+      })
+    ).rejects.toThrow('USER_NOT_FOUND')
+  })
+
+  it('spends when bonusBalance is null on user document', async () => {
+    await User.collection.insertOne({
+      userId: 'spend-null-bonus',
+      guildId: 'guild-1',
+      balance: 50,
+      lockedBalance: 0,
+      bonusBalance: null
+    })
+
+    await spendCasinoBalance({
+      userId: 'spend-null-bonus',
+      guildId: 'guild-1',
+      amount: 20,
+      betId: 'spend-null-bonus-bet'
+    })
+
+    const user = await User.findOne({
+      userId: 'spend-null-bonus',
+      guildId: 'guild-1'
+    })
+    expect(user?.balance).toBe(30)
+  })
+
+  it('spends using bonus only when cash balance is zero', async () => {
+    await createTestUser({ balance: 0, bonusBalance: 60 })
+
+    await spendCasinoBalance({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      amount: 40,
+      betId: 'spend-bonus-only'
+    })
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.balance).toBe(0)
+    expect(user?.bonusBalance).toBe(20)
+  })
+
+  it('throws INSUFFICIENT_FUNDS on spendCasinoBalance', async () => {
+    await createTestUser({ balance: 10, bonusBalance: 0 })
+
+    await expect(
+      spendCasinoBalance({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        amount: 50,
+        betId: 'spend-2'
+      })
+    ).rejects.toThrow('INSUFFICIENT_FUNDS')
+  })
+
+  it('unlocks bet without double pay when win transaction already exists', async () => {
+    await createTestUser({ balance: 400, lockedBalance: 100 })
+    await Transaction.create({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      amount: 200,
+      type: 'win',
+      source: 'casino',
+      betId: 'bet-idem'
+    })
+
+    const finalBalance = await settleCasinoWinnings({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      winnings: 200,
+      betId: 'bet-idem'
+    })
+
+    expect(finalBalance).toBe(400)
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.lockedBalance).toBe(0)
+    expect(user?.balance).toBe(400)
+    expect(await Transaction.countDocuments({ betId: 'bet-idem', type: 'win' })).toBe(
+      1
+    )
+  })
+
+  it('rethrows non-Error values from spend insert', async () => {
+    await createTestUser({ balance: 200, bonusBalance: 0 })
+    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce('spend-fail')
+
+    await expect(
+      spendCasinoBalance({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        amount: 25,
+        betId: 'spend-non-error'
+      })
+    ).rejects.toBe('spend-fail')
+
+    vi.restoreAllMocks()
+  })
+
+  it('rethrows non-duplicate errors from spend insert', async () => {
+    await createTestUser({ balance: 200, bonusBalance: 0 })
+    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce(new Error('db down'))
+
+    await expect(
+      spendCasinoBalance({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        amount: 25,
+        betId: 'spend-err'
+      })
+    ).rejects.toThrow('db down')
+
+    vi.restoreAllMocks()
+  })
+
+  it('throws DUPLICATE_BET when spend insert hits duplicate key', async () => {
+    await createTestUser({ balance: 200, bonusBalance: 0 })
+
+    const duplicateError = Object.assign(new Error('duplicate key'), {
+      code: 11_000
+    })
+    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce(duplicateError)
+
+    await expect(
+      spendCasinoBalance({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        amount: 25,
+        betId: 'dup-spend-insert'
+      })
+    ).rejects.toThrow('DUPLICATE_BET')
+
+    vi.restoreAllMocks()
+  })
+
+  it('throws DUPLICATE_BET on second spend with same bet id', async () => {
+    await createTestUser({ balance: 200, bonusBalance: 0 })
+
+    await spendCasinoBalance({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      amount: 25,
+      betId: 'dup-spend'
+    })
+
+    await expect(
+      spendCasinoBalance({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        amount: 25,
+        betId: 'dup-spend'
+      })
+    ).rejects.toThrow('DUPLICATE_BET')
+  })
+
+  it('rethrows non-Error values from bet insert', async () => {
+    await createTestUser({ balance: 200, bonusBalance: 0 })
+    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce('not-an-error')
+
+    await expect(
+      reserveCasinoBet({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        totalBet: 25,
+        betId: 'reserve-non-error'
+      })
+    ).rejects.toBe('not-an-error')
+
+    vi.restoreAllMocks()
+  })
+
+  it('rethrows non-duplicate errors from bet insert', async () => {
+    await createTestUser({ balance: 200, bonusBalance: 0 })
+    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce(new Error('db down'))
+
+    await expect(
+      reserveCasinoBet({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        totalBet: 25,
+        betId: 'reserve-err'
+      })
+    ).rejects.toThrow('db down')
+
+    vi.restoreAllMocks()
+  })
+
+  it('throws DUPLICATE_BET when bet insert hits duplicate key', async () => {
+    await createTestUser({ balance: 200, bonusBalance: 0 })
+
+    const duplicateError = Object.assign(new Error('duplicate key'), {
+      code: 11_000
+    })
+    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce(duplicateError)
+
+    await expect(
+      reserveCasinoBet({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        totalBet: 25,
+        betId: 'dup-insert'
+      })
+    ).rejects.toThrow('DUPLICATE_BET')
+
+    vi.restoreAllMocks()
+  })
+
+  it('throws DUPLICATE_BET on second reserve with same bet id', async () => {
+    await createTestUser({ balance: 200, bonusBalance: 0 })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 25,
+      betId: 'dup-bet'
+    })
+
+    await expect(
+      reserveCasinoBet({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        totalBet: 25,
+        betId: 'dup-bet'
+      })
+    ).rejects.toThrow('DUPLICATE_BET')
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.lockedBalance).toBe(25)
+    expect(await Transaction.countDocuments({ betId: 'dup-bet', type: 'bet' })).toBe(
+      1
+    )
+  })
+
+  it('settles RPS when player two wins', async () => {
+    await createTestUser({ userId: 'p1', balance: 0, lockedBalance: 100 })
+    await createTestUser({
+      userId: 'p2',
+      guildId: 'guild-1',
+      balance: 0,
+      lockedBalance: 100
+    })
+
+    await settleRpsGameAtomic({
+      p1UserId: 'p1',
+      p1GuildId: 'guild-1',
+      p2UserId: 'p2',
+      p2GuildId: 'guild-1',
+      betAmount: 100,
+      winnerUserId: 'p2',
+      casinoCut: 0,
+      betId: 'rps-p2-win'
+    })
+
+    const winner = await User.findOne({ userId: 'p2', guildId: 'guild-1' })
+    expect(winner?.balance).toBe(200)
+  })
+
+  it('skips RPS settle when win transaction already exists', async () => {
+    await createTestUser({ userId: 'p1', balance: 0, lockedBalance: 100 })
+    await createTestUser({
+      userId: 'p2',
+      guildId: 'guild-1',
+      balance: 0,
+      lockedBalance: 100
+    })
+    await Transaction.create({
+      userId: 'p1',
+      guildId: 'guild-1',
+      amount: 200,
+      type: 'win',
+      source: 'casino',
+      betId: 'rps-idem'
+    })
+
+    await settleRpsGameAtomic({
+      p1UserId: 'p1',
+      p1GuildId: 'guild-1',
+      p2UserId: 'p2',
+      p2GuildId: 'guild-1',
+      betAmount: 100,
+      winnerUserId: 'p1',
+      casinoCut: 0,
+      betId: 'rps-idem'
+    })
+
+    const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
+    expect(p1?.lockedBalance).toBe(100)
+    expect(p1?.balance).toBe(0)
+  })
+
+  it('throws USER_NOT_FOUND on RPS settle', async () => {
+    await createTestUser({ userId: 'p1', balance: 0, lockedBalance: 100 })
+
+    await expect(
+      settleRpsGameAtomic({
+        p1UserId: 'p1',
+        p1GuildId: 'guild-1',
+        p2UserId: 'missing',
+        p2GuildId: 'guild-1',
+        betAmount: 100,
+        winnerUserId: 'p1',
+        casinoCut: 0,
+        betId: 'rps-missing'
+      })
+    ).rejects.toThrow('USER_NOT_FOUND')
+  })
+
+  it('throws USER_NOT_FOUND on refund', async () => {
+    await expect(
+      refundLockedBet({
+        userId: 'missing',
+        guildId: 'guild-1',
+        amount: 50,
+        betId: 'refund-missing'
+      })
+    ).rejects.toThrow('USER_NOT_FOUND')
+  })
+
+  it('settles RPS with winner payout and casino cut', async () => {
+    await createTestUser({
+      userId: 'p1',
+      balance: 0,
+      lockedBalance: 100
+    })
+    await createTestUser({
+      userId: 'p2',
+      guildId: 'guild-1',
+      balance: 0,
+      lockedBalance: 100
+    })
+
+    await settleRpsGameAtomic({
+      p1UserId: 'p1',
+      p1GuildId: 'guild-1',
+      p2UserId: 'p2',
+      p2GuildId: 'guild-1',
+      betAmount: 100,
+      winnerUserId: 'p1',
+      casinoCut: 0.1,
+      betId: 'rps-1'
+    })
+
+    const winner = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
+    const loser = await User.findOne({ userId: 'p2', guildId: 'guild-1' })
+    expect(winner?.lockedBalance).toBe(0)
+    expect(winner?.balance).toBe(180)
+    expect(loser?.lockedBalance).toBe(0)
+    expect(loser?.balance).toBe(0)
+  })
+
+  it('settles RPS as draw returning locked bets', async () => {
+    await createTestUser({
+      userId: 'p1',
+      balance: 50,
+      lockedBalance: 100
+    })
+    await createTestUser({
+      userId: 'p2',
+      guildId: 'guild-1',
+      balance: 50,
+      lockedBalance: 100
+    })
+
+    await settleRpsGameAtomic({
+      p1UserId: 'p1',
+      p1GuildId: 'guild-1',
+      p2UserId: 'p2',
+      p2GuildId: 'guild-1',
+      betAmount: 100,
+      winnerUserId: null,
+      casinoCut: 0.1,
+      betId: 'rps-draw'
+    })
+
+    const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
+    const p2 = await User.findOne({ userId: 'p2', guildId: 'guild-1' })
+    expect(p1?.balance).toBe(150)
+    expect(p1?.lockedBalance).toBe(0)
+    expect(p2?.balance).toBe(150)
+    expect(p2?.lockedBalance).toBe(0)
+  })
+
+  it('skips RPS settle when only first player has insufficient lock', async () => {
+    await createTestUser({ userId: 'p1', balance: 0, lockedBalance: 30 })
+    await createTestUser({
+      userId: 'p2',
+      guildId: 'guild-1',
+      balance: 0,
+      lockedBalance: 100
+    })
+
+    await settleRpsGameAtomic({
+      p1UserId: 'p1',
+      p1GuildId: 'guild-1',
+      p2UserId: 'p2',
+      p2GuildId: 'guild-1',
+      betAmount: 100,
+      winnerUserId: 'p2',
+      casinoCut: 0,
+      betId: 'rps-p1-low-lock'
+    })
+
+    const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
+    expect(p1?.lockedBalance).toBe(30)
+  })
+
+  it('skips RPS settle when only second player has insufficient lock', async () => {
+    await createTestUser({ userId: 'p1', balance: 0, lockedBalance: 100 })
+    await createTestUser({
+      userId: 'p2',
+      guildId: 'guild-1',
+      balance: 0,
+      lockedBalance: 40
+    })
+
+    await settleRpsGameAtomic({
+      p1UserId: 'p1',
+      p1GuildId: 'guild-1',
+      p2UserId: 'p2',
+      p2GuildId: 'guild-1',
+      betAmount: 100,
+      winnerUserId: 'p1',
+      casinoCut: 0,
+      betId: 'rps-p2-low-lock'
+    })
+
+    const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
+    const p2 = await User.findOne({ userId: 'p2', guildId: 'guild-1' })
+    expect(p1?.lockedBalance).toBe(100)
+    expect(p2?.lockedBalance).toBe(40)
+  })
+
+  it('skips RPS settle when locked balance is insufficient', async () => {
+    await createTestUser({
+      userId: 'p1',
+      balance: 100,
+      lockedBalance: 50
+    })
+    await createTestUser({
+      userId: 'p2',
+      guildId: 'guild-1',
+      balance: 100,
+      lockedBalance: 100
+    })
+
+    await settleRpsGameAtomic({
+      p1UserId: 'p1',
+      p1GuildId: 'guild-1',
+      p2UserId: 'p2',
+      p2GuildId: 'guild-1',
+      betAmount: 100,
+      winnerUserId: 'p2',
+      casinoCut: 0,
+      betId: 'rps-skip'
+    })
+
+    const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
+    expect(p1?.lockedBalance).toBe(50)
+    expect(await Transaction.countDocuments({ betId: 'rps-skip', type: 'win' })).toBe(
+      0
+    )
+  })
+
+  it('is idempotent when RPS win transaction already exists', async () => {
+    await createTestUser({
+      userId: 'p1',
+      balance: 0,
+      lockedBalance: 100
+    })
+    await createTestUser({
+      userId: 'p2',
+      guildId: 'guild-1',
+      balance: 0,
+      lockedBalance: 100
+    })
+
+    await Transaction.create({
+      userId: 'p1',
+      guildId: 'guild-1',
+      amount: 180,
+      type: 'win',
+      source: 'casino',
+      betId: 'rps-idem'
+    })
+
+    await settleRpsGameAtomic({
+      p1UserId: 'p1',
+      p1GuildId: 'guild-1',
+      p2UserId: 'p2',
+      p2GuildId: 'guild-1',
+      betAmount: 100,
+      winnerUserId: 'p1',
+      casinoCut: 0.1,
+      betId: 'rps-idem'
+    })
+
+    const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
+    expect(p1?.lockedBalance).toBe(100)
+    expect(p1?.balance).toBe(0)
   })
 })
