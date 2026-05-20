@@ -77,7 +77,10 @@ describe('vip.db money flows', () => {
       userId: 'user-1',
       type: 'vip'
     })
-    expect(tx?.meta).toMatchObject({ action: 'buy-refund', purchaseId: 'vip-buy-1' })
+    expect(tx?.meta).toMatchObject({
+      action: 'buy-refund',
+      purchaseId: 'vip-buy-1'
+    })
   })
 
   it('extends VIP and charges balance', async () => {

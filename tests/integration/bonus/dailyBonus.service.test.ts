@@ -67,7 +67,10 @@ describe('dailyBonus.service', () => {
 
     expect(secondClaim).toBeNull()
 
-    const unchanged = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    const unchanged = await User.findOne({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
     expect(unchanged?.bonusBalance).toBe(100)
     expect(unchanged?.dailyStreak).toBe(1)
   })

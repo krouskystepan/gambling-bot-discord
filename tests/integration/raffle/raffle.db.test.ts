@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  payRaffleWinner,
+  refundRafflePurchase
+} from '@/services/casino/casinoBet.service'
+import {
   addRaffleTickets,
   cancelRaffleAtomic,
   completeRaffleDraw,
@@ -8,10 +12,6 @@ import {
   searchRafflesForAutocomplete,
   upsertRaffle
 } from '@/services/db/raffle.db'
-import {
-  payRaffleWinner,
-  refundRafflePurchase
-} from '@/services/casino/casinoBet.service'
 
 import {
   Raffle,

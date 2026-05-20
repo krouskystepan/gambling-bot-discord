@@ -1,18 +1,17 @@
-import mongoose from 'mongoose'
 import { MongoMemoryReplSet } from 'mongodb-memory-server'
+import mongoose from 'mongoose'
 import { afterAll, beforeAll, beforeEach } from 'vitest'
 
-import '@/models/Transaction'
-import '@/models/User'
 import '@/models/Prediction'
-import '@/models/VipRoom'
-import '@/models/Raffle'
-
-import Transaction from '@/models/Transaction'
-import User from '@/models/User'
 import Prediction from '@/models/Prediction'
-import VipRoom from '@/models/VipRoom'
+import '@/models/Raffle'
 import Raffle from '@/models/Raffle'
+import '@/models/Transaction'
+import Transaction from '@/models/Transaction'
+import '@/models/User'
+import User from '@/models/User'
+import '@/models/VipRoom'
+import VipRoom from '@/models/VipRoom'
 
 let replSet: MongoMemoryReplSet
 

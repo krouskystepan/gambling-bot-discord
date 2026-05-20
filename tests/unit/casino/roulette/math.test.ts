@@ -1,5 +1,4 @@
 import { defaultCasinoSettings } from 'gambling-bot-shared'
-
 import { describe, expect, it } from 'vitest'
 
 import { calculateRouletteWin } from '@/utils/casino/roulette/math'

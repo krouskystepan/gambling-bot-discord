@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import TransactionModel from '@/models/Transaction'
-
 import {
   refundLockedBet,
   reserveCasinoBet,
@@ -66,7 +65,10 @@ describe('casinoBet.service', () => {
       betId: 'null-bonus-bet'
     })
 
-    const user = await User.findOne({ userId: 'null-bonus', guildId: 'guild-1' })
+    const user = await User.findOne({
+      userId: 'null-bonus',
+      guildId: 'guild-1'
+    })
     expect(user?.balance).toBe(80)
     expect(user?.lockedBalance).toBe(20)
   })
@@ -201,9 +203,9 @@ describe('casinoBet.service', () => {
     expect(user?.lockedBalance).toBe(50)
     expect(user?.balance).toBe(500)
     expect(finalBalance).toBe(550)
-    expect(await Transaction.countDocuments({ betId: 'bet-6', type: 'win' })).toBe(
-      0
-    )
+    expect(
+      await Transaction.countDocuments({ betId: 'bet-6', type: 'win' })
+    ).toBe(0)
   })
 
   it('spends casino balance using bonus then cash', async () => {
@@ -307,9 +309,9 @@ describe('casinoBet.service', () => {
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBe(400)
-    expect(await Transaction.countDocuments({ betId: 'bet-idem', type: 'win' })).toBe(
-      1
-    )
+    expect(
+      await Transaction.countDocuments({ betId: 'bet-idem', type: 'win' })
+    ).toBe(1)
   })
 
   it('rethrows non-Error values from spend insert', async () => {
@@ -330,7 +332,9 @@ describe('casinoBet.service', () => {
 
   it('rethrows non-duplicate errors from spend insert', async () => {
     await createTestUser({ balance: 200, bonusBalance: 0 })
-    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce(new Error('db down'))
+    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce(
+      new Error('db down')
+    )
 
     await expect(
       spendCasinoBalance({
@@ -402,7 +406,9 @@ describe('casinoBet.service', () => {
 
   it('rethrows non-duplicate errors from bet insert', async () => {
     await createTestUser({ balance: 200, bonusBalance: 0 })
-    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce(new Error('db down'))
+    vi.spyOn(TransactionModel, 'create').mockRejectedValueOnce(
+      new Error('db down')
+    )
 
     await expect(
       reserveCasinoBet({
@@ -457,9 +463,9 @@ describe('casinoBet.service', () => {
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
     expect(user?.lockedBalance).toBe(25)
-    expect(await Transaction.countDocuments({ betId: 'dup-bet', type: 'bet' })).toBe(
-      1
-    )
+    expect(
+      await Transaction.countDocuments({ betId: 'dup-bet', type: 'bet' })
+    ).toBe(1)
   })
 
   it('settles RPS when player two wins', async () => {
@@ -687,9 +693,9 @@ describe('casinoBet.service', () => {
 
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
     expect(p1?.lockedBalance).toBe(50)
-    expect(await Transaction.countDocuments({ betId: 'rps-skip', type: 'win' })).toBe(
-      0
-    )
+    expect(
+      await Transaction.countDocuments({ betId: 'rps-skip', type: 'win' })
+    ).toBe(0)
   })
 
   it('is idempotent when RPS win transaction already exists', async () => {

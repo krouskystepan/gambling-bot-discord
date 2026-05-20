@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
+import { payRaffleWinner } from '@/services/casino/casinoBet.service'
 import {
   completeRaffleDraw,
   getRafflesReadyToDraw,
   upsertRaffle
 } from '@/services/db/raffle.db'
-import { payRaffleWinner } from '@/services/casino/casinoBet.service'
 
-import { Raffle, User, createTestUser, setupMongoTests } from '../../helpers/mongo'
+import {
+  Raffle,
+  User,
+  createTestUser,
+  setupMongoTests
+} from '../../helpers/mongo'
 
 setupMongoTests()
 

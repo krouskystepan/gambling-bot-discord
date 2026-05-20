@@ -51,7 +51,9 @@ describe('prediction autolock data flow', () => {
 
     expect(updated?.status).toBe('ended')
 
-    const stillActive = await Prediction.findOne({ predictionId: 'pred-future' })
+    const stillActive = await Prediction.findOne({
+      predictionId: 'pred-future'
+    })
     expect(stillActive?.status).toBe('active')
   })
 })

@@ -55,7 +55,12 @@ export default [
         {
           patterns: [
             {
-              group: ['@/services/**', '@/models/**', '@/app/**', '@/utils/discord/**']
+              group: [
+                '@/services/**',
+                '@/models/**',
+                '@/app/**',
+                '@/utils/discord/**'
+              ]
             }
           ]
         }

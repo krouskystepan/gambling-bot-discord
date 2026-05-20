@@ -195,7 +195,10 @@ describe('prediction.db', () => {
       status: 'active'
     })
 
-    const found = await findPredictions({ guildId: 'guild-1', status: 'active' })
+    const found = await findPredictions({
+      guildId: 'guild-1',
+      status: 'active'
+    })
     expect(found.map((p) => p.predictionId)).toContain('pred-find')
   })
 })

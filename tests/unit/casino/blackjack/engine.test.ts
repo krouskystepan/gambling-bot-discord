@@ -146,7 +146,10 @@ describe('applyAction edge cases', () => {
     const state = baseState([card('10', 10), card('8', 8)], [])
 
     expect(
-      applyAction(state, 'UNKNOWN' as unknown as Parameters<typeof applyAction>[1])
+      applyAction(
+        state,
+        'UNKNOWN' as unknown as Parameters<typeof applyAction>[1]
+      )
     ).toEqual({ finished: false })
   })
 })

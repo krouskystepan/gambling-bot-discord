@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { dropPlinkoPath, renderBoardFrame } from '@/utils/casino/plinko/helpers'
 import { buildPlinkoPath } from '@/utils/casino/plinko/path'
-import {
-  dropPlinkoPath,
-  renderBoardFrame
-} from '@/utils/casino/plinko/helpers'
 
 describe('buildPlinkoPath', () => {
   it('stays within row bounds', () => {
@@ -69,11 +66,20 @@ describe('renderBoardFrame', () => {
   })
 
   it('skips ball markers when gap column is out of board bounds', () => {
-    const frame = renderBoardFrame(2, [[0, -5], [0, 0, 10]], 1, 0, {
-      0: 1,
-      1: 2,
-      2: 3
-    })
+    const frame = renderBoardFrame(
+      2,
+      [
+        [0, -5],
+        [0, 0, 10]
+      ],
+      1,
+      0,
+      {
+        0: 1,
+        1: 2,
+        2: 3
+      }
+    )
 
     expect(frame).toContain('```')
     expect(frame).not.toMatch(/\n.*●.*\n.*●/)

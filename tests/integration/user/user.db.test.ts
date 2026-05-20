@@ -37,7 +37,9 @@ describe('user.db', () => {
 
   it('forceCreateUser rethrows non-duplicate errors', async () => {
     const { default: UserModel } = await import('@/models/User')
-    const spy = vi.spyOn(UserModel, 'create').mockRejectedValueOnce(new Error('db down'))
+    const spy = vi
+      .spyOn(UserModel, 'create')
+      .mockRejectedValueOnce(new Error('db down'))
 
     await expect(
       forceCreateUser({ userId: 'err-user', guildId: 'guild-1' })

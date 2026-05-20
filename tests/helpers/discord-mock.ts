@@ -1,5 +1,6 @@
-import { MessageFlags } from 'discord.js'
 import { vi } from 'vitest'
+
+import { MessageFlags } from 'discord.js'
 
 export const createMockInteraction = () => {
   const reply = vi.fn().mockResolvedValue(undefined)

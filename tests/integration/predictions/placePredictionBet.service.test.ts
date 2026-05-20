@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import * as predictionDb from '@/services/db/prediction.db'
+import {
+  createPrediction,
+  updatePredictionStatus
+} from '@/services/db/prediction.db'
 import { placePredictionBet } from '@/services/predictions/placePredictionBet.service'
-import { createPrediction, updatePredictionStatus } from '@/services/db/prediction.db'
 
 import {
   Transaction,
