@@ -2,6 +2,12 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server'
 import mongoose from 'mongoose'
 import { afterAll, beforeAll, beforeEach } from 'vitest'
 
+import '@/models/AtmRequest'
+import AtmRequest from '@/models/AtmRequest'
+import '@/models/BlackjackGame'
+import BlackjackGame from '@/models/BlackjackGame'
+import '@/models/GuildConfiguration'
+import GuildConfiguration from '@/models/GuildConfiguration'
 import '@/models/Prediction'
 import Prediction from '@/models/Prediction'
 import '@/models/Raffle'
@@ -64,4 +70,13 @@ export const createTestUser = async ({
   })
 }
 
-export { Transaction, User, Prediction, VipRoom, Raffle }
+export {
+  AtmRequest,
+  BlackjackGame,
+  GuildConfiguration,
+  Transaction,
+  User,
+  Prediction,
+  VipRoom,
+  Raffle
+}

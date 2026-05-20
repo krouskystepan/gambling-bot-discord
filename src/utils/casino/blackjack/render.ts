@@ -5,44 +5,18 @@ import {
   ColorResolvable
 } from 'discord.js'
 
-import { TBlackjackHand } from '@/models/BlackjackGame'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import { createBetEmbed } from '@/utils/discord/createEmbed'
 
 import { encodeId } from './customId'
-import { Card } from './deck'
-import { PlayerAction } from './engine'
 import { calculateHandValue } from './math'
-
-export type StartBlackjackResultId =
-  | 'PBJ' // player blackjack
-  | 'DBJ' // dealer blackjack
-  | 'BBJ' // both blackjack
-
-export type GamePhaseId = 'PLAYER_TURN' | 'DEALER_DRAWING'
-
-export type FinalGameResultId =
-  | 'WIN' // net > 0
-  | 'LOSS' // net < 0
-  | 'EVEN' // net === 0
-
-type RenderResult =
-  | { kind: 'START'; startResultId: StartBlackjackResultId }
-  | { kind: 'PHASE'; gamePhaseId: GamePhaseId }
-  | { kind: 'FINAL'; finalResultId: FinalGameResultId; netProfit: number }
-
-export type RenderParams = {
-  userId: string
-  guildId: string
-  betId: string
-  hands: TBlackjackHand[]
-  activeHandIndex: number
-  dealerCards: Card[]
-  showBalance: boolean
-  userBalance?: number
-  dealerHideSecondCard?: boolean
-  result?: RenderResult
-}
+import type {
+  FinalGameResultId,
+  GamePhaseId,
+  PlayerAction,
+  RenderParams,
+  StartBlackjackResultId
+} from './types'
 
 const formatFinalResult = (
   result: FinalGameResultId,

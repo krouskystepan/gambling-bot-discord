@@ -1,8 +1,3 @@
-import { buildPlinkoPath } from './path'
-
-export const dropPlinkoPath = (rows: number, bias = 0.5): number[] =>
-  buildPlinkoPath(rows, () => Math.random() < bias)
-
 export const renderBoardFrame = (
   rows: number,
   paths: number[][],

@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  formatDate,
+  formatNumberToPercentage,
   formatNumberToReadableString,
+  formatNumberWithSpaces,
+  generateId,
   parseReadableStringToNumber,
-  parseTimeToSeconds
+  parseTimeToSeconds,
+  sleep
 } from '@/utils/common/utils'
 
 describe('parseReadableStringToNumber', () => {
@@ -22,6 +27,10 @@ describe('parseReadableStringToNumber', () => {
   it('returns NaN for invalid input', () => {
     expect(parseReadableStringToNumber('not-a-bet')).toBeNaN()
   })
+
+  it('parses plain numbers without suffix', () => {
+    expect(parseReadableStringToNumber('250')).toBe(250)
+  })
 })
 
 describe('formatNumberToReadableString', () => {
@@ -31,6 +40,14 @@ describe('formatNumberToReadableString', () => {
 
   it('formats millions', () => {
     expect(formatNumberToReadableString(4_500_000)).toBe('4.5M')
+  })
+
+  it('formats billions', () => {
+    expect(formatNumberToReadableString(2_500_000_000)).toBe('2.5B')
+  })
+
+  it('formats small numbers without suffix', () => {
+    expect(formatNumberToReadableString(42)).toBe('42')
   })
 
   it('formats negative values', () => {
@@ -49,5 +66,47 @@ describe('parseTimeToSeconds', () => {
 
   it('returns 0 for empty input', () => {
     expect(parseTimeToSeconds('')).toBe(0)
+  })
+
+  it('parses weeks', () => {
+    expect(parseTimeToSeconds('1w')).toBe(604_800)
+  })
+})
+
+describe('formatNumberWithSpaces', () => {
+  it('groups thousands with spaces', () => {
+    expect(formatNumberWithSpaces(1234567)).toBe('1 234 567')
+  })
+})
+
+describe('formatNumberToPercentage', () => {
+  it('formats ratio as percent string', () => {
+    expect(formatNumberToPercentage(0.125)).toBe('12.50%')
+  })
+})
+
+describe('formatDate', () => {
+  it('formats UTC date in Europe/Prague zone', () => {
+    const formatted = formatDate(new Date('2026-06-15T10:30:00Z'))
+    expect(formatted).toMatch(/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/)
+  })
+})
+
+describe('generateId', () => {
+  it('returns uppercase alphanumeric id', () => {
+    const id = generateId()
+    expect(id).toMatch(/^[0-9A-Z]+$/)
+    expect(id.length).toBeGreaterThan(5)
+  })
+})
+
+describe('sleep', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('resolves after delay', async () => {
+    const promise = sleep(1000)
+    vi.advanceTimersByTime(1000)
+    await expect(promise).resolves.toBeUndefined()
   })
 })

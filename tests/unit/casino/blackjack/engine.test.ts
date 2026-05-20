@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  EngineState,
   applyAction,
   canSplit,
   dealerDrawOne,
   dealerShouldDraw,
   resolveResult
 } from '@/utils/casino/blackjack/engine'
+import type { EngineState } from '@/utils/casino/blackjack/types'
 
 import { card } from '../../../helpers/cards'
 

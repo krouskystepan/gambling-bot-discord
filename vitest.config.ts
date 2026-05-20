@@ -2,36 +2,18 @@ import { defineConfig } from 'vitest/config'
 
 import path from 'node:path'
 
-/**
- * Coverage: all economy logic under services/ + utils/, minus explicit opt-outs.
- * New money files are included automatically — add tests (or add to coverageExclude).
- */
+/** 100% coverage on src/services/** and src/utils/** except coverageExclude (barrels, infra, embeds, render, types). RNG: rng.ts; rules: engine/math/path. */
 const coverageExclude = [
   'src/**/index.ts',
-
-  // DB / services not in test scope yet
-  'src/services/db/vip.db.ts',
-  'src/services/db/atmRequest.db.ts',
-  'src/services/db/blackjackGame.db.ts',
-  'src/services/db/guildConfiguration.db.ts',
   'src/services/db/base.db.ts',
-  'src/services/user/checkUserRegistration.service.ts',
-  'src/services/guildConfiguration/**',
-  'src/services/vip/**',
 
-  // Utils: Discord, RNG, render-only, misc
   'src/utils/logger.ts',
   'src/utils/devGuilds.ts',
-  'src/utils/discord/**',
-  'src/utils/common/utils.ts',
-  'src/utils/common/userCooldown.ts',
-  'src/utils/casino/rng.ts',
+  'src/utils/discord/createEmbed.ts',
+  'src/utils/discord/customEmotes.ts',
+
   'src/utils/casino/**/render.ts',
-  'src/utils/casino/blackjack/deck.ts',
-  'src/utils/casino/blackjack/state.ts',
-  'src/utils/casino/blackjack/customId.ts',
-  'src/utils/casino/roulette/helpers.ts',
-  'src/utils/casino/roulette/types.ts'
+  'src/utils/casino/**/types.ts'
 ]
 
 export default defineConfig({

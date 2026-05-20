@@ -1,10 +1,4 @@
-import { PlayerAction } from './engine'
-
-export type BlackjackButtonId = {
-  betId: string
-  action: PlayerAction
-  showBalance: boolean
-}
+import type { BlackjackButtonId, PlayerAction } from './types'
 
 export const encodeId = (d: BlackjackButtonId): string =>
   `bj:${d.betId}:${d.action}:${d.showBalance ? 1 : 0}`

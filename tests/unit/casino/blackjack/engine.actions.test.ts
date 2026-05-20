@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { Card } from '@/utils/casino/blackjack/deck'
-import { EngineState, applyAction } from '@/utils/casino/blackjack/engine'
+import { applyAction } from '@/utils/casino/blackjack/engine'
+import type { Card, EngineState } from '@/utils/casino/blackjack/types'
 import { calculateHandValue } from '@/utils/casino/blackjack/math'
 
 import { card } from '../../../helpers/cards'

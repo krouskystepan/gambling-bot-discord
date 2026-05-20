@@ -1,3 +1,5 @@
+import type { Card } from './types'
+
 export const SUITES = ['♠️', '♣️', '♥️', '♦️'] as const
 export const VALUES = [
   { label: 'A', value: 11 },
@@ -15,12 +17,6 @@ export const VALUES = [
   { label: 'K', value: 10 }
 ] as const
 
-export type Card = {
-  suite: (typeof SUITES)[number]
-  label: (typeof VALUES)[number]['label']
-  value: number
-}
-
 const createDeck = (deckCount: number): Card[] =>
   Array.from({ length: deckCount }, () =>
     SUITES.flatMap((suite) =>
@@ -29,12 +25,3 @@ const createDeck = (deckCount: number): Card[] =>
   ).flat()
 
 export const DECK = createDeck(2) // 2 decks
-
-export const shuffleDeck = (deck: Card[]): Card[] => {
-  const arr = [...deck]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}

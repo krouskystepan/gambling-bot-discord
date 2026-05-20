@@ -1,33 +1,8 @@
 import { TBlackjackHand } from '@/models/BlackjackGame'
 import { logger } from '@/utils/logger'
 
-import { Card } from './deck'
 import { calculateHandValue } from './math'
-
-export type PlayerAction = 'HIT' | 'STAND' | 'DOUBLE' | 'SPLIT'
-
-export type EngineResult =
-  | { finished: false }
-  | {
-      finished: true
-      payout: number
-      resultId: 'PB' | 'DB' | 'PW' | 'DW' | 'PUSH'
-    }
-  | {
-      finished: false
-      dealerTurn: true
-    }
-
-export type GamePhase = 'PLAYER' | 'DEALER' | 'FINISHED'
-
-export type EngineState = {
-  deck: Card[]
-  deckIndex: number
-  hands: TBlackjackHand[]
-  activeHandIndex: number
-  phase: GamePhase
-  dealerCards: Card[]
-}
+import type { Card, EngineResult, EngineState, PlayerAction } from './types'
 
 const draw = (s: EngineState): Card => {
   const card = s.deck[s.deckIndex]

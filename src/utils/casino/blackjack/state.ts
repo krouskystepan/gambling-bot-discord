@@ -1,6 +1,6 @@
 import { TBlackjackGame } from '@/models/BlackjackGame'
 
-import { EngineState } from './engine'
+import type { EngineState } from './types'
 
 export const docToEngine = (game: TBlackjackGame): EngineState => ({
   deck: game.deck,
