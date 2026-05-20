@@ -7,6 +7,14 @@
     "outDir": "dist",
 
     "strict": true,
+
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnusedLabels": false,
+    "noUncheckedSideEffectImports": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowUnreachableCode": false,
+
     "skipLibCheck": true,
     "resolveJsonModule": true,
 

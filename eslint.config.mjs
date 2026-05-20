@@ -41,9 +41,36 @@ export default [
         'error',
         {
           patterns: [
+            // {
+            //   group: ['@/models/**', '**/models/**'],
+            //   message: 'Do not import models directly. Use services instead.'
+            // }
             {
-              group: ['@/models/**', '**/models/**'],
-              message: 'Do not import models directly. Use services instead.'
+              files: ['src/domain/**/*.{ts,tsx}'],
+              rules: {
+                'no-restricted-imports': [
+                  'error',
+                  {
+                    patterns: [
+                      '@/services/**',
+                      '@/models/**',
+                      '@/app/**',
+                      '@/utils/discord/**'
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              files: ['src/app/commands/**/*.{ts,tsx}'],
+              rules: {
+                'no-restricted-imports': [
+                  'error',
+                  {
+                    patterns: ['@/services/db/**', '@/models/**']
+                  }
+                ]
+              }
             }
           ]
         }
