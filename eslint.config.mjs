@@ -3,7 +3,7 @@ import tsParser from '@typescript-eslint/parser'
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**']
+    ignores: ['dist/**', 'node_modules/**', 'tests/**']
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
@@ -37,51 +37,42 @@ export default [
         }
       ],
 
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            // {
-            //   group: ['@/models/**', '**/models/**'],
-            //   message: 'Do not import models directly. Use services instead.'
-            // }
-            {
-              files: ['src/domain/**/*.{ts,tsx}'],
-              rules: {
-                'no-restricted-imports': [
-                  'error',
-                  {
-                    patterns: [
-                      '@/services/**',
-                      '@/models/**',
-                      '@/app/**',
-                      '@/utils/discord/**'
-                    ]
-                  }
-                ]
-              }
-            },
-            {
-              files: ['src/app/commands/**/*.{ts,tsx}'],
-              rules: {
-                'no-restricted-imports': [
-                  'error',
-                  {
-                    patterns: ['@/services/db/**', '@/models/**']
-                  }
-                ]
-              }
-            }
-          ]
-        }
-      ],
-
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-empty-function': 'error',
       '@typescript-eslint/no-misused-promises': [
         'error',
         {
           checksVoidReturn: false
+        }
+      ]
+    }
+  },
+  {
+    files: ['src/domain/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/services/**', '@/models/**', '@/app/**', '@/utils/discord/**']
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    files: ['src/app/commands/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/services/db/**', '@/models/**']
+            }
+          ]
         }
       ]
     }

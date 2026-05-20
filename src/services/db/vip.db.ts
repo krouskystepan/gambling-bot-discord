@@ -107,7 +107,7 @@ export const removeMemberFromVip = async ({
   return VipRoom.findOneAndUpdate(
     { ownerId, guildId },
     { $pull: { memberIds: memberId } },
-    { new: true }
+    { returnDocument: 'after' }
   )
 }
 

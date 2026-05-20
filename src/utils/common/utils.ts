@@ -4,6 +4,7 @@ import { MessageFlags } from 'discord.js'
 
 import { ChatInputCommand } from 'commandkit'
 
+import { validateBetAmount } from '../bets/validateBetAmount'
 import { createInfoEmbed } from '../discord/createEmbed'
 
 export const sleep = (ms: number) =>
@@ -107,68 +108,62 @@ export const checkValidBet = (
   maxBet: number,
   minBet: number
 ): boolean => {
-  if (!Number.isFinite(betAmount)) {
-    interaction.reply({
-      embeds: [createInfoEmbed('Invalid Input', 'Bet must be a valid number.')],
-      flags: MessageFlags.Ephemeral
-    })
-    return false
+  const result = validateBetAmount(betAmount, maxBet, minBet)
+
+  if (result.ok) return true
+
+  switch (result.error) {
+    case 'INVALID_NUMBER':
+      interaction.reply({
+        embeds: [
+          createInfoEmbed('Invalid Input', 'Bet must be a valid number.')
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+      return false
+    case 'TOO_MANY_DECIMALS':
+      interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Bet Amount',
+            'Bet must have at most 2 decimal places.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+      return false
+    case 'BELOW_MINIMUM':
+      interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Bet Amount',
+            `Minimum possible bet is **$1**.`
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+      return false
+    case 'ABOVE_MAXIMUM':
+      interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Above Maximum Bet',
+            `The maximum bet is **$${formatNumberToReadableString(maxBet)}**.`
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+      return false
+    case 'BELOW_MIN_BET':
+      interaction.reply({
+        embeds: [
+          createInfoEmbed(
+            'Invalid Input - Below Minimum Bet',
+            `The minimum bet is **$${formatNumberToReadableString(minBet)}**.`
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+      return false
   }
-
-  const betCentsRaw = betAmount * 100
-  const betCents = Math.round(betCentsRaw)
-
-  if (Math.abs(betCentsRaw - betCents) > 1e-6) {
-    interaction.reply({
-      embeds: [
-        createInfoEmbed(
-          'Invalid Bet Amount',
-          'Bet must have at most 2 decimal places.'
-        )
-      ],
-      flags: MessageFlags.Ephemeral
-    })
-    return false
-  }
-
-  const minBetCents = Math.floor(minBet * 100)
-  const maxBetCents = Math.floor(maxBet * 100)
-
-  if (betAmount < 1) {
-    interaction.reply({
-      embeds: [
-        createInfoEmbed('Invalid Bet Amount', `Minimum possible bet is **$1**.`)
-      ],
-      flags: MessageFlags.Ephemeral
-    })
-    return false
-  }
-
-  if (maxBetCents > 0 && betCents > maxBetCents) {
-    interaction.reply({
-      embeds: [
-        createInfoEmbed(
-          'Invalid Input - Above Maximum Bet',
-          `The maximum bet is **$${formatNumberToReadableString(maxBet)}**.`
-        )
-      ],
-      flags: MessageFlags.Ephemeral
-    })
-    return false
-  }
-
-  if (minBetCents > 0 && betCents < minBetCents) {
-    interaction.reply({
-      embeds: [
-        createInfoEmbed(
-          'Invalid Input - Below Minimum Bet',
-          `The minimum bet is **$${formatNumberToReadableString(minBet)}**.`
-        )
-      ],
-      flags: MessageFlags.Ephemeral
-    })
-    return false
-  }
-
-  return true
 }

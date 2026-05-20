@@ -5,7 +5,6 @@ import {
   ColorResolvable
 } from 'discord.js'
 
-// eslint-disable-next-line no-restricted-imports
 import { TBlackjackHand } from '@/models/BlackjackGame'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import { createBetEmbed } from '@/utils/discord/createEmbed'

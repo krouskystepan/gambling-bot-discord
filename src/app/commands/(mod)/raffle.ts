@@ -18,13 +18,14 @@ import {
 } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { checkRaffleChannels, refundRafflePurchase } from '@/services'
 import {
   cancelRaffleAtomic,
+  checkRaffleChannels,
   getRaffleById,
+  refundRafflePurchase,
   searchRafflesForAutocomplete,
   upsertRaffle
-} from '@/services/db/raffle.db'
+} from '@/services'
 import {
   formatDate,
   formatNumberToReadableString,

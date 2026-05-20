@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-restricted-imports
 import { TBlackjackGame } from '@/models/BlackjackGame'
 
 import { EngineState } from './engine'

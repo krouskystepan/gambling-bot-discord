@@ -22,6 +22,7 @@ import {
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
+import { validatePredictionChoiceBet } from '@/utils/predictions/validatePredictionBet'
 
 // TODO: fix and test the predictions
 export default async (interaction: Interaction) => {
@@ -124,30 +125,29 @@ export default async (interaction: Interaction) => {
       .filter((bet) => bet.userId === modalInteraction.user.id)
       .reduce((sum, bet) => sum + bet.amount, 0)
 
-    const newChoiceTotal = userChoiceTotal + parsedBetAmount
+    const predictionBetCheck = validatePredictionChoiceBet({
+      userChoiceTotal,
+      parsedBetAmount,
+      maxBet: casinoSettings.prediction.maxBet,
+      minBet: casinoSettings.prediction.minBet
+    })
 
-    if (
-      casinoSettings.prediction.maxBet > 0 &&
-      newChoiceTotal > casinoSettings.prediction.maxBet
-    ) {
-      return modalInteraction.editReply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Above Maximum Bet',
-            `The maximum bet per choice is **$${formatNumberToReadableString(
-              casinoSettings.prediction.maxBet
-            )}**. You already have **$${formatNumberToReadableString(
-              userChoiceTotal
-            )}** on **${choiceName}**.`
-          )
-        ]
-      })
-    }
+    if (!predictionBetCheck.ok) {
+      if (predictionBetCheck.error === 'ABOVE_MAX_PER_CHOICE') {
+        return modalInteraction.editReply({
+          embeds: [
+            createInfoEmbed(
+              'Invalid Input - Above Maximum Bet',
+              `The maximum bet per choice is **$${formatNumberToReadableString(
+                casinoSettings.prediction.maxBet
+              )}**. You already have **$${formatNumberToReadableString(
+                userChoiceTotal
+              )}** on **${choiceName}**.`
+            )
+          ]
+        })
+      }
 
-    if (
-      casinoSettings.prediction.minBet > 0 &&
-      parsedBetAmount < casinoSettings.prediction.minBet
-    ) {
       return modalInteraction.editReply({
         embeds: [
           createInfoEmbed(

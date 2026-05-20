@@ -78,7 +78,7 @@ export const updatePredictionStatus = async ({
       status: Array.isArray(fromStatus) ? { $in: fromStatus } : fromStatus
     },
     { $set: { status: toStatus } },
-    { new: true }
+    { returnDocument: 'after' }
   )
 }
 

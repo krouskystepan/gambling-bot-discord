@@ -9,9 +9,12 @@
     "start": "commandkit start",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "format:fix": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "lint:check": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "check": "pnpm format:check && pnpm lint:check",
+    "lint:check": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix --max-warnings 0",
+    "type:check": "tsc --noEmit",
+    "test:check": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm format:check && pnpm lint:check && pnpm type:check && pnpm test:check",
     "fix": "pnpm format:fix && pnpm lint:fix",
     "clean": "rm -rf dist .commandkit",
     "docs:commands": "tsx src/scripts/generate-commands-structure.ts",
@@ -42,6 +45,8 @@
     "eslint": "^10.0.3",
     "prettier": "^3.8.1",
     "ts-morph": "^27.0.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "mongodb-memory-server": "^10.1.4",
+    "vitest": "^3.2.4"
   }
 }

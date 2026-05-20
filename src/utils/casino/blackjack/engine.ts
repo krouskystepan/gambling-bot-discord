@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-restricted-imports
 import { TBlackjackHand } from '@/models/BlackjackGame'
 import { logger } from '@/utils/logger'
 
