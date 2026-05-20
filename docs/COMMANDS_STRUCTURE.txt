@@ -1,6 +1,8 @@
-src
-├── misc
-│   ├── atm
+src/app/commands
+Permission tiers: (misc) = players | (mod) = moderators/admins
+
+├── (misc)  — normal users — global player commands
+│   ├── (atm)
 │   │   ├── deposit.ts
 │   │   │   └─ /deposit – Deposit money to your account.
 │   │   │      ├─ amount – The amount you want to deposit (e.g., 1000, 2k, 10.5k).
@@ -11,7 +13,16 @@ src
 │   │       └─ /withdraw – Withdraw money from your account.
 │   │          ├─ amount – The amount you want to withdraw (e.g., 1000, 2k, 10.5k).
 │   │          ├─ account – The account you want to send the money to.
-│   ├── casino
+│   ├── (casino)
+│   │   ├── (other)
+│   │   │   ├── blackjack.ts
+│   │   │   │   └─ /blackjack – Start a game of blackjack. You can hit, stand, or double down.
+│   │   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
+│   │   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │   │   └── rps.ts
+│   │   │       └─ /rps – Play rock, paper, scissors with another user.
+│   │   │          ├─ player – The user you want to play against.
+│   │   │          ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
 │   │   ├── coin-flip.ts
 │   │   │   └─ /coin-flip – Flip a coin!
 │   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
@@ -39,15 +50,6 @@ src
 │   │   │      ├─ entries – Number of entries.
 │   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
 │   │   │      ├─ skip-animations – Skip game animations for faster results.
-│   │   ├── other
-│   │   │   ├── blackjack.ts
-│   │   │   │   └─ /blackjack – Start a game of blackjack. You can hit, stand, or double down.
-│   │   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
-│   │   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
-│   │   │   └── rps.ts
-│   │   │       └─ /rps – Play rock, paper, scissors with another user.
-│   │   │          ├─ player – The user you want to play against.
-│   │   │          ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
 │   │   ├── plinko.ts
 │   │   │   └─ /plinko – Drop balls down the Plinko board!
 │   │   │      ├─ bet – Bet per ball (e.g., 1000, 2k, 4.5k).
@@ -66,7 +68,7 @@ src
 │   │          ├─ spins – Number of spins.
 │   │          ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
 │   │          ├─ skip-animations – Skip game animations for faster results.
-│   └── utils
+│   └── (utils)
 │       ├── balance.ts
 │       │   └─ /balance – Check your current balance (only you can see this).
 │       ├── bonus.ts
@@ -82,15 +84,15 @@ src
 │              ├─ extend – Extend your current VIP duration.
 │              ├─ add-member – Add a user to your VIP room.
 │              ├─ remove-member – Remove a user from your VIP room.
-└── mod
-    ├── auth
+└── (mod)  — moderators — admin / dev-guild commands
+    ├── (auth)
     │   ├── force-register.ts
     │   │   └─ /force-register – Force register a user.
     │   │      ├─ user – The user you want to register.
     │   └── force-unregister.ts
     │       └─ /force-unregister – Unregister a user (delete from DB).
     │          ├─ user-id – The ID of the user you want to unregister.
-    ├── config
+    ├── (config)
     │   ├── setup-atm.ts
     │   │   └─ /setup-atm – Manage ATM actions and logs channels.
     │   │      ├─ add-actions – Set a channel for ATM transactions (deposits and withdrawals).
@@ -128,19 +130,20 @@ src
     │          ├─ set-price-per-day – Set the price per day for VIP access.
     │          ├─ set-create-price – Set the one-time price for creating a VIP room.
     │          ├─ set-add-member-price – Set the one-time price for adding a member to room.
-    ├── prediction.ts
-    │   └─ /prediction – Manage predictions.
-    │      ├─ create – Create a new prediction.
-    │      ├─ end – End an active prediction so no more bets can be placed.
-    │      ├─ payout – Pay out winners of a prediction.
-    │      ├─ cancel – Cancel a prediction and refund all bets.
-    │      ├─ check – Check the status of a prediction.
-    ├── raffle.ts
-    │   └─ /raffle – Manage global ticket raffles.
-    │      ├─ create – Create a new scheduled raffle.
-    │      ├─ cancel – Cancel raffle and refund all tickets.
-    │      ├─ check – Check how many tickets each user has bought in a raffle.
-    ├── test
+    ├── (events)
+    │   ├── prediction.ts
+    │   │   └─ /prediction – Manage predictions.
+    │   │      ├─ create – Create a new prediction.
+    │   │      ├─ end – End an active prediction so no more bets can be placed.
+    │   │      ├─ payout – Pay out winners of a prediction.
+    │   │      ├─ cancel – Cancel a prediction and refund all bets.
+    │   │      ├─ check – Check the status of a prediction.
+    │   └── raffle.ts
+    │       └─ /raffle – Manage global ticket raffles.
+    │          ├─ create – Create a new scheduled raffle.
+    │          ├─ cancel – Cancel raffle and refund all tickets.
+    │          ├─ check – Check how many tickets each user has bought in a raffle.
+    ├── (test)
     │   ├── simulate-coin-flip.ts
     │   │   └─ /simulate-coin-flip – Simulate X coin flips. WARNING: May take a long time!
     │   │      ├─ flips – Number of flips you want to simulate.
@@ -182,7 +185,7 @@ src
     │          ├─ max-amount – Maximum amount per transaction (upper bound).
     │          ├─ days – How many past days to simulate over (default: 30).
     │          ├─ unique-users – Number of distinct users to simulate (default: auto).
-    └── utils
+    └── (utils)
         ├── casino-games.ts
         │   └─ /casino-games – Show available casino games and how to use them.
         ├── casino-info.ts

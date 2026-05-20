@@ -5,10 +5,28 @@ import { Project, SyntaxKind } from 'ts-morph'
 const ROOT = path.resolve('src/app/commands')
 const project = new Project({ tsConfigFilePath: 'tsconfig.json' })
 
+const PERM_TIERS: Record<string, string> = {
+  '(misc)': 'normal users — global player commands',
+  '(mod)': 'moderators — admin / dev-guild commands'
+}
+
 let output = ''
 
 function walk(dir: string, prefix = '') {
-  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  const entries = fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.name !== 'README.md')
+    .sort((a, b) => {
+      const tierOrder = ['(misc)', '(mod)']
+      const aTier = tierOrder.indexOf(a.name)
+      const bTier = tierOrder.indexOf(b.name)
+      if (aTier !== -1 || bTier !== -1) {
+        if (aTier === -1) return 1
+        if (bTier === -1) return -1
+        return aTier - bTier
+      }
+      return a.name.localeCompare(b.name)
+    })
 
   entries.forEach((entry, index) => {
     const isLast = index === entries.length - 1
@@ -16,7 +34,10 @@ function walk(dir: string, prefix = '') {
     const nextPrefix = prefix + (isLast ? '    ' : '│   ')
     const fullPath = path.join(dir, entry.name)
 
-    output += `${prefix}${branch}${entry.name}\n`
+    const permNote = PERM_TIERS[entry.name]
+    output += `${prefix}${branch}${entry.name}`
+    if (permNote) output += `  — ${permNote}`
+    output += '\n'
 
     if (entry.isDirectory()) {
       walk(fullPath, nextPrefix)
@@ -89,7 +110,8 @@ function walk(dir: string, prefix = '') {
   })
 }
 
-output += 'src\n'
+output += 'src/app/commands\n'
+output += 'Permission tiers: (misc) = players | (mod) = moderators/admins\n\n'
 walk(ROOT, '')
 
 fs.writeFileSync('docs/COMMANDS_STRUCTURE.txt', output)
