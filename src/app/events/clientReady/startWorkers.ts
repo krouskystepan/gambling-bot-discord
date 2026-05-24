@@ -1,5 +1,6 @@
 import { EventHandler } from 'commandkit'
 
+import { logger } from '@/utils/logger'
 import {
   blackjackAutostandJob,
   guildSettingsSyncJob,
@@ -19,6 +20,8 @@ const SIX_HOURS = 6 * ONE_HOUR
 const ONE_DAY = 24 * 60 * ONE_MINUTE
 
 const handler: EventHandler<'clientReady'> = (client) => {
+  logger.boot('Starting background workers')
+
   void runWorkerLoop('VIP expiration', ONE_MINUTE, () =>
     vipExpirationJob(client)
   )
@@ -46,6 +49,8 @@ const handler: EventHandler<'clientReady'> = (client) => {
       predictionCleanupJob()
     )
   }, ONE_MINUTE)
+
+  logger.boot('Background worker scheduling complete')
 }
 
 export default handler

@@ -15,6 +15,8 @@ export const vipExpirationJob = async (client: Client<true>) => {
   const expiredRooms = await getAllOldVips()
   if (!expiredRooms.length) return
 
+  let processed = 0
+
   for (const room of expiredRooms) {
     try {
       const guild = await client.guilds.fetch(room.guildId).catch(() => null)
@@ -80,11 +82,15 @@ export const vipExpirationJob = async (client: Client<true>) => {
         })
         .catch(() => null)
 
-      logger.worker(`VIP channel ${room.channelId} expired.`)
+      processed++
 
       await sleep(500)
     } catch (err) {
       logger.error(`VIP expiration failed for channel ${room.channelId}`, err)
     }
+  }
+
+  if (processed > 0) {
+    logger.worker(`VIP expiration: processed ${processed}`)
   }
 }

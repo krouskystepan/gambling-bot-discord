@@ -9,12 +9,15 @@ export const runWorkerLoop = async (
   job: () => Promise<void>
 ) => {
   if (runningWorkers.has(name)) {
-    logger.error(`[WORKER] ${name} already running — duplicate start prevented`)
+    logger.error(
+      { worker: name },
+      'Worker already running — duplicate start prevented'
+    )
     return
   }
 
   runningWorkers.add(name)
-  logger.worker(`⌛ ${name} worker started`)
+  logger.worker(`Worker started: ${name}`)
 
   while (true) {
     const start = Date.now()
@@ -22,7 +25,7 @@ export const runWorkerLoop = async (
     try {
       await job()
     } catch (err) {
-      logger.error(`[${name}] Worker run failed`, err)
+      logger.error({ err, worker: name }, 'Worker run failed')
     }
 
     const duration = Date.now() - start

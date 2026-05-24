@@ -15,6 +15,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const command: CommandData = {
   name: 'force-unregister',
@@ -100,6 +101,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           .setColor('NotQuiteBlack')
       ]
     })
+
+    logger.event(
+      {
+        action: 'force_unregister',
+        actorId: interaction.user.id,
+        targetUserId: userId,
+        guildId: interaction.guildId
+      },
+      'Admin force-unregistered user'
+    )
 
     return interaction.reply({
       embeds: [

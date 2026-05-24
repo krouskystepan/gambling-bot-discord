@@ -15,6 +15,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const command: CommandData = {
   name: 'force-register',
@@ -101,6 +102,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           .setColor('Grey')
       ]
     })
+
+    logger.event(
+      {
+        action: 'force_register',
+        actorId: interaction.user.id,
+        targetUserId: user.id,
+        guildId: interaction.guildId
+      },
+      'Admin force-registered user'
+    )
 
     return interaction.reply({
       embeds: [

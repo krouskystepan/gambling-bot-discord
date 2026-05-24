@@ -1,30 +1,101 @@
-export type LogLevel = 'BOOT' | 'READY' | 'WORKER' | 'EVENT' | 'ERROR'
+import pino from 'pino'
 
-const COLORS = {
-  reset: '\x1b[0m',
+export type LogCategory = 'BOOT' | 'READY' | 'WORKER' | 'EVENT' | 'ERROR'
 
-  white: '\x1b[37m',
-  green: '\x1b[32m',
-  cyan: '\x1b[36m',
-  magenta: '\x1b[35m',
-  red: '\x1b[31m'
-} as const
+export type LogContext = Record<string, unknown>
 
-const LEVEL_COLOR: Record<LogLevel, string> = {
-  BOOT: COLORS.white,
-  READY: COLORS.green,
-  WORKER: COLORS.cyan,
-  EVENT: COLORS.magenta,
-  ERROR: COLORS.red
+const isProduction = process.env.NODE_ENV === 'production'
+
+const defaultLevel = process.env.LOG_LEVEL ?? (isProduction ? 'info' : 'debug')
+
+const rootLogger = pino({
+  level: defaultLevel,
+  timestamp: pino.stdTimeFunctions.isoTime,
+  ...(isProduction
+    ? {}
+    : {
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname,category',
+            messageFormat: '{category} {msg}'
+          }
+        }
+      })
+})
+
+const isLogContext = (value: unknown): value is LogContext =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  !(value instanceof Error)
+
+const toErrBinding = (value: unknown): LogContext => {
+  if (value instanceof Error) return { err: value }
+  if (isLogContext(value)) {
+    const { error, err, ...rest } = value as LogContext & {
+      error?: unknown
+      err?: unknown
+    }
+    const nested = error ?? err
+    return nested !== undefined
+      ? { ...rest, err: nested }
+      : (value as LogContext)
+  }
+  return { detail: value }
 }
 
-const now = (): string => new Date().toISOString()
+const logCategory = (
+  category: LogCategory,
+  message: string,
+  context?: LogContext
+): void => {
+  rootLogger.info({ category, ...context }, message)
+}
 
-const colorizeLevel = (level: LogLevel): string =>
-  `${LEVEL_COLOR[level]}${level}${COLORS.reset}`
+const logError = (message: string, bindings: LogContext): void => {
+  rootLogger.error({ category: 'ERROR' as const, ...bindings }, message)
+}
 
-const format = (level: LogLevel, msg: string): string =>
-  `[${now()}] [${colorizeLevel(level)}] ${msg}`
+type LoggerEventFn = {
+  (message: string): void
+  (context: LogContext, message: string): void
+}
+
+type LoggerErrorFn = {
+  (message: string): void
+  (message: string, err?: unknown): void
+  (context: LogContext, message: string): void
+}
+
+const eventFn: LoggerEventFn = (arg1: string | LogContext, arg2?: string) => {
+  if (typeof arg1 === 'string') {
+    logCategory('EVENT', arg1)
+    return
+  }
+  logCategory('EVENT', arg2 ?? '', arg1)
+}
+
+const errorFn: LoggerErrorFn = (
+  arg1: string | LogContext,
+  arg2?: string | unknown
+) => {
+  if (typeof arg1 === 'string') {
+    if (arg2 === undefined) {
+      logError(arg1, {})
+      return
+    }
+    if (typeof arg2 === 'string') {
+      logError(arg1, { detail: arg2 })
+      return
+    }
+    logError(arg1, toErrBinding(arg2))
+    return
+  }
+  logError(typeof arg2 === 'string' ? arg2 : '', arg1)
+}
 
 export const logger: {
   /**
@@ -49,20 +120,17 @@ export const logger: {
    * User actions or framework events.
    * Use for Discord interactions and important events.
    */
-  event: (message: string) => void
+  event: LoggerEventFn
 
   /**
    * Errors and exceptions.
    * Use for caught errors and unexpected failures.
    */
-  error: (message: string, error?: unknown) => void
+  error: LoggerErrorFn
 } = {
-  boot: (msg) => console.log(format('BOOT', msg)),
-  ready: (msg) => console.log(format('READY', msg)),
-  worker: (msg) => console.log(format('WORKER', msg)),
-  event: (msg) => console.log(format('EVENT', msg)),
-  error: (msg, err) => {
-    console.error(format('ERROR', msg))
-    if (err) console.error(err)
-  }
+  boot: (msg) => logCategory('BOOT', msg),
+  ready: (msg) => logCategory('READY', msg),
+  worker: (msg) => logCategory('WORKER', msg),
+  event: eventFn,
+  error: errorFn
 }

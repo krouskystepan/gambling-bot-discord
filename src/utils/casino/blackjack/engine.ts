@@ -1,12 +1,11 @@
 import { TBlackjackHand } from '@/models/BlackjackGame'
-import { logger } from '@/utils/logger'
 
 import { calculateHandValue } from './math'
 import type { Card, EngineResult, EngineState, PlayerAction } from './types'
 
 const draw = (s: EngineState): Card => {
   const card = s.deck[s.deckIndex]
-  if (!card) logger.error('Deck exhausted')
+  if (!card) throw new Error('Deck exhausted')
   s.deckIndex++
   return card
 }
@@ -50,8 +49,7 @@ export const applyAction = (
 
   if (action === 'SPLIT') {
     if (!canSplit(s)) {
-      logger.error('Invalid split')
-      return { finished: false }
+      throw new Error('Invalid split')
     }
 
     const [c1, c2] = hand.cards

@@ -9,6 +9,7 @@ export const connectToDatabase = async () => {
     await mongoose.connect(process.env.MONGO_URI)
     logger.boot('✅ Connected to the database')
   } catch (error) {
-    logger.error('Error connecting to the database:', error)
+    logger.error('Error connecting to the database', error)
+    process.exit(1)
   }
 }

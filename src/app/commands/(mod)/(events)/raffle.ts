@@ -37,6 +37,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const command: CommandData = {
   name: 'raffle',
@@ -288,6 +289,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         rows.push(currentRow)
       }
 
+      logger.event(
+        {
+          action: 'raffle_create',
+          actorId: interaction.user.id,
+          raffleId: messageReply.id,
+          ticketPrice: parsedTicketPrice,
+          maxTickets,
+          guildId: interaction.guildId
+        },
+        'Admin created global raffle'
+      )
+
       await interaction.editReply({
         embeds: [embed],
         components: rows
@@ -352,6 +365,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           components: []
         })
       }
+
+      logger.event(
+        {
+          action: 'raffle_cancel',
+          actorId: interaction.user.id,
+          raffleId,
+          guildId: interaction.guildId,
+          refundedParticipants: raffle.participants.length
+        },
+        'Admin canceled raffle and refunded tickets'
+      )
 
       return interaction.reply({
         embeds: [

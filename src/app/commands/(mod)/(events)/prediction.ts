@@ -306,6 +306,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         autolock: autolockDate,
         status: 'active'
       })
+
+      logger.event(
+        {
+          action: 'prediction_create',
+          actorId: interaction.user.id,
+          predictionId: messageReply.id,
+          guildId: interaction.guildId,
+          title
+        },
+        'Admin created prediction'
+      )
     }
 
     if (subcommand === 'end') {
@@ -360,6 +371,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           components: []
         })
       }
+
+      logger.event(
+        {
+          action: 'prediction_end',
+          actorId: interaction.user.id,
+          predictionId,
+          guildId: interaction.guildId,
+          title: updatedPrediction.title
+        },
+        'Admin ended prediction'
+      )
 
       return interaction.reply({
         embeds: [
@@ -499,7 +521,14 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const sendableLogChannel = logChannel as GuildTextBasedChannel
 
       if (!sendableLogChannel) {
-        logger.error('Log channel not found!')
+        logger.error(
+          {
+            predictionId,
+            guildId: interaction.guildId,
+            logChannelId: configReply.predictionChannelIds.logs
+          },
+          'Prediction payout log channel not found'
+        )
       } else {
         const totalBets = prediction.choices.flatMap((c) => c.bets)
 
@@ -572,7 +601,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           )
 
         logChannel.send({ embeds: [embed] }).catch((err) => {
-          logger.error('Failed to pay the winners', err)
+          logger.error(
+            { err, predictionId, guildId: interaction.guildId },
+            'Failed to send prediction payout log message'
+          )
         })
       }
 
@@ -602,6 +634,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         fromStatus: 'ended',
         toStatus: 'paid'
       })
+
+      logger.event(
+        {
+          action: 'prediction_payout',
+          actorId: interaction.user.id,
+          predictionId,
+          winnerChoice,
+          guildId: interaction.guildId,
+          winnerCount: winner.bets.length
+        },
+        'Admin paid prediction winners'
+      )
 
       return interaction.reply({
         embeds: [
@@ -670,6 +714,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           })
         } catch {}
       }
+
+      logger.event(
+        {
+          action: 'prediction_cancel',
+          actorId: interaction.user.id,
+          predictionId,
+          guildId: interaction.guildId,
+          title: updatedPrediction.title,
+          refundedBets: allBets.length
+        },
+        'Admin canceled prediction and refunded bets'
+      )
 
       return interaction.reply({
         embeds: [

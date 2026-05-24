@@ -28,6 +28,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const command: CommandData = {
   name: 'vip',
@@ -283,6 +284,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         throw discordError
       }
 
+      logger.event(
+        {
+          action: 'vip_purchase',
+          userId: interaction.user.id,
+          channelId: channel.id,
+          amount: totalPrice,
+          durationDays,
+          guildId: interaction.guildId
+        },
+        'User purchased VIP room'
+      )
+
       return interaction.editReply({
         embeds: [
           createSuccessEmbed(
@@ -392,6 +405,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
         await extendMsg.pin().catch()
       }
+
+      logger.event(
+        {
+          action: 'vip_extend',
+          userId: interaction.user.id,
+          channelId: existingVip.channelId,
+          amount: totalPrice,
+          durationDays,
+          guildId: interaction.guildId
+        },
+        'User extended VIP room'
+      )
 
       return interaction.editReply({
         embeds: [
@@ -507,6 +532,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           .catch()
       }
 
+      logger.event(
+        {
+          action: 'vip_add_member',
+          ownerId: interaction.user.id,
+          memberId: userToAdd.id,
+          channelId: vipRoom.channelId,
+          amount: chargedAmount,
+          guildId: interaction.guildId
+        },
+        'VIP owner added member'
+      )
+
       return interaction.editReply({
         embeds: [
           createSuccessEmbed(
@@ -605,6 +642,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           .edit(userToRemove.id, { ViewChannel: false, SendMessages: false })
           .catch()
       }
+
+      logger.event(
+        {
+          action: 'vip_remove_member',
+          ownerId: interaction.user.id,
+          memberId: userToRemove.id,
+          channelId: vipRoom.channelId,
+          guildId: interaction.guildId
+        },
+        'VIP owner removed member'
+      )
 
       return interaction.editReply({
         embeds: [

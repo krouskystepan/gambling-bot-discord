@@ -2,6 +2,8 @@ import 'dotenv/config'
 
 import { Client, GatewayIntentBits } from 'discord.js'
 
+import '@/bootstrap/logging'
+
 import { connectToDatabase } from './services'
 
 const client = new Client({

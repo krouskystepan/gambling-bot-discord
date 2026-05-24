@@ -21,6 +21,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const command: CommandData = {
   name: 'manage-balance',
@@ -227,6 +228,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         handledBy: interaction.user.id
       })
 
+      logger.event(
+        {
+          action: 'balance_deposit',
+          actorId: interaction.user.id,
+          targetUserId: user.id,
+          amount: parsedAmount,
+          guildId: interaction.guildId
+        },
+        'Admin balance deposit'
+      )
+
       return interaction.reply({
         content: `<@${user.id}>`,
         embeds: [
@@ -293,6 +305,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         handledBy: interaction.user.id
       })
 
+      logger.event(
+        {
+          action: 'balance_withdraw',
+          actorId: interaction.user.id,
+          targetUserId: user.id,
+          amount: parsedAmount,
+          guildId: interaction.guildId
+        },
+        'Admin balance withdraw'
+      )
+
       return interaction.reply({
         content: `<@${user.id}>`,
         embeds: [
@@ -315,6 +338,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         userId: user.id,
         guildId: interaction.guildId!
       })
+
+      logger.event(
+        {
+          action: 'balance_reset',
+          actorId: interaction.user.id,
+          targetUserId: user.id,
+          guildId: interaction.guildId
+        },
+        'Admin balance reset'
+      )
 
       return interaction.reply({
         content: `<@${user.id}>`,
@@ -359,6 +392,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         source: 'command',
         handledBy: interaction.user.id
       })
+
+      logger.event(
+        {
+          action: 'balance_bonus',
+          actorId: interaction.user.id,
+          targetUserId: user.id,
+          amount: parsedAmount,
+          guildId: interaction.guildId
+        },
+        'Admin bonus granted'
+      )
 
       return interaction.reply({
         content: `<@${user.id}>`,

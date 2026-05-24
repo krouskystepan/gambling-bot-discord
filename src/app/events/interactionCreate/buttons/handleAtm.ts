@@ -9,6 +9,7 @@ import {
   TextChannel
 } from 'discord.js'
 
+import { handleUnexpectedButtonError } from '@/errors'
 import {
   completeAtmRequest,
   createTransaction,
@@ -207,6 +208,18 @@ export default async (interaction: Interaction, client: Client) => {
           components: []
         })
 
+        logger.event(
+          {
+            action: 'atm_withdraw_approve_failed',
+            actorId: interaction.user.id,
+            targetUserId: userId,
+            requestId,
+            amount,
+            guildId
+          },
+          'ATM withdrawal approval failed — insufficient balance'
+        )
+
         return interaction.update({
           content:
             'User no longer has enough available balance to approve this withdrawal.',
@@ -259,7 +272,10 @@ export default async (interaction: Interaction, client: Client) => {
         components: []
       })
     } catch (err) {
-      logger.error('Failed to update ATM log message', err)
+      logger.error(
+        { err, requestId, handler: 'handleAtm' },
+        'Failed to update ATM log message'
+      )
     }
 
     const actionWord = type === 'deposit' ? 'Deposit' : 'Withdrawal'
@@ -277,11 +293,27 @@ export default async (interaction: Interaction, client: Client) => {
       ]
     })
 
+    logger.event(
+      {
+        action:
+          finalAction === 'approve' ? 'atm_request_approved' : 'atm_request_rejected',
+        actorId: interaction.user.id,
+        targetUserId: userId,
+        requestId,
+        requestType: type,
+        amount,
+        guildId
+      },
+      `ATM ${type} ${finalAction === 'approve' ? 'approved' : 'rejected'}`
+    )
+
     await interaction.update({
       content: `Transaction ${finalAction === 'approve' ? 'approved' : 'rejected'} successfully.`,
       components: []
     })
   } catch (error) {
-    logger.error('ATM handler error', error)
+    await handleUnexpectedButtonError(interaction, error, {
+      handler: 'handleAtm'
+    })
   }
 }

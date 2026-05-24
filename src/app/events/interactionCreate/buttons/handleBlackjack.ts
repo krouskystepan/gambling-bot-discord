@@ -1,5 +1,6 @@
 import { Interaction, MessageFlags } from 'discord.js'
 
+import { handleUnexpectedButtonError } from '@/errors'
 import {
   deleteBlackjackGame,
   getBlackjackGameByBetId,
@@ -22,7 +23,6 @@ import {
   resolveResult
 } from '@/utils/casino/blackjack'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
-import { logger } from '@/utils/logger'
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -312,6 +312,8 @@ export default async (interaction: Interaction) => {
       ]
     })
   } catch (err) {
-    logger.error('Blackjack button error', err)
+    await handleUnexpectedButtonError(interaction, err, {
+      handler: 'handleBlackjack'
+    })
   }
 }

@@ -26,6 +26,7 @@ import {
   generateId,
   parseReadableStringToNumber
 } from '@/utils/common/utils'
+import { logger } from '@/utils/logger'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
@@ -204,6 +205,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     )
 
     await logMessage.edit({ components: [row] })
+
+    logger.event(
+      {
+        action: 'atm_withdraw_requested',
+        userId: interaction.user.id,
+        requestId,
+        amount: parsedAmount,
+        guildId: interaction.guildId
+      },
+      'ATM withdrawal request created'
+    )
 
     return interaction.reply({
       embeds: [
