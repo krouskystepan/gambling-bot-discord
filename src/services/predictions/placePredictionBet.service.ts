@@ -1,6 +1,7 @@
+import { validatePredictionChoiceBet } from 'gambling-bot-shared'
+
 import { refundLockedBet, reserveCasinoBet } from '@/services/casino'
 import { addPredictionBet, getPredictionById } from '@/services/db'
-import { validatePredictionChoiceBet } from '@/utils/predictions/validatePredictionBet'
 
 export class PlacePredictionBetError extends Error {
   constructor(

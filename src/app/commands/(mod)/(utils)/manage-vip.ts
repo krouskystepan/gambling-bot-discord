@@ -1,3 +1,5 @@
+import { parseTimeToSeconds } from 'gambling-bot-shared'
+
 import {
   ApplicationCommandOptionType,
   ChannelType,
@@ -18,7 +20,6 @@ import {
   getGuildConfigByGuildId,
   getUser
 } from '@/services'
-import { parseTimeToSeconds } from '@/utils/common/utils'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,

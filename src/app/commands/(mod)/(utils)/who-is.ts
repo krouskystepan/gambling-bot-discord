@@ -1,10 +1,11 @@
+import { formatNumberToReadableString } from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
 
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { checkUserRegistration } from '@/services'
-import { formatNumberToReadableString } from '@/utils/common/utils'
 
 export const command: CommandData = {
   name: 'who-is',

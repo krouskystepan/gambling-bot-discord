@@ -1,4 +1,10 @@
 import {
+  formatNumberToReadableString,
+  generateId,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
+
+import {
   ActionRowBuilder,
   ApplicationCommandOptionType,
   ButtonBuilder,
@@ -16,12 +22,7 @@ import {
   reserveCasinoBet,
   settleRpsGameAtomic
 } from '@/services'
-import {
-  checkValidBet,
-  formatNumberToReadableString,
-  generateId,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
+import { checkValidBet } from '@/utils/common/utils'
 import {
   createBetEmbed,
   createErrorEmbed,

@@ -1,3 +1,5 @@
+import { parseReadableStringToNumber } from 'gambling-bot-shared'
+
 import {
   ApplicationCommandOptionType,
   ChannelType,
@@ -8,7 +10,6 @@ import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
-import { parseReadableStringToNumber } from '@/utils/common/utils'
 import { DEV_GUILDS } from '@/utils/devGuilds'
 import {
   createErrorEmbed,

@@ -1,4 +1,7 @@
-import { TPredictionOption } from 'gambling-bot-shared'
+import {
+  TPredictionOption,
+  formatNumberToReadableString
+} from 'gambling-bot-shared'
 import { DateTime } from 'luxon'
 
 import {
@@ -30,7 +33,7 @@ import {
   updatePredictionStatus,
   updateUserBalanceAtomic
 } from '@/services'
-import { formatDate, formatNumberToReadableString } from '@/utils/common/utils'
+import { formatDate } from '@/utils/common/utils'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,

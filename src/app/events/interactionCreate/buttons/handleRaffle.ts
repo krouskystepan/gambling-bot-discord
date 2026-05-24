@@ -1,3 +1,5 @@
+import { formatNumberToReadableString } from 'gambling-bot-shared'
+
 import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 
 import { handleUnexpectedButtonError } from '@/errors'
@@ -7,7 +9,6 @@ import {
   getRaffleById,
   spendCasinoBalance
 } from '@/services'
-import { formatNumberToReadableString } from '@/utils/common/utils'
 import {
   createErrorEmbed,
   createInfoEmbed,

@@ -1,3 +1,5 @@
+import { formatNumberToReadableString } from 'gambling-bot-shared'
+
 import {
   Client,
   EmbedBuilder,
@@ -13,7 +15,6 @@ import {
   resetUserBalance,
   updateUserBalanceAtomic
 } from '@/services'
-import { formatNumberToReadableString } from '@/utils/common/utils'
 import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 

@@ -1,3 +1,9 @@
+import {
+  formatNumberToReadableString,
+  generateId,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData } from 'commandkit'
@@ -12,12 +18,7 @@ import {
 } from '@/services'
 import { drawGoldenJackpot } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
-import {
-  checkValidBet,
-  formatNumberToReadableString,
-  generateId,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
+import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 
 const GOLDEN_JACKPOT_MAX_ENTRIES = 100

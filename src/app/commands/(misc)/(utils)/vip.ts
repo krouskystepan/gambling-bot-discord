@@ -1,4 +1,10 @@
 import {
+  formatNumberToReadableString,
+  generateId,
+  parseTimeToSeconds
+} from 'gambling-bot-shared'
+
+import {
   ApplicationCommandOptionType,
   ChannelType,
   MessageFlags,
@@ -19,11 +25,6 @@ import {
   removeVipMemberAtomic,
   reserveVipPurchase
 } from '@/services'
-import {
-  formatNumberToReadableString,
-  generateId,
-  parseTimeToSeconds
-} from '@/utils/common/utils'
 import {
   createErrorEmbed,
   createSuccessEmbed

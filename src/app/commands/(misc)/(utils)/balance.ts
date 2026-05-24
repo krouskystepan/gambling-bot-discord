@@ -1,13 +1,14 @@
+import {
+  formatNumberToReadableString,
+  formatNumberWithSpaces
+} from 'gambling-bot-shared'
+
 import { MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { checkUserRegistration } from '@/services'
-import {
-  formatNumberToReadableString,
-  formatNumberWithSpaces
-} from '@/utils/common/utils'
 import { createSuccessEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {

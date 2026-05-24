@@ -1,3 +1,9 @@
+import {
+  formatNumberToReadableString,
+  formatNumberWithSpaces,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
@@ -12,11 +18,6 @@ import {
   resetUserBalance,
   updateUserBalanceAtomic
 } from '@/services'
-import {
-  formatNumberToReadableString,
-  formatNumberWithSpaces,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
 import {
   createErrorEmbed,
   createSuccessEmbed

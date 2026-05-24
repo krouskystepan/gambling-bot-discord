@@ -4,7 +4,7 @@ import {
   canClaimDailyBonus,
   getStreakAfterClaim,
   getStreakDisplay
-} from '@/utils/bonus/streak'
+} from 'gambling-bot-shared'
 
 describe('daily bonus streak helpers', () => {
   const now = new Date('2026-05-20T12:00:00Z')

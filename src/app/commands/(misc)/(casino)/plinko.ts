@@ -1,3 +1,9 @@
+import {
+  formatNumberToReadableString,
+  generateId,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
+
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData } from 'commandkit'
@@ -13,12 +19,7 @@ import {
 import { renderBoardFrame } from '@/utils/casino/plinko'
 import { dropPlinkoPath } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
-import {
-  checkValidBet,
-  formatNumberToReadableString,
-  generateId,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
+import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
