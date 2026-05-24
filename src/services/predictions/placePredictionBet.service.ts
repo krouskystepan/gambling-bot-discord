@@ -1,9 +1,5 @@
-import {
-  addPredictionBet,
-  getPredictionById,
-  refundLockedBet,
-  reserveCasinoBet
-} from '@/services'
+import { refundLockedBet, reserveCasinoBet } from '@/services/casino'
+import { addPredictionBet, getPredictionById } from '@/services/db'
 import { validatePredictionChoiceBet } from '@/utils/predictions/validatePredictionBet'
 
 export class PlacePredictionBetError extends Error {
