@@ -14,12 +14,12 @@ import {
   createTransaction,
   getGuildConfigByGuildId
 } from '@/services'
-import { calculateDailyReward } from '@/utils/bonus/calculateDailyReward'
 import {
+  calculateBonusReward,
   canClaimDailyBonus,
   getStreakAfterClaim,
   getStreakDisplay
-} from '@/utils/bonus/streak'
+} from 'gambling-bot-shared'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
@@ -78,7 +78,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         streak
       )
 
-      const nextReward = calculateDailyReward(nextStreak, settings)
+      const nextReward = calculateBonusReward({
+        streak: nextStreak,
+        settings
+      }).reward
 
       const totalDays = 28
       let calendar = ''
@@ -156,7 +159,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       }
 
       streak = getStreakAfterClaim(lastClaim, now, streak)
-      const reward = calculateDailyReward(streak, settings)
+      const reward = calculateBonusReward({ streak, settings }).reward
 
       const updatedUser = await claimDailyBonus({
         user,
