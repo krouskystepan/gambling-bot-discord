@@ -15,6 +15,7 @@ import {
   parseReadableStringToNumber
 } from '@/utils/common/utils'
 import { DEV_GUILDS } from '@/utils/devGuilds'
+import { logger } from '@/utils/logger'
 
 export const command: CommandData = {
   name: 'money-manager',
@@ -77,6 +78,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         giveButton
       )
 
+      logger.event(
+        {
+          action: 'money_manager_give_embed',
+          actorId: interaction.user.id,
+          amount: parsedAmount,
+          guildId: interaction.guildId
+        },
+        'Admin posted money generator embed'
+      )
+
       return interaction.reply({
         embeds: [embed],
         components: [row]
@@ -97,6 +108,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         resetButton
+      )
+
+      logger.event(
+        {
+          action: 'money_manager_reset_embed',
+          actorId: interaction.user.id,
+          guildId: interaction.guildId
+        },
+        'Admin posted money reset embed'
       )
 
       return interaction.reply({

@@ -20,6 +20,7 @@ import {
   createAtmRequest,
   deleteAtmRequest
 } from '@/services'
+import { logger } from '@/utils/logger'
 import {
   formatNumberToReadableString,
   generateId,
@@ -168,6 +169,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     )
 
     await logMessage.edit({ components: [row] })
+
+    logger.event(
+      {
+        action: 'atm_deposit_requested',
+        userId: interaction.user.id,
+        requestId,
+        amount: parsedAmount,
+        guildId: interaction.guildId
+      },
+      'ATM deposit request created'
+    )
 
     return interaction.reply({
       embeds: [

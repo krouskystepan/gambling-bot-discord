@@ -91,6 +91,6 @@ auditBalances().catch((err) => {
     'utf-8'
   )
 
-  logger.error('Economy summary audit failed', err)
+  logger.error('Balance audit failed', err)
   process.exit(1)
 })

@@ -2,6 +2,7 @@ import { MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import { createSuccessEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
@@ -27,26 +28,30 @@ const formatUptime = (ms: number) => {
 }
 
 export const chatInput: ChatInputCommand = async ({ interaction, client }) => {
-  const start = Date.now()
+  try {
+    const start = Date.now()
 
-  await interaction.deferReply({
-    flags: MessageFlags.Ephemeral
-  })
+    await interaction.deferReply({
+      flags: MessageFlags.Ephemeral
+    })
 
-  const clientPing = Date.now() - start
-  const wsPing = client.ws.ping ?? 0
-  const uptime = formatUptime(client.uptime ?? 0)
+    const clientPing = Date.now() - start
+    const wsPing = client.ws.ping ?? 0
+    const uptime = formatUptime(client.uptime ?? 0)
 
-  await interaction.editReply({
-    embeds: [
-      createSuccessEmbed(
-        '🏓 Pong!',
-        [
-          `**Client latency:** \`${clientPing}ms\``,
-          `**WebSocket latency:** \`${wsPing}ms\``,
-          `**Uptime:** \`${uptime}\``
-        ].join('\n')
-      )
-    ]
-  })
+    await interaction.editReply({
+      embeds: [
+        createSuccessEmbed(
+          '🏓 Pong!',
+          [
+            `**Client latency:** \`${clientPing}ms\``,
+            `**WebSocket latency:** \`${wsPing}ms\``,
+            `**Uptime:** \`${uptime}\``
+          ].join('\n')
+        )
+      ]
+    })
+  } catch (error) {
+    await handleUnexpectedInteractionError(interaction, error)
+  }
 }

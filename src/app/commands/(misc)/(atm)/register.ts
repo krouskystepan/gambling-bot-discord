@@ -69,8 +69,20 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         ]
       })
       .catch((err) => {
-        logger.error('Registration failed', err)
+        logger.error(
+          { err, userId: interaction.user.id, guildId: interaction.guildId },
+          'Failed to send registration log message'
+        )
       })
+
+    logger.event(
+      {
+        action: 'user_register',
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      },
+      'User registered via ATM'
+    )
 
     return interaction.reply({
       embeds: [

@@ -6,6 +6,7 @@ import {
   TextChannel
 } from 'discord.js'
 
+import { handleUnexpectedButtonError } from '@/errors'
 import {
   getGuildConfigByGuildId,
   getUser,
@@ -101,7 +102,12 @@ export default async (interaction: Interaction, client: Client) => {
               .setColor('DarkGreen')
           ]
         })
-        .catch((err) => logger.error('Failed to send the message', err))
+        .catch((err) =>
+          logger.error(
+            { err, handler: 'handleMoneyManage', action: 'generate-money' },
+            'Failed to send money generator log message'
+          )
+        )
 
       const embed = new EmbedBuilder()
         .setTitle('ATM - Money Generator')
@@ -113,6 +119,16 @@ export default async (interaction: Interaction, client: Client) => {
           )}**.`
         )
         .setColor('DarkGreen')
+
+      logger.event(
+        {
+          action: 'money_generator_claim',
+          userId: interaction.user.id,
+          amount: parsedAmount,
+          guildId: interaction.guildId
+        },
+        'User claimed money from generator embed'
+      )
 
       await interaction.reply({
         embeds: [embed],
@@ -143,7 +159,12 @@ export default async (interaction: Interaction, client: Client) => {
               .setColor('DarkRed')
           ]
         })
-        .catch((err) => logger.error('Failed to send the message', err))
+        .catch((err) =>
+          logger.error(
+            { err, handler: 'handleMoneyManage', action: 'reset-money' },
+            'Failed to send money reset log message'
+          )
+        )
 
       const embed = new EmbedBuilder()
         .setTitle('ATM - Money Reset')
@@ -154,12 +175,23 @@ export default async (interaction: Interaction, client: Client) => {
         )
         .setColor('DarkRed')
 
+      logger.event(
+        {
+          action: 'money_reset_claim',
+          userId: interaction.user.id,
+          guildId: interaction.guildId
+        },
+        'User reset balance via embed'
+      )
+
       await interaction.reply({
         embeds: [embed],
         flags: MessageFlags.Ephemeral
       })
     }
   } catch (error) {
-    logger.error('Error in handleGiveMoney.ts', error)
+    await handleUnexpectedButtonError(interaction, error, {
+      handler: 'handleMoneyManage'
+    })
   }
 }

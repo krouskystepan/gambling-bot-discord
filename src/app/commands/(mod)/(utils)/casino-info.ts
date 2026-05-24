@@ -4,6 +4,7 @@ import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import { getAllActiveVipsByGuildId, getGuildConfigByGuildId } from '@/services'
 import {
   formatNumberToReadableString,
@@ -213,71 +214,75 @@ const buildConfigSections = (
   ])
 ]
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
-  const config = await getGuildConfigByGuildId({
-    guildId: interaction.guildId!
-  })
-  if (!config?.casinoSettings) return
+  try {
+    const config = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
+    })
+    if (!config?.casinoSettings) return
 
-  const vipRooms = await getAllActiveVipsByGuildId({
-    guildId: interaction.guildId!
-  })
+    const vipRooms = await getAllActiveVipsByGuildId({
+      guildId: interaction.guildId!
+    })
 
-  const showGames = interaction.options.getBoolean('games') ?? false
-  const showConfig = interaction.options.getBoolean('config') ?? false
-  const showAdmin = interaction.options.getBoolean('admin') ?? false
+    const showGames = interaction.options.getBoolean('games') ?? false
+    const showConfig = interaction.options.getBoolean('config') ?? false
+    const showAdmin = interaction.options.getBoolean('admin') ?? false
 
-  if (!showGames && !showConfig) {
-    return interaction.reply({
-      embeds: [
-        createErrorEmbed(
-          'Invalid Selection',
-          'Select at least one option: `games` or `config`.'
-        )
-      ],
+    if (!showGames && !showConfig) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Invalid Selection',
+            'Select at least one option: `games` or `config`.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+
+    await interaction.reply({
+      content: 'ℹ️ **Casino Information**\nSee threads below.',
       flags: MessageFlags.Ephemeral
     })
-  }
 
-  await interaction.reply({
-    content: 'ℹ️ **Casino Information**\nSee threads below.',
-    flags: MessageFlags.Ephemeral
-  })
+    if (showGames) {
+      const gamesMessage = await interaction.followUp({
+        content: '🎮 Casino Games Information',
+        fetchReply: true
+      })
 
-  if (showGames) {
-    const gamesMessage = await interaction.followUp({
-      content: '🎮 Casino Games Information',
-      fetchReply: true
-    })
+      const gamesThread = await gamesMessage.startThread({
+        name: '🎮 Casino Games',
+        autoArchiveDuration: 1440
+      })
 
-    const gamesThread = await gamesMessage.startThread({
-      name: '🎮 Casino Games',
-      autoArchiveDuration: 1440
-    })
-
-    for (const section of buildGamesSections(
-      config.casinoSettings,
-      showAdmin
-    )) {
-      await gamesThread.send(`${section}\n\u200B`)
+      for (const section of buildGamesSections(
+        config.casinoSettings,
+        showAdmin
+      )) {
+        await gamesThread.send(`${section}\n\u200B`)
+      }
     }
-  }
 
-  if (showConfig) {
-    const configMessage = await interaction.followUp({
-      content: '⚙️ Casino Configuration',
-      fetchReply: true
-    })
+    if (showConfig) {
+      const configMessage = await interaction.followUp({
+        content: '⚙️ Casino Configuration',
+        fetchReply: true
+      })
 
-    const configThread = await configMessage.startThread({
-      name: '⚙️ Casino Configuration',
-      autoArchiveDuration: 1440
-    })
+      const configThread = await configMessage.startThread({
+        name: '⚙️ Casino Configuration',
+        autoArchiveDuration: 1440
+      })
 
-    for (const section of buildConfigSections(
-      config,
-      vipRooms.map((r) => r.channelId)
-    )) {
-      await configThread.send(`${section}\n\u200B`)
+      for (const section of buildConfigSections(
+        config,
+        vipRooms.map((r) => r.channelId)
+      )) {
+        await configThread.send(`${section}\n\u200B`)
+      }
     }
+  } catch (error) {
+    await handleUnexpectedInteractionError(interaction, error)
   }
 }

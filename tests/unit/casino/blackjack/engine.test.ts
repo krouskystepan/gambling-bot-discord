@@ -138,7 +138,7 @@ describe('applyAction edge cases', () => {
   it('rejects invalid split', () => {
     const state = baseState([card('8', 8), card('9', 9)], [])
 
-    expect(applyAction(state, 'SPLIT')).toEqual({ finished: false })
+    expect(() => applyAction(state, 'SPLIT')).toThrow('Invalid split')
     expect(state.hands).toHaveLength(1)
   })
 
@@ -177,15 +177,15 @@ describe('canSplit', () => {
     expect(canSplit(state)).toBe(false)
   })
 
-  it('draw logs when deck is exhausted', () => {
+  it('throws when deck is exhausted', () => {
     const state: EngineState = {
       ...baseState([card('10', 10)], []),
       deck: [],
       deckIndex: 0
     }
 
-    dealerDrawOne(state)
-    expect(state.dealerCards).toHaveLength(1)
+    expect(() => dealerDrawOne(state)).toThrow('Deck exhausted')
+    expect(state.dealerCards).toHaveLength(0)
   })
 
   it('disallows split on different ranks', () => {

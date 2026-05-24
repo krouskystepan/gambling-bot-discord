@@ -21,6 +21,7 @@ import {
   getStreakDisplay
 } from '@/utils/bonus/streak'
 import { formatNumberToReadableString } from '@/utils/common/utils'
+import { logger } from '@/utils/logger'
 import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
@@ -186,6 +187,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           bonusStreak: streak
         }
       })
+
+      logger.event(
+        {
+          action: 'daily_bonus_claim',
+          userId: interaction.user.id,
+          amount: reward,
+          streak,
+          guildId: interaction.guildId
+        },
+        'User claimed daily bonus'
+      )
 
       const embed = new EmbedBuilder()
         .setTitle('Daily Bonus Claimed!')

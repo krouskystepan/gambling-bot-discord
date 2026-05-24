@@ -24,6 +24,8 @@ import { logger } from '@/utils/logger'
 export const blackjackAutostandJob = async (client: Client<true>) => {
   const oldGames = await getAllOldBlackjackGames(1) // older than 1 day
 
+  let processed = 0
+
   for (const game of oldGames) {
     try {
       const guild = await client.guilds.fetch(game.guildId).catch(() => null)
@@ -107,13 +109,15 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
         guildId: game.guildId
       })
 
-      logger.worker(
-        `🃏 Auto-stand executed for ${game.betId} in guild ${game.guildId}`
-      )
+      processed++
 
       await sleep(300)
     } catch (err) {
       logger.error(`Auto-stand failed for game ${game.betId}`, err)
     }
+  }
+
+  if (processed > 0) {
+    logger.worker(`Blackjack auto-stand: processed ${processed}`)
   }
 }

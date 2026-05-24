@@ -13,6 +13,8 @@ export const predictionAutolockJob = async (client: Client<true>) => {
     // limit: 25
   })
 
+  let locked = 0
+
   for (const prediction of predictions) {
     try {
       const updated = await updatePredictionStatus({
@@ -40,9 +42,7 @@ export const predictionAutolockJob = async (client: Client<true>) => {
         components: []
       })
 
-      logger.worker(
-        `Prediction "${prediction.title}" (${prediction.predictionId}) auto-locked`
-      )
+      locked++
       await sleep(300)
     } catch (err) {
       logger.error(
@@ -50,5 +50,9 @@ export const predictionAutolockJob = async (client: Client<true>) => {
         err
       )
     }
+  }
+
+  if (locked > 0) {
+    logger.worker(`Prediction autolock: locked ${locked}`)
   }
 }

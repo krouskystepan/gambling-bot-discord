@@ -1,5 +1,6 @@
 import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 
+import { handleUnexpectedButtonError } from '@/errors'
 import {
   addRaffleTickets,
   getGuildConfigByGuildId,
@@ -12,7 +13,6 @@ import {
   createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
-import { logger } from '@/utils/logger'
 
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
@@ -165,6 +165,8 @@ export default async (interaction: Interaction) => {
       ]
     })
   } catch (error) {
-    logger.error('Error in handleRaffle.ts', error)
+    await handleUnexpectedButtonError(interaction, error, {
+      handler: 'handleRaffle'
+    })
   }
 }

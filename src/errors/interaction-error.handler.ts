@@ -9,12 +9,15 @@ export const handleUnexpectedInteractionError = async (
   interaction: Parameters<ChatInputCommand>[0]['interaction'],
   error: unknown
 ) => {
-  logger.error('Unexpected interaction error', {
-    command: interaction.commandName,
-    userId: interaction.user.id,
-    guildId: interaction.guildId,
-    error
-  })
+  logger.error(
+    {
+      err: error,
+      command: interaction.commandName,
+      userId: interaction.user.id,
+      guildId: interaction.guildId
+    },
+    'Unexpected interaction error'
+  )
 
   if (interaction.replied || interaction.deferred) return
 

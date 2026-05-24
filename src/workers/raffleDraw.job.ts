@@ -75,15 +75,41 @@ export const raffleDrawJob = async (client: Client<true>) => {
         }
       }
 
+      const moneyMoved = refunded || winnerId !== null
+
       const channel = await client.channels
         .fetch(raffle.channelId)
         .catch(() => null)
-      if (!channel?.isTextBased()) continue
+      if (!channel?.isTextBased()) {
+        if (moneyMoved) {
+          logger.error(
+            {
+              raffleId: raffle.raffleId,
+              guildId: raffle.guildId,
+              channelId: raffle.channelId
+            },
+            'Raffle draw: Discord channel missing after settlement'
+          )
+        }
+        continue
+      }
 
       const raffleMessage = await channel.messages
         .fetch(raffle.raffleId)
         .catch(() => null)
-      if (!raffleMessage) continue
+      if (!raffleMessage) {
+        if (moneyMoved) {
+          logger.error(
+            {
+              raffleId: raffle.raffleId,
+              guildId: raffle.guildId,
+              messageId: raffle.raffleId
+            },
+            'Raffle draw: Discord message missing after settlement'
+          )
+        }
+        continue
+      }
 
       const thread = raffleMessage.hasThread
         ? raffleMessage.thread
@@ -94,7 +120,19 @@ export const raffleDrawJob = async (client: Client<true>) => {
             })
             .catch(() => null)
 
-      if (!thread?.isTextBased()) continue
+      if (!thread?.isTextBased()) {
+        if (moneyMoved) {
+          logger.error(
+            {
+              raffleId: raffle.raffleId,
+              guildId: raffle.guildId,
+              messageId: raffle.raffleId
+            },
+            'Raffle draw: Discord thread missing after settlement'
+          )
+        }
+        continue
+      }
 
       const resultEmbed = new EmbedBuilder()
         .setColor(

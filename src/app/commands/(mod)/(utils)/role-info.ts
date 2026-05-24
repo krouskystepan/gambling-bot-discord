@@ -2,6 +2,8 @@ import { ApplicationCommandOptionType, EmbedBuilder, Role } from 'discord.js'
 
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
+
 export const command: CommandData = {
   name: 'role-info',
   description: 'Display information about a role.',
@@ -22,75 +24,79 @@ export const metadata: CommandMetadata = {
 }
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
-  const options = interaction.options
+  try {
+    const options = interaction.options
 
-  const roleOption = options.getRole('role', true)
+    const roleOption = options.getRole('role', true)
 
-  if (!(roleOption instanceof Role)) {
-    throw new Error('Role not cached')
-  }
+    if (!(roleOption instanceof Role)) {
+      throw new Error('Role not cached')
+    }
 
-  const role = roleOption
+    const role = roleOption
 
-  const permissions =
-    role.permissions
-      .toArray()
-      .map(
-        (perm) =>
-          permissionMappings[perm] ||
-          `✅ ${perm.replace(/_/g, ' ').toLowerCase()}`
+    const permissions =
+      role.permissions
+        .toArray()
+        .map(
+          (perm) =>
+            permissionMappings[perm] ||
+            `✅ ${perm.replace(/_/g, ' ').toLowerCase()}`
+        )
+        .join('\n') || '❌ No permissions'
+
+    const roleColor = role.hexColor === '#000000' ? 'No color' : role.hexColor
+    const roleCreatedAt = role.createdAt.toLocaleDateString('en-US')
+    const rolePosition = role.position
+
+    const embed = new EmbedBuilder()
+      .setColor(role.color || 0x3498db)
+      .setTitle(`ℹ️ **ROLE INFORMATION** ℹ️`)
+      .addFields(
+        {
+          name: '📛 Role Name',
+          value: `\`\`\`${role.name}\`\`\``,
+          inline: true
+        },
+        {
+          name: '🎨 Role Color',
+          value: `\`\`\`${roleColor}\`\`\``,
+          inline: true
+        },
+        {
+          name: '🆔 Role ID',
+          value: `\`\`\`${role.id}\`\`\``,
+          inline: false
+        },
+        {
+          name: '🔢 Role Position',
+          value: `\`\`\`${rolePosition}\`\`\``,
+          inline: true
+        },
+        {
+          name: '👥 Member Count',
+          value: `\`\`\`${role.members.size}\`\`\``,
+          inline: true
+        },
+        {
+          name: '🛠️ Permissions',
+          value: `\`\`\`${permissions}\`\`\``,
+          inline: false
+        },
+        {
+          name: '📅 Created',
+          value: `\`\`\`${roleCreatedAt}\`\`\``,
+          inline: true
+        }
       )
-      .join('\n') || '❌ No permissions'
+      .setTimestamp()
 
-  const roleColor = role.hexColor === '#000000' ? 'No color' : role.hexColor
-  const roleCreatedAt = role.createdAt.toLocaleDateString('en-US')
-  const rolePosition = role.position
-
-  const embed = new EmbedBuilder()
-    .setColor(role.color || 0x3498db)
-    .setTitle(`ℹ️ **ROLE INFORMATION** ℹ️`)
-    .addFields(
-      {
-        name: '📛 Role Name',
-        value: `\`\`\`${role.name}\`\`\``,
-        inline: true
-      },
-      {
-        name: '🎨 Role Color',
-        value: `\`\`\`${roleColor}\`\`\``,
-        inline: true
-      },
-      {
-        name: '🆔 Role ID',
-        value: `\`\`\`${role.id}\`\`\``,
-        inline: false
-      },
-      {
-        name: '🔢 Role Position',
-        value: `\`\`\`${rolePosition}\`\`\``,
-        inline: true
-      },
-      {
-        name: '👥 Member Count',
-        value: `\`\`\`${role.members.size}\`\`\``,
-        inline: true
-      },
-      {
-        name: '🛠️ Permissions',
-        value: `\`\`\`${permissions}\`\`\``,
-        inline: false
-      },
-      {
-        name: '📅 Created',
-        value: `\`\`\`${roleCreatedAt}\`\`\``,
-        inline: true
-      }
-    )
-    .setTimestamp()
-
-  return interaction.reply({
-    embeds: [embed]
-  })
+    return interaction.reply({
+      embeds: [embed]
+    })
+  } catch (error) {
+    await handleUnexpectedInteractionError(interaction, error)
+  }
 }
 
 const permissionMappings: { [key: string]: string } = {

@@ -24,6 +24,7 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const command: CommandData = {
   name: 'manage-vip',
@@ -291,6 +292,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         `VIP created by admin ${interaction.user}`
       )
 
+      logger.event(
+        {
+          action: 'vip_create',
+          actorId: interaction.user.id,
+          targetUserId: targetedUser.id,
+          channelId: channel.id,
+          guildId: interaction.guildId
+        },
+        'Admin created VIP room'
+      )
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
@@ -417,6 +429,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         guildId: interaction.guildId!
       })
 
+      logger.event(
+        {
+          action: 'vip_remove',
+          actorId: interaction.user.id,
+          targetUserId: targetedUser.id,
+          guildId: interaction.guildId
+        },
+        'Admin removed VIP room'
+      )
+
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
@@ -536,6 +558,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
         await extendMsg.pin()
       }
+
+      logger.event(
+        {
+          action: 'vip_extend',
+          actorId: interaction.user.id,
+          targetUserId: targetedUser.id,
+          channelId: updatedVip.channelId,
+          guildId: interaction.guildId,
+          durationDays: Math.floor(durationSeconds / 86400)
+        },
+        'Admin extended VIP room'
+      )
 
       return interaction.reply({
         embeds: [
@@ -661,6 +695,19 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           bypassUsed: bypass
         }
       })
+
+      logger.event(
+        {
+          action: 'vip_add_member',
+          actorId: interaction.user.id,
+          ownerId: ownerUser.id,
+          memberId: userToAdd.id,
+          channelId: vipRoom.channelId,
+          guildId: interaction.guildId,
+          bypass
+        },
+        'Admin added member to VIP room'
+      )
 
       return interaction.reply({
         embeds: [
