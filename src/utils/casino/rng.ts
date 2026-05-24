@@ -6,7 +6,8 @@ import {
   TCasinoSettings
 } from 'gambling-bot-shared'
 
-import { Card } from './blackjack'
+import type { Card } from './blackjack/types'
+import { buildPlinkoPath } from './plinko/path'
 
 const random = () => {
   return crypto.randomInt(0, 1_000_000) / 1_000_000
@@ -65,10 +66,21 @@ export const drawNextCard = (deck: Card[], cardIndex: number): Card => {
   return deck[cardIndex]
 }
 
-export const dropPlinkoBall = (rows: number, bias = 0.5): number => {
-  let rights = 0
-  for (let i = 0; i < rows; i++) {
-    if (random() < bias) rights++
+export const shuffleDeck = (deck: Card[]): Card[] => {
+  const arr = [...deck]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
-  return rights // bin index
+  return arr
+}
+
+/** Full plinko path for animation; final bin = last element. */
+export const dropPlinkoPath = (rows: number, bias = 0.5): number[] =>
+  buildPlinkoPath(rows, () => random() < bias)
+
+/** Plinko landing bin index (0..rows). */
+export const dropPlinkoBall = (rows: number, bias = 0.5): number => {
+  const path = dropPlinkoPath(rows, bias)
+  return path[path.length - 1]!
 }

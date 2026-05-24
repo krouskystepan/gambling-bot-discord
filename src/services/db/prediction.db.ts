@@ -1,3 +1,4 @@
+import { TPrediction } from 'gambling-bot-shared'
 import mongoose from 'mongoose'
 
 import Prediction from '@/models/Prediction'
@@ -20,7 +21,7 @@ export const getPredictionToLock = async ({
   status = 'active',
   useAutolock = true
 }: {
-  status?: string
+  status?: TPrediction['status']
   useAutolock?: boolean
 }) => {
   const now = new Date()
@@ -78,7 +79,7 @@ export const updatePredictionStatus = async ({
       status: Array.isArray(fromStatus) ? { $in: fromStatus } : fromStatus
     },
     { $set: { status: toStatus } },
-    { new: true }
+    { returnDocument: 'after' }
   )
 }
 
@@ -87,7 +88,7 @@ export const deletePrediction = async ({
 }: {
   predictionId: string
 }) => {
-  Prediction.deleteOne({ predictionId })
+  await Prediction.deleteOne({ predictionId })
 }
 
 type PredictionDoc = mongoose.InferSchemaType<typeof Prediction.schema>

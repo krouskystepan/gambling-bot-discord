@@ -9,3 +9,6 @@ export type RouletteBet = {
   amount: number
   displayValue: string
 }
+
+export type RouletteWinMultipliers =
+  (typeof defaultCasinoSettings)['roulette']['winMultipliers']

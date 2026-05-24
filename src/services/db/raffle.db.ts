@@ -47,7 +47,7 @@ export const upsertRaffle = async ({
     },
     {
       upsert: true,
-      new: true
+      returnDocument: 'after'
     }
   )
 }
@@ -136,7 +136,7 @@ export const cancelRaffleAtomic = async ({
   return Raffle.findOneAndUpdate(
     { raffleId, guildId, status: { $ne: 'canceled' } },
     { $set: { status: 'canceled' } },
-    { new: true }
+    { returnDocument: 'after' }
   )
 }
 

@@ -10,7 +10,8 @@ import {
   reserveCasinoBet,
   settleCasinoWinnings
 } from '@/services'
-import { dropPlinkoPath, renderBoardFrame } from '@/utils/casino/plinko'
+import { renderBoardFrame } from '@/utils/casino/plinko'
+import { dropPlinkoPath } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import {
   checkValidBet,

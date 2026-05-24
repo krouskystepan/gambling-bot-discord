@@ -1,11 +1,11 @@
-import { MINI_NUMBERS, defaultCasinoSettings } from 'gambling-bot-shared'
+import { MINI_NUMBERS } from 'gambling-bot-shared'
 
-import { RouletteBet } from './types'
+import type { RouletteBet, RouletteWinMultipliers } from './types'
 
 export function calculateRouletteWin(
   bet: RouletteBet,
   result: string,
-  payouts: (typeof defaultCasinoSettings)['roulette']['winMultipliers']
+  payouts: RouletteWinMultipliers
 ) {
   const amount = bet.amount
   const numResult = Number(result)

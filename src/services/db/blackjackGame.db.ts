@@ -62,7 +62,7 @@ export const upsertBlackjackGame = async ({
     },
     {
       upsert: true,
-      new: true
+      returnDocument: 'after'
     }
   )
 }

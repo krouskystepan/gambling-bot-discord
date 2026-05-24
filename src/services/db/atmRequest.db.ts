@@ -42,6 +42,6 @@ export const completeAtmRequest = async ({
   return AtmRequest.findOneAndUpdate(
     { requestId, status: 'pending' },
     { status, handledBy, handledAt: new Date() },
-    { new: true }
+    { returnDocument: 'after' }
   )
 }

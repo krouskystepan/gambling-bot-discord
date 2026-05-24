@@ -7,12 +7,11 @@ import {
   TextInputStyle
 } from 'discord.js'
 
+import { getGuildConfigByGuildId, getPredictionById } from '@/services'
 import {
-  addPredictionBet,
-  getGuildConfigByGuildId,
-  getPredictionById,
-  reserveCasinoBet
-} from '@/services'
+  PlacePredictionBetError,
+  placePredictionBet
+} from '@/services/predictions/placePredictionBet.service'
 import {
   formatNumberToReadableString,
   parseReadableStringToNumber
@@ -23,7 +22,6 @@ import {
 } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
-// TODO: fix and test the predictions
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
@@ -120,63 +118,59 @@ export default async (interaction: Interaction) => {
     const casinoSettings = guildConfig?.casinoSettings
     if (!casinoSettings) return
 
-    const userChoiceTotal = targetChoice.bets
-      .filter((bet) => bet.userId === modalInteraction.user.id)
-      .reduce((sum, bet) => sum + bet.amount, 0)
-
-    const newChoiceTotal = userChoiceTotal + parsedBetAmount
-
-    if (
-      casinoSettings.prediction.maxBet > 0 &&
-      newChoiceTotal > casinoSettings.prediction.maxBet
-    ) {
-      return modalInteraction.editReply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Above Maximum Bet',
-            `The maximum bet per choice is **$${formatNumberToReadableString(
-              casinoSettings.prediction.maxBet
-            )}**. You already have **$${formatNumberToReadableString(
-              userChoiceTotal
-            )}** on **${choiceName}**.`
-          )
-        ]
+    try {
+      await placePredictionBet({
+        userId: modalInteraction.user.id,
+        guildId: interaction.guildId!,
+        predictionId,
+        choiceName,
+        amount: parsedBetAmount,
+        minBet: casinoSettings.prediction.minBet,
+        maxBet: casinoSettings.prediction.maxBet
       })
-    }
-
-    if (
-      casinoSettings.prediction.minBet > 0 &&
-      parsedBetAmount < casinoSettings.prediction.minBet
-    ) {
-      return modalInteraction.editReply({
-        embeds: [
-          createInfoEmbed(
-            'Invalid Input - Below Minimum Bet',
-            `The minimum bet is **$${formatNumberToReadableString(
-              casinoSettings.prediction.minBet
-            )}**.`
-          )
-        ]
-      })
-    }
-
-    await reserveCasinoBet({
-      userId: modalInteraction.user.id,
-      guildId: interaction.guildId!,
-      totalBet: parsedBetAmount,
-      betId: predictionId
-    })
-
-    const added = await addPredictionBet({
-      predictionId,
-      guildId: modalInteraction.guildId!,
-      userId: modalInteraction.user.id,
-      amount: parsedBetAmount,
-      choiceName
-    })
-
-    if (!added) {
-      throw new Error('PREDICTION_STATE_CHANGED_AFTER_VALIDATION')
+    } catch (err: unknown) {
+      if (err instanceof PlacePredictionBetError) {
+        if (err.code === 'VALIDATION_FAILED') {
+          if (err.message === 'ABOVE_MAX_PER_CHOICE') {
+            const userChoiceTotal = targetChoice.bets
+              .filter((bet) => bet.userId === modalInteraction.user.id)
+              .reduce((sum, bet) => sum + bet.amount, 0)
+            return modalInteraction.editReply({
+              embeds: [
+                createInfoEmbed(
+                  'Invalid Input - Above Maximum Bet',
+                  `The maximum bet per choice is **$${formatNumberToReadableString(
+                    casinoSettings.prediction.maxBet
+                  )}**. You already have **$${formatNumberToReadableString(
+                    userChoiceTotal
+                  )}** on **${choiceName}**.`
+                )
+              ]
+            })
+          }
+          return modalInteraction.editReply({
+            embeds: [
+              createInfoEmbed(
+                'Invalid Input - Below Minimum Bet',
+                `The minimum bet is **$${formatNumberToReadableString(
+                  casinoSettings.prediction.minBet
+                )}**.`
+              )
+            ]
+          })
+        }
+        if (err.code === 'PREDICTION_STATE_CHANGED') {
+          return modalInteraction.editReply({
+            embeds: [
+              createInfoEmbed(
+                'Bet Failed',
+                'This prediction changed while placing your bet. Your funds were refunded.'
+              )
+            ]
+          })
+        }
+      }
+      throw err
     }
 
     await modalInteraction.editReply({

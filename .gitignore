@@ -1,8 +1,9 @@
 .env
-.env.*
+.env.production
 .DS_store
 .commandkit
 /node_modules
 /temp
 /logs
 /dist
+/coverage

@@ -1,6 +1,6 @@
 import { MINI_NUMBERS } from 'gambling-bot-shared'
 
-import { RouletteBetType } from './types'
+import type { RouletteBetType } from './types'
 
 export function inferTypeFromValue(value: string): RouletteBetType {
   const val = value.toLowerCase()

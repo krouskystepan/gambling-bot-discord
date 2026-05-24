@@ -18,6 +18,12 @@ export async function reserveCasinoBet({
 
   try {
     await session.withTransaction(async () => {
+      const duplicateBet = await Transaction.exists({
+        betId,
+        type: 'bet'
+      }).session(session)
+      if (duplicateBet) throw new Error('DUPLICATE_BET')
+
       const user = await User.findOne({ userId, guildId }).session(session)
       if (!user) throw new Error('USER_NOT_FOUND')
 
@@ -28,25 +34,37 @@ export async function reserveCasinoBet({
         throw new Error('INSUFFICIENT_FUNDS')
       }
 
+      try {
+        await Transaction.create(
+          [
+            {
+              userId,
+              guildId,
+              amount: totalBet,
+              type: 'bet',
+              source: 'casino',
+              betId
+            }
+          ],
+          { session }
+        )
+      } catch (err: unknown) {
+        if (
+          err instanceof Error &&
+          'code' in err &&
+          (err as { code: number }).code === 11000
+        ) {
+          throw new Error('DUPLICATE_BET')
+        }
+
+        throw err
+      }
+
       user.bonusBalance -= bonusUsed
       user.balance -= cashUsed
       user.lockedBalance += totalBet
 
       await user.save({ session })
-
-      await Transaction.create(
-        [
-          {
-            userId,
-            guildId,
-            amount: totalBet,
-            type: 'bet',
-            source: 'casino',
-            betId
-          }
-        ],
-        { session }
-      )
     })
   } finally {
     session.endSession()
@@ -84,21 +102,28 @@ export async function settleCasinoWinnings({
       user.lockedBalance -= totalBet
 
       if (winnings > 0) {
-        user.balance += winnings
+        const winExists = await Transaction.exists({
+          betId,
+          type: 'win'
+        }).session(session)
 
-        await Transaction.create(
-          [
-            {
-              userId,
-              guildId,
-              amount: winnings,
-              type: 'win',
-              source: 'casino',
-              betId
-            }
-          ],
-          { session }
-        )
+        if (!winExists) {
+          user.balance += winnings
+
+          await Transaction.create(
+            [
+              {
+                userId,
+                guildId,
+                amount: winnings,
+                type: 'win',
+                source: 'casino',
+                betId
+              }
+            ],
+            { session }
+          )
+        }
       }
 
       await user.save({ session })
@@ -107,16 +132,6 @@ export async function settleCasinoWinnings({
     })
 
     return finalBalance
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      'code' in err &&
-      (err as { code: number }).code === 11000
-    ) {
-      const user = await User.findOne({ userId, guildId })
-      return user!.balance + user!.lockedBalance
-    }
-    throw err
   } finally {
     session.endSession()
   }
@@ -341,6 +356,12 @@ export async function spendCasinoBalance({
 
   try {
     await session.withTransaction(async () => {
+      const duplicateBet = await Transaction.exists({
+        betId,
+        type: 'bet'
+      }).session(session)
+      if (duplicateBet) throw new Error('DUPLICATE_BET')
+
       const user = await User.findOne({ userId, guildId }).session(session)
       if (!user) throw new Error('USER_NOT_FOUND')
 
@@ -348,18 +369,16 @@ export async function spendCasinoBalance({
       const bonusUsed = Math.min(bonusBalance, amount)
       const cashUsed = amount - bonusUsed
 
+      const balanceInc: Record<string, number> = { balance: -cashUsed }
+      if (bonusUsed > 0) balanceInc.bonusBalance = -bonusUsed
+
       const result = await User.updateOne(
         {
           userId,
           guildId,
           balance: { $gte: cashUsed }
         },
-        {
-          $inc: {
-            balance: -cashUsed,
-            bonusBalance: -bonusUsed
-          }
-        },
+        { $inc: balanceInc },
         { session }
       )
 

@@ -14,6 +14,12 @@ import {
   createTransaction,
   getGuildConfigByGuildId
 } from '@/services'
+import { calculateDailyReward } from '@/utils/bonus/calculateDailyReward'
+import {
+  canClaimDailyBonus,
+  getStreakAfterClaim,
+  getStreakDisplay
+} from '@/utils/bonus/streak'
 import { formatNumberToReadableString } from '@/utils/common/utils'
 import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 
@@ -59,83 +65,19 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     }
 
     const settings = guildConfig.bonusSettings
-    const {
-      rewardMode = 'linear',
-      baseReward = 0,
-      streakIncrement = 0,
-      streakMultiplier = 1,
-      maxReward = 0,
-      resetOnMax = false,
-      milestoneBonus: {
-        weekly: milestoneWeekly = 0,
-        monthly: milestoneMonthly = 0
-      } = {}
-    } = settings
 
     const now = new Date()
     const lastClaim = user.lastDailyClaim ? new Date(user.lastDailyClaim) : null
     let streak = user.dailyStreak ?? 0
 
-    const calculateReward = (streakNum: number) => {
-      let reward = Number(baseReward)
-
-      if (rewardMode === 'linear') {
-        reward += (streakNum - 1) * Number(streakIncrement)
-      } else {
-        reward *= Math.pow(Number(streakMultiplier), streakNum - 1)
-      }
-
-      if (maxReward > 0 && reward > maxReward) {
-        if (resetOnMax) {
-          if (rewardMode === 'linear') {
-            const cycleLength =
-              Math.floor((maxReward - baseReward) / streakIncrement) + 1
-            const newStreak = ((streakNum - 1) % cycleLength) + 1
-            reward = baseReward + (newStreak - 1) * streakIncrement
-          } else {
-            const cycleLength =
-              Math.floor(
-                Math.log(maxReward / baseReward) / Math.log(streakMultiplier)
-              ) + 1
-            const newStreak = ((streakNum - 1) % cycleLength) + 1
-            reward = baseReward * Math.pow(streakMultiplier, newStreak - 1)
-          }
-        } else {
-          reward = maxReward
-        }
-      }
-
-      if (streakNum % 7 === 0) reward += Number(milestoneWeekly)
-      if (streakNum % 28 === 0) reward += Number(milestoneMonthly)
-
-      return reward
-    }
-
     if (subcommand === 'check') {
-      const nowTime = now.getTime()
-      const lastTime = lastClaim ? lastClaim.getTime() : 0
+      const { currentStreak, nextStreak } = getStreakDisplay(
+        lastClaim,
+        now,
+        streak
+      )
 
-      let currentStreak: number
-      let nextStreak: number
-
-      if (!lastClaim) {
-        currentStreak = 0
-        nextStreak = 1
-      } else {
-        const diff = nowTime - lastTime
-        if (diff < 24 * 60 * 60 * 1000) {
-          currentStreak = streak
-          nextStreak = streak + 1
-        } else if (diff < 48 * 60 * 60 * 1000) {
-          currentStreak = streak
-          nextStreak = streak + 1
-        } else {
-          currentStreak = 0
-          nextStreak = 1
-        }
-      }
-
-      const nextReward = calculateReward(nextStreak)
+      const nextReward = calculateDailyReward(nextStreak, settings)
 
       const totalDays = 28
       let calendar = ''
@@ -163,7 +105,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       let claimInfo = 'Available now!'
       if (lastClaim) {
-        const nextClaim = new Date(lastTime + 24 * 60 * 60 * 1000)
+        const nextClaim = new Date(lastClaim.getTime() + 24 * 60 * 60 * 1000)
         if (now < nextClaim) {
           claimInfo = `**<t:${Math.floor(
             nextClaim.getTime() / 1000
@@ -197,9 +139,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     }
 
     if (subcommand === 'claim') {
-      const canClaim =
-        !lastClaim || now.getTime() - lastClaim.getTime() >= 24 * 60 * 60 * 1000
-      if (!canClaim) {
+      if (!canClaimDailyBonus(lastClaim, now)) {
         const nextClaim = new Date(lastClaim!.getTime() + 24 * 60 * 60 * 1000)
         return interaction.reply({
           embeds: [
@@ -214,11 +154,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      streak =
-        lastClaim && now.getTime() - lastClaim.getTime() < 48 * 60 * 60 * 1000
-          ? streak + 1
-          : 1
-      const reward = calculateReward(streak)
+      streak = getStreakAfterClaim(lastClaim, now, streak)
+      const reward = calculateDailyReward(streak, settings)
 
       const updatedUser = await claimDailyBonus({
         user,

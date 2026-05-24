@@ -1,4 +1,4 @@
-import { Card } from './deck'
+import type { Card } from './types'
 
 export const calculateHandValue = (cards: Card[]): number => {
   let total = 0
