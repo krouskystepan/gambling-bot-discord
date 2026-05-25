@@ -27,6 +27,10 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "packageManager": "pnpm@10.28.0",
+  "pnpm": {
+    "ignoredBuiltDependencies": ["esbuild"]
+  },
   "dependencies": {
     "commandkit": "^1.2.1",
     "discord.js": "^14.26.4",
