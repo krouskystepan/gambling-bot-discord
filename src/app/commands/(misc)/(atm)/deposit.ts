@@ -1,4 +1,10 @@
 import {
+  formatNumberToReadableString,
+  generateId,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
+
+import {
   ActionRowBuilder,
   ApplicationCommandOptionType,
   ButtonBuilder,
@@ -20,17 +26,12 @@ import {
   createAtmRequest,
   deleteAtmRequest
 } from '@/services'
-import { logger } from '@/utils/logger'
-import {
-  formatNumberToReadableString,
-  generateId,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
+import { logger } from '@/utils/logger'
 
 export const command: CommandData = {
   name: 'deposit',

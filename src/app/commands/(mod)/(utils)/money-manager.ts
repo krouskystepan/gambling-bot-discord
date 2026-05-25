@@ -1,4 +1,9 @@
 import {
+  formatNumberToReadableString,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
+
+import {
   ActionRowBuilder,
   ApplicationCommandOptionType,
   ButtonBuilder,
@@ -10,10 +15,6 @@ import {
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import {
-  formatNumberToReadableString,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
 import { DEV_GUILDS } from '@/utils/devGuilds'
 import { logger } from '@/utils/logger'
 

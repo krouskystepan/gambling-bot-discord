@@ -1,4 +1,8 @@
-import { TTransaction } from 'gambling-bot-shared'
+import {
+  TTransaction,
+  formatNumberToReadableString,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType } from 'discord.js'
 
@@ -6,10 +10,6 @@ import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { createMultipleTransactions } from '@/services'
-import {
-  formatNumberToReadableString,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
 import { DEV_GUILDS } from '@/utils/devGuilds'
 
 export const command: CommandData = {

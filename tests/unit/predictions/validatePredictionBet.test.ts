@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validatePredictionChoiceBet } from '@/utils/predictions/validatePredictionBet'
+import { validatePredictionChoiceBet } from 'gambling-bot-shared'
 
 describe('validatePredictionChoiceBet', () => {
   it('accepts valid bet within per-choice limit', () => {

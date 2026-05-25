@@ -1,4 +1,9 @@
-import { TGuildConfiguration, calculateRTP } from 'gambling-bot-shared'
+import {
+  TGuildConfiguration,
+  calculateRTP,
+  formatNumberToReadableString,
+  formatNumberWithSpaces
+} from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
@@ -6,10 +11,6 @@ import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { getAllActiveVipsByGuildId, getGuildConfigByGuildId } from '@/services'
-import {
-  formatNumberToReadableString,
-  formatNumberWithSpaces
-} from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {

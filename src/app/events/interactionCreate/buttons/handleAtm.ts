@@ -1,3 +1,5 @@
+import { formatNumberToReadableString } from 'gambling-bot-shared'
+
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -17,7 +19,6 @@ import {
   getPendingAtmRequest,
   updateUserBalanceAtomic
 } from '@/services'
-import { formatNumberToReadableString } from '@/utils/common/utils'
 import {
   createErrorEmbed,
   createSuccessEmbed
@@ -296,7 +297,9 @@ export default async (interaction: Interaction, client: Client) => {
     logger.event(
       {
         action:
-          finalAction === 'approve' ? 'atm_request_approved' : 'atm_request_rejected',
+          finalAction === 'approve'
+            ? 'atm_request_approved'
+            : 'atm_request_rejected',
         actorId: interaction.user.id,
         targetUserId: userId,
         requestId,

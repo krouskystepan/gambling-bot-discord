@@ -1,4 +1,9 @@
 import {
+  formatNumberToReadableString,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
+
+import {
   ActionRowBuilder,
   Interaction,
   MessageFlags,
@@ -13,10 +18,6 @@ import {
   PlacePredictionBetError,
   placePredictionBet
 } from '@/services/predictions/placePredictionBet.service'
-import {
-  formatNumberToReadableString,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
 import {
   createInfoEmbed,
   createSuccessEmbed

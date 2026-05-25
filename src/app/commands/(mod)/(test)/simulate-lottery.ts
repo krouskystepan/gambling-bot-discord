@@ -1,4 +1,9 @@
-import { LOTTERY_MAX_SIMULATE_ENTRIES } from 'gambling-bot-shared'
+import {
+  LOTTERY_MAX_SIMULATE_ENTRIES,
+  formatNumberToReadableString,
+  formatNumberWithSpaces,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType } from 'discord.js'
 
@@ -7,11 +12,6 @@ import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 import { handleUnexpectedInteractionError } from '@/errors'
 import { getGuildConfigByGuildId } from '@/services'
 import { drawLottery } from '@/utils/casino/rng'
-import {
-  formatNumberToReadableString,
-  formatNumberWithSpaces,
-  parseReadableStringToNumber
-} from '@/utils/common/utils'
 import { DEV_GUILDS } from '@/utils/devGuilds'
 import { createBetEmbed } from '@/utils/discord/createEmbed'
 

@@ -1,3 +1,5 @@
+import { formatNumberToReadableString } from 'gambling-bot-shared'
+
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -5,7 +7,6 @@ import {
   ColorResolvable
 } from 'discord.js'
 
-import { formatNumberToReadableString } from '@/utils/common/utils'
 import { createBetEmbed } from '@/utils/discord/createEmbed'
 
 import { encodeId } from './customId'

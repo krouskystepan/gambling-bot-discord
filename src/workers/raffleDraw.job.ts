@@ -1,4 +1,8 @@
-import { TGuildConfiguration } from 'gambling-bot-shared'
+import {
+  TGuildConfiguration,
+  formatNumberWithSpaces,
+  generateId
+} from 'gambling-bot-shared'
 
 import { Colors, EmbedBuilder } from 'discord.js'
 
@@ -13,7 +17,7 @@ import {
   completeRaffleDraw,
   getRafflesReadyToDraw
 } from '@/services/db/raffle.db'
-import { formatNumberWithSpaces, generateId, sleep } from '@/utils/common/utils'
+import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
 const pickWinner = (participants: { userId: string; tickets: number }[]) => {
