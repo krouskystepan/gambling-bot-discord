@@ -2,7 +2,8 @@ import {
   TGuildConfiguration,
   calculateRTP,
   formatNumberToReadableString,
-  formatNumberWithSpaces
+  formatNumberWithSpaces,
+  formatPlinkoBinMultipliersForDisplay
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -133,7 +134,9 @@ const buildGamesSections = (
   ]),
 
   section('🎯 Plinko', [
-    multiplier(settings.plinko.binMultipliers),
+    multiplier(
+      formatPlinkoBinMultipliersForDisplay(settings.plinko.binMultipliers)
+    ),
     bet('Max Bet', settings.plinko.maxBet),
     bet('Min Bet', settings.plinko.minBet),
     ...(showAdmin ? [rtpLine('plinko', settings.plinko)] : [])

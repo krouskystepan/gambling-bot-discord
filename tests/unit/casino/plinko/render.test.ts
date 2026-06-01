@@ -7,10 +7,10 @@ describe('renderBoardFrame', () => {
   it('renders pegs and legend for a fixed path', () => {
     const path = buildPlinkoPath(3, () => true)
     const frame = renderBoardFrame(3, [path], 0, 0, {
-      0: 1,
-      1: 2,
-      2: 3,
-      3: 4
+      1: 1,
+      2: 2,
+      3: 3,
+      4: 4
     })
 
     expect(frame).toContain('```')
@@ -20,7 +20,7 @@ describe('renderBoardFrame', () => {
 
   it('renders ball position on later steps', () => {
     const path = buildPlinkoPath(3, () => true)
-    const frame = renderBoardFrame(3, [path], 2, 0, { 0: 1, 1: 2, 2: 3, 3: 4 })
+    const frame = renderBoardFrame(3, [path], 2, 0, { 1: 1, 2: 2, 3: 3, 4: 4 })
 
     expect(frame).toContain('●')
   })
@@ -28,9 +28,9 @@ describe('renderBoardFrame', () => {
   it('skips balls not yet spawned and finished paths', () => {
     const path = buildPlinkoPath(2, () => true)
     const frame = renderBoardFrame(2, [path, path], 0, 2, {
-      0: 1,
-      1: 2,
-      2: 3
+      1: 1,
+      2: 2,
+      3: 3
     })
 
     expect(frame).toContain('```')
@@ -46,9 +46,9 @@ describe('renderBoardFrame', () => {
       1,
       0,
       {
-        0: 1,
-        1: 2,
-        2: 3
+        1: 1,
+        2: 2,
+        3: 3
       }
     )
 

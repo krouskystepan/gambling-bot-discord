@@ -3,7 +3,7 @@ export const renderBoardFrame = (
   paths: number[][],
   globalStep: number,
   spawnDelay: number,
-  binMultipliers: Record<number, number>
+  binMultipliers: Record<string | number, number>
 ): string => {
   const width = rows * 2 + 1
   const centerCol = Math.floor(width / 2)
@@ -79,7 +79,7 @@ export const renderBoardFrame = (
     if (seen.has(symbol)) continue
     seen.add(symbol)
 
-    const mult = binMultipliers[i] ?? 0
+    const mult = binMultipliers[i + 1] ?? binMultipliers[String(i + 1)] ?? 0
     legend.push(`**${symbol}** x${mult.toFixed(2)}`)
   }
 

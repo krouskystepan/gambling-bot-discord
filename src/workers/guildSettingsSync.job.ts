@@ -1,4 +1,4 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared'
+import { defaultCasinoSettings, normalizePlinkoBinMultipliers } from 'gambling-bot-shared'
 import merge from 'lodash/merge.js'
 
 import { Client } from 'commandkit'
@@ -21,6 +21,10 @@ export const guildSettingsSyncJob = async (client: Client<true>) => {
         {},
         defaultCasinoSettings,
         dbSettings.casinoSettings
+      )
+
+      mergedSettings.plinko.binMultipliers = normalizePlinkoBinMultipliers(
+        mergedSettings.plinko.binMultipliers
       )
 
       if (
