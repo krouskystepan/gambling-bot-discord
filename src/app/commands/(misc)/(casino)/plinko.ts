@@ -1,10 +1,10 @@
 import {
+  PLINKO_ROW_COUNT,
   formatNumberToReadableString,
   generateId,
   getPlinkoMultiplierAtPathIndex,
   normalizePlinkoBinMultipliers,
-  parseReadableStringToNumber,
-  PLINKO_ROW_COUNT
+  parseReadableStringToNumber
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -186,7 +186,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     for (let i = 0; i < balls; i++) {
       const path = paths[i]
       const finalBin = path[path.length - 1]
-      const multiplier = getPlinkoMultiplierAtPathIndex(binMultipliers, finalBin)
+      const multiplier = getPlinkoMultiplierAtPathIndex(
+        binMultipliers,
+        finalBin
+      )
       const formattedMultiplier = Number(multiplier).toFixed(2)
       const winnings = betAmount * multiplier
       const netForBall = winnings - betAmount

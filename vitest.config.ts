@@ -24,6 +24,10 @@ export default defineConfig({
         __dirname,
         '../gambling-bot-shared/dist/schemas/index.js'
       ),
+      'gambling-bot-shared/server': path.resolve(
+        __dirname,
+        '../gambling-bot-shared/dist/server.js'
+      ),
       'gambling-bot-shared': path.resolve(
         __dirname,
         '../gambling-bot-shared/dist/index.js'

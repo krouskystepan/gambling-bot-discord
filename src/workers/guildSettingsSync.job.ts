@@ -1,4 +1,7 @@
-import { defaultCasinoSettings, normalizePlinkoBinMultipliers } from 'gambling-bot-shared'
+import {
+  defaultCasinoSettings,
+  normalizePlinkoBinMultipliers
+} from 'gambling-bot-shared'
 import merge from 'lodash/merge.js'
 
 import { Client } from 'commandkit'
