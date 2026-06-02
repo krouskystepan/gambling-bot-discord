@@ -3,7 +3,8 @@ import {
   canClaimDailyBonus,
   formatNumberToReadableString,
   getStreakAfterClaim,
-  getStreakDisplay
+  getStreakDisplay,
+  normalizeBonusSettings
 } from 'gambling-bot-shared'
 
 import {
@@ -66,7 +67,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       })
     }
 
-    const settings = guildConfig.bonusSettings
+    const settings = normalizeBonusSettings(guildConfig.bonusSettings)
 
     const now = new Date()
     const lastClaim = user.lastDailyClaim ? new Date(user.lastDailyClaim) : null

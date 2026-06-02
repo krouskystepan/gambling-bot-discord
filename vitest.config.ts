@@ -19,7 +19,15 @@ const coverageExclude = [
 export default defineConfig({
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
+      '@': path.resolve(__dirname, 'src'),
+      'gambling-bot-shared/schemas': path.resolve(
+        __dirname,
+        '../gambling-bot-shared/dist/schemas/index.js'
+      ),
+      'gambling-bot-shared': path.resolve(
+        __dirname,
+        '../gambling-bot-shared/dist/index.js'
+      )
     }
   },
   test: {

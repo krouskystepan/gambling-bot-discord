@@ -98,6 +98,24 @@ describe('calculateBonusReward', () => {
     expect(reward).toBe(400)
   })
 
+  it('marks isReset only on cycle wrap days, not every day after cap', () => {
+    const settings = {
+      rewardMode: 'exponential' as const,
+      baseReward: 100,
+      streakMultiplier: 1.5,
+      maxReward: 2000,
+      resetOnMax: true,
+      milestoneBonus: { weekly: 0, monthly: 0 }
+    }
+
+    expect(calculateBonusReward({ streak: 8, settings }).isReset).toBe(false)
+    expect(calculateBonusReward({ streak: 9, settings }).isReset).toBe(true)
+    expect(calculateBonusReward({ streak: 10, settings }).isReset).toBe(false)
+    expect(calculateBonusReward({ streak: 16, settings }).isReset).toBe(false)
+    expect(calculateBonusReward({ streak: 17, settings }).isReset).toBe(true)
+    expect(calculateBonusReward({ streak: 18, settings }).isReset).toBe(false)
+  })
+
   it('adds monthly milestone on day 28', () => {
     const { reward } = calculateBonusReward({
       streak: 28,
