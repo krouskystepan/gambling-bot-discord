@@ -13,6 +13,18 @@ export const getUser = async ({
   return user
 }
 
+export const getGuildUserIds = async ({
+  guildId,
+  limit = 2000
+}: {
+  guildId: string
+  limit?: number
+}): Promise<string[]> => {
+  const users = await User.find({ guildId }).select('userId').limit(limit).lean()
+
+  return users.map((u) => u.userId)
+}
+
 export const resetUserBalance = async ({
   userId,
   guildId
