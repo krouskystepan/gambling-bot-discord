@@ -20,7 +20,10 @@ export const getGuildUserIds = async ({
   guildId: string
   limit?: number
 }): Promise<string[]> => {
-  const users = await User.find({ guildId }).select('userId').limit(limit).lean()
+  const users = await User.find({ guildId })
+    .select('userId')
+    .limit(limit)
+    .lean()
 
   return users.map((u) => u.userId)
 }

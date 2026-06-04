@@ -2,8 +2,9 @@
 .env.production
 .DS_store
 .commandkit
-/node_modules
-/temp
-/logs
-/dist
-/coverage
+node_modules/
+temp/
+logs/
+dist/
+coverage/
+.cursor/
