@@ -1,6 +1,6 @@
 import {
   PLINKO_ROW_COUNT,
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   getPlinkoMultiplierAtPathIndex,
   normalizePlinkoBinMultipliers,
@@ -101,7 +101,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       betAmount,
       configReply.casinoSettings.plinko.maxBet,
-      configReply.casinoSettings.plinko.minBet
+      configReply.casinoSettings.plinko.minBet,
+      configReply.globalSettings
     )
     if (!isBetValid) return
 
@@ -126,7 +127,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+              `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -163,7 +164,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             createBetEmbed(
               `🎯 Balls dropping...`,
               'Blue',
-              `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+              `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
                 renderBoardFrame(
                   rows,
                   paths,
@@ -173,7 +174,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
                 ) +
                 `\n\n💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                } **$${formatNumberToReadableString(liveResult)}**`,
+                } **${formatMoney(liveResult, configReply.globalSettings)}**`,
               betId
             )
           ]
@@ -212,14 +213,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       }
 
       const isNegative = displayValue < 0
-      const formattedAmount = formatNumberToReadableString(
-        Math.abs(displayValue)
-      )
 
       results.push(
         `Ball **${i + 1}** - x${formattedMultiplier} | ${emoji} | ${
           isNegative ? '-' : ''
-        }$${formattedAmount}`
+        }${formatMoney(displayValue, configReply.globalSettings)}`
       )
     }
 
@@ -244,13 +242,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               ? '🎯 **Better Luck Next Time...** ❌'
               : '🎯 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+          `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
             `🎯 **Ball Results:**\n${results.join('\n')}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(liveResult)}**\n` +
+            } **${formatMoney(liveResult, configReply.globalSettings)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
+              ? `🏦 Balance: **${formatMoney(finalBalance, configReply.globalSettings)}**`
               : ''),
           betId
         )

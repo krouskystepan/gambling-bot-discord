@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { defaultCasinoSettings } from 'gambling-bot-shared'
+import { defaultCasinoSettings, defaultGlobalSettings } from 'gambling-bot-shared'
 
 import {
   createGuildConfiguration,
@@ -22,6 +22,7 @@ describe('guildConfiguration.db', () => {
 
     expect(created.guildId).toBe('guild-1')
     expect(created.casinoSettings).toEqual(defaultCasinoSettings)
+    expect(created.globalSettings).toEqual(defaultGlobalSettings)
 
     const fetched = await getGuildConfigByGuildId({ guildId: 'guild-1' })
     expect(fetched?.guildId).toBe('guild-1')

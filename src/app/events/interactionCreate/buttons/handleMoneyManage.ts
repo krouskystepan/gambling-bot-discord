@@ -1,4 +1,4 @@
-import { formatNumberToReadableString } from 'gambling-bot-shared'
+import { formatMoney } from 'gambling-bot-shared'
 
 import {
   Client,
@@ -71,7 +71,7 @@ export default async (interaction: Interaction, client: Client) => {
           embeds: [
             createInfoEmbed(
               'Balance too high',
-              `You can only receive money if your balance is below **$${formatNumberToReadableString(parsedAmount * 5)}**.`
+              `You can only receive money if your balance is below **${formatMoney(parsedAmount * 5, guildConfiguration.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -96,8 +96,9 @@ export default async (interaction: Interaction, client: Client) => {
             new EmbedBuilder()
               .setTitle('ATM - Money Generator')
               .setDescription(
-                `<@${interaction.user.id}> has added **$${formatNumberToReadableString(
-                  parsedAmount
+                `<@${interaction.user.id}> has added **${formatMoney(
+                  parsedAmount,
+                  guildConfiguration.globalSettings
                 )}** to their account.`
               )
               .setColor('DarkGreen')
@@ -113,10 +114,12 @@ export default async (interaction: Interaction, client: Client) => {
       const embed = new EmbedBuilder()
         .setTitle('ATM - Money Generator')
         .setDescription(
-          `Server has added **$${formatNumberToReadableString(
-            parsedAmount
-          )}** to your account.\nYour new balance is **$${formatNumberToReadableString(
-            updatedUser.balance
+          `Server has added **${formatMoney(
+            parsedAmount,
+            guildConfiguration.globalSettings
+          )}** to your account.\nYour new balance is **${formatMoney(
+            updatedUser.balance,
+            guildConfiguration.globalSettings
           )}**.`
         )
         .setColor('DarkGreen')
@@ -170,8 +173,9 @@ export default async (interaction: Interaction, client: Client) => {
       const embed = new EmbedBuilder()
         .setTitle('ATM - Money Reset')
         .setDescription(
-          `Server has reset your account balance.\nYour new balance is **$${formatNumberToReadableString(
-            newUser.balance
+          `Server has reset your account balance.\nYour new balance is **${formatMoney(
+            newUser.balance,
+            guildConfiguration.globalSettings
           )}**.`
         )
         .setColor('DarkRed')

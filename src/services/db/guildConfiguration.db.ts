@@ -1,4 +1,8 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared'
+import {
+  defaultCasinoSettings,
+  defaultGlobalSettings,
+  normalizeGlobalSettings
+} from 'gambling-bot-shared'
 
 import GuildConfiguration from '@/models/GuildConfiguration'
 import { TGetGuildcongifuration } from '@/types/types'
@@ -6,7 +10,11 @@ import { TGetGuildcongifuration } from '@/types/types'
 export const getGuildConfigByGuildId = async ({
   guildId
 }: TGetGuildcongifuration) => {
-  return GuildConfiguration.findOne({ guildId })
+  const doc = await GuildConfiguration.findOne({ guildId })
+  if (!doc) return null
+
+  doc.globalSettings = normalizeGlobalSettings(doc.globalSettings)
+  return doc
 }
 
 export const createGuildConfiguration = async ({
@@ -16,7 +24,8 @@ export const createGuildConfiguration = async ({
 }) => {
   const guildConfiguration = await GuildConfiguration.create({
     guildId,
-    casinoSettings: defaultCasinoSettings
+    casinoSettings: defaultCasinoSettings,
+    globalSettings: defaultGlobalSettings
   })
 
   return guildConfiguration

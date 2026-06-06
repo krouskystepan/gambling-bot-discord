@@ -8,6 +8,10 @@ import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 import { getGuildConfigByGuildId } from '../db/guildConfiguration.db'
 import { getActiveVipChannels } from '../vip/getActiveVipChannels.service'
+import {
+  assertGlobalFeature,
+  assertNotMaintenance
+} from './checkGlobalFeature.service'
 
 export const checkAtmChannels = async (
   interaction: Parameters<ChatInputCommand>[0]['interaction']
@@ -54,6 +58,8 @@ export const checkAtmChannels = async (
     })
     return false
   }
+
+  if (!(await assertNotMaintenance(interaction, config))) return false
 
   return config
 }
@@ -109,6 +115,11 @@ export const checkCasinoChannels = async (
     return false
   }
 
+  if (!(await assertNotMaintenance(interaction, config))) return false
+  if (!(await assertGlobalFeature(interaction, config, 'casinoGames'))) {
+    return false
+  }
+
   return config
 }
 
@@ -148,6 +159,8 @@ export const checkPredictionChannels = async (
     return false
   }
 
+  if (!(await assertNotMaintenance(interaction, config))) return false
+
   return config
 }
 
@@ -183,6 +196,8 @@ export const checkRaffleChannels = async (
     })
     return false
   }
+
+  if (!(await assertNotMaintenance(interaction, config))) return false
 
   return config
 }

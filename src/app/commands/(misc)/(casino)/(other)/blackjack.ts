@@ -1,5 +1,5 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber
 } from 'gambling-bot-shared'
@@ -83,7 +83,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.blackjack.maxBet,
-      configReply.casinoSettings.blackjack.minBet
+      configReply.casinoSettings.blackjack.minBet,
+      configReply.globalSettings
     )
 
     if (!isBetValid) return
@@ -110,7 +111,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+              `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -172,7 +173,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             dealerCards,
             showBalance,
             userBalance: finalBalance,
-            result: { kind: 'START', startResultId }
+            result: { kind: 'START', startResultId },
+            globalSettings: configReply.globalSettings
           })
         ]
       })
@@ -224,7 +226,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
           dealerCards,
           showBalance,
-          dealerHideSecondCard: true
+          dealerHideSecondCard: true,
+          globalSettings: configReply.globalSettings
         })
       ],
       components: [row]

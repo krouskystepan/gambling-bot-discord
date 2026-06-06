@@ -1,3 +1,5 @@
+import { isGlobalFeatureDisabled } from 'gambling-bot-shared'
+
 import {
   ApplicationCommandOptionType,
   EmbedBuilder,
@@ -8,7 +10,11 @@ import {
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { forceDeleteUser, getGuildConfigByGuildId } from '@/services'
+import {
+  assertModMaintenanceAllowed,
+  forceDeleteUser,
+  getGuildConfigByGuildId
+} from '@/services'
 import { DEV_GUILDS } from '@/utils/devGuilds'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
@@ -48,6 +54,24 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           createErrorEmbed(
             'Error - Logs Not Set Up',
             'ATM logs are not configured yet.\nPlease contact an administrator.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+    if (
+      (await assertModMaintenanceAllowed(interaction, interaction.guildId!)) ===
+      false
+    ) {
+      return
+    }
+
+    if (isGlobalFeatureDisabled(guildConfig, 'registration')) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Feature Disabled',
+            'New user registration is disabled on this server.'
           )
         ],
         flags: MessageFlags.Ephemeral

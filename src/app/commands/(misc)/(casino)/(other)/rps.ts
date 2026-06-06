@@ -1,5 +1,5 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber
 } from 'gambling-bot-shared'
@@ -86,7 +86,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const betAmount = parseReadableStringToNumber(
       interaction.options.getString('bet', true)
     )
-    const readableBetAmount = formatNumberToReadableString(betAmount)
     const realWinAmount =
       betAmount * (1 - configReply.casinoSettings.rps.casinoCut)
 
@@ -94,7 +93,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       betAmount,
       configReply.casinoSettings.rps.maxBet,
-      configReply.casinoSettings.rps.minBet
+      configReply.casinoSettings.rps.minBet,
+      configReply.globalSettings
     )
     if (!isBetValid) return
 
@@ -166,7 +166,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     )
 
     const reply = await interaction.editReply({
-      content: `${targetDiscordUser}, you’ve been challenged by ${interaction.user} to a game of Rock, Paper, Scissors for **$${readableBetAmount}**!\nChoose one of the options to start the game.`,
+      content: `${targetDiscordUser}, you’ve been challenged by ${interaction.user} to a game of Rock, Paper, Scissors for **${formatMoney(betAmount, configReply.globalSettings)}**!\nChoose one of the options to start the game.`,
       embeds: [embed],
       components: [row]
     })
@@ -226,14 +226,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (targetChoice.beats === initiatorChoice.name) {
       winnerUser = targetUser
       loserUser = user
-      resultText = `${targetDiscordUser} won and took **$${formatNumberToReadableString(
-        realWinAmount
+      resultText = `${targetDiscordUser} won and took **${formatMoney(
+        realWinAmount,
+        configReply.globalSettings
       )}** from ${interaction.user}!`
     } else if (initiatorChoice.beats === targetChoice.name) {
       winnerUser = user
       loserUser = targetUser
-      resultText = `${interaction.user} won and took **$${formatNumberToReadableString(
-        realWinAmount
+      resultText = `${interaction.user} won and took **${formatMoney(
+        realWinAmount,
+        configReply.globalSettings
       )}** from ${targetDiscordUser}!`
     }
 

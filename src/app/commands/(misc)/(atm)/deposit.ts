@@ -1,5 +1,5 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber
 } from 'gambling-bot-shared'
@@ -20,6 +20,7 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  assertGlobalFeature,
   attachAtmRequestMessage,
   checkAtmChannels,
   checkUserRegistration,
@@ -60,11 +61,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     const guildConfiguration = await checkAtmChannels(interaction)
     if (!guildConfiguration) return
+    if (
+      !(await assertGlobalFeature(interaction, guildConfiguration, 'deposit'))
+    ) {
+      return
+    }
 
     const account = interaction.options.getString('account', true)
     const amount = interaction.options.getString('amount', true)
     const parsedAmount = parseReadableStringToNumber(amount)
-    const readableAmount = formatNumberToReadableString(parsedAmount)
 
     if (isNaN(parsedAmount)) {
       return interaction.reply({
@@ -139,7 +144,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             )
             .setColor('Green')
             .setDescription(
-              `<@${interaction.user.id}> requested a deposit of **$${readableAmount}** from account **${account}**.`
+              `<@${interaction.user.id}> requested a deposit of **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** from account **${account}**.`
             )
         ]
       })
@@ -186,7 +191,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       embeds: [
         createSuccessEmbed(
           'ATM - Deposit',
-          `You have successfully deposited **$${readableAmount}** to your account.\nPlease wait for the transaction to be processed.`
+          `You have successfully deposited **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to your account.\nPlease wait for the transaction to be processed.`
         )
       ],
       flags: MessageFlags.Ephemeral

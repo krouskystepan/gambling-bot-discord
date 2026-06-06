@@ -1,3 +1,5 @@
+import type { GlobalSettings } from 'gambling-bot-shared'
+
 import type { TBlackjackHand } from '@/models/BlackjackGame'
 
 import type { SUITES, VALUES } from './deck'
@@ -66,4 +68,5 @@ export type RenderParams = {
   userBalance?: number
   dealerHideSecondCard?: boolean
   result?: RenderResult
+  globalSettings?: Partial<GlobalSettings> | null
 }

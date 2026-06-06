@@ -1,7 +1,7 @@
 import {
   calculateBonusReward,
   canClaimDailyBonus,
-  formatNumberToReadableString,
+  formatMoney,
   getStreakAfterClaim,
   getStreakDisplay,
   normalizeBonusSettings
@@ -18,6 +18,8 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  assertGlobalFeature,
+  assertNotMaintenance,
   checkUserRegistration,
   claimDailyBonus,
   createTransaction,
@@ -55,7 +57,22 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const guildConfig = await getGuildConfigByGuildId({
       guildId: interaction.guildId!
     })
-    if (!guildConfig || !guildConfig.bonusSettings) {
+    if (!guildConfig) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Bonus not configured',
+            'Daily bonus is not configured for this server.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+    if (!(await assertNotMaintenance(interaction, guildConfig))) return
+    if (!(await assertGlobalFeature(interaction, guildConfig, 'dailyBonus'))) {
+      return
+    }
+    if (!guildConfig.bonusSettings) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
@@ -131,7 +148,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           },
           {
             name: '💰 Next Reward',
-            value: `$${formatNumberToReadableString(nextReward)}`,
+            value: `${formatMoney(nextReward, guildConfig.globalSettings)}`,
             inline: true
           },
           { name: '⏰ Next Claim', value: claimInfo, inline: false }
@@ -208,8 +225,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         .setTitle('Daily Bonus Claimed!')
         .setColor(Colors.Gold)
         .setDescription(
-          `You claimed your daily bonus and received **$${formatNumberToReadableString(
-            reward
+          `You claimed your daily bonus and received **${formatMoney(
+            reward,
+            guildConfig.globalSettings
           )}** coins!`
         )
         .addFields(
@@ -220,7 +238,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           },
           {
             name: '🎁 Bonus Balance',
-            value: `$${formatNumberToReadableString(updatedUser.bonusBalance)}`,
+            value: `${formatMoney(updatedUser.bonusBalance, guildConfig.globalSettings)}`,
             inline: true
           }
         )

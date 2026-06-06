@@ -1,5 +1,5 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber
 } from 'gambling-bot-shared'
@@ -108,7 +108,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.goldenJackpot.maxBet,
-      configReply.casinoSettings.goldenJackpot.minBet
+      configReply.casinoSettings.goldenJackpot.minBet,
+      configReply.globalSettings
     )
 
     if (!isBetValid) return
@@ -134,7 +135,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+              `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -155,11 +156,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           createBetEmbed(
             `🤑 Drawing...`,
             'Blue',
-            `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+            `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
               `🎟️ Tickets left: **${initialTickets}**\n` +
               `\n💰 Total: ${
                 liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-              } **$${formatNumberToReadableString(liveResult)}**`,
+              } **${formatMoney(liveResult, configReply.globalSettings)}**`,
             betId
           )
         ]
@@ -189,8 +190,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       if (isJackpot) {
         jackpotTries.push(
-          `**JACKPOT!** You won **$${formatNumberToReadableString(
-            winnings
+          `**JACKPOT!** You won **${formatMoney(
+            winnings,
+            configReply.globalSettings
           )}** on Try **#${tryNumber.toString().padStart(3, '0')}**! 🔥`
         )
       }
@@ -207,14 +209,14 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               createBetEmbed(
                 `🤑 Drawing...`,
                 'Blue',
-                `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+                `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
                   `🎟️ Tickets left: **${ticketsLeft}**\n` +
                   (jackpotTries.length > 0
                     ? `\n**🤑 JACKPOT WINS:**\n${jackpotTries.join('\n')}\n`
                     : '') +
                   `\n💰 Total: ${
                     liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                  } **$${formatNumberToReadableString(liveResult)}**`,
+                  } **${formatMoney(liveResult, configReply.globalSettings)}**`,
                 betId
               )
             ]
@@ -245,13 +247,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               ? '🤑 **Better Luck Next Time...** ❌'
               : '🤑 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+          `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
             `🤑 **Draw Result:**${isWin ? `\n ${jackpotTries.join('\n')}` : ' No win'}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(liveResult)}**\n` +
+            } **${formatMoney(liveResult, configReply.globalSettings)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
+              ? `🏦 Balance: **${formatMoney(finalBalance, configReply.globalSettings)}**`
               : ''),
           betId
         )

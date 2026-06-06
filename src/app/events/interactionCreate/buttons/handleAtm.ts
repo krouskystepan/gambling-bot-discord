@@ -1,4 +1,4 @@
-import { formatNumberToReadableString } from 'gambling-bot-shared'
+import { formatMoney } from 'gambling-bot-shared'
 
 import {
   ActionRowBuilder,
@@ -95,7 +95,20 @@ export default async (interaction: Interaction, client: Client) => {
     }
 
     const { userId, amount, type, guildId } = request
-    const readableAmount = `$${formatNumberToReadableString(amount)}`
+
+    if (!guildConfig) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Not Configured',
+            'Guild configuration not found.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+
+    const readableAmount = `${formatMoney(amount, guildConfig.globalSettings)}`
 
     if (finalAction === 'reject') {
       const completed = await completeAtmRequest({

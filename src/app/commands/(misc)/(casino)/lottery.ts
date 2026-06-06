@@ -1,6 +1,6 @@
 import {
   TCasinoSettings,
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber
 } from 'gambling-bot-shared'
@@ -99,7 +99,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const entries = interaction.options.getInteger('entries') || 1
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
-    const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
     const skipAnimations = interaction.options.getBoolean('skip-animations')
 
@@ -131,7 +130,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.lottery.maxBet,
-      configReply.casinoSettings.lottery.minBet
+      configReply.casinoSettings.lottery.minBet,
+      configReply.globalSettings
     )
 
     if (!isBetValid) return
@@ -157,7 +157,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+              `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -178,14 +178,14 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             createBetEmbed(
               `🎟️ Drawing...`,
               'Blue',
-              `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+              `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
                 `Your numbers: **${userNumbers
                   .map((n) => n.toString().padStart(2, '0'))
                   .join(', ')}**\n\n` +
                 `🎟️ **Draw Results:**\n${[...results, '🎟️ Drawing...'].join('\n')}\n\n` +
                 `💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                } **$${formatNumberToReadableString(liveResult)}**`,
+                } **${formatMoney(liveResult, configReply.globalSettings)}**`,
               betId
             )
           ]
@@ -210,10 +210,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       results.push(
         `**${resultString}** | ${matchedNumbers > 0 ? `🎉 **${matchedNumbers}**` : `❌ **0**`} | ${
           winnings > parsedBetAmount
-            ? `**+$${formatNumberToReadableString(winnings)}**`
+            ? `**+${formatMoney(winnings, configReply.globalSettings)}**`
             : winnings < parsedBetAmount
-              ? `**-$${readableBetAmount}**`
-              : `**$0**`
+              ? `**-${formatMoney(parsedBetAmount, configReply.globalSettings)}**`
+              : `**${formatMoney(0, configReply.globalSettings)}**`
         }`
       )
 
@@ -242,16 +242,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               ? '🎟️ **Better Luck Next Time...** ❌'
               : '🎟️ **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+          `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
             `Your numbers: **${userNumbers
               .map((n) => n.toString().padStart(2, '0'))
               .join(', ')}**\n\n` +
             `🎟️ **Draw Results:**\n${results.join('\n')}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(liveResult)}**\n` +
+            } **${formatMoney(liveResult, configReply.globalSettings)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
+              ? `🏦 Balance: **${formatMoney(finalBalance, configReply.globalSettings)}**`
               : ''),
           betId
         )

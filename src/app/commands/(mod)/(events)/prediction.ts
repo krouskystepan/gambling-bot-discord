@@ -1,7 +1,4 @@
-import {
-  TPredictionOption,
-  formatNumberToReadableString
-} from 'gambling-bot-shared'
+import { TPredictionOption, formatMoney } from 'gambling-bot-shared'
 import { DateTime } from 'luxon'
 
 import {
@@ -24,6 +21,7 @@ import {
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  assertGlobalFeature,
   checkPredictionChannels,
   createPrediction,
   createTransaction,
@@ -149,6 +147,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const configReply = await checkPredictionChannels(interaction)
 
     if (!configReply) return
+    if (
+      !(await assertGlobalFeature(
+        interaction,
+        configReply,
+        'predictionManagement'
+      ))
+    ) {
+      return
+    }
 
     const member = await interaction.guild?.members.fetch(interaction.user.id)
     const hasAdmin = member?.permissions.has('Administrator')
@@ -561,9 +568,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               .fetch(w.userId)
               .catch(() => null)
             const username = member ? `<@${member.id}>` : 'Unknown'
-            return `${username} (Bet: $${formatNumberToReadableString(
-              w.betAmount
-            )}, Win: $${formatNumberToReadableString(w.winAmount)})`
+            return `${username} (Bet: ${formatMoney(
+              w.betAmount,
+              configReply.globalSettings
+            )}, Win: ${formatMoney(w.winAmount, configReply.globalSettings)})`
           })
         )
 
@@ -573,7 +581,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               .fetch(l.userId)
               .catch(() => null)
             const username = member ? `<@${member.id}>` : 'Unknown'
-            return `${username} (Bet: $${formatNumberToReadableString(l.betAmount)}, Win: $0)`
+            return `${username} (Bet: ${formatMoney(l.betAmount, configReply.globalSettings)}, Win: ${formatMoney(0, configReply.globalSettings)})`
           })
         )
 
@@ -590,7 +598,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             { name: 'Losers', value: `${losers.length}`, inline: true },
             {
               name: 'Casino Profit/Loss',
-              value: `$${formatNumberToReadableString(casinoProfit)}`,
+              value: `${formatMoney(casinoProfit, configReply.globalSettings)}`,
               inline: true
             },
             {
@@ -776,7 +784,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
                 .fetch(b.userId)
                 .catch(() => null)
               const username = member ? `<@${member.id}>` : 'Unknown'
-              return `${username} — Bet: $${formatNumberToReadableString(b.amount)}`
+              return `${username} — Bet: ${formatMoney(b.amount, configReply.globalSettings)}`
             })
           )
 
@@ -784,10 +792,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             name: `Option: ${choice.choiceName} (${choice.odds}x)`,
             value:
               `Bets: ${bettors.length}\n` +
-              `Total Bet: $${formatNumberToReadableString(
-                choice.bets.reduce((a, b) => a + b.amount, 0)
+              `Total Bet: ${formatMoney(
+                choice.bets.reduce((a, b) => a + b.amount, 0),
+                configReply.globalSettings
               )}\n` +
-              `If Wins → Payout: $${formatNumberToReadableString(totalWin)}\n` +
+              `If Wins → Payout: ${formatMoney(totalWin, configReply.globalSettings)}\n` +
               (bettors.length ? bettors.join('\n') : 'No bets'),
             inline: false
           }
@@ -801,7 +810,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           { name: 'Status', value: prediction.status, inline: true },
           {
             name: 'Total Bets',
-            value: `$${formatNumberToReadableString(totalBetAmount)}`,
+            value: `${formatMoney(totalBetAmount, configReply.globalSettings)}`,
             inline: true
           },
           ...choiceSummaries

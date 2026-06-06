@@ -1,3 +1,4 @@
+import { defaultGlobalSettings } from 'gambling-bot-shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getGuildConfigByGuildId } from '@/services/db/guildConfiguration.db'
@@ -72,6 +73,16 @@ describe('checkAtmChannels', () => {
 
     expect(await checkAtmChannels(ix as never)).toEqual(config)
   })
+
+  it('returns false during maintenance mode', async () => {
+    mockGetConfig.mockResolvedValue({
+      atmChannelIds: { logs: 'log-ch', actions: 'atm-actions' },
+      globalSettings: { ...defaultGlobalSettings, maintenanceMode: true }
+    } as never)
+    const ix = interaction('atm-actions')
+
+    expect(await checkAtmChannels(ix as never)).toBe(false)
+  })
 })
 
 describe('checkCasinoChannels', () => {
@@ -118,6 +129,29 @@ describe('checkCasinoChannels', () => {
 
     expect(await checkCasinoChannels(ix as never)).toBe(false)
   })
+
+  it('returns false during maintenance mode', async () => {
+    mockGetConfig.mockResolvedValue({
+      casinoChannelIds: ['casino-ch'],
+      globalSettings: { ...defaultGlobalSettings, maintenanceMode: true }
+    } as never)
+    mockGetVipChannels.mockResolvedValue([])
+    const ix = interaction('casino-ch')
+
+    expect(await checkCasinoChannels(ix as never)).toBe(false)
+  })
+
+  it('returns false when casino games are disabled globally', async () => {
+    mockGetConfig.mockResolvedValue({
+      casinoChannelIds: ['casino-ch'],
+      globalSettings: { ...defaultGlobalSettings, disableCasinoGames: true }
+    } as never)
+    mockGetVipChannels.mockResolvedValue([])
+    const ix = interaction('casino-ch')
+
+    expect(await checkCasinoChannels(ix as never)).toBe(false)
+    expect(ix.reply).toHaveBeenCalled()
+  })
 })
 
 describe('checkPredictionChannels', () => {
@@ -146,6 +180,16 @@ describe('checkPredictionChannels', () => {
 
     expect(await checkPredictionChannels(ix as never)).toEqual(config)
   })
+
+  it('returns false during maintenance mode', async () => {
+    mockGetConfig.mockResolvedValue({
+      predictionChannelIds: { logs: 'pred-log', actions: 'pred-actions' },
+      globalSettings: { ...defaultGlobalSettings, maintenanceMode: true }
+    } as never)
+    const ix = interaction('pred-actions')
+
+    expect(await checkPredictionChannels(ix as never)).toBe(false)
+  })
 })
 
 describe('checkRaffleChannels', () => {
@@ -173,5 +217,15 @@ describe('checkRaffleChannels', () => {
     const ix = interaction('raffle-actions')
 
     expect(await checkRaffleChannels(ix as never)).toEqual(config)
+  })
+
+  it('returns false during maintenance mode', async () => {
+    mockGetConfig.mockResolvedValue({
+      raffleChannelIds: { logs: 'raffle-log', actions: 'raffle-actions' },
+      globalSettings: { ...defaultGlobalSettings, maintenanceMode: true }
+    } as never)
+    const ix = interaction('raffle-actions')
+
+    expect(await checkRaffleChannels(ix as never)).toBe(false)
   })
 })

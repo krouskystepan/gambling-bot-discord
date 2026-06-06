@@ -1,7 +1,8 @@
 import {
+  type GlobalSettings,
   TGuildConfiguration,
   calculateRTP,
-  formatNumberToReadableString,
+  formatMoney,
   formatNumberWithSpaces,
   formatPlinkoBinMultipliersForDisplay
 } from 'gambling-bot-shared'
@@ -45,14 +46,22 @@ export const metadata: CommandMetadata = {
 const section = (title: string, lines: string[]) =>
   `## ${title}\n${lines.join('\n')}`
 
-const bet = (label: string, value: number) =>
+const bet = (
+  label: string,
+  value: number,
+  globalSettings?: Partial<GlobalSettings> | null
+) =>
   `- **${label}:** ${
-    value === 0 ? 'No Limit' : `$${formatNumberToReadableString(value)}`
+    value === 0 ? 'No Limit' : formatMoney(value, globalSettings)
   }`
 
-const price = (label: string, value: number) =>
+const price = (
+  label: string,
+  value: number,
+  globalSettings?: Partial<GlobalSettings> | null
+) =>
   `- **${label}:** ${
-    value === 0 ? 'Not Set' : `$${formatNumberToReadableString(value)}`
+    value === 0 ? 'Not Set' : formatMoney(value, globalSettings)
   }`
 
 const multiplier = (value: number | Record<string, number>) => {
@@ -96,26 +105,27 @@ const rtpLine = <G extends Parameters<typeof calculateRTP>[0]>(
 
 const buildGamesSections = (
   settings: TGuildConfiguration['casinoSettings'],
-  showAdmin: boolean
+  showAdmin: boolean,
+  globalSettings?: Partial<GlobalSettings> | null
 ): string[] => [
   section('🪙 Coin Flip', [
     multiplier(settings.coinflip.winMultiplier),
-    bet('Max Bet', settings.coinflip.maxBet),
-    bet('Min Bet', settings.coinflip.minBet),
+    bet('Max Bet', settings.coinflip.maxBet, globalSettings),
+    bet('Min Bet', settings.coinflip.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('coinflip', settings.coinflip)] : [])
   ]),
 
   section('🎲 Dice', [
     multiplier(settings.dice.winMultiplier),
-    bet('Max Bet', settings.dice.maxBet),
-    bet('Min Bet', settings.dice.minBet),
+    bet('Max Bet', settings.dice.maxBet, globalSettings),
+    bet('Min Bet', settings.dice.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('dice', settings.dice)] : [])
   ]),
 
   section('🤑 Golden Jackpot', [
     multiplier(settings.goldenJackpot.winMultiplier),
-    bet('Max Bet', settings.goldenJackpot.maxBet),
-    bet('Min Bet', settings.goldenJackpot.minBet),
+    bet('Max Bet', settings.goldenJackpot.maxBet, globalSettings),
+    bet('Min Bet', settings.goldenJackpot.minBet, globalSettings),
     ...(showAdmin
       ? [
           rtpLine('goldenJackpot', settings.goldenJackpot),
@@ -128,8 +138,8 @@ const buildGamesSections = (
 
   section('🎟️ Lottery', [
     multiplier(settings.lottery.winMultipliers),
-    bet('Max Bet', settings.lottery.maxBet),
-    bet('Min Bet', settings.lottery.minBet),
+    bet('Max Bet', settings.lottery.maxBet, globalSettings),
+    bet('Min Bet', settings.lottery.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('lottery', settings.lottery)] : [])
   ]),
 
@@ -137,22 +147,22 @@ const buildGamesSections = (
     multiplier(
       formatPlinkoBinMultipliersForDisplay(settings.plinko.binMultipliers)
     ),
-    bet('Max Bet', settings.plinko.maxBet),
-    bet('Min Bet', settings.plinko.minBet),
+    bet('Max Bet', settings.plinko.maxBet, globalSettings),
+    bet('Min Bet', settings.plinko.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('plinko', settings.plinko)] : [])
   ]),
 
   section('🌀 Roulette', [
     multiplier(settings.roulette.winMultipliers),
-    bet('Max Bet', settings.roulette.maxBet),
-    bet('Min Bet', settings.roulette.minBet),
+    bet('Max Bet', settings.roulette.maxBet, globalSettings),
+    bet('Min Bet', settings.roulette.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('roulette', settings.roulette)] : [])
   ]),
 
   section('🎰 Slots', [
     multiplier(settings.slots.winMultipliers),
-    bet('Max Bet', settings.slots.maxBet),
-    bet('Min Bet', settings.slots.minBet),
+    bet('Max Bet', settings.slots.maxBet, globalSettings),
+    bet('Min Bet', settings.slots.minBet, globalSettings),
     ...(showAdmin
       ? [
           rtpLine('slots', settings.slots),
@@ -164,19 +174,19 @@ const buildGamesSections = (
   ]),
 
   section('🃏 Blackjack', [
-    bet('Max Bet', settings.blackjack.maxBet),
-    bet('Min Bet', settings.blackjack.minBet)
+    bet('Max Bet', settings.blackjack.maxBet, globalSettings),
+    bet('Min Bet', settings.blackjack.minBet, globalSettings)
   ]),
 
   section('🪨📄✂️ RPS', [
     `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
-    bet('Max Bet', settings.rps.maxBet),
-    bet('Min Bet', settings.rps.minBet)
+    bet('Max Bet', settings.rps.maxBet, globalSettings),
+    bet('Min Bet', settings.rps.minBet, globalSettings)
   ]),
 
   section('👀 Prediction', [
-    bet('Max Bet', settings.prediction.maxBet),
-    bet('Min Bet', settings.prediction.minBet)
+    bet('Max Bet', settings.prediction.maxBet, globalSettings),
+    bet('Min Bet', settings.prediction.minBet, globalSettings)
   ]),
 
   section('🎫 Raffle', [
@@ -206,9 +216,21 @@ const buildConfigSections = (
 
   section('💰 VIP', [
     ` - **VIP Max Members:** ${config.vipSettings.maxMembers}`,
-    price('VIP Price / Create', config.vipSettings.pricePerCreate),
-    price('VIP Price / Day', config.vipSettings.pricePerDay),
-    price('VIP Price / Member', config.vipSettings.pricePerAdditionalMember)
+    price(
+      'VIP Price / Create',
+      config.vipSettings.pricePerCreate,
+      config.globalSettings
+    ),
+    price(
+      'VIP Price / Day',
+      config.vipSettings.pricePerDay,
+      config.globalSettings
+    ),
+    price(
+      'VIP Price / Member',
+      config.vipSettings.pricePerAdditionalMember,
+      config.globalSettings
+    )
   ]),
 
   section('🏠 VIP Rooms', [
@@ -262,7 +284,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       for (const section of buildGamesSections(
         config.casinoSettings,
-        showAdmin
+        showAdmin,
+        config.globalSettings
       )) {
         await gamesThread.send(`${section}\n\u200B`)
       }

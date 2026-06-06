@@ -3,7 +3,11 @@ import { EmbedBuilder, GuildTextBasedChannel, MessageFlags } from 'discord.js'
 import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { checkAtmChannels, createUserIfNotExists } from '@/services'
+import {
+  assertGlobalFeature,
+  checkAtmChannels,
+  createUserIfNotExists
+} from '@/services'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
   createErrorEmbed,
@@ -21,6 +25,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const guildConfiguration = await checkAtmChannels(interaction)
     if (!guildConfiguration) return
+    if (
+      !(await assertGlobalFeature(
+        interaction,
+        guildConfiguration,
+        'registration'
+      ))
+    ) {
+      return
+    }
 
     const wasCreated = await createUserIfNotExists({
       userId: interaction.user.id,

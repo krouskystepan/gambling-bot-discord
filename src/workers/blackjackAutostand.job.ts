@@ -5,6 +5,7 @@ import { Client } from 'commandkit'
 import {
   deleteBlackjackGame,
   getAllOldBlackjackGames,
+  getGuildConfigByGuildId,
   settleCasinoWinnings,
   updateBlackjackGame
 } from '@/services'
@@ -36,6 +37,11 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
         .catch(() => null)
 
       if (!channel || channel.type !== ChannelType.GuildText) continue
+
+      const guildConfig = await getGuildConfigByGuildId({
+        guildId: game.guildId
+      })
+      const globalSettings = guildConfig?.globalSettings
 
       const message = await channel.messages
         .fetch(game.messageId)
@@ -98,7 +104,8 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
             activeHandIndex: -1,
             dealerCards: engine.dealerCards,
             result: { kind: 'FINAL', finalResultId, netProfit: net },
-            showBalance: false
+            showBalance: false,
+            globalSettings
           })
         ],
         components: []

@@ -1,14 +1,11 @@
-import {
-  formatNumberToReadableString,
-  formatNumberWithSpaces
-} from 'gambling-bot-shared'
+import { formatMoney, formatMoneyExact } from 'gambling-bot-shared'
 
 import { MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { checkUserRegistration } from '@/services'
+import { checkUserRegistration, getGuildConfigByGuildId } from '@/services'
 import { createSuccessEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
@@ -22,6 +19,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const user = await checkUserRegistration({ interaction })
     if (!user) return
 
+    const guildConfig = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
+    })
+    const globalSettings = guildConfig?.globalSettings
+
     const roundedBalance = Math.round(user.balance * 100) / 100
     const roundedLockedBalance = Math.round(user.lockedBalance * 100) / 100
     const roundedBonusBalance = Math.round(user.bonusBalance * 100) / 100
@@ -31,9 +33,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         createSuccessEmbed(
           'ATM - Balance',
           [
-            `💰 Available Balance: **$${formatNumberToReadableString(roundedBalance)}** ($${formatNumberWithSpaces(roundedBalance)})`,
-            `🔒 Locked Balance: **$${formatNumberToReadableString(roundedLockedBalance)}** ($${formatNumberWithSpaces(roundedLockedBalance)})`,
-            `🎁 Bonus Balance: **$${formatNumberToReadableString(roundedBonusBalance)}** ($${formatNumberWithSpaces(roundedBonusBalance)})`,
+            `💰 Available Balance: **${formatMoney(roundedBalance, globalSettings)}** (${formatMoneyExact(roundedBalance, globalSettings)})`,
+            `🔒 Locked Balance: **${formatMoney(roundedLockedBalance, globalSettings)}** (${formatMoneyExact(roundedLockedBalance, globalSettings)})`,
+            `🎁 Bonus Balance: **${formatMoney(roundedBonusBalance, globalSettings)}** (${formatMoneyExact(roundedBonusBalance, globalSettings)})`,
             '',
             '**What this means:**',
             '- **Available Balance** - money you can freely bet and withdraw.',

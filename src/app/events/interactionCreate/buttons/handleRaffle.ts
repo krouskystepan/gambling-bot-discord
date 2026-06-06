@@ -1,10 +1,12 @@
-import { formatNumberToReadableString } from 'gambling-bot-shared'
+import { formatMoney } from 'gambling-bot-shared'
 
 import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 
 import { handleUnexpectedButtonError } from '@/errors'
 import {
   addRaffleTickets,
+  assertGlobalFeature,
+  assertNotMaintenance,
   getGuildConfigByGuildId,
   getRaffleById,
   spendCasinoBalance
@@ -23,9 +25,20 @@ export default async (interaction: Interaction) => {
 
   const ticketAmount = Number(ticketAmountString || 1)
 
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral })
-
   try {
+    const guildConfigEarly = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
+    })
+    if (!guildConfigEarly) return
+    if (!(await assertNotMaintenance(interaction, guildConfigEarly))) return
+    if (
+      !(await assertGlobalFeature(interaction, guildConfigEarly, 'raffles'))
+    ) {
+      return
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+
     const raffle = await getRaffleById({
       raffleId,
       guildId: interaction.guildId!
@@ -51,10 +64,7 @@ export default async (interaction: Interaction) => {
       })
     }
 
-    const guildConfig = await getGuildConfigByGuildId({
-      guildId: interaction.guildId!
-    })
-    const casinoSettings = guildConfig?.casinoSettings
+    const casinoSettings = guildConfigEarly.casinoSettings
     if (!casinoSettings) return
 
     const existingEntry = raffle.participants.find(
@@ -91,7 +101,7 @@ export default async (interaction: Interaction) => {
         embeds: [
           createErrorEmbed(
             'Insufficient Funds',
-            `You need **$${formatNumberToReadableString(totalCost)}** to buy tickets.`
+            `You need **${formatMoney(totalCost, guildConfigEarly.globalSettings)}** to buy tickets.`
           )
         ]
       })
@@ -122,7 +132,7 @@ export default async (interaction: Interaction) => {
       )
       const rawPot = totalTickets * raffle.ticketPrice
 
-      const houseCut = guildConfig.casinoSettings.raffle.casinoCut
+      const houseCut = guildConfigEarly.casinoSettings.raffle.casinoCut
       const pot = rawPot * (1 - houseCut)
 
       const drawUnix = Math.floor(
@@ -134,14 +144,15 @@ export default async (interaction: Interaction) => {
         .setTitle('🎫 Global Raffle')
         .setDescription(
           [
-            `💰 Ticket Price: **$${formatNumberToReadableString(
-              updatedRaffle.ticketPrice
+            `💰 Ticket Price: **${formatMoney(
+              updatedRaffle.ticketPrice,
+              guildConfigEarly.globalSettings
             )}**`,
             `🎟️ Ticket Limit: **${updatedRaffle.maxTicketsPerUser}**`,
             '',
             `🗓️ Drawing Date: **<t:${drawUnix}:F>**`,
             '',
-            `💸 Current Pot: **$${formatNumberToReadableString(pot)}**`
+            `💸 Current Pot: **${formatMoney(pot, guildConfigEarly.globalSettings)}**`
           ].join('\n')
         )
         .setFooter({ text: `ID: ${raffle.drawId}` })
@@ -159,8 +170,9 @@ export default async (interaction: Interaction) => {
       embeds: [
         createSuccessEmbed(
           'Ticket/s Purchased',
-          `You bought **${ticketAmount}** ticket/s for **$${formatNumberToReadableString(
-            totalCost
+          `You bought **${ticketAmount}** ticket/s for **${formatMoney(
+            totalCost,
+            guildConfigEarly.globalSettings
           )}**`
         )
       ]

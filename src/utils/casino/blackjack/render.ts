@@ -1,4 +1,4 @@
-import { formatNumberToReadableString } from 'gambling-bot-shared'
+import { type GlobalSettings, formatMoney } from 'gambling-bot-shared'
 
 import {
   ActionRowBuilder,
@@ -21,7 +21,8 @@ import type {
 
 const formatFinalResult = (
   result: FinalGameResultId,
-  netProfit: number
+  netProfit: number,
+  globalSettings?: Partial<GlobalSettings> | null
 ): {
   color: ColorResolvable
   text: string
@@ -30,23 +31,19 @@ const formatFinalResult = (
     case 'WIN':
       return {
         color: 'Green',
-        text: `You win!\n💰 Total: 🟢 **$${formatNumberToReadableString(
-          netProfit
-        )}**`
+        text: `You win!\n💰 Total: 🟢 **${formatMoney(netProfit, globalSettings)}**`
       }
 
     case 'LOSS':
       return {
         color: 'Red',
-        text: `You lose!\n💰 Total: 🔴 -**$${formatNumberToReadableString(
-          Math.abs(netProfit)
-        )}**`
+        text: `You lose!\n💰 Total: 🔴 -**${formatMoney(Math.abs(netProfit), globalSettings)}**`
       }
 
     case 'EVEN':
       return {
         color: 'Yellow',
-        text: `Break-even.\n💰 Total: 🟡 **$0**`
+        text: `Break-even.\n💰 Total: 🟡 **${formatMoney(0, globalSettings)}**`
       }
   }
 }
@@ -74,7 +71,8 @@ const formatPhaseResult = (
 
 const formatStartResult = (
   result: StartBlackjackResultId,
-  totalBet: number
+  totalBet: number,
+  globalSettings?: Partial<GlobalSettings> | null
 ): {
   color: ColorResolvable
   text: string
@@ -83,23 +81,19 @@ const formatStartResult = (
     case 'PBJ':
       return {
         color: 'Green',
-        text: `You have Blackjack!\n💰 Total: 🟢 **$${formatNumberToReadableString(
-          totalBet * 2.5
-        )}**`
+        text: `You have Blackjack!\n💰 Total: 🟢 **${formatMoney(totalBet * 2.5, globalSettings)}**`
       }
 
     case 'DBJ':
       return {
         color: 'Red',
-        text: `Dealer has Blackjack!\n💰 Total: 🔴 **$-${formatNumberToReadableString(
-          totalBet
-        )}**`
+        text: `Dealer has Blackjack!\n💰 Total: 🔴 -**${formatMoney(totalBet, globalSettings)}**`
       }
 
     case 'BBJ':
       return {
         color: 'Yellow',
-        text: `Both have Blackjack.\n💰 Total: 🟡 **$0**`
+        text: `Both have Blackjack.\n💰 Total: 🟡 **${formatMoney(0, globalSettings)}**`
       }
   }
 }
@@ -112,7 +106,8 @@ export const renderBlackjackEmbed = ({
   userBalance,
   result,
   dealerHideSecondCard,
-  betId
+  betId,
+  globalSettings
 }: RenderParams) => {
   const playerHandsText = hands
     .map((hand, index) => {
@@ -124,7 +119,7 @@ export const renderBlackjackEmbed = ({
       return [
         `**Hand ${index + 1}** ${isActive ? '👉 **ACTIVE**' : ''}`,
         `${cards} (**${total}**)${busted ? ' 💥 BUST' : ''}`,
-        `💵 Bet: **$${formatNumberToReadableString(hand.betAmount)}**`
+        `💵 Bet: **${formatMoney(hand.betAmount, globalSettings)}**`
       ].join('\n')
     })
     .join('\n\n')
@@ -145,7 +140,11 @@ export const renderBlackjackEmbed = ({
   if (result) {
     switch (result.kind) {
       case 'START': {
-        const formatted = formatStartResult(result.startResultId, totalBet)
+        const formatted = formatStartResult(
+          result.startResultId,
+          totalBet,
+          globalSettings
+        )
         color = formatted.color
         resultText = formatted.text
         break
@@ -161,7 +160,8 @@ export const renderBlackjackEmbed = ({
       case 'FINAL': {
         const formatted = formatFinalResult(
           result.finalResultId,
-          result.netProfit
+          result.netProfit,
+          globalSettings
         )
         color = formatted.color
         resultText = formatted.text
@@ -171,7 +171,7 @@ export const renderBlackjackEmbed = ({
   }
 
   const sections: string[] = [
-    `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**`,
+    `💵 Total Bet: **${formatMoney(totalBet, globalSettings)}**`,
     `**Dealer**\n${dealerHand}`,
     `**You**\n${playerHandsText}`
   ]
@@ -179,7 +179,7 @@ export const renderBlackjackEmbed = ({
   if (resultText) {
     let resultSection = `**Result**\n${resultText}`
     if (showBalance && typeof userBalance === 'number') {
-      resultSection += `\n🏦 Balance: **$${formatNumberToReadableString(userBalance)}**`
+      resultSection += `\n🏦 Balance: **${formatMoney(userBalance, globalSettings)}**`
     }
     sections.push(resultSection)
   }
