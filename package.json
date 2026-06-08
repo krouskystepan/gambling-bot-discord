@@ -4,6 +4,11 @@
   "main": "src/app.ts",
   "type": "module",
   "scripts": {
+    "prepare": "bash scripts/setup-git-hooks.sh",
+    "predev": "bash ../gambling-bot-shared/scripts/ensure-linked.sh",
+    "shared:link": "CI=true pnpm link ../gambling-bot-shared",
+    "shared:unlink": "CI=true pnpm unlink gambling-bot-shared && CI=true pnpm install --frozen-lockfile",
+    "shared:status": "bash ../gambling-bot-shared/scripts/shared-link-status.sh",
     "dev": "commandkit dev",
     "build": "commandkit build",
     "start": "commandkit start",
@@ -31,7 +36,8 @@
   "pnpm": {
     "ignoredBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {}
   },
   "dependencies": {
     "commandkit": "^1.2.1",

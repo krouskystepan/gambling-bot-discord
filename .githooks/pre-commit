@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+node -e "
+  const pkg = require('./package.json');
+  const dep = pkg.dependencies?.['gambling-bot-shared'] ?? '';
+  if (/^(file:|link:|workspace:)/.test(dep)) {
+    console.error('gambling-bot-shared must use an npm version range, not', dep);
+    process.exit(1);
+  }
+"
+
+if [ -f pnpm-workspace.yaml ]; then
+  if grep -qE 'gambling-bot-shared:\s*link:' pnpm-workspace.yaml; then
+    echo 'pnpm-workspace.yaml contains a link: override for gambling-bot-shared' >&2
+    exit 1
+  fi
+fi
+
+if git diff --cached --name-only | grep -q '^pnpm-lock.yaml$'; then
+  if git diff --cached pnpm-lock.yaml | grep -qE 'gambling-bot-shared.*link:'; then
+    echo 'pnpm-lock.yaml contains a link: resolution for gambling-bot-shared' >&2
+    exit 1
+  fi
+fi
