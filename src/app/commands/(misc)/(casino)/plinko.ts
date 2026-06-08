@@ -212,12 +212,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         emoji = '➖'
       }
 
-      const isNegative = displayValue < 0
-
       results.push(
-        `Ball **${i + 1}** - x${formattedMultiplier} | ${emoji} | ${
-          isNegative ? '-' : ''
-        }${formatMoney(displayValue, configReply.globalSettings)}`
+        `Ball **${i + 1}** - x${formattedMultiplier} | ${emoji} | ${formatMoney(displayValue, configReply.globalSettings)}`
       )
     }
 
