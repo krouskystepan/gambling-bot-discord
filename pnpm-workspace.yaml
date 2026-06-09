@@ -1,1 +1,7 @@
 excludeLinksFromLockfile: true
+
+ignoredBuiltDependencies:
+  - esbuild
+
+minimumReleaseAgeExclude:
+  - gambling-bot-shared

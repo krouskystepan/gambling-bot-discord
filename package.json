@@ -33,12 +33,6 @@
   "license": "ISC",
   "description": "",
   "packageManager": "pnpm@11.5.0",
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "esbuild"
-    ],
-    "overrides": {}
-  },
   "dependencies": {
     "commandkit": "^1.2.1",
     "discord.js": "^14.26.4",
