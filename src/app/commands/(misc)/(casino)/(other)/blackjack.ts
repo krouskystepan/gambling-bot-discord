@@ -1,7 +1,8 @@
 import {
   formatMoney,
   generateId,
-  parseReadableStringToNumber
+  parseReadableStringToNumber,
+  shouldAnnounceByMultiplier
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -28,6 +29,7 @@ import {
 } from '@/utils/casino/blackjack'
 import { checkValidBet } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'blackjack',
@@ -152,6 +154,29 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         winnings: payout,
         betId
       })
+
+      if (startResultId === 'PBJ') {
+        const blackjackMultiplier = payout / parsedBetAmount
+        if (
+          shouldAnnounceByMultiplier(
+            blackjackMultiplier,
+            configReply.casinoSettings.winAnnouncements.blackjackMinMultiplier
+          )
+        ) {
+          tryAnnounceBigWin({
+            guild: interaction.guild,
+            guildConfig: configReply,
+            userId: user.userId,
+            title: '🃏 Blackjack Big Win!',
+            intro: 'hit blackjack!',
+            lines: [
+              `**x${blackjackMultiplier.toFixed(2)}** → **${formatMoney(payout, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+            ],
+            betId,
+            sourceChannelId: interaction.channelId
+          })
+        }
+      }
 
       const hands = [
         {

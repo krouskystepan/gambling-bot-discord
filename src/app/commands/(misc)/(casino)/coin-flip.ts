@@ -1,7 +1,8 @@
 import {
   formatMoney,
   generateId,
-  parseReadableStringToNumber
+  parseReadableStringToNumber,
+  shouldAnnounceByMultiplier
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -21,6 +22,7 @@ import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 import { coinEmojis, flipCoinEmote } from '@/utils/discord/customEmotes'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'coin-flip',
@@ -147,6 +149,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     let liveResult = 0
     const results: string[] = []
+    const announcementFlips: string[] = []
 
     await interaction.deferReply()
 
@@ -172,9 +175,21 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       const flipResult = flipCoin()
       const win = side === flipResult
-      const winnings = win
-        ? parsedBetAmount * configReply.casinoSettings.coinflip.winMultiplier
+      const flipMultiplier = win
+        ? configReply.casinoSettings.coinflip.winMultiplier
         : 0
+      const winnings = win ? parsedBetAmount * flipMultiplier : 0
+
+      if (
+        shouldAnnounceByMultiplier(
+          flipMultiplier,
+          configReply.casinoSettings.winAnnouncements.coinflipMinMultiplier
+        )
+      ) {
+        announcementFlips.push(
+          `Flip **${i + 1}** — ${coinEmojis[flipResult]} — **x${flipMultiplier.toFixed(2)}** → **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+        )
+      }
 
       results.push(
         `${coinEmojis[flipResult]} | ${win ? '🎉' : '❌'} | ${
@@ -196,6 +211,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       betId
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🪙 Coin Flip Big Win!',
+      intro: 'called it right!',
+      lines: announcementFlips,
+      betId,
+      sourceChannelId: interaction.channelId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0

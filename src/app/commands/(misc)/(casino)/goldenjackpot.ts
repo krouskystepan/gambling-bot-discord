@@ -1,7 +1,8 @@
 import {
   formatMoney,
   generateId,
-  parseReadableStringToNumber
+  parseReadableStringToNumber,
+  shouldAnnounceGoldenJackpotHit
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -20,6 +21,7 @@ import { drawGoldenJackpot } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 const GOLDEN_JACKPOT_MAX_ENTRIES = 100
 
@@ -147,6 +149,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const initialTickets = entries
     let liveResult = 0
     let jackpotTries: string[] = []
+    const announcementHits: string[] = []
 
     await interaction.deferReply()
 
@@ -189,12 +192,26 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       liveResult += winnings - parsedBetAmount
 
       if (isJackpot) {
+        const tryLabel = tryNumber.toString().padStart(3, '0')
+
         jackpotTries.push(
           `**JACKPOT!** You won **${formatMoney(
             winnings,
             configReply.globalSettings
-          )}** on Try **#${tryNumber.toString().padStart(3, '0')}**! 🔥`
+          )}** on Try **#${tryLabel}**! 🔥`
         )
+
+        if (
+          shouldAnnounceGoldenJackpotHit(
+            configReply.casinoSettings.goldenJackpot.winMultiplier,
+            configReply.casinoSettings.winAnnouncements
+              .goldenJackpotMinMultiplier
+          )
+        ) {
+          announcementHits.push(
+            `hit the jackpot on Try **#${tryLabel}**!\n💰 Won: **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+          )
+        }
       }
 
       if (!skipAnimations) {
@@ -234,6 +251,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       betId
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🏆 Golden Jackpot!',
+      lines: announcementHits,
+      betId,
+      sourceChannelId: interaction.channelId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0

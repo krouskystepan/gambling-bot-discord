@@ -23,7 +23,9 @@ import {
   renderBlackjackEmbed,
   resolveResult
 } from '@/utils/casino/blackjack'
+import { collectBlackjackBigWinLines } from '@/utils/casino/blackjackBigWin'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -257,6 +259,24 @@ export default async (interaction: Interaction) => {
         winnings: totalPayout,
         betId
       })
+
+      if (guildConfig) {
+        tryAnnounceBigWin({
+          guild: interaction.guild,
+          guildConfig,
+          userId: game.userId,
+          title: '🃏 Blackjack Big Win!',
+          intro: 'crushed the table!',
+          lines: collectBlackjackBigWinLines({
+            engine,
+            globalSettings,
+            minMultiplier:
+              guildConfig.casinoSettings.winAnnouncements.blackjackMinMultiplier
+          }),
+          betId,
+          sourceChannelId: interaction.channelId
+        })
+      }
 
       let userBalance: number | undefined
 

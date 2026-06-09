@@ -1,7 +1,8 @@
 import {
   formatMoney,
   generateId,
-  parseReadableStringToNumber
+  parseReadableStringToNumber,
+  shouldAnnounceByMultiplier
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -21,6 +22,7 @@ import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 import { slotEmojis, spinSlotEmotes } from '@/utils/discord/customEmotes'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'slots',
@@ -138,6 +140,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     let totalWinnings = 0
     let liveResult = 0
     const results: string[] = []
+    const announcementSpins: string[] = []
 
     await interaction.deferReply()
 
@@ -172,10 +175,21 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         (match) => slotEmojis[match]
       )
 
-      const winnings =
-        (configReply.casinoSettings.slots.winMultipliers[spinResult] || 0) *
-        parsedBetAmount
+      const spinMultiplier =
+        configReply.casinoSettings.slots.winMultipliers[spinResult] || 0
+      const winnings = spinMultiplier * parsedBetAmount
       const isWin = winnings > 0
+
+      if (
+        shouldAnnounceByMultiplier(
+          spinMultiplier,
+          configReply.casinoSettings.winAnnouncements.slotsMinMultiplier
+        )
+      ) {
+        announcementSpins.push(
+          `Spin **${i + 1}** — **${resultString}** — **x${spinMultiplier}** → **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+        )
+      }
 
       results.push(
         `**${resultString}** | ${isWin ? '🎉' : '❌'} | ${
@@ -197,6 +211,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       betId
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🎰 Slots Big Win!',
+      intro: 'hit a huge combo!',
+      lines: announcementSpins,
+      betId,
+      sourceChannelId: interaction.channelId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0

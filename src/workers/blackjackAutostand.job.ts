@@ -19,7 +19,9 @@ import {
   renderBlackjackEmbed,
   resolveResult
 } from '@/utils/casino/blackjack'
+import { collectBlackjackBigWinLines } from '@/utils/casino/blackjackBigWin'
 import { sleep } from '@/utils/common/utils'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 import { logger } from '@/utils/logger'
 
 export const blackjackAutostandJob = async (client: Client<true>) => {
@@ -92,6 +94,24 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
         winnings: totalPayout,
         betId: game.betId
       })
+
+      if (guildConfig) {
+        tryAnnounceBigWin({
+          guild,
+          guildConfig,
+          userId: game.userId,
+          title: '🃏 Blackjack Big Win!',
+          intro: 'crushed the table!',
+          lines: collectBlackjackBigWinLines({
+            engine,
+            globalSettings,
+            minMultiplier:
+              guildConfig.casinoSettings.winAnnouncements.blackjackMinMultiplier
+          }),
+          betId: game.betId,
+          sourceChannelId: game.channelId
+        })
+      }
 
       await message.edit({
         content: 'This game was inactive, so auto-stand was executed.',

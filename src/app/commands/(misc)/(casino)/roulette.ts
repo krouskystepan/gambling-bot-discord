@@ -1,7 +1,8 @@
 import {
   formatMoney,
   generateId,
-  parseReadableStringToNumber
+  parseReadableStringToNumber,
+  shouldAnnounceByMultiplier
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -27,6 +28,7 @@ import {
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'roulette',
@@ -196,6 +198,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     let liveResult = 0
     const results: string[] = []
+    const announcementHits: string[] = []
 
     await interaction.deferReply()
 
@@ -232,6 +235,21 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         )
 
         winnings += winAmount
+
+        if (winAmount > 0) {
+          const betMultiplier = winAmount / bet.amount
+          if (
+            shouldAnnounceByMultiplier(
+              betMultiplier,
+              configReply.casinoSettings.winAnnouncements.rouletteMinMultiplier
+            )
+          ) {
+            announcementHits.push(
+              `Spin **${i + 1}** — **${color} ${spinResult}** — **${bet.displayValue ?? bet.value}** — **x${betMultiplier.toFixed(2)}** → **${formatMoney(winAmount, configReply.globalSettings)}** (bet **${formatMoney(bet.amount, configReply.globalSettings)}**)`
+            )
+          }
+        }
+
         spinOutput += `\n**${formatMoney(bet.amount, configReply.globalSettings)}** on ${
           bet.displayValue ?? bet.value
         } | ${
@@ -255,6 +273,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       betId
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🌀 Roulette Big Win!',
+      intro: 'landed a huge bet!',
+      lines: announcementHits,
+      betId,
+      sourceChannelId: interaction.channelId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0

@@ -13,6 +13,7 @@ const baseConfig = (globalSettings?: TGuildConfiguration['globalSettings']) =>
     guildId: 'g1',
     atmChannelIds: { actions: '', logs: '' },
     casinoChannelIds: [],
+    winAnnouncementsChannelId: '',
     predictionChannelIds: { actions: '', logs: '' },
     raffleChannelIds: { actions: '', logs: '' },
     managerRoleId: '',

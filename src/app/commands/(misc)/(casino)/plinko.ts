@@ -4,7 +4,8 @@ import {
   generateId,
   getPlinkoMultiplierAtPathIndex,
   normalizePlinkoBinMultipliers,
-  parseReadableStringToNumber
+  parseReadableStringToNumber,
+  shouldAnnouncePlinkoBall
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -24,6 +25,7 @@ import { dropPlinkoPath } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'plinko',
@@ -145,6 +147,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     let totalWinnings = 0
     let liveResult = 0
     const results: string[] = []
+    const announcementBalls: string[] = []
 
     await interaction.deferReply()
 
@@ -215,6 +218,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       results.push(
         `Ball **${i + 1}** - x${formattedMultiplier} | ${emoji} | ${formatMoney(displayValue, configReply.globalSettings)}`
       )
+
+      if (
+        shouldAnnouncePlinkoBall(
+          multiplier,
+          configReply.casinoSettings.winAnnouncements.plinkoMinMultiplier
+        )
+      ) {
+        announcementBalls.push(
+          `Ball **${i + 1}** — **x${formattedMultiplier}** → **${formatMoney(winnings, configReply.globalSettings)}**`
+        )
+      }
     }
 
     const finalBalance = await settleCasinoWinnings({
@@ -225,6 +239,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       betId
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🎯 Plinko Big Win!',
+      intro: 'landed huge multipliers!',
+      lines: announcementBalls,
+      betId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0

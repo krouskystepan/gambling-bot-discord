@@ -6,8 +6,8 @@
   "scripts": {
     "prepare": "bash scripts/setup-git-hooks.sh",
     "predev": "bash ../gambling-bot-shared/scripts/ensure-linked.sh",
-    "shared:link": "CI=true pnpm link ../gambling-bot-shared",
-    "shared:unlink": "CI=true pnpm unlink gambling-bot-shared && CI=true pnpm install --frozen-lockfile",
+    "shared:link": "bash ../gambling-bot-shared/scripts/ensure-linked.sh",
+    "shared:unlink": "bash ../gambling-bot-shared/scripts/unlink-app.sh",
     "shared:status": "bash ../gambling-bot-shared/scripts/shared-link-status.sh",
     "dev": "commandkit dev",
     "build": "commandkit build",

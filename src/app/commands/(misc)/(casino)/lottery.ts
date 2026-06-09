@@ -2,7 +2,8 @@ import {
   TCasinoSettings,
   formatMoney,
   generateId,
-  parseReadableStringToNumber
+  parseReadableStringToNumber,
+  shouldAnnounceByMultiplier
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -21,6 +22,7 @@ import { drawLottery } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'lottery',
@@ -168,6 +170,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     let liveResult = 0
     const results: string[] = []
+    const announcementDraws: string[] = []
 
     await interaction.deferReply()
 
@@ -203,9 +206,20 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         lotteryNumbers.includes(n)
       ).length as keyof TCasinoSettings['lottery']['winMultipliers']
 
-      const winnings =
-        parsedBetAmount *
+      const drawMultiplier =
         configReply.casinoSettings.lottery.winMultipliers[matchedNumbers]
+      const winnings = parsedBetAmount * drawMultiplier
+
+      if (
+        shouldAnnounceByMultiplier(
+          drawMultiplier,
+          configReply.casinoSettings.winAnnouncements.lotteryMinMultiplier
+        )
+      ) {
+        announcementDraws.push(
+          `Draw **${i + 1}** — **${matchedNumbers} matches** — **x${drawMultiplier}** → **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+        )
+      }
 
       results.push(
         `**${resultString}** | ${matchedNumbers > 0 ? `🎉 **${matchedNumbers}**` : `❌ **0**`} | ${
@@ -229,6 +243,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       betId
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🎟️ Lottery Big Win!',
+      intro: 'matched big numbers!',
+      lines: announcementDraws,
+      betId,
+      sourceChannelId: interaction.channelId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0

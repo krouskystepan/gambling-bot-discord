@@ -1,7 +1,8 @@
 import {
   formatMoney,
   generateId,
-  parseReadableStringToNumber
+  parseReadableStringToNumber,
+  shouldAnnounceByMultiplier
 } from 'gambling-bot-shared'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
@@ -21,6 +22,7 @@ import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 import { diceEmojis, rollDiceEmote } from '@/utils/discord/customEmotes'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'dice',
@@ -148,6 +150,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     let liveResult = 0
     const results: string[] = []
+    const announcementRolls: string[] = []
 
     await interaction.deferReply()
 
@@ -173,11 +176,23 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       const dice = rollDice()
       const win = side === dice
-      const winnings = win
-        ? parsedBetAmount * configReply.casinoSettings.dice.winMultiplier
+      const rollMultiplier = win
+        ? configReply.casinoSettings.dice.winMultiplier
         : 0
+      const winnings = win ? parsedBetAmount * rollMultiplier : 0
 
       const diceEmoji = diceEmojis[dice] ?? '🎲'
+
+      if (
+        shouldAnnounceByMultiplier(
+          rollMultiplier,
+          configReply.casinoSettings.winAnnouncements.diceMinMultiplier
+        )
+      ) {
+        announcementRolls.push(
+          `Roll **${i + 1}** — ${diceEmoji} — **x${rollMultiplier}** → **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+        )
+      }
 
       results.push(
         `${diceEmoji} | ${win ? '🎉' : '❌'} | ${
@@ -199,6 +214,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       betId
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🎲 Dice Big Win!',
+      intro: 'rolled hot!',
+      lines: announcementRolls,
+      betId,
+      sourceChannelId: interaction.channelId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0

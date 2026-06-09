@@ -4,8 +4,13 @@ set -euo pipefail
 node -e "
   const pkg = require('./package.json');
   const dep = pkg.dependencies?.['gambling-bot-shared'] ?? '';
+  const override = pkg.pnpm?.overrides?.['gambling-bot-shared'] ?? '';
   if (/^(file:|link:|workspace:)/.test(dep)) {
     console.error('gambling-bot-shared must use an npm version range, not', dep);
+    process.exit(1);
+  }
+  if (/link:/.test(String(override))) {
+    console.error('package.json pnpm.overrides must not link gambling-bot-shared');
     process.exit(1);
   }
 "
