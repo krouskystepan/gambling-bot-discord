@@ -1,4 +1,4 @@
-import { TBlackjackGame } from '@/models/BlackjackGame'
+import { TBlackjackGame } from 'gambling-bot-shared'
 
 import type { EngineState } from './types'
 

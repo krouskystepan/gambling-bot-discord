@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { TBlackjackGame } from '@/models/BlackjackGame'
+import { TBlackjackGame } from 'gambling-bot-shared'
 import { docToEngine, engineToDoc } from '@/utils/casino/blackjack/state'
 
 import { card } from '../../../helpers/cards'

@@ -1,62 +1,8 @@
-import { Schema, model } from 'mongoose'
+import { TRaffle } from 'gambling-bot-shared'
+import { RaffleSchema } from 'gambling-bot-shared/server'
+import mongoose from 'mongoose'
 
-type TRaffle = {
-  drawId: string
-  raffleId: string
-  guildId: string
-  channelId: string
-  creatorId: string
+export type { TRaffle } from 'gambling-bot-shared'
 
-  ticketPrice: number
-  maxTicketsPerUser: number
-
-  nextDrawAt: Date
-  lastDrawAt?: Date
-  drawIntervalMs: number
-
-  status: 'active' | 'canceled'
-
-  participants: {
-    userId: string
-    tickets: number
-  }[]
-
-  createdAt: Date
-  updatedAt: Date
-}
-
-const RaffleSchema = new Schema<TRaffle>(
-  {
-    drawId: { type: String, required: true },
-    raffleId: { type: String, required: true },
-    guildId: { type: String, required: true, index: true },
-    channelId: { type: String, required: true },
-    creatorId: { type: String, required: true },
-
-    ticketPrice: { type: Number, required: true, min: 1 },
-    maxTicketsPerUser: { type: Number, required: true, min: 1 },
-
-    nextDrawAt: { type: Date, required: true },
-    lastDrawAt: { type: Date },
-    drawIntervalMs: { type: Number, required: true, min: 1 },
-
-    status: {
-      type: String,
-      enum: ['active', 'canceled'],
-      default: 'active',
-      index: true
-    },
-
-    participants: [
-      {
-        userId: { type: String, required: true },
-        tickets: { type: Number, required: true, min: 1 }
-      }
-    ]
-  },
-  { timestamps: true }
-)
-
-RaffleSchema.index({ raffleId: 1 }, { unique: true })
-
-export default model<TRaffle>('Raffle', RaffleSchema)
+export default (mongoose.models.Raffle as mongoose.Model<TRaffle>) ||
+  mongoose.model<TRaffle>('Raffle', RaffleSchema)
