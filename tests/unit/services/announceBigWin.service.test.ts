@@ -12,6 +12,7 @@ vi.mock('@/utils/logger', () => ({
 }))
 
 const { createBetEmbed } = await import('@/utils/discord/createEmbed')
+const { logger } = await import('@/utils/logger')
 
 const baseConfig = {
   guildId: 'guild-1',
@@ -79,6 +80,25 @@ describe('announceBigWin', () => {
     expect(createBetEmbed).not.toHaveBeenCalled()
   })
 
+  it('skips when channel fetch fails', async () => {
+    const guild = {
+      id: 'guild-1',
+      channels: {
+        fetch: vi.fn().mockRejectedValue(new Error('fetch failed'))
+      }
+    }
+
+    await announceBigWin({
+      guild: guild as never,
+      guildConfig: baseConfig as never,
+      userId: 'user-1',
+      title: 'Win',
+      description: 'Big win'
+    })
+
+    expect(createBetEmbed).not.toHaveBeenCalled()
+  })
+
   it('sends embed when channel is configured and sendable', async () => {
     const send = vi.fn().mockResolvedValue(undefined)
     const guild = {
@@ -109,6 +129,35 @@ describe('announceBigWin', () => {
     expect(send).toHaveBeenCalledWith({
       content: '<@user-1>',
       embeds: [{ title: 'embed' }]
+    })
+  })
+
+  it('logs when send fails', async () => {
+    const sendError = new Error('send failed')
+    const send = vi.fn().mockRejectedValue(sendError)
+    const guild = {
+      id: 'guild-1',
+      channels: {
+        fetch: vi.fn().mockResolvedValue({
+          send,
+          guild: { id: 'guild-1' }
+        })
+      }
+    }
+
+    await announceBigWin({
+      guild: guild as never,
+      guildConfig: baseConfig as never,
+      userId: 'user-1',
+      title: 'Win',
+      description: 'Big win'
+    })
+
+    await vi.waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith(
+        { err: sendError, guildId: 'guild-1', channelId: 'announce-ch' },
+        'Failed to send big win announcement'
+      )
     })
   })
 })

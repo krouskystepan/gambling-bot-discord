@@ -52,4 +52,41 @@ describe('collectBlackjackBigWinLines', () => {
 
     expect(lines).toEqual([])
   })
+
+  it('skips hands with no payout', () => {
+    const lines = collectBlackjackBigWinLines({
+      engine: {
+        deck: [],
+        deckIndex: 0,
+        hands: [
+          {
+            cards: [card('10', 10), card('6', 6)],
+            betAmount: 100,
+            finished: true,
+            isSplitHand: false
+          }
+        ],
+        activeHandIndex: 0,
+        phase: 'PLAYER',
+        dealerCards: [card('10', 10), card('K', 10)]
+      },
+      globalSettings: undefined,
+      minMultiplier: 2
+    })
+
+    expect(lines).toEqual([])
+  })
+
+  it('skips missing hands in the engine', () => {
+    const engine = winningEngine()
+    engine.hands = [undefined as unknown as EngineState['hands'][number]]
+
+    const lines = collectBlackjackBigWinLines({
+      engine,
+      globalSettings: undefined,
+      minMultiplier: 2
+    })
+
+    expect(lines).toEqual([])
+  })
 })
