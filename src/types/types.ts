@@ -70,4 +70,5 @@ export type TAddPredictionBet = Pick<
   choiceName: TPredictionOption['choiceName']
   userId: TPredictionOption['bets'][number]['userId']
   amount: TPredictionOption['bets'][number]['amount']
+  betId: TPredictionOption['bets'][number]['betId']
 }

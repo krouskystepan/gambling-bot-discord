@@ -57,7 +57,8 @@ describe('prediction.db', () => {
       guildId: 'guild-1',
       choiceName: 'Over',
       userId: 'user-1',
-      amount: 250
+      amount: 250,
+      betId: 'bet-pred-2'
     })
 
     const updated = await Prediction.findOne({ predictionId: 'pred-2' })

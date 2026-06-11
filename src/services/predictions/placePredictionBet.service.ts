@@ -1,4 +1,4 @@
-import { validatePredictionChoiceBet } from 'gambling-bot-shared'
+import { generateId, validatePredictionChoiceBet } from 'gambling-bot-shared'
 
 import { refundLockedBet, reserveCasinoBet } from '@/services/casino'
 import { addPredictionBet, getPredictionById } from '@/services/db'
@@ -70,11 +70,13 @@ export const placePredictionBet = async ({
     throw new PlacePredictionBetError(validation.error, 'VALIDATION_FAILED')
   }
 
+  const betId = generateId()
+
   await reserveCasinoBet({
     userId,
     guildId,
     totalBet: amount,
-    betId: predictionId,
+    betId,
     game: 'prediction'
   })
 
@@ -83,7 +85,8 @@ export const placePredictionBet = async ({
     guildId,
     userId,
     amount,
-    choiceName
+    choiceName,
+    betId
   })
 
   if (!added) {
@@ -91,7 +94,7 @@ export const placePredictionBet = async ({
       userId,
       guildId,
       amount,
-      betId: predictionId,
+      betId,
       game: 'prediction'
     })
     throw new PlacePredictionBetError(

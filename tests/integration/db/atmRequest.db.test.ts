@@ -5,7 +5,9 @@ import {
   completeAtmRequest,
   createAtmRequest,
   deleteAtmRequest,
-  getPendingAtmRequest
+  getAtmRequestCounts,
+  getPendingAtmRequest,
+  listAtmRequests
 } from '@/services/db/atmRequest.db'
 
 import { AtmRequest, setupMongoTests } from '../../helpers/mongo'
@@ -87,6 +89,42 @@ describe('atmRequest.db', () => {
       handledBy: 'mod-2'
     })
     expect(second).toBeNull()
+  })
+
+  it('lists and counts requests by status', async () => {
+    await createAtmRequest({
+      requestId: 'atm-list-1',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'deposit',
+      amount: 100,
+      account: 'acc-a'
+    })
+    await createAtmRequest({
+      requestId: 'atm-list-2',
+      userId: 'user-2',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 50,
+      account: 'acc-b'
+    })
+    await completeAtmRequest({
+      requestId: 'atm-list-2',
+      status: 'approved',
+      handledBy: 'mod-1'
+    })
+
+    const pending = await listAtmRequests({
+      guildId: 'guild-1',
+      status: 'pending'
+    })
+    expect(pending.total).toBe(1)
+    expect(pending.requests[0]?.requestId).toBe('atm-list-1')
+
+    const counts = await getAtmRequestCounts({ guildId: 'guild-1' })
+    expect(counts.pending).toBe(1)
+    expect(counts.approved).toBe(1)
+    expect(counts.total).toBe(2)
   })
 
   it('deletes request by id', async () => {

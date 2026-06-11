@@ -190,7 +190,8 @@ const buildGamesSections = (
   ]),
 
   section('🎫 Raffle', [
-    `- **Casino Cut:** ${settings.raffle.casinoCut * 100}%`
+    `- **Casino Cut:** ${settings.raffle.casinoCut * 100}%`,
+    ...(showAdmin ? [rtpLine('raffle', settings.raffle)] : [])
   ])
 ]
 

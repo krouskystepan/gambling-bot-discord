@@ -103,7 +103,8 @@ export const addPredictionBet = async ({
   guildId,
   choiceName,
   userId,
-  amount
+  amount,
+  betId
 }: TAddPredictionBet) => {
   return Prediction.findOneAndUpdate(
     {
@@ -115,7 +116,8 @@ export const addPredictionBet = async ({
       $push: {
         'choices.$.bets': {
           userId,
-          amount
+          amount,
+          betId
         }
       }
     }

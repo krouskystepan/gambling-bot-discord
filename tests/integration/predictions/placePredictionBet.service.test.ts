@@ -51,8 +51,15 @@ describe('placePredictionBet.service', () => {
     expect(user?.balance).toBe(400)
     expect(user?.lockedBalance).toBe(100)
 
+    const prediction = await predictionDb.getPredictionById({
+      predictionId: 'pred-happy',
+      guildId: 'guild-1'
+    })
+    const betId = prediction?.choices[0]?.bets[0]?.betId
+    expect(betId).toBeTruthy()
+
     const tx = await Transaction.findOne({
-      betId: 'pred-happy',
+      betId,
       type: 'bet'
     })
     expect(tx?.amount).toBe(100)
