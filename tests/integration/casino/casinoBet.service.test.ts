@@ -26,7 +26,8 @@ describe('casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       totalBet: 80,
-      betId: 'bet-1'
+      betId: 'bet-1',
+      game: 'dice'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -44,7 +45,8 @@ describe('casinoBet.service', () => {
         userId: 'missing',
         guildId: 'guild-1',
         totalBet: 10,
-        betId: 'reserve-missing'
+        betId: 'reserve-missing',
+        game: 'dice'
       })
     ).rejects.toThrow('USER_NOT_FOUND')
   })
@@ -62,7 +64,8 @@ describe('casinoBet.service', () => {
       userId: 'null-bonus',
       guildId: 'guild-1',
       totalBet: 20,
-      betId: 'null-bonus-bet'
+      betId: 'null-bonus-bet',
+      game: 'dice'
     })
 
     const user = await User.findOne({
@@ -80,7 +83,8 @@ describe('casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       totalBet: 50,
-      betId: 'bonus-only'
+      betId: 'bonus-only',
+      game: 'dice'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -97,7 +101,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         totalBet: 100,
-        betId: 'bet-2'
+        betId: 'bet-2',
+        game: 'dice'
       })
     ).rejects.toThrow('INSUFFICIENT_FUNDS')
   })
@@ -109,7 +114,8 @@ describe('casinoBet.service', () => {
         guildId: 'guild-1',
         totalBet: 10,
         winnings: 0,
-        betId: 'settle-missing'
+        betId: 'settle-missing',
+        game: 'dice'
       })
     ).rejects.toThrow('USER_NOT_FOUND')
   })
@@ -122,7 +128,8 @@ describe('casinoBet.service', () => {
       guildId: 'guild-1',
       totalBet: 100,
       winnings: 0,
-      betId: 'bet-zero-win'
+      betId: 'bet-zero-win',
+      game: 'dice'
     })
 
     expect(finalBalance).toBe(500)
@@ -139,7 +146,8 @@ describe('casinoBet.service', () => {
       guildId: 'guild-1',
       totalBet: 100,
       winnings: 200,
-      betId: 'bet-3'
+      betId: 'bet-3',
+      game: 'dice'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -158,7 +166,8 @@ describe('casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       amount: 75,
-      betId: 'bet-4'
+      betId: 'bet-4',
+      game: 'dice'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -179,7 +188,8 @@ describe('casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       amount: 75,
-      betId: 'bet-5'
+      betId: 'bet-5',
+      game: 'dice'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -196,7 +206,8 @@ describe('casinoBet.service', () => {
       guildId: 'guild-1',
       totalBet: 100,
       winnings: 200,
-      betId: 'bet-6'
+      betId: 'bet-6',
+      game: 'dice'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -215,7 +226,8 @@ describe('casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       amount: 60,
-      betId: 'spend-1'
+      betId: 'spend-1',
+      game: 'dice'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -229,7 +241,8 @@ describe('casinoBet.service', () => {
         userId: 'missing',
         guildId: 'guild-1',
         amount: 10,
-        betId: 'spend-missing'
+        betId: 'spend-missing',
+        game: 'dice'
       })
     ).rejects.toThrow('USER_NOT_FOUND')
   })
@@ -247,7 +260,8 @@ describe('casinoBet.service', () => {
       userId: 'spend-null-bonus',
       guildId: 'guild-1',
       amount: 20,
-      betId: 'spend-null-bonus-bet'
+      betId: 'spend-null-bonus-bet',
+      game: 'dice'
     })
 
     const user = await User.findOne({
@@ -264,7 +278,8 @@ describe('casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       amount: 40,
-      betId: 'spend-bonus-only'
+      betId: 'spend-bonus-only',
+      game: 'dice'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -280,7 +295,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         amount: 50,
-        betId: 'spend-2'
+        betId: 'spend-2',
+        game: 'dice'
       })
     ).rejects.toThrow('INSUFFICIENT_FUNDS')
   })
@@ -301,7 +317,8 @@ describe('casinoBet.service', () => {
       guildId: 'guild-1',
       totalBet: 100,
       winnings: 200,
-      betId: 'bet-idem'
+      betId: 'bet-idem',
+      game: 'dice'
     })
 
     expect(finalBalance).toBe(400)
@@ -323,7 +340,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         amount: 25,
-        betId: 'spend-non-error'
+        betId: 'spend-non-error',
+        game: 'dice'
       })
     ).rejects.toBe('spend-fail')
 
@@ -341,7 +359,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         amount: 25,
-        betId: 'spend-err'
+        betId: 'spend-err',
+        game: 'dice'
       })
     ).rejects.toThrow('db down')
 
@@ -361,7 +380,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         amount: 25,
-        betId: 'dup-spend-insert'
+        betId: 'dup-spend-insert',
+        game: 'dice'
       })
     ).rejects.toThrow('DUPLICATE_BET')
 
@@ -375,7 +395,8 @@ describe('casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       amount: 25,
-      betId: 'dup-spend'
+      betId: 'dup-spend',
+      game: 'dice'
     })
 
     await expect(
@@ -383,7 +404,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         amount: 25,
-        betId: 'dup-spend'
+        betId: 'dup-spend',
+        game: 'dice'
       })
     ).rejects.toThrow('DUPLICATE_BET')
   })
@@ -397,7 +419,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         totalBet: 25,
-        betId: 'reserve-non-error'
+        betId: 'reserve-non-error',
+        game: 'dice'
       })
     ).rejects.toBe('not-an-error')
 
@@ -415,7 +438,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         totalBet: 25,
-        betId: 'reserve-err'
+        betId: 'reserve-err',
+        game: 'dice'
       })
     ).rejects.toThrow('db down')
 
@@ -435,7 +459,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         totalBet: 25,
-        betId: 'dup-insert'
+        betId: 'dup-insert',
+        game: 'dice'
       })
     ).rejects.toThrow('DUPLICATE_BET')
 
@@ -449,7 +474,8 @@ describe('casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       totalBet: 25,
-      betId: 'dup-bet'
+      betId: 'dup-bet',
+      game: 'dice'
     })
 
     await expect(
@@ -457,7 +483,8 @@ describe('casinoBet.service', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         totalBet: 25,
-        betId: 'dup-bet'
+        betId: 'dup-bet',
+        game: 'dice'
       })
     ).rejects.toThrow('DUPLICATE_BET')
 
@@ -485,7 +512,8 @@ describe('casinoBet.service', () => {
       betAmount: 100,
       winnerUserId: 'p2',
       casinoCut: 0,
-      betId: 'rps-p2-win'
+      betId: 'rps-p2-win',
+      game: 'dice'
     })
 
     const winner = await User.findOne({ userId: 'p2', guildId: 'guild-1' })
@@ -517,7 +545,8 @@ describe('casinoBet.service', () => {
       betAmount: 100,
       winnerUserId: 'p1',
       casinoCut: 0,
-      betId: 'rps-idem'
+      betId: 'rps-idem',
+      game: 'dice'
     })
 
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
@@ -537,7 +566,8 @@ describe('casinoBet.service', () => {
         betAmount: 100,
         winnerUserId: 'p1',
         casinoCut: 0,
-        betId: 'rps-missing'
+        betId: 'rps-missing',
+        game: 'dice'
       })
     ).rejects.toThrow('USER_NOT_FOUND')
   })
@@ -548,7 +578,8 @@ describe('casinoBet.service', () => {
         userId: 'missing',
         guildId: 'guild-1',
         amount: 50,
-        betId: 'refund-missing'
+        betId: 'refund-missing',
+        game: 'dice'
       })
     ).rejects.toThrow('USER_NOT_FOUND')
   })
@@ -574,7 +605,8 @@ describe('casinoBet.service', () => {
       betAmount: 100,
       winnerUserId: 'p1',
       casinoCut: 0.1,
-      betId: 'rps-1'
+      betId: 'rps-1',
+      game: 'dice'
     })
 
     const winner = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
@@ -606,7 +638,8 @@ describe('casinoBet.service', () => {
       betAmount: 100,
       winnerUserId: null,
       casinoCut: 0.1,
-      betId: 'rps-draw'
+      betId: 'rps-draw',
+      game: 'dice'
     })
 
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
@@ -634,7 +667,8 @@ describe('casinoBet.service', () => {
       betAmount: 100,
       winnerUserId: 'p2',
       casinoCut: 0,
-      betId: 'rps-p1-low-lock'
+      betId: 'rps-p1-low-lock',
+      game: 'dice'
     })
 
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
@@ -658,7 +692,8 @@ describe('casinoBet.service', () => {
       betAmount: 100,
       winnerUserId: 'p1',
       casinoCut: 0,
-      betId: 'rps-p2-low-lock'
+      betId: 'rps-p2-low-lock',
+      game: 'dice'
     })
 
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
@@ -688,7 +723,8 @@ describe('casinoBet.service', () => {
       betAmount: 100,
       winnerUserId: 'p2',
       casinoCut: 0,
-      betId: 'rps-skip'
+      betId: 'rps-skip',
+      game: 'dice'
     })
 
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
@@ -728,7 +764,8 @@ describe('casinoBet.service', () => {
       betAmount: 100,
       winnerUserId: 'p1',
       casinoCut: 0.1,
-      betId: 'rps-idem'
+      betId: 'rps-idem',
+      game: 'dice'
     })
 
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })

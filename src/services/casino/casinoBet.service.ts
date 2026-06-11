@@ -1,3 +1,4 @@
+import type { CasinoGameId } from 'gambling-bot-shared'
 import mongoose from 'mongoose'
 
 import Transaction from '@/models/Transaction'
@@ -7,12 +8,14 @@ export async function reserveCasinoBet({
   userId,
   guildId,
   totalBet,
-  betId
+  betId,
+  game
 }: {
   userId: string
   guildId: string
   totalBet: number
   betId: string
+  game: CasinoGameId
 }) {
   const session = await mongoose.startSession()
 
@@ -43,7 +46,8 @@ export async function reserveCasinoBet({
               amount: totalBet,
               type: 'bet',
               source: 'casino',
-              betId
+              betId,
+              meta: { game }
             }
           ],
           { session }
@@ -76,13 +80,15 @@ export async function settleCasinoWinnings({
   guildId,
   totalBet,
   winnings,
-  betId
+  betId,
+  game
 }: {
   userId: string
   guildId: string
   totalBet: number
   winnings: number
   betId: string
+  game: CasinoGameId
 }) {
   const session = await mongoose.startSession()
 
@@ -118,7 +124,8 @@ export async function settleCasinoWinnings({
                 amount: winnings,
                 type: 'win',
                 source: 'casino',
-                betId
+                betId,
+                meta: { game }
               }
             ],
             { session }
@@ -145,7 +152,8 @@ export async function settleRpsGameAtomic({
   betAmount,
   winnerUserId, // null = draw
   casinoCut,
-  betId
+  betId,
+  game
 }: {
   p1UserId: string
   p1GuildId: string
@@ -155,6 +163,7 @@ export async function settleRpsGameAtomic({
   winnerUserId: string | null
   casinoCut: number
   betId: string
+  game: CasinoGameId
 }) {
   const session = await mongoose.startSession()
 
@@ -196,7 +205,8 @@ export async function settleRpsGameAtomic({
               amount: payout,
               type: 'win',
               source: 'casino',
-              betId
+              betId,
+              meta: { game }
             }
           ],
           { session }
@@ -214,12 +224,14 @@ export async function refundLockedBet({
   userId,
   guildId,
   amount,
-  betId
+  betId,
+  game
 }: {
   userId: string
   guildId: string
   amount: number
   betId: string
+  game: CasinoGameId
 }) {
   const session = await mongoose.startSession()
 
@@ -245,7 +257,8 @@ export async function refundLockedBet({
             amount,
             type: 'refund',
             source: 'casino',
-            betId
+            betId,
+            meta: { game }
           }
         ],
         { session }
@@ -264,12 +277,14 @@ export async function refundRafflePurchase({
   userId,
   guildId,
   amount,
-  raffleId
+  raffleId,
+  game
 }: {
   userId: string
   guildId: string
   amount: number
   raffleId: string
+  game: CasinoGameId
 }) {
   const session = await mongoose.startSession()
 
@@ -290,7 +305,8 @@ export async function refundRafflePurchase({
             amount,
             type: 'refund',
             source: 'casino',
-            betId: raffleId
+            betId: raffleId,
+            meta: { game }
           }
         ],
         { session }
@@ -305,12 +321,14 @@ export async function payRaffleWinner({
   userId,
   guildId,
   amount,
-  raffleId
+  raffleId,
+  game
 }: {
   userId: string
   guildId: string
   amount: number
   raffleId: string
+  game: CasinoGameId
 }) {
   const session = await mongoose.startSession()
 
@@ -330,7 +348,8 @@ export async function payRaffleWinner({
             amount,
             type: 'win',
             source: 'casino',
-            betId: raffleId
+            betId: raffleId,
+            meta: { game }
           }
         ],
         { session }
@@ -345,12 +364,14 @@ export async function spendCasinoBalance({
   userId,
   guildId,
   amount,
-  betId
+  betId,
+  game
 }: {
   userId: string
   guildId: string
   amount: number
   betId: string
+  game: CasinoGameId
 }) {
   const session = await mongoose.startSession()
 
@@ -395,7 +416,8 @@ export async function spendCasinoBalance({
               amount,
               type: 'bet',
               source: 'casino',
-              betId
+              betId,
+              meta: { game }
             }
           ],
           { session }

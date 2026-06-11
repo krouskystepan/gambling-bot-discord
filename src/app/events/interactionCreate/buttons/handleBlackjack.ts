@@ -90,7 +90,8 @@ export default async (interaction: Interaction) => {
           userId: game.userId,
           guildId,
           totalBet: extraBet,
-          betId
+          betId,
+          game: 'blackjack'
         })
       } catch {
         return interaction.followUp({
@@ -115,7 +116,8 @@ export default async (interaction: Interaction) => {
           userId: game.userId,
           guildId,
           totalBet: splitBet,
-          betId
+          betId,
+          game: 'blackjack'
         })
       } catch {
         return interaction.followUp({
@@ -257,7 +259,8 @@ export default async (interaction: Interaction) => {
         guildId,
         totalBet,
         winnings: totalPayout,
-        betId
+        betId,
+        game: 'blackjack'
       })
 
       if (guildConfig) {

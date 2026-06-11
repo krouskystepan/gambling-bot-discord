@@ -124,7 +124,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         userId,
         guildId,
         totalBet,
-        betId
+        betId,
+        game: 'goldenJackpot'
       })
     } catch (err) {
       if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
@@ -248,7 +249,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       guildId,
       totalBet,
       winnings: totalWinnings,
-      betId
+      betId,
+      game: 'goldenJackpot'
     })
     betSettled = true
 
@@ -294,7 +296,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           guildId,
           totalBet,
           winnings: totalWinnings,
-          betId
+          betId,
+          game: 'goldenJackpot'
         })
       } catch {}
     }

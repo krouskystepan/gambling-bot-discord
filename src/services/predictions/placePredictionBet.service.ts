@@ -74,7 +74,8 @@ export const placePredictionBet = async ({
     userId,
     guildId,
     totalBet: amount,
-    betId: predictionId
+    betId: predictionId,
+    game: 'prediction'
   })
 
   const added = await addPredictionBet({
@@ -90,7 +91,8 @@ export const placePredictionBet = async ({
       userId,
       guildId,
       amount,
-      betId: predictionId
+      betId: predictionId,
+      game: 'prediction'
     })
     throw new PlacePredictionBetError(
       'Prediction state changed after funds were reserved',

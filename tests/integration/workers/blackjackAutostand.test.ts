@@ -50,7 +50,8 @@ const settleStaleBlackjackGame = async (game: TBlackjackGame) => {
     guildId: game.guildId,
     totalBet,
     winnings: totalPayout,
-    betId: game.betId
+    betId: game.betId,
+    game: 'blackjack'
   })
 
   await deleteBlackjackGame({ userId: game.userId, guildId: game.guildId })
@@ -65,7 +66,8 @@ describe('blackjack autostand data flow', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       totalBet: 100,
-      betId: 'bet-autostand-1'
+      betId: 'bet-autostand-1',
+      game: 'blackjack'
     })
 
     await upsertBlackjackGame({

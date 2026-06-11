@@ -113,7 +113,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         betAmount,
         winnerUserId: null, // draw = full refund
         casinoCut: 0,
-        betId
+        betId,
+        game: 'rps'
       })
 
       p1Reserved = false
@@ -125,7 +126,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         userId: user.userId,
         guildId: user.guildId,
         totalBet: betAmount,
-        betId
+        betId,
+        game: 'rps'
       })
       p1Reserved = true
 
@@ -133,7 +135,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         userId: targetUser.userId,
         guildId: targetUser.guildId,
         totalBet: betAmount,
-        betId
+        betId,
+        game: 'rps'
       })
       p2Reserved = true
     } catch {
@@ -248,7 +251,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         betAmount,
         winnerUserId: winnerUser ? winnerUser.userId : null,
         casinoCut: configReply.casinoSettings.rps.casinoCut,
-        betId
+        betId,
+        game: 'rps'
       })
 
       p1Reserved = false

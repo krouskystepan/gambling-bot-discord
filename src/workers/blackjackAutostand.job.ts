@@ -92,7 +92,8 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
         guildId: game.guildId,
         totalBet,
         winnings: totalPayout,
-        betId: game.betId
+        betId: game.betId,
+        game: 'blackjack'
       })
 
       if (guildConfig) {

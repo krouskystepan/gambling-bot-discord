@@ -1,4 +1,6 @@
 import {
+  CASINO_GAME_IDS,
+  type CasinoGameId,
   formatNumberToReadableString,
   generateId,
   parseReadableStringToNumber
@@ -220,6 +222,10 @@ function pickWinAmount(betAmount: number, maxAmount: number): number {
   return Math.min(maxAmount, Math.max(1, Math.round(betAmount * multiplier)))
 }
 
+function randomCasinoGame(): CasinoGameId {
+  return randomChoice(CASINO_GAME_IDS)
+}
+
 function createCasinoRound({
   guildId,
   pickUser,
@@ -235,6 +241,7 @@ function createCasinoRound({
   const betId = generateId()
   const betAmount = pickChipAmount(maxAmount)
   const betAt = randomCreatedAt(days)
+  const game = randomCasinoGame()
 
   const txs: SimTransaction[] = [
     {
@@ -244,6 +251,7 @@ function createCasinoRound({
       type: 'bet',
       source: 'casino',
       betId,
+      meta: { game },
       createdAt: betAt
     }
   ]
@@ -261,6 +269,7 @@ function createCasinoRound({
       type: 'refund',
       source: 'casino',
       betId,
+      meta: { game },
       createdAt: randomCreatedAt(days, betAt)
     })
     return txs
@@ -273,6 +282,7 @@ function createCasinoRound({
     type: 'win',
     source: 'casino',
     betId,
+    meta: { game },
     createdAt: randomCreatedAt(days, betAt)
   })
 
@@ -294,6 +304,7 @@ function createRefundRound({
   const betId = generateId()
   const betAmount = pickChipAmount(maxAmount)
   const betAt = randomCreatedAt(days)
+  const game = randomCasinoGame()
 
   return [
     {
@@ -303,6 +314,7 @@ function createRefundRound({
       type: 'bet',
       source: 'casino',
       betId,
+      meta: { game },
       createdAt: betAt
     },
     {
@@ -312,6 +324,7 @@ function createRefundRound({
       type: 'refund',
       source: 'casino',
       betId,
+      meta: { game },
       createdAt: randomCreatedAt(days, betAt)
     }
   ]

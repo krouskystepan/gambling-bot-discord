@@ -94,7 +94,8 @@ export default async (interaction: Interaction) => {
         userId: interaction.user.id,
         guildId: interaction.guildId!,
         amount: totalCost,
-        betId: raffle.drawId
+        betId: raffle.drawId,
+        game: 'raffle'
       })
     } catch {
       return interaction.editReply({

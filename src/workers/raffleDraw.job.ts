@@ -72,7 +72,8 @@ export const raffleDrawJob = async (client: Client<true>) => {
             userId: p.userId,
             guildId: raffle.guildId,
             amount: p.tickets * raffle.ticketPrice,
-            raffleId: raffle.drawId
+            raffleId: raffle.drawId,
+            game: 'raffle'
           })
         }
       } else {
@@ -83,7 +84,8 @@ export const raffleDrawJob = async (client: Client<true>) => {
             userId: winnerId,
             guildId: raffle.guildId,
             amount: pot,
-            raffleId: raffle.drawId
+            raffleId: raffle.drawId,
+            game: 'raffle'
           })
         }
       }

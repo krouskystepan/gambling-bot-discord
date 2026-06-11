@@ -462,7 +462,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             userId: bet.userId,
             guildId: interaction.guildId!,
             amount: bet.amount,
-            betId: prediction.predictionId
+            betId: prediction.predictionId,
+            game: 'prediction'
           })
         }
 
@@ -484,7 +485,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           amount: bet.amount * winner.odds,
           type: 'win',
           source: 'casino',
-          betId: prediction.predictionId
+          betId: prediction.predictionId,
+          meta: { game: 'prediction' }
         })
 
         const profit = bet.amount * (winner.odds - 1)
@@ -697,7 +699,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           userId: bet.userId,
           guildId: interaction.guildId!,
           amount: bet.amount,
-          betId: predictionId
+          betId: predictionId,
+          game: 'prediction'
         })
       }
 

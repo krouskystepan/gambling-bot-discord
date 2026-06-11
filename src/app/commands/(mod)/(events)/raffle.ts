@@ -340,7 +340,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           userId: entry.userId,
           guildId: interaction.guildId!,
           amount: refundAmount,
-          raffleId: raffle.drawId
+          raffleId: raffle.drawId,
+          game: 'raffle'
         })
       }
 
