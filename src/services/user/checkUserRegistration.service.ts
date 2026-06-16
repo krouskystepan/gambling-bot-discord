@@ -1,4 +1,4 @@
-import { TUser } from 'gambling-bot-shared'
+import { TUser } from 'gambling-bot-shared/user'
 
 import { MessageFlags } from 'discord.js'
 

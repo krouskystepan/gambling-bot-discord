@@ -155,7 +155,8 @@ describe('raffle money via casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       amount: 40,
-      raffleId: 'raffle-refund-1'
+      raffleId: 'raffle-refund-1',
+      game: 'raffle'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -174,7 +175,8 @@ describe('raffle money via casinoBet.service', () => {
         userId: 'missing',
         guildId: 'guild-1',
         amount: 10,
-        raffleId: 'raffle-refund-missing'
+        raffleId: 'raffle-refund-missing',
+        game: 'raffle'
       })
     ).rejects.toThrow('USER_NOT_FOUND')
   })
@@ -185,7 +187,8 @@ describe('raffle money via casinoBet.service', () => {
         userId: 'missing',
         guildId: 'guild-1',
         amount: 10,
-        raffleId: 'raffle-win-missing'
+        raffleId: 'raffle-win-missing',
+        game: 'raffle'
       })
     ).rejects.toThrow('USER_NOT_FOUND')
   })
@@ -197,7 +200,8 @@ describe('raffle money via casinoBet.service', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       amount: 250,
-      raffleId: 'raffle-win-1'
+      raffleId: 'raffle-win-1',
+      game: 'raffle'
     })
 
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })

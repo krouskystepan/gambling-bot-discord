@@ -1,9 +1,12 @@
 import {
   TCasinoSettings,
-  formatNumberToReadableString,
+  shouldAnnounceByMultiplier
+} from 'gambling-bot-shared/casino'
+import {
+  formatMoney,
   generateId,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
@@ -21,6 +24,7 @@ import { drawLottery } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'lottery',
@@ -99,7 +103,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const entries = interaction.options.getInteger('entries') || 1
     const betAmount = interaction.options.getString('bet', true)
     const parsedBetAmount = parseReadableStringToNumber(betAmount)
-    const readableBetAmount = formatNumberToReadableString(parsedBetAmount)
     const showBalance = interaction.options.getBoolean('show-balance')
     const skipAnimations = interaction.options.getBoolean('skip-animations')
 
@@ -131,7 +134,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.lottery.maxBet,
-      configReply.casinoSettings.lottery.minBet
+      configReply.casinoSettings.lottery.minBet,
+      configReply.globalSettings
     )
 
     if (!isBetValid) return
@@ -144,7 +148,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         userId,
         guildId,
         totalBet,
-        betId
+        betId,
+        game: 'lottery'
       })
     } catch (err) {
       if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
@@ -157,7 +162,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+              `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -168,6 +173,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     let liveResult = 0
     const results: string[] = []
+    const announcementDraws: string[] = []
 
     await interaction.deferReply()
 
@@ -178,14 +184,14 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             createBetEmbed(
               `🎟️ Drawing...`,
               'Blue',
-              `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+              `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
                 `Your numbers: **${userNumbers
                   .map((n) => n.toString().padStart(2, '0'))
                   .join(', ')}**\n\n` +
                 `🎟️ **Draw Results:**\n${[...results, '🎟️ Drawing...'].join('\n')}\n\n` +
                 `💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                } **$${formatNumberToReadableString(liveResult)}**`,
+                } **${formatMoney(liveResult, configReply.globalSettings)}**`,
               betId
             )
           ]
@@ -203,17 +209,28 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         lotteryNumbers.includes(n)
       ).length as keyof TCasinoSettings['lottery']['winMultipliers']
 
-      const winnings =
-        parsedBetAmount *
+      const drawMultiplier =
         configReply.casinoSettings.lottery.winMultipliers[matchedNumbers]
+      const winnings = parsedBetAmount * drawMultiplier
+
+      if (
+        shouldAnnounceByMultiplier(
+          drawMultiplier,
+          configReply.casinoSettings.winAnnouncements.lotteryMinMultiplier
+        )
+      ) {
+        announcementDraws.push(
+          `Draw **${i + 1}** — **${matchedNumbers} matches** — **x${drawMultiplier}** → **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+        )
+      }
 
       results.push(
         `**${resultString}** | ${matchedNumbers > 0 ? `🎉 **${matchedNumbers}**` : `❌ **0**`} | ${
           winnings > parsedBetAmount
-            ? `**+$${formatNumberToReadableString(winnings)}**`
+            ? `**+${formatMoney(winnings, configReply.globalSettings)}**`
             : winnings < parsedBetAmount
-              ? `**-$${readableBetAmount}**`
-              : `**$0**`
+              ? `**-${formatMoney(parsedBetAmount, configReply.globalSettings)}**`
+              : `**${formatMoney(0, configReply.globalSettings)}**`
         }`
       )
 
@@ -226,9 +243,21 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       guildId,
       totalBet,
       winnings: totalWinnings,
-      betId
+      betId,
+      game: 'lottery'
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🎟️ Lottery Big Win!',
+      intro: 'matched big numbers!',
+      lines: announcementDraws,
+      betId,
+      sourceChannelId: interaction.channelId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -242,16 +271,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               ? '🎟️ **Better Luck Next Time...** ❌'
               : '🎟️ **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+          `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
             `Your numbers: **${userNumbers
               .map((n) => n.toString().padStart(2, '0'))
               .join(', ')}**\n\n` +
             `🎟️ **Draw Results:**\n${results.join('\n')}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(liveResult)}**\n` +
+            } **${formatMoney(liveResult, configReply.globalSettings)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
+              ? `🏦 Balance: **${formatMoney(finalBalance, configReply.globalSettings)}**`
               : ''),
           betId
         )
@@ -265,7 +294,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           guildId,
           totalBet,
           winnings: totalWinnings,
-          betId
+          betId,
+          game: 'lottery'
         })
       } catch {}
     }

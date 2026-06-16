@@ -1,4 +1,4 @@
-import { TUser } from 'gambling-bot-shared'
+import { TUser } from 'gambling-bot-shared/user'
 import type { UpdateQuery } from 'mongoose'
 
 import User from '@/models/User'
@@ -11,6 +11,21 @@ export const getUser = async ({
   const user = await User.findOne({ userId, guildId })
 
   return user
+}
+
+export const getGuildUserIds = async ({
+  guildId,
+  limit = 2000
+}: {
+  guildId: string
+  limit?: number
+}): Promise<string[]> => {
+  const users = await User.find({ guildId })
+    .select('userId')
+    .limit(limit)
+    .lean()
+
+  return users.map((u) => u.userId)
 }
 
 export const resetUserBalance = async ({

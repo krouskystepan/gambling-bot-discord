@@ -1,7 +1,7 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import {
   ActionRowBuilder,
@@ -13,7 +13,12 @@ import {
 } from 'discord.js'
 
 import { handleUnexpectedButtonError } from '@/errors'
-import { getGuildConfigByGuildId, getPredictionById } from '@/services'
+import {
+  assertGlobalFeature,
+  assertNotMaintenance,
+  getGuildConfigByGuildId,
+  getPredictionById
+} from '@/services'
 import {
   PlacePredictionBetError,
   placePredictionBet
@@ -31,6 +36,15 @@ export default async (interaction: Interaction) => {
       interaction.customId.split('.')
 
     if (type !== 'prediction' || !predictionId || !choiceName || !odds) return
+
+    const guildConfig = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
+    })
+    if (!guildConfig) return
+    if (!(await assertNotMaintenance(interaction, guildConfig))) return
+    if (!(await assertGlobalFeature(interaction, guildConfig, 'predictions'))) {
+      return
+    }
 
     const targetPrediction = await getPredictionById({
       predictionId,
@@ -113,10 +127,7 @@ export default async (interaction: Interaction) => {
       })
     }
 
-    const guildConfig = await getGuildConfigByGuildId({
-      guildId: interaction.guildId!
-    })
-    const casinoSettings = guildConfig?.casinoSettings
+    const casinoSettings = guildConfig.casinoSettings
     if (!casinoSettings) return
 
     try {
@@ -140,10 +151,12 @@ export default async (interaction: Interaction) => {
               embeds: [
                 createInfoEmbed(
                   'Invalid Input - Above Maximum Bet',
-                  `The maximum bet per choice is **$${formatNumberToReadableString(
-                    casinoSettings.prediction.maxBet
-                  )}**. You already have **$${formatNumberToReadableString(
-                    userChoiceTotal
+                  `The maximum bet per choice is **${formatMoney(
+                    casinoSettings.prediction.maxBet,
+                    guildConfig.globalSettings
+                  )}**. You already have **${formatMoney(
+                    userChoiceTotal,
+                    guildConfig.globalSettings
                   )}** on **${choiceName}**.`
                 )
               ]
@@ -153,8 +166,9 @@ export default async (interaction: Interaction) => {
             embeds: [
               createInfoEmbed(
                 'Invalid Input - Below Minimum Bet',
-                `The minimum bet is **$${formatNumberToReadableString(
-                  casinoSettings.prediction.minBet
+                `The minimum bet is **${formatMoney(
+                  casinoSettings.prediction.minBet,
+                  guildConfig.globalSettings
                 )}**.`
               )
             ]
@@ -178,7 +192,7 @@ export default async (interaction: Interaction) => {
       embeds: [
         createSuccessEmbed(
           'Bet Placed Successfully',
-          `You placed **$${formatNumberToReadableString(parsedBetAmount)}** on **${choiceName}**`
+          `You placed **${formatMoney(parsedBetAmount, guildConfig.globalSettings)}** on **${choiceName}**`
         )
       ]
     })

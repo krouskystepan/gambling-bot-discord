@@ -1,0 +1,8 @@
+excludeLinksFromLockfile: true
+
+allowBuilds:
+  esbuild: false
+  mongodb-memory-server: true
+
+minimumReleaseAgeExclude:
+  - gambling-bot-shared

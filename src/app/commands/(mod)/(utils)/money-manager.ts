@@ -1,7 +1,7 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import {
   ActionRowBuilder,
@@ -15,6 +15,10 @@ import {
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
+import {
+  assertModMaintenanceAllowed,
+  getGuildConfigByGuildId
+} from '@/services'
 import { DEV_GUILDS } from '@/utils/devGuilds'
 import { logger } from '@/utils/logger'
 
@@ -52,6 +56,16 @@ export const metadata: CommandMetadata = {
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
+    const guildConfig = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
+    })
+    if (
+      (await assertModMaintenanceAllowed(interaction, interaction.guildId!)) ===
+      false
+    ) {
+      return
+    }
+
     const options = interaction.options
 
     const subcommand = options.getSubcommand()
@@ -59,13 +73,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (subcommand === 'give-balance') {
       const amount = interaction.options.getString('amount', true)
       const parsedAmount = parseReadableStringToNumber(amount)
-      const readableAmount = formatNumberToReadableString(parsedAmount)
-
       const embed = new EmbedBuilder()
         .setTitle('Money Generator')
         .setColor(Colors.DarkGreen)
         .setDescription(
-          `Click to add **$${readableAmount}** to your account.\n` +
+          `Click to add **${formatMoney(parsedAmount, guildConfig?.globalSettings)}** to your account.\n` +
             'You can use this money to try **CASINO** games.'
         )
         .setTimestamp()

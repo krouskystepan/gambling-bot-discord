@@ -1,8 +1,9 @@
+import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
@@ -28,6 +29,7 @@ import {
 } from '@/utils/casino/blackjack'
 import { checkValidBet } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'blackjack',
@@ -83,7 +85,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.blackjack.maxBet,
-      configReply.casinoSettings.blackjack.minBet
+      configReply.casinoSettings.blackjack.minBet,
+      configReply.globalSettings
     )
 
     if (!isBetValid) return
@@ -97,7 +100,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         userId: user.userId,
         guildId: user.guildId,
         totalBet: parsedBetAmount,
-        betId
+        betId,
+        game: 'blackjack'
       })
     } catch (err) {
       if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
@@ -110,7 +114,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+              `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -149,8 +153,32 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         guildId: user.guildId,
         totalBet: parsedBetAmount,
         winnings: payout,
-        betId
+        betId,
+        game: 'blackjack'
       })
+
+      if (startResultId === 'PBJ') {
+        const blackjackMultiplier = payout / parsedBetAmount
+        if (
+          shouldAnnounceByMultiplier(
+            blackjackMultiplier,
+            configReply.casinoSettings.winAnnouncements.blackjackMinMultiplier
+          )
+        ) {
+          tryAnnounceBigWin({
+            guild: interaction.guild,
+            guildConfig: configReply,
+            userId: user.userId,
+            title: '🃏 Blackjack Big Win!',
+            intro: 'hit blackjack!',
+            lines: [
+              `**x${blackjackMultiplier.toFixed(2)}** → **${formatMoney(payout, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+            ],
+            betId,
+            sourceChannelId: interaction.channelId
+          })
+        }
+      }
 
       const hands = [
         {
@@ -172,7 +200,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             dealerCards,
             showBalance,
             userBalance: finalBalance,
-            result: { kind: 'START', startResultId }
+            result: { kind: 'START', startResultId },
+            globalSettings: configReply.globalSettings
           })
         ]
       })
@@ -224,7 +253,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
           dealerCards,
           showBalance,
-          dealerHideSecondCard: true
+          dealerHideSecondCard: true,
+          globalSettings: configReply.globalSettings
         })
       ],
       components: [row]

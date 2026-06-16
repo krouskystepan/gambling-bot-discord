@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest'
-
 import {
   canClaimDailyBonus,
+  getEffectiveStreak,
   getStreakAfterClaim,
   getStreakDisplay
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/bonus'
+import { describe, expect, it } from 'vitest'
 
 describe('daily bonus streak helpers', () => {
   const now = new Date('2026-05-20T12:00:00Z')
@@ -58,5 +58,15 @@ describe('daily bonus streak helpers', () => {
       currentStreak: 0,
       nextStreak: 1
     })
+  })
+
+  it('returns zero effective streak after grace expires', () => {
+    const lastClaim = new Date('2026-05-17T12:00:00Z')
+    expect(getEffectiveStreak(lastClaim, now, 8)).toBe(0)
+  })
+
+  it('keeps stored streak inside grace window', () => {
+    const lastClaim = new Date('2026-05-19T14:00:00Z')
+    expect(getEffectiveStreak(lastClaim, now, 4)).toBe(4)
   })
 })

@@ -1,6 +1,6 @@
+import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
+import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import { describe, expect, it } from 'vitest'
-
-import { defaultCasinoSettings } from 'gambling-bot-shared'
 
 import {
   createGuildConfiguration,
@@ -22,11 +22,12 @@ describe('guildConfiguration.db', () => {
 
     expect(created.guildId).toBe('guild-1')
     expect(created.casinoSettings).toEqual(defaultCasinoSettings)
+    expect(created.globalSettings).toEqual(defaultGlobalSettings)
 
     const fetched = await getGuildConfigByGuildId({ guildId: 'guild-1' })
     expect(fetched?.guildId).toBe('guild-1')
-    expect(await GuildConfiguration.countDocuments({ guildId: 'guild-1' })).toBe(
-      1
-    )
+    expect(
+      await GuildConfiguration.countDocuments({ guildId: 'guild-1' })
+    ).toBe(1)
   })
 })

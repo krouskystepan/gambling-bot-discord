@@ -1,8 +1,8 @@
 import {
-  formatNumberToReadableString,
-  formatNumberWithSpaces,
+  formatMoney,
+  formatMoneyExact,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
@@ -124,7 +124,7 @@ export const command: CommandData = {
     {
       name: 'reset',
       description:
-        'Reset a user’s balance to $0 and remove all their transactions in this server.',
+        'Reset a user’s balance to zero and remove all their transactions in this server.',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
@@ -185,7 +185,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     const amountStr = options.getString('amount', false)
     const parsedAmount = amountStr ? parseReadableStringToNumber(amountStr) : 0
-    const readableAmount = formatNumberToReadableString(parsedAmount)
 
     const targetUser = await checkTargetUserRegistration({
       interaction,
@@ -245,8 +244,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Deposit',
-            `An administrator has added **$${readableAmount}** to <@${user.id}>'s balance.\n` +
-              `**New Balance:** $${formatNumberToReadableString(updatedUser!.balance)}`
+            `An administrator has added **${formatMoney(parsedAmount, configReply.globalSettings)}** to <@${user.id}>'s balance.\n` +
+              `**New Balance:** ${formatMoney(updatedUser!.balance, configReply.globalSettings)}`
           )
         ]
       })
@@ -269,8 +268,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Withdrawable Funds',
-              `You cannot withdraw **$${readableAmount}** because **$${formatNumberToReadableString(
-                targetUser.lockedBalance
+              `You cannot withdraw **${formatMoney(parsedAmount, configReply.globalSettings)}** because **${formatMoney(
+                targetUser.lockedBalance,
+                configReply.globalSettings
               )}** of the balance comes from bonuses.\n\nThey must wager the bonuses first.`
             )
           ],
@@ -290,7 +290,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Withdrawable Funds',
-              `User does not have **$${readableAmount}** available to withdraw.`
+              `User does not have **${formatMoney(parsedAmount, configReply.globalSettings)}** available to withdraw.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -322,8 +322,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         embeds: [
           createSuccessEmbed(
             'ATM - Admin Withdraw',
-            `An administrator has removed **$${readableAmount}** from <@${user.id}>'s balance.\n` +
-              `**New Balance:** $${formatNumberToReadableString(updatedUser!.balance)}`
+            `An administrator has removed **${formatMoney(parsedAmount, configReply.globalSettings)}** from <@${user.id}>'s balance.\n` +
+              `**New Balance:** ${formatMoney(updatedUser!.balance, configReply.globalSettings)}`
           )
         ]
       })
@@ -356,7 +356,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           createSuccessEmbed(
             'ATM - Admin Reset',
             `An administrator has reset <@${user.id}>'s balance and cleared transaction history.\n` +
-              `**New Balance:** $0`
+              `**New Balance:** ${formatMoney(0, configReply.globalSettings)}`
           )
         ]
       })
@@ -410,9 +410,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         embeds: [
           createSuccessEmbed(
             'ATM - Bonus Given',
-            `Granted **$${readableAmount}** bonus to <@${user.id}>.\n` +
-              `Bonus balance: **$${formatNumberToReadableString(
-                updatedUser.bonusBalance ?? 0
+            `Granted **${formatMoney(parsedAmount, configReply.globalSettings)}** bonus to <@${user.id}>.\n` +
+              `Bonus balance: **${formatMoney(
+                updatedUser.bonusBalance ?? 0,
+                configReply.globalSettings
               )}**`
           )
         ]
@@ -429,15 +430,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           createSuccessEmbed(
             'ATM - Balance',
             [
-              `💰 Available Balance: **$${formatNumberToReadableString(
-                roundedBalance
-              )}** ($${formatNumberWithSpaces(roundedBalance)})`,
-              `🔒 Locked Balance: **$${formatNumberToReadableString(
-                roundedLockedBalance
-              )}** ($${formatNumberWithSpaces(roundedLockedBalance)})`,
-              `🎁 Bonus Balance: **$${formatNumberToReadableString(
-                roundedBonusBalance
-              )}** ($${formatNumberWithSpaces(roundedBonusBalance)})`,
+              `💰 Available Balance: **${formatMoney(roundedBalance, configReply.globalSettings)}** (${formatMoneyExact(roundedBalance, configReply.globalSettings)})`,
+              `🔒 Locked Balance: **${formatMoney(roundedLockedBalance, configReply.globalSettings)}** (${formatMoneyExact(roundedLockedBalance, configReply.globalSettings)})`,
+              `🎁 Bonus Balance: **${formatMoney(roundedBonusBalance, configReply.globalSettings)}** (${formatMoneyExact(roundedBonusBalance, configReply.globalSettings)})`,
               '',
               '**What this means:**',
               '- **Available Balance** - money you can freely bet and withdraw.',

@@ -1,12 +1,16 @@
-import {
-  TPrediction,
-  TPredictionOption,
-  TTransaction,
-  TUser,
-  TVipRoom
-} from 'gambling-bot-shared'
+import { TTransaction } from 'gambling-bot-shared/transactions'
+import { TUser } from 'gambling-bot-shared/user'
+import { TVipRoom } from 'gambling-bot-shared/vip'
 
 import { EngineState } from '@/utils/casino/blackjack'
+
+export type {
+  TAddPredictionBet,
+  TCreatePrediction,
+  TGetOldPredictions,
+  TGetPrediction,
+  TUpdatePredictionStatus
+} from 'gambling-bot-shared/predictions'
 
 // Create
 export type TCreateUser = Pick<TUser, 'userId' | 'guildId'>
@@ -18,30 +22,17 @@ export type TCreateTransaction = Omit<TTransaction, 'createdAt'> & {
   createdAt?: Date
 }
 export type TCreateMultipleTransactions = TTransaction[]
-export type TCreatePrediction = Omit<TPrediction, 'createdAt' | 'updatedAt'>
 
 // Read - Get
 export type TGetUser = Pick<TUser, 'userId' | 'guildId'>
 export type TGetVip = Pick<TVipRoom, 'guildId' | 'ownerId'>
 export type TGetBlackjackGame = Pick<TUser, 'userId' | 'guildId'>
 export type TGetGuildcongifuration = Pick<TUser, 'guildId'>
-export type TGetPrediction = Pick<TPrediction, 'predictionId' | 'guildId'>
-export type TGetOldPredictions = {
-  statuses: TPrediction['status'][]
-  olderThanDays: number
-}
 
 // Update
 export type TUpdateUserBalance = Pick<TUser, 'userId' | 'guildId'> & {
   amount: number
   lockedAmount?: number
-}
-export type TUpdatePredictionStatus = Pick<
-  TPrediction,
-  'predictionId' | 'guildId'
-> & {
-  fromStatus: TPrediction['status'] | TPrediction['status'][]
-  toStatus: TPrediction['status']
 }
 
 // Delete
@@ -61,13 +52,4 @@ export type TAddRaffleTickets = {
   userId: string
   tickets: number
   maxTicketsPerUser: number
-}
-
-export type TAddPredictionBet = Pick<
-  TPrediction,
-  'predictionId' | 'guildId'
-> & {
-  choiceName: TPredictionOption['choiceName']
-  userId: TPredictionOption['bets'][number]['userId']
-  amount: TPredictionOption['bets'][number]['amount']
 }

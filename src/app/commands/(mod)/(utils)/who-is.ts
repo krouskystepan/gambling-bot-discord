@@ -1,11 +1,11 @@
-import { formatNumberToReadableString } from 'gambling-bot-shared'
+import { formatMoney } from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
 
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { checkUserRegistration } from '@/services'
+import { checkUserRegistration, getGuildConfigByGuildId } from '@/services'
 
 export const command: CommandData = {
   name: 'who-is',
@@ -33,6 +33,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const user = options.getUser('user', true)
 
     const userDocument = await checkUserRegistration({ interaction })
+    const guildConfig = await getGuildConfigByGuildId({
+      guildId: interaction.guildId!
+    })
 
     const member = await interaction.guild?.members.fetch(user.id)
 
@@ -54,7 +57,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (userDocument) {
       registered = userDocument.createdAt.toLocaleDateString('en-GB')
       balance = userDocument.balance
-        ? `$${formatNumberToReadableString(userDocument.balance)}`
+        ? formatMoney(userDocument.balance, guildConfig?.globalSettings)
         : 'No balance'
     }
 

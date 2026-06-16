@@ -3,7 +3,11 @@ import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { createGuildConfiguration, getGuildConfigByGuildId } from '@/services'
+import {
+  assertModMaintenanceAllowed,
+  createGuildConfiguration,
+  getGuildConfigByGuildId
+} from '@/services'
 import { DEV_GUILDS } from '@/utils/devGuilds'
 import {
   createErrorEmbed,
@@ -60,6 +64,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       guildConfiguration = await createGuildConfiguration({
         guildId: interaction.guildId!
       })
+    } else if (
+      (await assertModMaintenanceAllowed(interaction, interaction.guildId!)) ===
+      false
+    ) {
+      return
     }
 
     const options = interaction.options

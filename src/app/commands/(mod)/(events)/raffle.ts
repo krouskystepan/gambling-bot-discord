@@ -1,9 +1,9 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber,
   parseTimeToSeconds
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 import { DateTime } from 'luxon'
 
 import {
@@ -25,10 +25,11 @@ import {
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  cancelRaffleAtomic,
+  assertGlobalFeature,
+  cancelRaffle,
   checkRaffleChannels,
+  getGuildConfigByGuildId,
   getRaffleById,
-  refundRafflePurchase,
   searchRafflesForAutocomplete,
   upsertRaffle
 } from '@/services'
@@ -114,6 +115,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const configReply = await checkRaffleChannels(interaction)
     if (!configReply) return
+    if (
+      !(await assertGlobalFeature(interaction, configReply, 'raffleManagement'))
+    ) {
+      return
+    }
 
     const member = await interaction.guild?.members.fetch(interaction.user.id)
     const hasAdmin = member?.permissions.has('Administrator')
@@ -149,9 +155,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           flags: MessageFlags.Ephemeral
         })
       }
-
-      const readableTicketPrice =
-        formatNumberToReadableString(parsedTicketPrice)
 
       const maxTickets = opts.getInteger('max-tickets', true)
       const drawInput = opts.getString('draw-time', true)
@@ -251,12 +254,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         .setTitle('🎫 Global Raffle')
         .setDescription(
           [
-            `💰 Ticket Price: **$${readableTicketPrice}**`,
+            `💰 Ticket Price: **${formatMoney(parsedTicketPrice, configReply.globalSettings)}**`,
             `🎟️ Ticket Limit: **${maxTickets}**`,
             '',
             `🗓️ Drawing Date: **<t:${drawUnix}:F>**`,
             '',
-            '💸 Current Pot: **$0**'
+            `💸 Current Pot: **${formatMoney(0, configReply.globalSettings)}**`
           ].join('\n')
         )
         .setFooter({ text: `ID: ${betId}` })
@@ -310,12 +313,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (sub === 'cancel') {
       const raffleId = opts.getString('raffle-id', true)
 
-      const raffle = await cancelRaffleAtomic({
+      const cancelResult = await cancelRaffle({
         raffleId,
         guildId: interaction.guildId!
       })
 
-      if (!raffle) {
+      if (!cancelResult.ok) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
@@ -327,18 +330,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      const ticketPrice = raffle.ticketPrice
-
-      for (const entry of raffle.participants) {
-        const refundAmount = entry.tickets * ticketPrice
-
-        await refundRafflePurchase({
-          userId: entry.userId,
-          guildId: interaction.guildId!,
-          amount: refundAmount,
-          raffleId: raffle.drawId
-        })
-      }
+      const { raffle, refundErrors } = cancelResult
 
       const raffleMessage = await interaction.channel?.messages
         .fetch(raffleId)
@@ -352,7 +344,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             [
               '❌ **This raffle has been canceled**',
               '',
-              `💰 Ticket Price: **$${formatNumberToReadableString(ticketPrice)}**`,
+              `💰 Ticket Price: **${formatMoney(raffle.ticketPrice, configReply.globalSettings)}**`,
               `🎟️ Ticket Limit: **${raffle.maxTicketsPerUser}**`,
               '',
               '💸 All tickets have been refunded.'
@@ -372,10 +364,23 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           actorId: interaction.user.id,
           raffleId,
           guildId: interaction.guildId,
-          refundedParticipants: raffle.participants.length
+          refundedParticipants: raffle.participants.length,
+          refundErrors: refundErrors.length
         },
         'Admin canceled raffle and refunded tickets'
       )
+
+      if (refundErrors.length > 0) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Raffle Canceled With Refund Errors',
+              `Raffle canceled but ${refundErrors.length} refund(s) failed. Check logs.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
 
       return interaction.reply({
         embeds: [
@@ -441,10 +446,12 @@ export const autocomplete: AutocompleteCommand = async ({ interaction }) => {
 
   if (subcommand !== 'cancel' && subcommand !== 'check') return
 
-  const raffles = await searchRafflesForAutocomplete({
-    guildId: interaction.guildId!,
-    query: focused
-  })
+  const guildId = interaction.guildId!
+  const [raffles, guildConfig] = await Promise.all([
+    searchRafflesForAutocomplete({ guildId, query: focused }),
+    getGuildConfigByGuildId({ guildId })
+  ])
+  const globalSettings = guildConfig?.globalSettings
 
   if (raffles.length === 0) {
     return interaction.respond([{ name: 'No raffles found', value: 'none' }])
@@ -452,7 +459,7 @@ export const autocomplete: AutocompleteCommand = async ({ interaction }) => {
 
   return interaction.respond(
     raffles.map((r) => ({
-      name: `TP: ${formatNumberToReadableString(r.ticketPrice)} • TL: ${r.maxTicketsPerUser} • ND: ${formatDate(r.nextDrawAt)} | CP: ${r.totalPot}`,
+      name: `TP: ${formatMoney(r.ticketPrice, globalSettings)} • TL: ${r.maxTicketsPerUser} • ND: ${formatDate(r.nextDrawAt)} | CP: ${formatMoney(r.totalPot, globalSettings)}`,
       value: r.raffleId
     }))
   )

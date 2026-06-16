@@ -1,4 +1,4 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared'
+import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
 import { describe, expect, it } from 'vitest'
 
 import { calculateRouletteWin } from '@/utils/casino/roulette/math'

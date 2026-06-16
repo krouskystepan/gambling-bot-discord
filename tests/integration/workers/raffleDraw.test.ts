@@ -50,7 +50,8 @@ describe('raffle draw data flow', () => {
       userId: 'winner',
       guildId: 'guild-1',
       amount: pot,
-      raffleId: 'draw-ready'
+      raffleId: 'draw-ready',
+      game: 'raffle'
     })
 
     const winner = await User.findOne({ userId: 'winner', guildId: 'guild-1' })

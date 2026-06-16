@@ -1,7 +1,10 @@
+import { TBlackjackGame } from 'gambling-bot-shared/blackjack'
 import { describe, expect, it } from 'vitest'
 
-import { TBlackjackGame } from '@/models/BlackjackGame'
-import { reserveCasinoBet, settleCasinoWinnings } from '@/services/casino/casinoBet.service'
+import {
+  reserveCasinoBet,
+  settleCasinoWinnings
+} from '@/services/casino/casinoBet.service'
 import {
   deleteBlackjackGame,
   getAllOldBlackjackGames,
@@ -16,7 +19,12 @@ import {
 } from '@/utils/casino/blackjack'
 
 import { card } from '../../helpers/cards'
-import { BlackjackGame, User, createTestUser, setupMongoTests } from '../../helpers/mongo'
+import {
+  BlackjackGame,
+  User,
+  createTestUser,
+  setupMongoTests
+} from '../../helpers/mongo'
 
 setupMongoTests()
 
@@ -50,7 +58,8 @@ const settleStaleBlackjackGame = async (game: TBlackjackGame) => {
     guildId: game.guildId,
     totalBet,
     winnings: totalPayout,
-    betId: game.betId
+    betId: game.betId,
+    game: 'blackjack'
   })
 
   await deleteBlackjackGame({ userId: game.userId, guildId: game.guildId })
@@ -65,7 +74,8 @@ describe('blackjack autostand data flow', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       totalBet: 100,
-      betId: 'bet-autostand-1'
+      betId: 'bet-autostand-1',
+      game: 'blackjack'
     })
 
     await upsertBlackjackGame({

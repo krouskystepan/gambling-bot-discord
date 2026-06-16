@@ -1,4 +1,4 @@
-import { MINI_NUMBERS } from 'gambling-bot-shared'
+import { MINI_NUMBERS } from 'gambling-bot-shared/casino'
 
 export function getRouletteColor(number: string) {
   const color = MINI_NUMBERS[number]

@@ -1,8 +1,8 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import {
   ActionRowBuilder,
@@ -20,6 +20,7 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  assertGlobalFeature,
   attachAtmRequestMessage,
   checkAtmChannels,
   checkUserRegistration,
@@ -61,12 +62,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     const guildConfiguration = await checkAtmChannels(interaction)
     if (!guildConfiguration) return
+    if (
+      !(await assertGlobalFeature(interaction, guildConfiguration, 'withdraw'))
+    ) {
+      return
+    }
 
     const account = interaction.options.getString('account', true)
     const amount = interaction.options.getString('amount', true)
     const parsedAmount = parseReadableStringToNumber(amount)
-    const readableAmount = formatNumberToReadableString(parsedAmount)
-
     if (isNaN(parsedAmount)) {
       return interaction.reply({
         embeds: [
@@ -103,7 +107,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough funds to withdraw **$${readableAmount}**.\nYour current balance is **$${formatNumberToReadableString(preview.balance)}**.`
+              `You don't have enough funds to withdraw **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**.\nYour current balance is **${formatMoney(preview.balance, guildConfiguration.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -115,8 +119,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Withdrawable Funds',
-              `You requested **$${readableAmount}**, but you can only withdraw **$${formatNumberToReadableString(preview.withdrawable)}**.\n` +
-                `**$${formatNumberToReadableString(preview.locked)}** is currently locked.`
+              `You requested **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**, but you can only withdraw **${formatMoney(preview.withdrawable, guildConfiguration.globalSettings)}**.\n` +
+                `**${formatMoney(preview.locked, guildConfiguration.globalSettings)}** is currently locked.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -178,7 +182,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             )
             .setColor('Red')
             .setDescription(
-              `<@${interaction.user.id}> requested a withdrawal of **$${readableAmount}** to account **${account}**.`
+              `<@${interaction.user.id}> requested a withdrawal of **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to account **${account}**.`
             )
         ],
         components: []
@@ -222,7 +226,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       embeds: [
         createSuccessEmbed(
           'ATM - Withdraw',
-          `You have requested to withdraw **$${readableAmount}**.\nPlease wait for the transaction to be processed.`
+          `You have requested to withdraw **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**.\nPlease wait for the transaction to be processed.`
         )
       ],
       flags: MessageFlags.Ephemeral

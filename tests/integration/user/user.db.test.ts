@@ -4,6 +4,7 @@ import {
   createUserIfNotExists,
   forceCreateUser,
   forceDeleteUser,
+  getGuildUserIds,
   getUser,
   previewWithdraw,
   resetUserBalance,
@@ -20,6 +21,17 @@ describe('user.db', () => {
 
     const user = await getUser({ userId: 'user-1', guildId: 'guild-1' })
     expect(user?.balance).toBe(42)
+  })
+
+  it('getGuildUserIds returns user ids for a guild', async () => {
+    await createTestUser({ userId: 'u-a', guildId: 'guild-1' })
+    await createTestUser({ userId: 'u-b', guildId: 'guild-1' })
+    await createTestUser({ userId: 'other', guildId: 'guild-2' })
+
+    const ids = await getGuildUserIds({ guildId: 'guild-1' })
+
+    expect(ids).toHaveLength(2)
+    expect(ids).toEqual(expect.arrayContaining(['u-a', 'u-b']))
   })
 
   it('resetUserBalance zeros balances', async () => {

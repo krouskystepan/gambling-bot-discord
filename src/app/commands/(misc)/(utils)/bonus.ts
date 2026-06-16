@@ -1,10 +1,12 @@
 import {
   calculateBonusReward,
   canClaimDailyBonus,
-  formatNumberToReadableString,
-  getStreakAfterClaim,
-  getStreakDisplay
-} from 'gambling-bot-shared'
+  getEffectiveStreak,
+  getStreakDisplay,
+  normalizeBonusSettings
+} from 'gambling-bot-shared/bonus'
+import { getBonusCycleLength } from 'gambling-bot-shared/bonus'
+import { formatMoney } from 'gambling-bot-shared/common'
 
 import {
   ApplicationCommandOptionType,
@@ -17,9 +19,10 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  assertGlobalFeature,
+  assertNotMaintenance,
   checkUserRegistration,
-  claimDailyBonus,
-  createTransaction,
+  claimDailyBonusAtomic,
   getGuildConfigByGuildId
 } from '@/services'
 import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
@@ -43,8 +46,6 @@ export const command: CommandData = {
   ]
 }
 
-// TODO: fix and test the bonuses
-// DO NOT USE LOCKED BALANCE - CHECK IF CAN IDK
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const subcommand = interaction.options.getSubcommand()
@@ -54,7 +55,22 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const guildConfig = await getGuildConfigByGuildId({
       guildId: interaction.guildId!
     })
-    if (!guildConfig || !guildConfig.bonusSettings) {
+    if (!guildConfig) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Error - Bonus not configured',
+            'Daily bonus is not configured for this server.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+    if (!(await assertNotMaintenance(interaction, guildConfig))) return
+    if (!(await assertGlobalFeature(interaction, guildConfig, 'dailyBonus'))) {
+      return
+    }
+    if (!guildConfig.bonusSettings) {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
@@ -66,17 +82,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       })
     }
 
-    const settings = guildConfig.bonusSettings
+    const settings = normalizeBonusSettings(guildConfig.bonusSettings)
 
     const now = new Date()
     const lastClaim = user.lastDailyClaim ? new Date(user.lastDailyClaim) : null
-    let streak = user.dailyStreak ?? 0
+    const storedStreak = user.dailyStreak ?? 0
 
     if (subcommand === 'check') {
       const { currentStreak, nextStreak } = getStreakDisplay(
         lastClaim,
         now,
-        streak
+        getEffectiveStreak(lastClaim, now, storedStreak)
       )
 
       const nextReward = calculateBonusReward({
@@ -84,7 +100,20 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         settings
       }).reward
 
-      const totalDays = 28
+      const cycleLength = settings.resetOnMax
+        ? Math.min(
+            28,
+            getBonusCycleLength(
+              settings.rewardMode,
+              settings.baseReward,
+              settings.maxReward,
+              settings.streakIncrement ?? 0,
+              settings.streakMultiplier ?? 1
+            )
+          )
+        : 28
+      const totalDays = Math.max(cycleLength, 7)
+
       let calendar = ''
       for (let i = 1; i <= totalDays; i++) {
         const isWeekly = i % 7 === 0
@@ -121,7 +150,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const embed = new EmbedBuilder()
         .setTitle('Daily Bonus Calendar')
         .setColor(Colors.Blue)
-        .setDescription(`Here is your bonus streak calendar:\n\n${calendar}`)
+        .setDescription(
+          `Here is your bonus streak calendar (${totalDays} day cycle):\n\n${calendar}`
+        )
         .addFields(
           {
             name: '🔥 Current Streak',
@@ -130,11 +161,14 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           },
           {
             name: '💰 Next Reward',
-            value: `$${formatNumberToReadableString(nextReward)}`,
+            value: `${formatMoney(nextReward, guildConfig.globalSettings)}`,
             inline: true
           },
           { name: '⏰ Next Claim', value: claimInfo, inline: false }
         )
+        .setFooter({
+          text: 'Daily bonus credits bonus balance only — never locked balance.'
+        })
         .setTimestamp()
 
       return interaction.reply({
@@ -159,17 +193,14 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      streak = getStreakAfterClaim(lastClaim, now, streak)
-      const reward = calculateBonusReward({ streak, settings }).reward
-
-      const updatedUser = await claimDailyBonus({
-        user,
-        reward,
-        streak,
-        now
+      const claimResult = await claimDailyBonusAtomic({
+        userId: user.userId,
+        guildId: user.guildId,
+        now,
+        settings
       })
 
-      if (!updatedUser) {
+      if (!claimResult.ok) {
         return interaction.reply({
           embeds: [
             createInfoEmbed(
@@ -181,16 +212,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      await createTransaction({
-        userId: updatedUser.userId,
-        guildId: updatedUser.guildId,
-        amount: reward,
-        type: 'bonus',
-        source: 'system',
-        meta: {
-          bonusStreak: streak
-        }
-      })
+      const { user: updatedUser, reward, streak, isReset } = claimResult
 
       logger.event(
         {
@@ -203,13 +225,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         'User claimed daily bonus'
       )
 
+      const resetNote = isReset
+        ? '\n\nYour reward cycle has reset — keep the streak going!'
+        : ''
+
       const embed = new EmbedBuilder()
         .setTitle('Daily Bonus Claimed!')
         .setColor(Colors.Gold)
         .setDescription(
-          `You claimed your daily bonus and received **$${formatNumberToReadableString(
-            reward
-          )}** coins!`
+          `You claimed your daily bonus and received **${formatMoney(
+            reward,
+            guildConfig.globalSettings
+          )}** coins!${resetNote}`
         )
         .addFields(
           {
@@ -219,7 +246,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           },
           {
             name: '🎁 Bonus Balance',
-            value: `$${formatNumberToReadableString(updatedUser.bonusBalance)}`,
+            value: `${formatMoney(updatedUser.bonusBalance, guildConfig.globalSettings)}`,
             inline: true
           }
         )

@@ -1,16 +1,17 @@
+import { LOTTERY_MAX_SIMULATE_ENTRIES } from 'gambling-bot-shared/casino'
 import {
-  LOTTERY_MAX_SIMULATE_ENTRIES,
+  formatMoney,
   formatNumberToReadableString,
   formatNumberWithSpaces,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType } from 'discord.js'
 
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { getGuildConfigByGuildId } from '@/services'
+import { assertGlobalFeature, getGuildConfigByGuildId } from '@/services'
 import { drawLottery } from '@/utils/casino/rng'
 import { DEV_GUILDS } from '@/utils/devGuilds'
 import { createBetEmbed } from '@/utils/discord/createEmbed'
@@ -68,6 +69,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const settings = config?.casinoSettings
 
     if (!settings) return
+    if (
+      !(await assertGlobalFeature(interaction, config, 'casinoGamesForMods'))
+    ) {
+      return
+    }
 
     await interaction.deferReply()
 
@@ -104,7 +110,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     await interaction.editReply(
       `Simulating **${formatNumberToReadableString(
         entries
-      )}** entries with a bet of **$${formatNumberToReadableString(bet)}**. Please wait...`
+      )}** entries with a bet of **${formatMoney(bet, config.globalSettings)}**. Please wait...`
     )
 
     const startTime = performance.now()
@@ -174,9 +180,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const embed = createBetEmbed(
       `🎟️ Lottery Simulation - ${formatNumberToReadableString(entries)} entries`,
       profitOrLoss >= 0 ? 'Green' : 'Red',
-      `Total bet: **$${formatNumberToReadableString(totalBet)}**\n` +
-        `Total: **$${formatNumberToReadableString(totalWinnings)}**\n` +
-        `Profit/Loss: **$${formatNumberToReadableString(profitOrLoss)}**\n` +
+      `Total bet: **${formatMoney(totalBet, config.globalSettings)}**\n` +
+        `Total: **${formatMoney(totalWinnings, config.globalSettings)}**\n` +
+        `Profit/Loss: **${formatMoney(profitOrLoss, config.globalSettings)}**\n` +
         `Profit/Loss Percentage: **${profitOrLossPercentage.toFixed(2)}%**\n` +
         `📊 RTP: **${rtp.toFixed(2)}%**\n\n` +
         (winsLosses ? `${winLossesDetails}\n\n` : '') +

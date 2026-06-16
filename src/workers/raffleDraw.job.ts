@@ -1,8 +1,12 @@
 import {
-  TGuildConfiguration,
-  formatNumberWithSpaces,
+  formatMoney,
+  formatMoneyExact,
   generateId
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
+import {
+  TGuildConfiguration,
+  isGlobalFeatureDisabled
+} from 'gambling-bot-shared/guild'
 
 import { Colors, EmbedBuilder } from 'discord.js'
 
@@ -46,6 +50,13 @@ export const raffleDrawJob = async (client: Client<true>) => {
         continue
       }
 
+      if (isGlobalFeatureDisabled(guildConfig, 'raffleManagement')) {
+        logger.worker(
+          `[RAFFLE] Skipping draw — raffle management disabled (${raffle.guildId})`
+        )
+        continue
+      }
+
       const participants = raffle.participants.filter((p) => p.tickets > 0)
       const totalTickets = participants.reduce((s, p) => s + p.tickets, 0)
       const rawPot = totalTickets * raffle.ticketPrice
@@ -63,7 +74,8 @@ export const raffleDrawJob = async (client: Client<true>) => {
             userId: p.userId,
             guildId: raffle.guildId,
             amount: p.tickets * raffle.ticketPrice,
-            raffleId: raffle.drawId
+            raffleId: raffle.drawId,
+            game: 'raffle'
           })
         }
       } else {
@@ -74,7 +86,8 @@ export const raffleDrawJob = async (client: Client<true>) => {
             userId: winnerId,
             guildId: raffle.guildId,
             amount: pot,
-            raffleId: raffle.drawId
+            raffleId: raffle.drawId,
+            game: 'raffle'
           })
         }
       }
@@ -147,7 +160,7 @@ export const raffleDrawJob = async (client: Client<true>) => {
           refunded
             ? 'Not enough participants — all tickets refunded.'
             : winnerId
-              ? `🏆 **Winner:** <@${winnerId}>\n🎟️ Tickets Sold: **${totalTickets}**\n💰 Pot: **$${formatNumberWithSpaces(pot)}**`
+              ? `🏆 **Winner:** <@${winnerId}>\n🎟️ Tickets Sold: **${totalTickets}**\n💰 Pot: **${formatMoneyExact(pot, guildConfig.globalSettings)}**`
               : 'No participants this round.'
         )
         .setFooter({ text: `ID: ${raffle.drawId}` })
@@ -171,7 +184,7 @@ export const raffleDrawJob = async (client: Client<true>) => {
         .setColor(Colors.Gold)
         .setTitle('🎫 Global Raffle')
         .setDescription(
-          `💰 Ticket Price: **$${raffle.ticketPrice.toLocaleString()}**\n🎟️ Ticket Limit: **${raffle.maxTicketsPerUser}**\n\n🗓️ Next Draw: **<t:${nextDrawUnix}:F>**\n\n💸 Current Pot: **$0**`
+          `💰 Ticket Price: **${formatMoneyExact(raffle.ticketPrice, guildConfig.globalSettings)}**\n🎟️ Ticket Limit: **${raffle.maxTicketsPerUser}**\n\n🗓️ Next Draw: **<t:${nextDrawUnix}:F>**\n\n💸 Current Pot: **${formatMoney(0, guildConfig.globalSettings)}**`
         )
         .setFooter({ text: `ID: ${newBetId}` })
         .setTimestamp()
@@ -191,7 +204,7 @@ export const raffleDrawJob = async (client: Client<true>) => {
         )
       } else if (winnerId) {
         logger.worker(
-          `Raffle "${raffle.raffleId}" winner ${winnerId} — pot $${formatNumberWithSpaces(pot)}`
+          `Raffle "${raffle.raffleId}" winner ${winnerId} — pot ${formatMoneyExact(pot, guildConfig.globalSettings)}`
         )
       }
 

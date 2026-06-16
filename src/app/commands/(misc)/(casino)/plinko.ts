@@ -1,11 +1,14 @@
 import {
-  formatNumberToReadableString,
-  generateId,
+  PLINKO_ROW_COUNT,
   getPlinkoMultiplierAtPathIndex,
   normalizePlinkoBinMultipliers,
-  parseReadableStringToNumber,
-  PLINKO_ROW_COUNT
-} from 'gambling-bot-shared'
+  shouldAnnouncePlinkoBall
+} from 'gambling-bot-shared/casino'
+import {
+  formatMoney,
+  generateId,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
@@ -24,6 +27,7 @@ import { dropPlinkoPath } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'plinko',
@@ -101,7 +105,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       betAmount,
       configReply.casinoSettings.plinko.maxBet,
-      configReply.casinoSettings.plinko.minBet
+      configReply.casinoSettings.plinko.minBet,
+      configReply.globalSettings
     )
     if (!isBetValid) return
 
@@ -113,7 +118,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         userId,
         guildId,
         totalBet,
-        betId
+        betId,
+        game: 'plinko'
       })
     } catch (err) {
       if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
@@ -126,7 +132,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+              `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -144,6 +150,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     let totalWinnings = 0
     let liveResult = 0
     const results: string[] = []
+    const announcementBalls: string[] = []
 
     await interaction.deferReply()
 
@@ -163,7 +170,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             createBetEmbed(
               `🎯 Balls dropping...`,
               'Blue',
-              `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+              `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
                 renderBoardFrame(
                   rows,
                   paths,
@@ -173,7 +180,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
                 ) +
                 `\n\n💰 Total: ${
                   liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                } **$${formatNumberToReadableString(liveResult)}**`,
+                } **${formatMoney(liveResult, configReply.globalSettings)}**`,
               betId
             )
           ]
@@ -186,7 +193,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     for (let i = 0; i < balls; i++) {
       const path = paths[i]
       const finalBin = path[path.length - 1]
-      const multiplier = getPlinkoMultiplierAtPathIndex(binMultipliers, finalBin)
+      const multiplier = getPlinkoMultiplierAtPathIndex(
+        binMultipliers,
+        finalBin
+      )
       const formattedMultiplier = Number(multiplier).toFixed(2)
       const winnings = betAmount * multiplier
       const netForBall = winnings - betAmount
@@ -208,16 +218,20 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         emoji = '➖'
       }
 
-      const isNegative = displayValue < 0
-      const formattedAmount = formatNumberToReadableString(
-        Math.abs(displayValue)
+      results.push(
+        `Ball **${i + 1}** - x${formattedMultiplier} | ${emoji} | ${formatMoney(displayValue, configReply.globalSettings)}`
       )
 
-      results.push(
-        `Ball **${i + 1}** - x${formattedMultiplier} | ${emoji} | ${
-          isNegative ? '-' : ''
-        }$${formattedAmount}`
-      )
+      if (
+        shouldAnnouncePlinkoBall(
+          multiplier,
+          configReply.casinoSettings.winAnnouncements.plinkoMinMultiplier
+        )
+      ) {
+        announcementBalls.push(
+          `Ball **${i + 1}** — **x${formattedMultiplier}** → **${formatMoney(winnings, configReply.globalSettings)}**`
+        )
+      }
     }
 
     const finalBalance = await settleCasinoWinnings({
@@ -225,9 +239,20 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       guildId,
       totalBet,
       winnings: totalWinnings,
-      betId
+      betId,
+      game: 'plinko'
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🎯 Plinko Big Win!',
+      intro: 'landed huge multipliers!',
+      lines: announcementBalls,
+      betId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -241,13 +266,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               ? '🎯 **Better Luck Next Time...** ❌'
               : '🎯 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+          `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
             `🎯 **Ball Results:**\n${results.join('\n')}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(liveResult)}**\n` +
+            } **${formatMoney(liveResult, configReply.globalSettings)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
+              ? `🏦 Balance: **${formatMoney(finalBalance, configReply.globalSettings)}**`
               : ''),
           betId
         )
@@ -261,7 +286,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           guildId,
           totalBet,
           winnings: totalWinnings,
-          betId
+          betId,
+          game: 'plinko'
         })
       } catch {}
     }

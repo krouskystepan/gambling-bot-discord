@@ -1,15 +1,16 @@
-import type { TBlackjackHand } from '@/models/BlackjackGame'
+import type {
+  Card,
+  GamePhase,
+  TBlackjackHand
+} from 'gambling-bot-shared/blackjack'
+import type { GlobalSettings } from 'gambling-bot-shared/guild'
 
-import type { SUITES, VALUES } from './deck'
-
-export type Suite = (typeof SUITES)[number]
-export type CardLabel = (typeof VALUES)[number]['label']
-
-export type Card = {
-  suite: Suite
-  label: CardLabel
-  value: number
-}
+export type {
+  Card,
+  CardLabel,
+  GamePhase,
+  Suite
+} from 'gambling-bot-shared/blackjack'
 
 export type PlayerAction = 'HIT' | 'STAND' | 'DOUBLE' | 'SPLIT'
 
@@ -26,8 +27,6 @@ export type EngineResult =
       finished: false
       dealerTurn: true
     }
-
-export type GamePhase = 'PLAYER' | 'DEALER' | 'FINISHED'
 
 export type EngineState = {
   deck: Card[]
@@ -66,4 +65,5 @@ export type RenderParams = {
   userBalance?: number
   dealerHideSecondCard?: boolean
   result?: RenderResult
+  globalSettings?: Partial<GlobalSettings> | null
 }

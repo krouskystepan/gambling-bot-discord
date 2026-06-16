@@ -1,8 +1,8 @@
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseTimeToSeconds
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import {
   ApplicationCommandOptionType,
@@ -16,6 +16,8 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
   addVipMemberAtomic,
+  assertGlobalFeature,
+  assertNotMaintenance,
   extendVipAtomic,
   finalizeVipPurchase,
   getActiveVipByOwner,
@@ -106,11 +108,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         embeds: [
           createErrorEmbed(
             'Guild Not Configured',
-            'This guild has not been configured yet. Please contact administrator.'
+            'This guild has not been configured yet. Please contact an administrator.'
           )
         ],
         flags: MessageFlags.Ephemeral
       })
+    }
+    if (!(await assertNotMaintenance(interaction, guildConfiguration))) return
+    if (!(await assertGlobalFeature(interaction, guildConfiguration, 'vip'))) {
+      return
     }
 
     if (
@@ -301,7 +307,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         embeds: [
           createSuccessEmbed(
             'VIP Purchased',
-            `Channel: <#${channel.id}>\nDuration: **${durationDays} day(s)**\nCost: **$${formatNumberToReadableString(totalPrice)}**`
+            `Channel: <#${channel.id}>\nDuration: **${durationDays} day(s)**\nCost: **${formatMoney(totalPrice, guildConfiguration.globalSettings)}**`
           )
         ]
       })
@@ -425,7 +431,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             'VIP Extended',
             `Your VIP has been extended by **${durationDays} day(s)**.\n` +
               `New expiry: <t:${Math.floor(newExpiry.getTime() / 1000)}:f>\n` +
-              `You have been charged **$${formatNumberToReadableString(totalPrice)}**.`
+              `You have been charged **${formatMoney(totalPrice, guildConfiguration.globalSettings)}**.`
           )
         ]
       })
@@ -549,7 +555,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         embeds: [
           createSuccessEmbed(
             'Member Added',
-            `${userToAdd} added to VIP.\nCharge: **$${formatNumberToReadableString(chargedAmount)}**`
+            `${userToAdd} added to VIP.\nCharge: **${formatMoney(chargedAmount, guildConfiguration.globalSettings)}**`
           )
         ]
       })
@@ -703,10 +709,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             'VIP Info',
             vipInfoSection +
               (pricePerCreate > 0
-                ? `Price per create: **$${formatNumberToReadableString(pricePerCreate)}**\n`
+                ? `Price per create: **${formatMoney(pricePerCreate, guildConfiguration.globalSettings)}**\n`
                 : '') +
-              `Price per day: **$${formatNumberToReadableString(pricePerDay)}**\n\n` +
-              `Your balance: **$${formatNumberToReadableString(user.balance)}**\n` +
+              `Price per day: **${formatMoney(pricePerDay, guildConfiguration.globalSettings)}**\n\n` +
+              `Your balance: **${formatMoney(user.balance, guildConfiguration.globalSettings)}**\n` +
               `You can afford VIP for up to **${maxDays} day(s)** (excluding creation fee).`
           )
         ],

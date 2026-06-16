@@ -1,4 +1,4 @@
-import { MINI_NUMBERS } from 'gambling-bot-shared'
+import { MINI_NUMBERS } from 'gambling-bot-shared/casino'
 
 import type { RouletteBetType } from './types'
 

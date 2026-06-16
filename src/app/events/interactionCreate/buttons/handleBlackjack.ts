@@ -4,6 +4,7 @@ import { handleUnexpectedButtonError } from '@/errors'
 import {
   deleteBlackjackGame,
   getBlackjackGameByBetId,
+  getGuildConfigByGuildId,
   getUser,
   reserveCasinoBet,
   settleCasinoWinnings,
@@ -22,7 +23,9 @@ import {
   renderBlackjackEmbed,
   resolveResult
 } from '@/utils/casino/blackjack'
+import { collectBlackjackBigWinLines } from '@/utils/casino/blackjackBigWin'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -38,6 +41,9 @@ export default async (interaction: Interaction) => {
   if (!guildId) return
 
   try {
+    const guildConfig = await getGuildConfigByGuildId({ guildId })
+    const globalSettings = guildConfig?.globalSettings
+
     const game = await getBlackjackGameByBetId({ betId, guildId })
 
     if (!game) {
@@ -84,7 +90,8 @@ export default async (interaction: Interaction) => {
           userId: game.userId,
           guildId,
           totalBet: extraBet,
-          betId
+          betId,
+          game: 'blackjack'
         })
       } catch {
         return interaction.followUp({
@@ -109,7 +116,8 @@ export default async (interaction: Interaction) => {
           userId: game.userId,
           guildId,
           totalBet: splitBet,
-          betId
+          betId,
+          game: 'blackjack'
         })
       } catch {
         return interaction.followUp({
@@ -182,7 +190,8 @@ export default async (interaction: Interaction) => {
               dealerCards: engine.dealerCards,
               showBalance,
               userBalance: finalUser.balance,
-              result: { kind: 'FINAL', finalResultId, netProfit: net }
+              result: { kind: 'FINAL', finalResultId, netProfit: net },
+              globalSettings
             })
           ],
           components: []
@@ -205,7 +214,8 @@ export default async (interaction: Interaction) => {
             activeHandIndex: -1,
             dealerCards: engine.dealerCards,
             showBalance,
-            result: { kind: 'PHASE', gamePhaseId: 'DEALER_DRAWING' }
+            result: { kind: 'PHASE', gamePhaseId: 'DEALER_DRAWING' },
+            globalSettings
           })
         ],
         components: []
@@ -225,7 +235,8 @@ export default async (interaction: Interaction) => {
               activeHandIndex: -1,
               dealerCards: engine.dealerCards,
               showBalance,
-              result: { kind: 'PHASE', gamePhaseId: 'DEALER_DRAWING' }
+              result: { kind: 'PHASE', gamePhaseId: 'DEALER_DRAWING' },
+              globalSettings
             })
           ],
           components: []
@@ -248,8 +259,27 @@ export default async (interaction: Interaction) => {
         guildId,
         totalBet,
         winnings: totalPayout,
-        betId
+        betId,
+        game: 'blackjack'
       })
+
+      if (guildConfig) {
+        tryAnnounceBigWin({
+          guild: interaction.guild,
+          guildConfig,
+          userId: game.userId,
+          title: '🃏 Blackjack Big Win!',
+          intro: 'crushed the table!',
+          lines: collectBlackjackBigWinLines({
+            engine,
+            globalSettings,
+            minMultiplier:
+              guildConfig.casinoSettings.winAnnouncements.blackjackMinMultiplier
+          }),
+          betId,
+          sourceChannelId: interaction.channelId
+        })
+      }
 
       let userBalance: number | undefined
 
@@ -269,7 +299,8 @@ export default async (interaction: Interaction) => {
             dealerCards: engine.dealerCards,
             showBalance,
             userBalance,
-            result: { kind: 'FINAL', finalResultId, netProfit: net }
+            result: { kind: 'FINAL', finalResultId, netProfit: net },
+            globalSettings
           })
         ],
         components: []
@@ -299,7 +330,8 @@ export default async (interaction: Interaction) => {
           dealerCards: engine.dealerCards,
           showBalance,
           result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
-          dealerHideSecondCard: true
+          dealerHideSecondCard: true,
+          globalSettings
         })
       ],
       components: [

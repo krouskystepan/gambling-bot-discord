@@ -1,7 +1,6 @@
-import {
-  formatNumberToReadableString,
-  validateBetAmount
-} from 'gambling-bot-shared'
+import { validateBetAmount } from 'gambling-bot-shared/casino'
+import { formatMoney } from 'gambling-bot-shared/common'
+import { type GlobalSettings } from 'gambling-bot-shared/guild'
 import { DateTime } from 'luxon'
 
 import { MessageFlags } from 'discord.js'
@@ -22,7 +21,8 @@ export const checkValidBet = (
   interaction: Parameters<ChatInputCommand>[0]['interaction'],
   betAmount: number,
   maxBet: number,
-  minBet: number
+  minBet: number,
+  globalSettings?: Partial<GlobalSettings> | null
 ): boolean => {
   const result = validateBetAmount(betAmount, maxBet, minBet)
 
@@ -64,7 +64,7 @@ export const checkValidBet = (
         embeds: [
           createInfoEmbed(
             'Invalid Input - Above Maximum Bet',
-            `The maximum bet is **$${formatNumberToReadableString(maxBet)}**.`
+            `The maximum bet is **${formatMoney(maxBet, globalSettings)}**.`
           )
         ],
         flags: MessageFlags.Ephemeral
@@ -75,7 +75,7 @@ export const checkValidBet = (
         embeds: [
           createInfoEmbed(
             'Invalid Input - Below Minimum Bet',
-            `The minimum bet is **$${formatNumberToReadableString(minBet)}**.`
+            `The minimum bet is **${formatMoney(minBet, globalSettings)}**.`
           )
         ],
         flags: MessageFlags.Ephemeral

@@ -1,8 +1,9 @@
+import { shouldAnnounceGoldenJackpotHit } from 'gambling-bot-shared/casino'
 import {
-  formatNumberToReadableString,
+  formatMoney,
   generateId,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
@@ -20,6 +21,7 @@ import { drawGoldenJackpot } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 const GOLDEN_JACKPOT_MAX_ENTRIES = 100
 
@@ -108,7 +110,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction,
       parsedBetAmount,
       configReply.casinoSettings.goldenJackpot.maxBet,
-      configReply.casinoSettings.goldenJackpot.minBet
+      configReply.casinoSettings.goldenJackpot.minBet,
+      configReply.globalSettings
     )
 
     if (!isBetValid) return
@@ -121,7 +124,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         userId,
         guildId,
         totalBet,
-        betId
+        betId,
+        game: 'goldenJackpot'
       })
     } catch (err) {
       if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
@@ -134,7 +138,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough money to place this bet.\nYour current balance is **$${formatNumberToReadableString(freshUser?.balance ?? 0)}**.`
+              `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -146,6 +150,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const initialTickets = entries
     let liveResult = 0
     let jackpotTries: string[] = []
+    const announcementHits: string[] = []
 
     await interaction.deferReply()
 
@@ -155,11 +160,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           createBetEmbed(
             `🤑 Drawing...`,
             'Blue',
-            `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+            `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
               `🎟️ Tickets left: **${initialTickets}**\n` +
               `\n💰 Total: ${
                 liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-              } **$${formatNumberToReadableString(liveResult)}**`,
+              } **${formatMoney(liveResult, configReply.globalSettings)}**`,
             betId
           )
         ]
@@ -188,11 +193,26 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       liveResult += winnings - parsedBetAmount
 
       if (isJackpot) {
+        const tryLabel = tryNumber.toString().padStart(3, '0')
+
         jackpotTries.push(
-          `**JACKPOT!** You won **$${formatNumberToReadableString(
-            winnings
-          )}** on Try **#${tryNumber.toString().padStart(3, '0')}**! 🔥`
+          `**JACKPOT!** You won **${formatMoney(
+            winnings,
+            configReply.globalSettings
+          )}** on Try **#${tryLabel}**! 🔥`
         )
+
+        if (
+          shouldAnnounceGoldenJackpotHit(
+            configReply.casinoSettings.goldenJackpot.winMultiplier,
+            configReply.casinoSettings.winAnnouncements
+              .goldenJackpotMinMultiplier
+          )
+        ) {
+          announcementHits.push(
+            `hit the jackpot on Try **#${tryLabel}**!\n💰 Won: **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+          )
+        }
       }
 
       if (!skipAnimations) {
@@ -207,14 +227,14 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               createBetEmbed(
                 `🤑 Drawing...`,
                 'Blue',
-                `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+                `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
                   `🎟️ Tickets left: **${ticketsLeft}**\n` +
                   (jackpotTries.length > 0
                     ? `\n**🤑 JACKPOT WINS:**\n${jackpotTries.join('\n')}\n`
                     : '') +
                   `\n💰 Total: ${
                     liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                  } **$${formatNumberToReadableString(liveResult)}**`,
+                  } **${formatMoney(liveResult, configReply.globalSettings)}**`,
                 betId
               )
             ]
@@ -229,9 +249,20 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       guildId,
       totalBet,
       winnings: totalWinnings,
-      betId
+      betId,
+      game: 'goldenJackpot'
     })
     betSettled = true
+
+    tryAnnounceBigWin({
+      guild: interaction.guild,
+      guildConfig: configReply,
+      userId,
+      title: '🏆 Golden Jackpot!',
+      lines: announcementHits,
+      betId,
+      sourceChannelId: interaction.channelId
+    })
 
     const isWin = liveResult > 0
     const isLoss = liveResult < 0
@@ -245,13 +276,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               ? '🤑 **Better Luck Next Time...** ❌'
               : '🤑 **Not Bad...** 👀',
           isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-          `💵 Total Bet: **$${formatNumberToReadableString(totalBet)}**\n\n` +
+          `💵 Total Bet: **${formatMoney(totalBet, configReply.globalSettings)}**\n\n` +
             `🤑 **Draw Result:**${isWin ? `\n ${jackpotTries.join('\n')}` : ' No win'}\n\n` +
             `💰 Total: ${
               isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-            } **$${formatNumberToReadableString(liveResult)}**\n` +
+            } **${formatMoney(liveResult, configReply.globalSettings)}**\n` +
             (showBalance
-              ? `🏦 Balance: **$${formatNumberToReadableString(finalBalance)}**`
+              ? `🏦 Balance: **${formatMoney(finalBalance, configReply.globalSettings)}**`
               : ''),
           betId
         )
@@ -265,7 +296,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           guildId,
           totalBet,
           winnings: totalWinnings,
-          betId
+          betId,
+          game: 'goldenJackpot'
         })
       } catch {}
     }

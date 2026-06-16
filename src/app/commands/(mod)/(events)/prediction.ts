@@ -1,8 +1,10 @@
+import { formatMoney } from 'gambling-bot-shared/common'
 import {
-  TPredictionOption,
-  formatNumberToReadableString
-} from 'gambling-bot-shared'
-import { DateTime } from 'luxon'
+  calculatePredictionPayoutSummary,
+  getPredictionCheckSummary,
+  parsePredictionAutolock,
+  parsePredictionChoices
+} from 'gambling-bot-shared/predictions'
 
 import {
   ActionRowBuilder,
@@ -24,15 +26,17 @@ import {
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  assertGlobalFeature,
   checkPredictionChannels,
   createPrediction,
-  createTransaction,
   findPredictions,
-  getPredictionById,
-  refundLockedBet,
-  updatePredictionStatus,
-  updateUserBalanceAtomic
+  getPredictionById
 } from '@/services'
+import {
+  cancelPrediction,
+  endPrediction,
+  payPrediction
+} from '@/services/predictions/payPrediction.service'
 import { formatDate } from '@/utils/common/utils'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
@@ -143,12 +147,20 @@ export const metadata: CommandMetadata = {
   botPermissions: ['Administrator']
 }
 
-// TODO: Make this safe, add paying state or lock when paying, smth like this
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const configReply = await checkPredictionChannels(interaction)
 
     if (!configReply) return
+    if (
+      !(await assertGlobalFeature(
+        interaction,
+        configReply,
+        'predictionManagement'
+      ))
+    ) {
+      return
+    }
 
     const member = await interaction.guild?.members.fetch(interaction.user.id)
     const hasAdmin = member?.permissions.has('Administrator')
@@ -177,90 +189,53 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const choicesInput = options.getString('choices', true)
       const autolockInput = options.getString('autolock', false)
 
-      const rawChoices = choicesInput.split(',').map((c) => c.trim())
-      if (rawChoices.length < 2 || rawChoices.length > 3) {
+      const choicesResult = parsePredictionChoices(choicesInput)
+      if (!choicesResult.ok) {
+        const messages: Record<typeof choicesResult.error, string> = {
+          INVALID_COUNT: 'You must provide **2 or 3 choices** only.',
+          INVALID_FORMAT: `Invalid option format: "${choicesResult.detail ?? ''}". Use OptionName:Odds (e.g. Yes:2)`
+        }
+
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Wrong Number of Choices',
-              'You must provide **2 or 3 choices** only.'
+              choicesResult.error === 'INVALID_COUNT'
+                ? 'Invalid Input - Wrong Number of Choices'
+                : 'Invalid Input - Invalid Format',
+              messages[choicesResult.error]
             )
           ],
           flags: MessageFlags.Ephemeral
         })
       }
 
-      const choicesArray: TPredictionOption[] = []
-      for (const item of rawChoices) {
-        const [name, odds] = item.split(':').map((x) => x.trim())
-        if (!name || !odds || isNaN(Number(odds))) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Invalid Input - Invalid Format',
-                `Invalid option format: "${item}". Use OptionName:Odds (e.g. Yes:2)`
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
-        }
-        choicesArray.push({
-          choiceName: name,
-          odds: Number(odds),
-          bets: []
-        })
-      }
+      const choicesArray = choicesResult.choices
 
       let autolockDate: Date | null = null
       if (autolockInput) {
-        const dateTimeRegex = /^(\d{1,2})\.(\d{1,2})\.(\d{4}) (\d{2}):(\d{2})$/
-        const match = autolockInput.match(dateTimeRegex)
+        const autolockResult = parsePredictionAutolock(autolockInput)
 
-        if (!match) {
+        if (!autolockResult.ok) {
+          const messages: Record<typeof autolockResult.error, string> = {
+            INVALID_FORMAT:
+              'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 05:00` or `09.09.2025 18:00`',
+            INVALID_DATE: 'The date/time you provided is invalid.',
+            PAST_DATE:
+              'Autolock must be a future date/time. Please provide a date and time that is after now.'
+          }
+
           return interaction.reply({
             embeds: [
               createErrorEmbed(
                 'Invalid Input - Invalid Autolock Date/Time',
-                'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 05:00` or `09.09.2025 18:00`'
+                messages[autolockResult.error]
               )
             ],
             flags: MessageFlags.Ephemeral
           })
         }
 
-        const [_, day, month, year, hour, minute] = match.map(Number)
-
-        const dt = DateTime.fromObject(
-          { year, month, day, hour, minute },
-          //! Later in db
-          { zone: 'Europe/Prague' }
-        )
-
-        if (!dt.isValid) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Invalid Input - Invalid Autolock Date/Time',
-                'The date/time you provided is invalid.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
-        }
-
-        if (dt.toMillis() <= Date.now()) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Invalid Input - Autolock in the Past',
-                'Autolock must be a future date/time. Please provide a date and time that is after now.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
-        }
-
-        autolockDate = dt.toJSDate()
+        autolockDate = autolockResult.autolock
       }
 
       await interaction.deferReply()
@@ -325,11 +300,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (subcommand === 'end') {
       const predictionId = options.getString('prediction-id', true)
 
-      const updatedPrediction = await updatePredictionStatus({
+      const updatedPrediction = await endPrediction({
         predictionId,
-        guildId: interaction.guildId!,
-        fromStatus: 'active',
-        toStatus: 'ended'
+        guildId: interaction.guildId!
       })
 
       if (!updatedPrediction) {
@@ -414,51 +387,35 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const predictionId = options.getString('prediction-id', true)
       const winnerChoice = options.getString('winner', true)
 
-      const prediction = await getPredictionById({
+      const payoutResult = await payPrediction({
         predictionId,
-        guildId: interaction.guildId!
+        guildId: interaction.guildId!,
+        winnerChoice
       })
 
-      if (!prediction || prediction.status !== 'ended') {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Prediction Not Ready',
-              'Prediction is not in ENDED state.'
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      const winner = prediction.choices.find(
-        (c) => c.choiceName === winnerChoice
-      )
-
-      const allBets = prediction.choices.flatMap((c) => c.bets)
-
-      if (!winner) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Invalid Choice',
-              `The winner "${winnerChoice}" does not exist in this prediction.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      if (winner.bets.length === 0) {
-        for (const bet of allBets) {
-          await refundLockedBet({
-            userId: bet.userId,
-            guildId: interaction.guildId!,
-            amount: bet.amount,
-            betId: prediction.predictionId
-          })
+      if (!payoutResult.ok) {
+        const messages: Record<typeof payoutResult.code, string> = {
+          NOT_FOUND: 'Prediction not found.',
+          INVALID_STATUS: 'Prediction is not in ENDED state.',
+          ALREADY_HANDLED:
+            'Prediction payout is already in progress or completed.',
+          INVALID_WINNER: `The winner "${winnerChoice}" does not exist in this prediction.`
         }
 
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Prediction Payout Failed',
+              messages[payoutResult.code]
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
+      const { prediction, outcome } = payoutResult
+
+      if (outcome === 'refunded') {
         return interaction.reply({
           embeds: [
             createSuccessEmbed(
@@ -470,40 +427,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      for (const bet of winner.bets) {
-        await createTransaction({
-          userId: bet.userId,
-          guildId: interaction.guildId!,
-          amount: bet.amount * winner.odds,
-          type: 'win',
-          source: 'casino',
-          betId: prediction.predictionId
-        })
-
-        const profit = bet.amount * (winner.odds - 1)
-
-        await updateUserBalanceAtomic({
-          userId: bet.userId,
-          guildId: interaction.guildId!,
-          balanceDelta: profit,
-          lockedDelta: -bet.amount
-        })
-      }
-
-      const losingChoices = prediction.choices.filter(
-        (c) => c.choiceName !== winnerChoice
-      )
-
-      for (const choice of losingChoices) {
-        for (const bet of choice.bets) {
-          await updateUserBalanceAtomic({
-            userId: bet.userId,
-            guildId: interaction.guildId!,
-            balanceDelta: 0,
-            lockedDelta: -bet.amount
-          })
-        }
-      }
+      const winner = prediction.choices.find(
+        (c) => c.choiceName === winnerChoice
+      )!
 
       const logChannel = interaction
         .guild!.channels.fetch(configReply.predictionChannelIds.logs)
@@ -533,27 +459,24 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           'Prediction payout log channel not found'
         )
       } else {
-        const totalBets = prediction.choices.flatMap((c) => c.bets)
+        const payoutSummary = calculatePredictionPayoutSummary(
+          prediction,
+          winnerChoice
+        )
 
-        const winners = winner.bets.map((b) => ({
-          userId: b.userId,
-          betAmount: b.amount,
-          winAmount: b.amount * winner.odds
-        }))
+        if (!payoutSummary) {
+          return interaction.reply({
+            embeds: [
+              createErrorEmbed(
+                'Prediction Payout Failed',
+                `The winner "${winnerChoice}" does not exist in this prediction.`
+              )
+            ],
+            flags: MessageFlags.Ephemeral
+          })
+        }
 
-        const losers = prediction.choices
-          .filter((c) => c.choiceName !== winnerChoice)
-          .flatMap((c) =>
-            c.bets.map((b) => ({
-              userId: b.userId,
-              betAmount: b.amount,
-              winAmount: 0
-            }))
-          )
-
-        const totalWon = winners.reduce((acc, w) => acc + w.winAmount, 0)
-        const totalLost = losers.reduce((acc, l) => acc + l.betAmount, 0)
-        const casinoProfit = totalLost - totalWon
+        const { winners, losers, casinoProfit } = payoutSummary
 
         const winnersDisplay = await Promise.all(
           winners.map(async (w) => {
@@ -561,9 +484,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               .fetch(w.userId)
               .catch(() => null)
             const username = member ? `<@${member.id}>` : 'Unknown'
-            return `${username} (Bet: $${formatNumberToReadableString(
-              w.betAmount
-            )}, Win: $${formatNumberToReadableString(w.winAmount)})`
+            return `${username} (Bet: ${formatMoney(
+              w.betAmount,
+              configReply.globalSettings
+            )}, Win: ${formatMoney(w.winAmount, configReply.globalSettings)})`
           })
         )
 
@@ -573,7 +497,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               .fetch(l.userId)
               .catch(() => null)
             const username = member ? `<@${member.id}>` : 'Unknown'
-            return `${username} (Bet: $${formatNumberToReadableString(l.betAmount)}, Win: $0)`
+            return `${username} (Bet: ${formatMoney(l.betAmount, configReply.globalSettings)}, Win: ${formatMoney(0, configReply.globalSettings)})`
           })
         )
 
@@ -583,14 +507,14 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           .addFields(
             {
               name: 'Participants',
-              value: `${totalBets.length}`,
+              value: `${payoutSummary.participants}`,
               inline: true
             },
             { name: 'Winners', value: `${winners.length}`, inline: true },
             { name: 'Losers', value: `${losers.length}`, inline: true },
             {
               name: 'Casino Profit/Loss',
-              value: `$${formatNumberToReadableString(casinoProfit)}`,
+              value: `${formatMoney(casinoProfit, configReply.globalSettings)}`,
               inline: true
             },
             {
@@ -631,13 +555,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         }
       }
 
-      await updatePredictionStatus({
-        predictionId,
-        guildId: interaction.guildId!,
-        fromStatus: 'ended',
-        toStatus: 'paid'
-      })
-
       logger.event(
         {
           action: 'prediction_payout',
@@ -664,11 +581,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (subcommand === 'cancel') {
       const predictionId = options.getString('prediction-id', true)
 
-      const updatedPrediction = await updatePredictionStatus({
+      const updatedPrediction = await cancelPrediction({
         predictionId,
-        guildId: interaction.guildId!,
-        fromStatus: ['active', 'ended'],
-        toStatus: 'canceled'
+        guildId: interaction.guildId!
       })
 
       if (!updatedPrediction) {
@@ -684,14 +599,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       }
 
       const allBets = updatedPrediction.choices.flatMap((c) => c.bets)
-      for (const bet of allBets) {
-        await refundLockedBet({
-          userId: bet.userId,
-          guildId: interaction.guildId!,
-          amount: bet.amount,
-          betId: predictionId
-        })
-      }
 
       const channel = await interaction.client.channels.fetch(
         updatedPrediction.channelId
@@ -760,23 +667,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      const totalBets = prediction.choices.flatMap((c) => c.bets)
-      const totalBetAmount = totalBets.reduce((acc, b) => acc + b.amount, 0)
+      const checkSummary = getPredictionCheckSummary(prediction)
+      const totalBetAmount = checkSummary.totalBetAmount
 
       const choiceSummaries = await Promise.all(
-        prediction.choices.map(async (choice) => {
-          const totalWin = choice.bets.reduce(
-            (acc, b) => acc + b.amount * choice.odds,
-            0
-          )
-
+        checkSummary.choices.map(async (choice) => {
           const bettors = await Promise.all(
             choice.bets.map(async (b) => {
               const member = await interaction.guild?.members
                 .fetch(b.userId)
                 .catch(() => null)
               const username = member ? `<@${member.id}>` : 'Unknown'
-              return `${username} — Bet: $${formatNumberToReadableString(b.amount)}`
+              return `${username} — Bet: ${formatMoney(b.amount, configReply.globalSettings)}`
             })
           )
 
@@ -784,10 +686,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             name: `Option: ${choice.choiceName} (${choice.odds}x)`,
             value:
               `Bets: ${bettors.length}\n` +
-              `Total Bet: $${formatNumberToReadableString(
-                choice.bets.reduce((a, b) => a + b.amount, 0)
+              `Total Bet: ${formatMoney(
+                choice.totalBetAmount,
+                configReply.globalSettings
               )}\n` +
-              `If Wins → Payout: $${formatNumberToReadableString(totalWin)}\n` +
+              `If Wins → Payout: ${formatMoney(choice.payoutIfWins, configReply.globalSettings)}\n` +
               (bettors.length ? bettors.join('\n') : 'No bets'),
             inline: false
           }
@@ -801,7 +704,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           { name: 'Status', value: prediction.status, inline: true },
           {
             name: 'Total Bets',
-            value: `$${formatNumberToReadableString(totalBetAmount)}`,
+            value: `${formatMoney(totalBetAmount, configReply.globalSettings)}`,
             inline: true
           },
           ...choiceSummaries
