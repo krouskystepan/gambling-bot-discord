@@ -1,4 +1,4 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared'
+import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { announceBigWin } from '@/services/discord/announceBigWin.service'

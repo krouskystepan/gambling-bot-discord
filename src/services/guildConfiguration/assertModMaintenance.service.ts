@@ -1,4 +1,4 @@
-import { TGuildConfiguration } from 'gambling-bot-shared'
+import { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
 import { getGuildConfigByGuildId } from '../db/guildConfiguration.db'
 import {

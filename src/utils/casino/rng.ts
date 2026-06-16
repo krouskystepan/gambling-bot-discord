@@ -4,7 +4,7 @@ import {
   LOTTERY_TOTAL_NUMBERS,
   MINI_NUMBERS,
   TCasinoSettings
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/casino'
 
 import type { Card } from './blackjack/types'
 import { buildPlinkoPath } from './plinko/path'

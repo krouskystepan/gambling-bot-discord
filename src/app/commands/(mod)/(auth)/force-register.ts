@@ -1,4 +1,4 @@
-import { isGlobalFeatureDisabled } from 'gambling-bot-shared'
+import { isGlobalFeatureDisabled } from 'gambling-bot-shared/guild'
 
 import {
   ApplicationCommandOptionType,

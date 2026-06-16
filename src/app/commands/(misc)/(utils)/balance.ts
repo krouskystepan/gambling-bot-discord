@@ -1,4 +1,4 @@
-import { formatMoney, formatMoneyExact } from 'gambling-bot-shared'
+import { formatMoney, formatMoneyExact } from 'gambling-bot-shared/common'
 
 import { MessageFlags } from 'discord.js'
 

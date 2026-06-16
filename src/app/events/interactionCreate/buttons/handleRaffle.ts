@@ -1,4 +1,4 @@
-import { formatMoney } from 'gambling-bot-shared'
+import { formatMoney } from 'gambling-bot-shared/common'
 
 import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 

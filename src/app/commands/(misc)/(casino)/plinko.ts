@@ -1,12 +1,14 @@
 import {
   PLINKO_ROW_COUNT,
-  formatMoney,
-  generateId,
   getPlinkoMultiplierAtPathIndex,
   normalizePlinkoBinMultipliers,
-  parseReadableStringToNumber,
   shouldAnnouncePlinkoBall
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/casino'
+import {
+  formatMoney,
+  generateId,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 

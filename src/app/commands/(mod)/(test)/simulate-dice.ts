@@ -1,10 +1,10 @@
+import { DICE_MAX_SIMULATE_ROLLS } from 'gambling-bot-shared/casino'
 import {
-  DICE_MAX_SIMULATE_ROLLS,
   formatMoney,
   formatNumberToReadableString,
   formatNumberWithSpaces,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType } from 'discord.js'
 

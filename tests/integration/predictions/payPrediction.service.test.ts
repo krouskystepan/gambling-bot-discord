@@ -4,8 +4,8 @@ import {
   createPrediction,
   updatePredictionStatus
 } from '@/services/db/prediction.db'
-import { placePredictionBet } from '@/services/predictions/placePredictionBet.service'
 import { payPrediction } from '@/services/predictions/payPrediction.service'
+import { placePredictionBet } from '@/services/predictions/placePredictionBet.service'
 
 import {
   Prediction,

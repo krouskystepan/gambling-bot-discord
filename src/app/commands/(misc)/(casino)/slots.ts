@@ -1,9 +1,9 @@
+import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
 import {
   formatMoney,
   generateId,
-  parseReadableStringToNumber,
-  shouldAnnounceByMultiplier
-} from 'gambling-bot-shared'
+  parseReadableStringToNumber
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 

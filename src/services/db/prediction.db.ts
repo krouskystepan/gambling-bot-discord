@@ -1,4 +1,4 @@
-import { createPredictionDb } from 'gambling-bot-shared/services'
+import { createPredictionDb } from 'gambling-bot-shared/predictions'
 
 import Prediction from '@/models/Prediction'
 

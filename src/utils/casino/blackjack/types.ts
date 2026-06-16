@@ -1,7 +1,16 @@
-import type { GlobalSettings } from 'gambling-bot-shared'
-import type { Card, GamePhase, TBlackjackHand } from 'gambling-bot-shared'
+import type {
+  Card,
+  GamePhase,
+  TBlackjackHand
+} from 'gambling-bot-shared/blackjack'
+import type { GlobalSettings } from 'gambling-bot-shared/guild'
 
-export type { Card, CardLabel, GamePhase, Suite } from 'gambling-bot-shared'
+export type {
+  Card,
+  CardLabel,
+  GamePhase,
+  Suite
+} from 'gambling-bot-shared/blackjack'
 
 export type PlayerAction = 'HIT' | 'STAND' | 'DOUBLE' | 'SPLIT'
 

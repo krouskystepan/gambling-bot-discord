@@ -1,7 +1,7 @@
 import {
   type PayPredictionResult,
   createPredictionLifecycleService
-} from 'gambling-bot-shared/services'
+} from 'gambling-bot-shared/predictions'
 
 import { refundLockedBet, settleCasinoWinnings } from '@/services/casino'
 import { predictionDb } from '@/services/db/prediction.db'

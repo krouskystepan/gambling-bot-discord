@@ -1,4 +1,4 @@
-import { defaultGlobalSettings } from 'gambling-bot-shared'
+import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getGuildConfigByGuildId } from '@/services/db/guildConfiguration.db'
@@ -49,7 +49,9 @@ describe('checkAtmChannels', () => {
   })
 
   it('returns false when ATM channels are incomplete', async () => {
-    mockGetConfig.mockResolvedValue({ atmChannelIds: { logs: 'log-ch' } } as never)
+    mockGetConfig.mockResolvedValue({
+      atmChannelIds: { logs: 'log-ch' }
+    } as never)
     const ix = interaction()
 
     expect(await checkAtmChannels(ix as never)).toBe(false)
@@ -123,7 +125,9 @@ describe('checkCasinoChannels', () => {
   })
 
   it('returns false in disallowed channel', async () => {
-    mockGetConfig.mockResolvedValue({ casinoChannelIds: ['casino-ch'] } as never)
+    mockGetConfig.mockResolvedValue({
+      casinoChannelIds: ['casino-ch']
+    } as never)
     mockGetVipChannels.mockResolvedValue([])
     const ix = interaction('other-ch')
 

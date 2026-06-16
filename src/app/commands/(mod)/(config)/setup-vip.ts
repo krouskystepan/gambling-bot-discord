@@ -1,4 +1,4 @@
-import { parseReadableStringToNumber } from 'gambling-bot-shared'
+import { parseReadableStringToNumber } from 'gambling-bot-shared/common'
 
 import {
   ApplicationCommandOptionType,

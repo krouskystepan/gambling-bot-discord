@@ -1,6 +1,7 @@
-import { defaultGlobalSettings } from 'gambling-bot-shared'
-import { PermissionFlagsBits } from 'discord.js'
+import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { PermissionFlagsBits } from 'discord.js'
 
 import { getGuildConfigByGuildId } from '@/services/db/guildConfiguration.db'
 import { assertModMaintenanceAllowed } from '@/services/guildConfiguration/assertModMaintenance.service'
@@ -54,7 +55,9 @@ describe('assertModMaintenanceAllowed', () => {
     } as never)
     const ix = repliable(false)
 
-    expect(await assertModMaintenanceAllowed(ix as never, 'guild-1')).toBe(false)
+    expect(await assertModMaintenanceAllowed(ix as never, 'guild-1')).toBe(
+      false
+    )
     expect(ix.reply).toHaveBeenCalledOnce()
   })
 
@@ -62,9 +65,9 @@ describe('assertModMaintenanceAllowed', () => {
     const config = { guildId: 'guild-1', globalSettings: defaultGlobalSettings }
     mockGetConfig.mockResolvedValue(config as never)
 
-    expect(await assertModMaintenanceAllowed(repliable() as never, 'guild-1')).toEqual(
-      config
-    )
+    expect(
+      await assertModMaintenanceAllowed(repliable() as never, 'guild-1')
+    ).toEqual(config)
   })
 
   it('returns config for admins during maintenance', async () => {

@@ -1,12 +1,12 @@
 import {
   calculateBonusReward,
   canClaimDailyBonus,
-  formatMoney,
-  getBonusCycleLength,
   getEffectiveStreak,
   getStreakDisplay,
   normalizeBonusSettings
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/bonus'
+import { getBonusCycleLength } from 'gambling-bot-shared/bonus'
+import { formatMoney } from 'gambling-bot-shared/common'
 
 import {
   ApplicationCommandOptionType,

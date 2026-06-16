@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { createGuildConfiguration } from '@/services/db/guildConfiguration.db'
 import {
   addMemberToVip,
   addVipMemberAtomic,
@@ -17,7 +18,6 @@ import {
   removeVipMemberAtomic,
   reserveVipPurchase
 } from '@/services/db/vip.db'
-import { createGuildConfiguration } from '@/services/db/guildConfiguration.db'
 
 import {
   GuildConfiguration,

@@ -1,4 +1,7 @@
-import { formatMoney, parseReadableStringToNumber } from 'gambling-bot-shared'
+import {
+  formatMoney,
+  parseReadableStringToNumber
+} from 'gambling-bot-shared/common'
 
 import {
   ActionRowBuilder,

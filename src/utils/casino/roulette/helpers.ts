@@ -1,4 +1,4 @@
-import { MINI_NUMBERS } from 'gambling-bot-shared'
+import { MINI_NUMBERS } from 'gambling-bot-shared/casino'
 
 export function getRouletteHelpers() {
   const numbers = Object.keys(MINI_NUMBERS).map(Number)

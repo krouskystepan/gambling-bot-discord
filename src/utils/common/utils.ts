@@ -1,8 +1,6 @@
-import {
-  type GlobalSettings,
-  formatMoney,
-  validateBetAmount
-} from 'gambling-bot-shared'
+import { validateBetAmount } from 'gambling-bot-shared/casino'
+import { formatMoney } from 'gambling-bot-shared/common'
+import { type GlobalSettings } from 'gambling-bot-shared/guild'
 import { DateTime } from 'luxon'
 
 import { MessageFlags } from 'discord.js'

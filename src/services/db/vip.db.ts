@@ -1,4 +1,4 @@
-import { TVipRoom } from 'gambling-bot-shared'
+import { TVipRoom } from 'gambling-bot-shared/vip'
 // NEW
 
 import mongoose from 'mongoose'

@@ -1,7 +1,8 @@
 import crypto from 'crypto'
-
-import { defaultCasinoSettings, LOTTERY_NUM_TO_DRAW } from 'gambling-bot-shared'
-
+import {
+  LOTTERY_NUM_TO_DRAW,
+  defaultCasinoSettings
+} from 'gambling-bot-shared/casino'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { DECK } from '@/utils/casino/blackjack/deck'

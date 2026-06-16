@@ -1,10 +1,10 @@
+import { COINFLIP_MAX_SIMULATE_FLIPS } from 'gambling-bot-shared/casino'
 import {
-  COINFLIP_MAX_SIMULATE_FLIPS,
   formatMoney,
   formatNumberToReadableString,
   formatNumberWithSpaces,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType } from 'discord.js'
 

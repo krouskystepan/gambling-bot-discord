@@ -1,11 +1,10 @@
+import { calculateRTP } from 'gambling-bot-shared/casino'
+import { formatPlinkoBinMultipliersForDisplay } from 'gambling-bot-shared/casino'
+import { formatMoney, formatNumberWithSpaces } from 'gambling-bot-shared/common'
 import {
   type GlobalSettings,
-  TGuildConfiguration,
-  calculateRTP,
-  formatMoney,
-  formatNumberWithSpaces,
-  formatPlinkoBinMultipliersForDisplay
-} from 'gambling-bot-shared'
+  TGuildConfiguration
+} from 'gambling-bot-shared/guild'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 

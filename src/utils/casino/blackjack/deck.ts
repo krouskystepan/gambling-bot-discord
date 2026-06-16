@@ -1,8 +1,8 @@
-import type { Card } from 'gambling-bot-shared'
-import { SUITES, VALUES } from 'gambling-bot-shared'
+import type { Card } from 'gambling-bot-shared/blackjack'
+import { SUITES, VALUES } from 'gambling-bot-shared/blackjack'
 
-export { SUITES, VALUES } from 'gambling-bot-shared'
-export type { Card } from 'gambling-bot-shared'
+export { SUITES, VALUES } from 'gambling-bot-shared/blackjack'
+export type { Card } from 'gambling-bot-shared/blackjack'
 
 const createDeck = (deckCount: number): Card[] =>
   Array.from({ length: deckCount }, () =>

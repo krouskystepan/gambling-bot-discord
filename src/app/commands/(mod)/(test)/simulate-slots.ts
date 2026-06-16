@@ -1,10 +1,10 @@
+import { SLOT_MAX_SIMULATE_SPINS } from 'gambling-bot-shared/casino'
 import {
-  SLOT_MAX_SIMULATE_SPINS,
   formatMoney,
   formatNumberToReadableString,
   formatNumberWithSpaces,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType } from 'discord.js'
 

@@ -3,7 +3,7 @@ import {
   generateId,
   parseReadableStringToNumber,
   parseTimeToSeconds
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 import { DateTime } from 'luxon'
 
 import {

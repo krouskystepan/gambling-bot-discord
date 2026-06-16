@@ -1,4 +1,4 @@
-import { TBlackjackHand } from 'gambling-bot-shared'
+import { TBlackjackHand } from 'gambling-bot-shared/blackjack'
 
 import { calculateHandValue } from './math'
 import type { Card, EngineResult, EngineState, PlayerAction } from './types'

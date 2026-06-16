@@ -1,5 +1,5 @@
-import type { CasinoGameId } from 'gambling-bot-shared'
-import { createCasinoBetService } from 'gambling-bot-shared/services'
+import type { CasinoGameId } from 'gambling-bot-shared/casino'
+import { createCasinoBetService } from 'gambling-bot-shared/casino'
 import mongoose from 'mongoose'
 
 import Transaction from '@/models/Transaction'

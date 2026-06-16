@@ -1,4 +1,4 @@
-import { createRaffleDb } from 'gambling-bot-shared/services'
+import { createRaffleDb } from 'gambling-bot-shared/raffle'
 
 import Raffle from '@/models/Raffle'
 

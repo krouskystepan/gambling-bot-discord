@@ -1,8 +1,8 @@
+import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
 import {
-  defaultCasinoSettings,
   defaultGlobalSettings,
   normalizeGlobalSettings
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/guild'
 
 import GuildConfiguration from '@/models/GuildConfiguration'
 import { TGetGuildcongifuration } from '@/types/types'

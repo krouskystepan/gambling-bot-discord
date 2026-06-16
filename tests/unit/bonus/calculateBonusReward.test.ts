@@ -1,4 +1,4 @@
-import { calculateBonusReward } from 'gambling-bot-shared'
+import { calculateBonusReward } from 'gambling-bot-shared/bonus'
 import { describe, expect, it } from 'vitest'
 
 describe('calculateBonusReward', () => {

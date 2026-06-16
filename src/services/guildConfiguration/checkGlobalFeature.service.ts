@@ -2,7 +2,7 @@ import {
   GlobalFeature,
   TGuildConfiguration,
   isGlobalFeatureDisabled
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/guild'
 
 import { MessageFlags, PermissionFlagsBits } from 'discord.js'
 

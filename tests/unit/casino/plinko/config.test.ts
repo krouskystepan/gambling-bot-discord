@@ -1,10 +1,9 @@
+import { normalizePlinkoBinMultipliers } from 'gambling-bot-shared/casino'
 import {
   expandPlinkoBinMultipliers,
   getPlinkoMirrorBin,
-  normalizePlinkoBinMultipliers,
   pathIndexToPlinkoBin
-} from 'gambling-bot-shared'
-
+} from 'gambling-bot-shared/casino'
 import { describe, expect, it } from 'vitest'
 
 describe('plinko bin config', () => {

@@ -2,8 +2,8 @@ import {
   BONUS_MAX_AMOUNT,
   BONUS_MAX_STREAK_MULTIPLIER,
   normalizeBonusSettings
-} from 'gambling-bot-shared'
-import { bonusFormSchema } from 'gambling-bot-shared/schemas'
+} from 'gambling-bot-shared/bonus'
+import { bonusFormSchema } from 'gambling-bot-shared/bonus'
 import { describe, expect, it } from 'vitest'
 
 describe('normalizeBonusSettings', () => {

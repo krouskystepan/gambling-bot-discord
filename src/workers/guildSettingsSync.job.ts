@@ -1,4 +1,4 @@
-import { normalizeCasinoSettings } from 'gambling-bot-shared'
+import { normalizeCasinoSettings } from 'gambling-bot-shared/casino'
 
 import { Client } from 'commandkit'
 

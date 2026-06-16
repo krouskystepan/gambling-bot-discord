@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { applyAction } from '@/utils/casino/blackjack/engine'
-import type { Card, EngineState } from '@/utils/casino/blackjack/types'
 import { calculateHandValue } from '@/utils/casino/blackjack/math'
+import type { Card, EngineState } from '@/utils/casino/blackjack/types'
 
 import { card } from '../../../helpers/cards'
 

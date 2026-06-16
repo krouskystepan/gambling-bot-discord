@@ -1,11 +1,10 @@
+import { formatMoney, formatMoneyExact } from 'gambling-bot-shared/common'
 import {
   defaultGlobalSettings,
-  formatMoney,
-  formatMoneyExact,
   isGlobalFeatureDisabled,
   normalizeGlobalSettings
-} from 'gambling-bot-shared'
-import type { TGuildConfiguration } from 'gambling-bot-shared'
+} from 'gambling-bot-shared/guild'
+import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import { describe, expect, it } from 'vitest'
 
 const baseConfig = (globalSettings?: TGuildConfiguration['globalSettings']) =>

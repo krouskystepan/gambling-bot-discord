@@ -1,10 +1,10 @@
+import { LOTTERY_MAX_SIMULATE_ENTRIES } from 'gambling-bot-shared/casino'
 import {
-  LOTTERY_MAX_SIMULATE_ENTRIES,
   formatMoney,
   formatNumberToReadableString,
   formatNumberWithSpaces,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType } from 'discord.js'
 

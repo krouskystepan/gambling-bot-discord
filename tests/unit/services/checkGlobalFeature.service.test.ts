@@ -1,7 +1,11 @@
-import { defaultGlobalSettings, type GlobalFeature } from 'gambling-bot-shared'
-import type { TGuildConfiguration } from 'gambling-bot-shared'
-import { PermissionFlagsBits } from 'discord.js'
+import {
+  type GlobalFeature,
+  defaultGlobalSettings
+} from 'gambling-bot-shared/guild'
+import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { PermissionFlagsBits } from 'discord.js'
 
 import {
   assertGlobalFeature,
@@ -12,7 +16,10 @@ import {
 import { createMockInteraction } from '../../helpers/discord-mock'
 
 vi.mock('@/utils/discord/createEmbed', () => ({
-  createErrorEmbed: (title: string, description: string) => ({ title, description })
+  createErrorEmbed: (title: string, description: string) => ({
+    title,
+    description
+  })
 }))
 
 const baseConfig = (
@@ -37,16 +44,15 @@ const repliable = (opts?: {
     return {
       permissions: {
         has: (permission: bigint) =>
-          opts?.admin === true && permission === PermissionFlagsBits.Administrator
+          opts?.admin === true &&
+          permission === PermissionFlagsBits.Administrator
       }
     }
   })
 
   return {
     user: { id: 'user-1' },
-    guild: opts?.noGuild
-      ? null
-      : { members: { fetch } },
+    guild: opts?.noGuild ? null : { members: { fetch } },
     replied: opts?.replied ?? false,
     deferred: opts?.deferred ?? false,
     reply: mock.reply,
@@ -57,25 +63,27 @@ const repliable = (opts?: {
 
 describe('canBypassMaintenance', () => {
   it('returns false when guild is missing', async () => {
-    expect(await canBypassMaintenance(repliable({ noGuild: true }) as never)).toBe(
-      false
-    )
+    expect(
+      await canBypassMaintenance(repliable({ noGuild: true }) as never)
+    ).toBe(false)
   })
 
   it('returns false when member fetch fails', async () => {
-    expect(await canBypassMaintenance(repliable({ fetchFails: true }) as never)).toBe(
-      false
-    )
+    expect(
+      await canBypassMaintenance(repliable({ fetchFails: true }) as never)
+    ).toBe(false)
   })
 
   it('returns false for non-admin members', async () => {
-    expect(await canBypassMaintenance(repliable({ admin: false }) as never)).toBe(
-      false
-    )
+    expect(
+      await canBypassMaintenance(repliable({ admin: false }) as never)
+    ).toBe(false)
   })
 
   it('returns true for server administrators', async () => {
-    expect(await canBypassMaintenance(repliable({ admin: true }) as never)).toBe(true)
+    expect(
+      await canBypassMaintenance(repliable({ admin: true }) as never)
+    ).toBe(true)
   })
 })
 
@@ -113,9 +121,9 @@ describe('assertGlobalFeature', () => {
 
   it('returns true when the feature is enabled', async () => {
     const ix = repliable()
-    expect(await assertGlobalFeature(ix as never, baseConfig(), 'deposit')).toBe(
-      true
-    )
+    expect(
+      await assertGlobalFeature(ix as never, baseConfig(), 'deposit')
+    ).toBe(true)
   })
 
   it('returns true for maintenance when user can bypass', async () => {
@@ -159,7 +167,9 @@ describe('assertGlobalFeature', () => {
         'deposit'
       )
     ).toBe(false)
-    expect(ix.getLastReply()?.embeds?.[0]?.title).toBe('Error - Feature Disabled')
+    expect(ix.getLastReply()?.embeds?.[0]?.title).toBe(
+      'Error - Feature Disabled'
+    )
   })
 })
 

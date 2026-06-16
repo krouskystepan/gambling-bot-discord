@@ -1,9 +1,9 @@
 import {
   type BonusSettings,
-  TUser,
   calculateBonusReward,
   getStreakAfterClaim
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/bonus'
+import { TUser } from 'gambling-bot-shared/user'
 import mongoose from 'mongoose'
 
 import Transaction from '@/models/Transaction'

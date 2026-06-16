@@ -13,7 +13,10 @@ vi.mock('@/services/db/user.db', () => ({
 }))
 
 vi.mock('@/utils/discord/createEmbed', () => ({
-  createErrorEmbed: (title: string, description: string) => ({ title, description })
+  createErrorEmbed: (title: string, description: string) => ({
+    title,
+    description
+  })
 }))
 
 const mockGetUser = vi.mocked(getUser)
@@ -33,7 +36,9 @@ describe('checkUserRegistration', () => {
       reply: vi.fn()
     }
 
-    const result = await checkUserRegistration({ interaction: interaction as never })
+    const result = await checkUserRegistration({
+      interaction: interaction as never
+    })
     expect(result).toEqual(user)
     expect(interaction.reply).not.toHaveBeenCalled()
   })
@@ -52,7 +57,9 @@ describe('checkUserRegistration', () => {
 
     expect(result).toBe(false)
     expect(interaction.reply).toHaveBeenCalledOnce()
-    expect(interaction.getLastReply()?.embeds?.[0]?.title).toContain('Not registered')
+    expect(interaction.getLastReply()?.embeds?.[0]?.title).toContain(
+      'Not registered'
+    )
   })
 })
 
@@ -87,6 +94,8 @@ describe('checkTargetUserRegistration', () => {
     })
 
     expect(result).toBe(false)
-    expect(interaction.getLastReply()?.embeds?.[0]?.description).toContain('target user')
+    expect(interaction.getLastReply()?.embeds?.[0]?.description).toContain(
+      'target user'
+    )
   })
 })

@@ -1,4 +1,4 @@
-import { normalizeBonusSettings } from 'gambling-bot-shared'
+import { normalizeBonusSettings } from 'gambling-bot-shared/bonus'
 import { describe, expect, it } from 'vitest'
 
 import { claimDailyBonusAtomic } from '@/services/user/dailyBonus.service'

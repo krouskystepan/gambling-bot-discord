@@ -2,7 +2,7 @@ import {
   shouldAnnounceByMultiplier,
   shouldAnnounceGoldenJackpotHit,
   shouldAnnouncePlinkoBall
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/casino'
 import { describe, expect, it } from 'vitest'
 
 describe('shouldAnnounceByMultiplier', () => {

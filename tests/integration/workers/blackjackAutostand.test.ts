@@ -1,7 +1,10 @@
+import { TBlackjackGame } from 'gambling-bot-shared/blackjack'
 import { describe, expect, it } from 'vitest'
 
-import { TBlackjackGame } from 'gambling-bot-shared'
-import { reserveCasinoBet, settleCasinoWinnings } from '@/services/casino/casinoBet.service'
+import {
+  reserveCasinoBet,
+  settleCasinoWinnings
+} from '@/services/casino/casinoBet.service'
 import {
   deleteBlackjackGame,
   getAllOldBlackjackGames,
@@ -16,7 +19,12 @@ import {
 } from '@/utils/casino/blackjack'
 
 import { card } from '../../helpers/cards'
-import { BlackjackGame, User, createTestUser, setupMongoTests } from '../../helpers/mongo'
+import {
+  BlackjackGame,
+  User,
+  createTestUser,
+  setupMongoTests
+} from '../../helpers/mongo'
 
 setupMongoTests()
 

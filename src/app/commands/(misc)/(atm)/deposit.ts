@@ -2,7 +2,7 @@ import {
   formatMoney,
   generateId,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import {
   ActionRowBuilder,

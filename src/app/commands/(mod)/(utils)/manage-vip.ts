@@ -1,4 +1,4 @@
-import { parseTimeToSeconds } from 'gambling-bot-shared'
+import { parseTimeToSeconds } from 'gambling-bot-shared/common'
 
 import {
   ApplicationCommandOptionType,

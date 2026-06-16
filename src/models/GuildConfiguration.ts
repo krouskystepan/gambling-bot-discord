@@ -1,5 +1,5 @@
-import { TGuildConfiguration } from 'gambling-bot-shared'
-import { GuildConfigurationSchema } from 'gambling-bot-shared/server'
+import { TGuildConfiguration } from 'gambling-bot-shared/guild'
+import { GuildConfigurationSchema } from 'gambling-bot-shared/mongoose'
 import mongoose from 'mongoose'
 
 export default (mongoose.models

@@ -1,11 +1,10 @@
-import { describe, expect, it } from 'vitest'
-
 import {
   canClaimDailyBonus,
   getEffectiveStreak,
   getStreakAfterClaim,
   getStreakDisplay
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/bonus'
+import { describe, expect, it } from 'vitest'
 
 describe('daily bonus streak helpers', () => {
   const now = new Date('2026-05-20T12:00:00Z')

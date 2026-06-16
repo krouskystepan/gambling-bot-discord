@@ -1,10 +1,12 @@
 import {
-  TGuildConfiguration,
   formatMoney,
   formatMoneyExact,
-  generateId,
+  generateId
+} from 'gambling-bot-shared/common'
+import {
+  TGuildConfiguration,
   isGlobalFeatureDisabled
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/guild'
 
 import { Colors, EmbedBuilder } from 'discord.js'
 

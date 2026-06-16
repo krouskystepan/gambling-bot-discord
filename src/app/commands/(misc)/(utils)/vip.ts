@@ -2,7 +2,7 @@ import {
   formatMoney,
   generateId,
   parseTimeToSeconds
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import {
   ApplicationCommandOptionType,

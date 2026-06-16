@@ -1,6 +1,13 @@
+import {
+  formatNumberToPercentage,
+  formatNumberToReadableString,
+  formatNumberWithSpaces,
+  generateId,
+  parseReadableStringToNumber,
+  parseTimeToSeconds
+} from 'gambling-bot-shared/common'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { formatNumberToPercentage, formatNumberToReadableString, formatNumberWithSpaces, generateId, parseReadableStringToNumber, parseTimeToSeconds } from 'gambling-bot-shared'
 import { formatDate, sleep } from '@/utils/common/utils'
 
 describe('parseReadableStringToNumber', () => {

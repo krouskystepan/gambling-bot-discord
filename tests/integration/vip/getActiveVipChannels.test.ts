@@ -59,8 +59,8 @@ describe('getActiveVipChannels', () => {
 
     vi.advanceTimersByTime(60_001)
 
-    expect(await getActiveVipChannels('guild-cache').then((c) => c.sort())).toEqual(
-      ['vip-cache-1', 'vip-cache-2']
-    )
+    expect(
+      await getActiveVipChannels('guild-cache').then((c) => c.sort())
+    ).toEqual(['vip-cache-1', 'vip-cache-2'])
   })
 })

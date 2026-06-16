@@ -1,4 +1,4 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared'
+import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
@@ -7,9 +7,8 @@ vi.mock('@/services/discord/announceBigWin.service', () => ({
   announceBigWin: vi.fn().mockResolvedValue(undefined)
 }))
 
-const { announceBigWin } = await import(
-  '@/services/discord/announceBigWin.service'
-)
+const { announceBigWin } =
+  await import('@/services/discord/announceBigWin.service')
 
 const baseConfig = {
   guildId: 'guild-1',

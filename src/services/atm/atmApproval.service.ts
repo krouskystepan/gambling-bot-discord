@@ -1,4 +1,5 @@
-import { type TAtmRequest, formatMoney } from 'gambling-bot-shared'
+import { type TAtmRequest } from 'gambling-bot-shared/atm'
+import { formatMoney } from 'gambling-bot-shared/common'
 
 import { Client, TextChannel } from 'discord.js'
 
@@ -9,7 +10,7 @@ import {
   getPendingAtmRequest,
   previewWithdraw,
   updateUserBalanceAtomic
-} from '@/services'
+} from '@/services/db'
 import {
   createErrorEmbed,
   createSuccessEmbed

@@ -1,7 +1,7 @@
 import {
   defaultCasinoSettings,
   normalizeCasinoSettings
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/casino'
 import { describe, expect, it } from 'vitest'
 
 describe('normalizeCasinoSettings', () => {

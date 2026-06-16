@@ -1,4 +1,4 @@
-import { calculateRTP } from 'gambling-bot-shared'
+import { calculateRTP } from 'gambling-bot-shared/casino'
 import { describe, expect, it } from 'vitest'
 
 describe('calculateRTP raffle', () => {

@@ -1,4 +1,5 @@
-import { generateId, validatePredictionChoiceBet } from 'gambling-bot-shared'
+import { generateId } from 'gambling-bot-shared/common'
+import { validatePredictionChoiceBet } from 'gambling-bot-shared/predictions'
 
 import { refundLockedBet, reserveCasinoBet } from '@/services/casino'
 import { addPredictionBet, getPredictionById } from '@/services/db'

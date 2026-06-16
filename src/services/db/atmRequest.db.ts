@@ -1,4 +1,4 @@
-import { TAtmRequest } from 'gambling-bot-shared'
+import { TAtmRequest } from 'gambling-bot-shared/atm'
 
 import AtmRequest from '@/models/AtmRequest'
 

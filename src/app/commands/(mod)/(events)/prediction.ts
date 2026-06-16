@@ -1,10 +1,10 @@
-import { formatMoney } from 'gambling-bot-shared'
+import { formatMoney } from 'gambling-bot-shared/common'
 import {
   calculatePredictionPayoutSummary,
   getPredictionCheckSummary,
   parsePredictionAutolock,
   parsePredictionChoices
-} from 'gambling-bot-shared/services'
+} from 'gambling-bot-shared/predictions'
 
 import {
   ActionRowBuilder,

@@ -1,4 +1,4 @@
-import { TGuildConfiguration } from 'gambling-bot-shared'
+import { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import { createBetEmbed } from '@/utils/discord/createEmbed'

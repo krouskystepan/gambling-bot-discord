@@ -1,8 +1,6 @@
-import {
-  GlobalSettings,
-  formatMoney,
-  shouldAnnounceByMultiplier
-} from 'gambling-bot-shared'
+import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
+import { formatMoney } from 'gambling-bot-shared/common'
+import { GlobalSettings } from 'gambling-bot-shared/guild'
 
 import { EngineState, resolveResult } from '@/utils/casino/blackjack'
 

@@ -1,10 +1,9 @@
+import { CASINO_GAME_IDS, type CasinoGameId } from 'gambling-bot-shared/casino'
 import {
-  CASINO_GAME_IDS,
-  type CasinoGameId,
   formatNumberToReadableString,
   generateId,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js'
 

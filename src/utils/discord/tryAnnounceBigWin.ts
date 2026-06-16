@@ -1,4 +1,4 @@
-import { TGuildConfiguration } from 'gambling-bot-shared'
+import { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
 import { announceBigWin } from '@/services/discord/announceBigWin.service'
 

@@ -2,7 +2,7 @@ import {
   formatMoney,
   formatMoneyExact,
   parseReadableStringToNumber
-} from 'gambling-bot-shared'
+} from 'gambling-bot-shared/common'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 

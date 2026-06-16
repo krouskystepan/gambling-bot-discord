@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { renderBoardFrame } from '@/utils/casino/plinko/render'
 import { buildPlinkoPath } from '@/utils/casino/plinko/path'
+import { renderBoardFrame } from '@/utils/casino/plinko/render'
 
 describe('renderBoardFrame', () => {
   it('renders pegs and legend for a fixed path', () => {
