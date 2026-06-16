@@ -1,5 +1,10 @@
-import { TPredictionOption, formatMoney } from 'gambling-bot-shared'
-import { DateTime } from 'luxon'
+import { formatMoney } from 'gambling-bot-shared'
+import {
+  calculatePredictionPayoutSummary,
+  getPredictionCheckSummary,
+  parsePredictionAutolock,
+  parsePredictionChoices
+} from 'gambling-bot-shared/services'
 
 import {
   ActionRowBuilder,
@@ -25,11 +30,13 @@ import {
   checkPredictionChannels,
   createPrediction,
   findPredictions,
-  getPredictionById,
-  payPrediction,
-  refundLockedBet,
-  updatePredictionStatus
+  getPredictionById
 } from '@/services'
+import {
+  cancelPrediction,
+  endPrediction,
+  payPrediction
+} from '@/services/predictions/payPrediction.service'
 import { formatDate } from '@/utils/common/utils'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
@@ -182,90 +189,53 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const choicesInput = options.getString('choices', true)
       const autolockInput = options.getString('autolock', false)
 
-      const rawChoices = choicesInput.split(',').map((c) => c.trim())
-      if (rawChoices.length < 2 || rawChoices.length > 3) {
+      const choicesResult = parsePredictionChoices(choicesInput)
+      if (!choicesResult.ok) {
+        const messages: Record<typeof choicesResult.error, string> = {
+          INVALID_COUNT: 'You must provide **2 or 3 choices** only.',
+          INVALID_FORMAT: `Invalid option format: "${choicesResult.detail ?? ''}". Use OptionName:Odds (e.g. Yes:2)`
+        }
+
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Wrong Number of Choices',
-              'You must provide **2 or 3 choices** only.'
+              choicesResult.error === 'INVALID_COUNT'
+                ? 'Invalid Input - Wrong Number of Choices'
+                : 'Invalid Input - Invalid Format',
+              messages[choicesResult.error]
             )
           ],
           flags: MessageFlags.Ephemeral
         })
       }
 
-      const choicesArray: TPredictionOption[] = []
-      for (const item of rawChoices) {
-        const [name, odds] = item.split(':').map((x) => x.trim())
-        if (!name || !odds || isNaN(Number(odds))) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Invalid Input - Invalid Format',
-                `Invalid option format: "${item}". Use OptionName:Odds (e.g. Yes:2)`
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
-        }
-        choicesArray.push({
-          choiceName: name,
-          odds: Number(odds),
-          bets: []
-        })
-      }
+      const choicesArray = choicesResult.choices
 
       let autolockDate: Date | null = null
       if (autolockInput) {
-        const dateTimeRegex = /^(\d{1,2})\.(\d{1,2})\.(\d{4}) (\d{2}):(\d{2})$/
-        const match = autolockInput.match(dateTimeRegex)
+        const autolockResult = parsePredictionAutolock(autolockInput)
 
-        if (!match) {
+        if (!autolockResult.ok) {
+          const messages: Record<typeof autolockResult.error, string> = {
+            INVALID_FORMAT:
+              'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 05:00` or `09.09.2025 18:00`',
+            INVALID_DATE: 'The date/time you provided is invalid.',
+            PAST_DATE:
+              'Autolock must be a future date/time. Please provide a date and time that is after now.'
+          }
+
           return interaction.reply({
             embeds: [
               createErrorEmbed(
                 'Invalid Input - Invalid Autolock Date/Time',
-                'Autolock must be in **D.M.YYYY HH:mm** or **DD.MM.YYYY HH:mm** format (24h). Example: `9.9.2025 05:00` or `09.09.2025 18:00`'
+                messages[autolockResult.error]
               )
             ],
             flags: MessageFlags.Ephemeral
           })
         }
 
-        const [_, day, month, year, hour, minute] = match.map(Number)
-
-        const dt = DateTime.fromObject(
-          { year, month, day, hour, minute },
-          //! Later in db
-          { zone: 'Europe/Prague' }
-        )
-
-        if (!dt.isValid) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Invalid Input - Invalid Autolock Date/Time',
-                'The date/time you provided is invalid.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
-        }
-
-        if (dt.toMillis() <= Date.now()) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Invalid Input - Autolock in the Past',
-                'Autolock must be a future date/time. Please provide a date and time that is after now.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
-        }
-
-        autolockDate = dt.toJSDate()
+        autolockDate = autolockResult.autolock
       }
 
       await interaction.deferReply()
@@ -330,11 +300,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (subcommand === 'end') {
       const predictionId = options.getString('prediction-id', true)
 
-      const updatedPrediction = await updatePredictionStatus({
+      const updatedPrediction = await endPrediction({
         predictionId,
-        guildId: interaction.guildId!,
-        fromStatus: 'active',
-        toStatus: 'ended'
+        guildId: interaction.guildId!
       })
 
       if (!updatedPrediction) {
@@ -491,27 +459,24 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           'Prediction payout log channel not found'
         )
       } else {
-        const totalBets = prediction.choices.flatMap((c) => c.bets)
+        const payoutSummary = calculatePredictionPayoutSummary(
+          prediction,
+          winnerChoice
+        )
 
-        const winners = winner.bets.map((b) => ({
-          userId: b.userId,
-          betAmount: b.amount,
-          winAmount: b.amount * winner.odds
-        }))
+        if (!payoutSummary) {
+          return interaction.reply({
+            embeds: [
+              createErrorEmbed(
+                'Prediction Payout Failed',
+                `The winner "${winnerChoice}" does not exist in this prediction.`
+              )
+            ],
+            flags: MessageFlags.Ephemeral
+          })
+        }
 
-        const losers = prediction.choices
-          .filter((c) => c.choiceName !== winnerChoice)
-          .flatMap((c) =>
-            c.bets.map((b) => ({
-              userId: b.userId,
-              betAmount: b.amount,
-              winAmount: 0
-            }))
-          )
-
-        const totalWon = winners.reduce((acc, w) => acc + w.winAmount, 0)
-        const totalLost = losers.reduce((acc, l) => acc + l.betAmount, 0)
-        const casinoProfit = totalLost - totalWon
+        const { winners, losers, casinoProfit } = payoutSummary
 
         const winnersDisplay = await Promise.all(
           winners.map(async (w) => {
@@ -542,7 +507,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           .addFields(
             {
               name: 'Participants',
-              value: `${totalBets.length}`,
+              value: `${payoutSummary.participants}`,
               inline: true
             },
             { name: 'Winners', value: `${winners.length}`, inline: true },
@@ -616,11 +581,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (subcommand === 'cancel') {
       const predictionId = options.getString('prediction-id', true)
 
-      const updatedPrediction = await updatePredictionStatus({
+      const updatedPrediction = await cancelPrediction({
         predictionId,
-        guildId: interaction.guildId!,
-        fromStatus: ['active', 'ended'],
-        toStatus: 'canceled'
+        guildId: interaction.guildId!
       })
 
       if (!updatedPrediction) {
@@ -636,15 +599,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       }
 
       const allBets = updatedPrediction.choices.flatMap((c) => c.bets)
-      for (const bet of allBets) {
-        await refundLockedBet({
-          userId: bet.userId,
-          guildId: interaction.guildId!,
-          amount: bet.amount,
-          betId: bet.betId ?? `${predictionId}:${bet.userId}`,
-          game: 'prediction'
-        })
-      }
 
       const channel = await interaction.client.channels.fetch(
         updatedPrediction.channelId
@@ -713,16 +667,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      const totalBets = prediction.choices.flatMap((c) => c.bets)
-      const totalBetAmount = totalBets.reduce((acc, b) => acc + b.amount, 0)
+      const checkSummary = getPredictionCheckSummary(prediction)
+      const totalBetAmount = checkSummary.totalBetAmount
 
       const choiceSummaries = await Promise.all(
-        prediction.choices.map(async (choice) => {
-          const totalWin = choice.bets.reduce(
-            (acc, b) => acc + b.amount * choice.odds,
-            0
-          )
-
+        checkSummary.choices.map(async (choice) => {
           const bettors = await Promise.all(
             choice.bets.map(async (b) => {
               const member = await interaction.guild?.members
@@ -738,10 +687,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             value:
               `Bets: ${bettors.length}\n` +
               `Total Bet: ${formatMoney(
-                choice.bets.reduce((a, b) => a + b.amount, 0),
+                choice.totalBetAmount,
                 configReply.globalSettings
               )}\n` +
-              `If Wins → Payout: ${formatMoney(totalWin, configReply.globalSettings)}\n` +
+              `If Wins → Payout: ${formatMoney(choice.payoutIfWins, configReply.globalSettings)}\n` +
               (bettors.length ? bettors.join('\n') : 'No bets'),
             inline: false
           }

@@ -1,8 +1,21 @@
 import type { CasinoGameId } from 'gambling-bot-shared'
+import { createCasinoBetService } from 'gambling-bot-shared/services'
 import mongoose from 'mongoose'
 
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
+
+const sharedCasinoBet = createCasinoBetService({
+  userModel: User,
+  transactionModel: Transaction
+})
+
+export const {
+  refundLockedBet,
+  settleCasinoWinnings,
+  refundRafflePurchase,
+  payRaffleWinner
+} = sharedCasinoBet
 
 export async function reserveCasinoBet({
   userId,
@@ -75,82 +88,13 @@ export async function reserveCasinoBet({
   }
 }
 
-export async function settleCasinoWinnings({
-  userId,
-  guildId,
-  totalBet,
-  winnings,
-  betId,
-  game
-}: {
-  userId: string
-  guildId: string
-  totalBet: number
-  winnings: number
-  betId: string
-  game: CasinoGameId
-}) {
-  const session = await mongoose.startSession()
-
-  try {
-    let finalBalance = 0
-
-    await session.withTransaction(async () => {
-      const user = await User.findOne({ userId, guildId }).session(session)
-
-      if (!user) throw new Error('USER_NOT_FOUND')
-
-      if (user.lockedBalance < totalBet) {
-        finalBalance = user.balance + user.lockedBalance
-        return
-      }
-
-      user.lockedBalance -= totalBet
-
-      if (winnings > 0) {
-        const winExists = await Transaction.exists({
-          betId,
-          type: 'win'
-        }).session(session)
-
-        if (!winExists) {
-          user.balance += winnings
-
-          await Transaction.create(
-            [
-              {
-                userId,
-                guildId,
-                amount: winnings,
-                type: 'win',
-                source: 'casino',
-                betId,
-                meta: { game }
-              }
-            ],
-            { session }
-          )
-        }
-      }
-
-      await user.save({ session })
-
-      finalBalance = user.balance + user.lockedBalance
-    })
-
-    return finalBalance
-  } finally {
-    session.endSession()
-  }
-}
-
 export async function settleRpsGameAtomic({
   p1UserId,
   p1GuildId,
   p2UserId,
   p2GuildId,
   betAmount,
-  winnerUserId, // null = draw
+  winnerUserId,
   casinoCut,
   betId,
   game
@@ -214,146 +158,6 @@ export async function settleRpsGameAtomic({
       }
 
       await Promise.all([p1.save({ session }), p2.save({ session })])
-    })
-  } finally {
-    session.endSession()
-  }
-}
-
-export async function refundLockedBet({
-  userId,
-  guildId,
-  amount,
-  betId,
-  game
-}: {
-  userId: string
-  guildId: string
-  amount: number
-  betId: string
-  game: CasinoGameId
-}) {
-  const session = await mongoose.startSession()
-
-  try {
-    await session.withTransaction(async () => {
-      const user = await User.findOne({ userId, guildId }).session(session)
-      if (!user) throw new Error('USER_NOT_FOUND')
-
-      if (user.lockedBalance < amount) {
-        return
-      }
-
-      user.lockedBalance -= amount
-      user.balance += amount
-
-      await user.save({ session })
-
-      await Transaction.create(
-        [
-          {
-            userId,
-            guildId,
-            amount,
-            type: 'refund',
-            source: 'casino',
-            betId,
-            meta: { game }
-          }
-        ],
-        { session }
-      )
-    })
-  } finally {
-    session.endSession()
-  }
-}
-
-// NOTE:
-// Raffle cancellation is an admin override.
-// All refunded amounts are returned to NORMAL balance,
-// even if bonus funds were used during purchase.
-export async function refundRafflePurchase({
-  userId,
-  guildId,
-  amount,
-  raffleId,
-  game
-}: {
-  userId: string
-  guildId: string
-  amount: number
-  raffleId: string
-  game: CasinoGameId
-}) {
-  const session = await mongoose.startSession()
-
-  try {
-    await session.withTransaction(async () => {
-      const user = await User.findOne({ userId, guildId }).session(session)
-      if (!user) throw new Error('USER_NOT_FOUND')
-
-      user.balance += amount
-
-      await user.save({ session })
-
-      await Transaction.create(
-        [
-          {
-            userId,
-            guildId,
-            amount,
-            type: 'refund',
-            source: 'casino',
-            betId: raffleId,
-            meta: { game }
-          }
-        ],
-        { session }
-      )
-    })
-  } finally {
-    session.endSession()
-  }
-}
-
-export async function payRaffleWinner({
-  userId,
-  guildId,
-  amount,
-  raffleId,
-  game
-}: {
-  userId: string
-  guildId: string
-  amount: number
-  raffleId: string
-  game: CasinoGameId
-}) {
-  const session = await mongoose.startSession()
-
-  try {
-    await session.withTransaction(async () => {
-      const user = await User.findOne({ userId, guildId }).session(session)
-      if (!user) throw new Error('USER_NOT_FOUND')
-
-      user.balance += amount
-      await user.save({ session })
-
-      await Transaction.create(
-        [
-          {
-            userId,
-            guildId,
-            amount,
-            type: 'win',
-            source: 'casino',
-            betId: raffleId,
-            meta: { game }
-          }
-        ],
-        { session }
-      )
     })
   } finally {
     session.endSession()

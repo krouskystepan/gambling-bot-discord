@@ -26,11 +26,10 @@ import {
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
   assertGlobalFeature,
-  cancelRaffleAtomic,
+  cancelRaffle,
   checkRaffleChannels,
   getGuildConfigByGuildId,
   getRaffleById,
-  refundRafflePurchase,
   searchRafflesForAutocomplete,
   upsertRaffle
 } from '@/services'
@@ -314,12 +313,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (sub === 'cancel') {
       const raffleId = opts.getString('raffle-id', true)
 
-      const raffle = await cancelRaffleAtomic({
+      const cancelResult = await cancelRaffle({
         raffleId,
         guildId: interaction.guildId!
       })
 
-      if (!raffle) {
+      if (!cancelResult.ok) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
@@ -331,19 +330,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      const ticketPrice = raffle.ticketPrice
-
-      for (const entry of raffle.participants) {
-        const refundAmount = entry.tickets * ticketPrice
-
-        await refundRafflePurchase({
-          userId: entry.userId,
-          guildId: interaction.guildId!,
-          amount: refundAmount,
-          raffleId: raffle.drawId,
-          game: 'raffle'
-        })
-      }
+      const { raffle, refundErrors } = cancelResult
 
       const raffleMessage = await interaction.channel?.messages
         .fetch(raffleId)
@@ -357,7 +344,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             [
               '❌ **This raffle has been canceled**',
               '',
-              `💰 Ticket Price: **${formatMoney(ticketPrice, configReply.globalSettings)}**`,
+              `💰 Ticket Price: **${formatMoney(raffle.ticketPrice, configReply.globalSettings)}**`,
               `🎟️ Ticket Limit: **${raffle.maxTicketsPerUser}**`,
               '',
               '💸 All tickets have been refunded.'
@@ -377,10 +364,23 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           actorId: interaction.user.id,
           raffleId,
           guildId: interaction.guildId,
-          refundedParticipants: raffle.participants.length
+          refundedParticipants: raffle.participants.length,
+          refundErrors: refundErrors.length
         },
         'Admin canceled raffle and refunded tickets'
       )
+
+      if (refundErrors.length > 0) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Raffle Canceled With Refund Errors',
+              `Raffle canceled but ${refundErrors.length} refund(s) failed. Check logs.`
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
 
       return interaction.reply({
         embeds: [
