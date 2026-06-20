@@ -295,8 +295,8 @@ describe('approveAtmRequest', () => {
       source: 'web'
     })
     expect(tx?.amount).toBe(75)
+    expect(tx?.referenceId).toBe('approve-deposit-web')
     expect(tx?.meta).toMatchObject({
-      requestId: 'approve-deposit-web',
       notes: 'verified'
     })
   })

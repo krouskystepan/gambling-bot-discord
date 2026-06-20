@@ -49,7 +49,7 @@ describe('transaction.db', () => {
       amount: 15,
       type: 'bet',
       source: 'casino',
-      betId: 'tx-del'
+      referenceId: 'tx-del'
     })
 
     await deleteAllTransactionsByUserId({

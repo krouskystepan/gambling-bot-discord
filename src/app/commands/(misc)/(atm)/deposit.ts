@@ -146,6 +146,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             .setDescription(
               `<@${interaction.user.id}> requested a deposit of **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** from account **${account}**.`
             )
+            .setFooter({ text: `ID: ${requestId}` })
         ]
       })
     } catch (err) {
@@ -191,7 +192,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       embeds: [
         createSuccessEmbed(
           'ATM - Deposit',
-          `You have successfully deposited **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to your account.\nPlease wait for the transaction to be processed.`
+          `You have successfully deposited **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to your account.\nPlease wait for the transaction to be processed.`,
+          requestId
         )
       ],
       flags: MessageFlags.Ephemeral

@@ -38,7 +38,6 @@ const buildTransactionMeta = ({
   request: TAtmRequest
   notes?: string
 }) => ({
-  requestId: request.requestId,
   account: request.account,
   ...(notes ? { notes } : {})
 })
@@ -201,6 +200,7 @@ export const approveAtmRequest = async ({
       type: 'deposit',
       source: source === 'web' ? 'web' : 'manual',
       handledBy,
+      referenceId: requestId,
       meta: txMeta
     })
 
@@ -322,6 +322,7 @@ export const approveAtmRequest = async ({
     type: 'withdraw',
     source: source === 'web' ? 'web' : 'manual',
     handledBy,
+    referenceId: requestId,
     meta: txMeta
   })
 

@@ -18,11 +18,21 @@ export const createBetEmbed = (
   return embed
 }
 
-export const createSuccessEmbed = (title: string, description: string) => {
-  return new EmbedBuilder()
+export const createSuccessEmbed = (
+  title: string,
+  description: string,
+  id?: string
+) => {
+  const embed = new EmbedBuilder()
     .setTitle(title)
     .setColor('Green')
     .setDescription(description)
+
+  if (id) {
+    embed.setFooter({ text: `ID: ${id}` })
+  }
+
+  return embed
 }
 
 export const createErrorEmbed = (title: string, description: string) => {
