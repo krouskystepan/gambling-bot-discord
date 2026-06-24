@@ -9,6 +9,8 @@ const coverageExclude = [
 
   'src/utils/logger.ts',
   'src/utils/devGuilds.ts',
+  'src/utils/devAccess.ts',
+  'src/services/dev/**',
   'src/utils/discord/createEmbed.ts',
   'src/utils/discord/customEmotes.ts',
 

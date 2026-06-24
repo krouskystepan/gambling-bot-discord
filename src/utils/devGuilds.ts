@@ -1,1 +1,1 @@
-export const DEV_GUILDS = ['1298805664654561340']
+export { DEV_GUILDS, DEV_USERS } from 'gambling-bot-shared/dev'

@@ -103,6 +103,8 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     │   │   └─ /setup-casino – Manage the casino channels.
     │   │      ├─ add – Set a channel for using casino bets.
     │   │      ├─ remove – Remove a channel for using casino bets by ID.
+    │   │      ├─ add-announcements – Set a channel for public big-win announcements.
+    │   │      ├─ remove-announcements – Remove the public big-win announcements channel.
     │   ├── setup-manager.ts
     │   │   └─ /setup-manager – Manage the manager role.
     │   │      ├─ set-role – Set the manager role.
@@ -130,6 +132,14 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     │          ├─ set-price-per-day – Set the price per day for VIP access.
     │          ├─ set-create-price – Set the one-time price for creating a VIP room.
     │          ├─ set-add-member-price – Set the one-time price for adding a member to room.
+    ├── (dev)
+    │   ├── mock-db.ts
+    │   │   └─ /mock-db – Seed the database with realistic mock data for Admin testing (dev only).
+    │   └── clear-mock-db.ts
+    │       └─ /clear-mock-db – Remove mock / operational guild data (keeps guild config). Dev only.
+    │          ├─ all – Fill all collections (users, txs, ATM, raffles, predictions, VIP).
+    │          ├─ entity – Fill a single collection.
+    │          ├─ custom – Fill all collections with custom counts.
     ├── (events)
     │   ├── prediction.ts
     │   │   └─ /prediction – Manage predictions.
@@ -143,48 +153,6 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     │          ├─ create – Create a new scheduled raffle.
     │          ├─ cancel – Cancel raffle and refund all tickets.
     │          ├─ check – Check how many tickets each user has bought in a raffle.
-    ├── (test)
-    │   ├── simulate-coin-flip.ts
-    │   │   └─ /simulate-coin-flip – Simulate X coin flips. WARNING: May take a long time!
-    │   │      ├─ flips – Number of flips you want to simulate.
-    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
-    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
-    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
-    │   │      ├─ multipliers – Displays multipliers.
-    │   ├── simulate-dice.ts
-    │   │   └─ /simulate-dice – Simulate X dice rolls. WARNING: May take a long time!
-    │   │      ├─ rolls – Number of rolls you want to simulate.
-    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
-    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
-    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
-    │   │      ├─ multipliers – Displays multipliers.
-    │   ├── simulate-goldenjackpot.ts
-    │   │   └─ /simulate-goldenjackpot – Simulate X goldenjackpot entries. WARNING: May take a long time!
-    │   │      ├─ entries – Number of entries you want to simulate.
-    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
-    │   │      ├─ details – Displays win details.
-    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
-    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
-    │   ├── simulate-lottery.ts
-    │   │   └─ /simulate-lottery – Simulate X lottery entries. WARNING: May take a long time!
-    │   │      ├─ entries – Number of entries.
-    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
-    │   │      ├─ details – Displays win details.
-    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
-    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
-    │   ├── simulate-slots.ts
-    │   │   └─ /simulate-slots – Simulate X spins on a slot machine. WARNING: May take a long time!
-    │   │      ├─ spins – Number of spins you want to simulate.
-    │   │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
-    │   │      ├─ details – Displays win details.
-    │   │      ├─ wins-losses-count – Displays the count of wins and losses.
-    │   │      ├─ win-losses-series – Displays the longest winning and losing streak.
-    │   └── simulate-transactions.ts
-    │       └─ /simulate-transactions – Simulate X transactions for testing filtering and indexing.
-    │          ├─ count – Number of transactions to simulate.
-    │          ├─ max-amount – Maximum amount per transaction (upper bound).
-    │          ├─ days – How many past days to simulate over (default: 30).
-    │          ├─ unique-users – Number of distinct users to simulate (default: auto).
     └── (utils)
         ├── casino-games.ts
         │   └─ /casino-games – Show available casino games and how to use them.
@@ -200,7 +168,7 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
         │      ├─ add-bonus – Give a bonus to a user.
         │      ├─ remove-bonus – Remove bonus funds from a user.
         │      ├─ check – Check a user’s balance.
-        │      ├─ reset – Reset a user’s balance to $0 and remove all their transactions in this server.
+        │      ├─ reset – Reset a user’s balance to zero and remove all their transactions in this server.
         ├── manage-vip.ts
         │   └─ /manage-vip – Admin commands to manage VIP rooms.
         │      ├─ create-room – Create a VIP room for a user.
