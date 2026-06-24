@@ -249,7 +249,7 @@ function createCasinoRound({
       amount: betAmount,
       type: 'bet',
       source: 'casino',
-      betId,
+      referenceId: betId,
       meta: { game },
       createdAt: betAt
     }
@@ -267,7 +267,7 @@ function createCasinoRound({
       amount: betAmount,
       type: 'refund',
       source: 'casino',
-      betId,
+      referenceId: betId,
       meta: { game },
       createdAt: randomCreatedAt(days, betAt)
     })
@@ -280,7 +280,7 @@ function createCasinoRound({
     amount: pickWinAmount(betAmount, maxAmount),
     type: 'win',
     source: 'casino',
-    betId,
+    referenceId: betId,
     meta: { game },
     createdAt: randomCreatedAt(days, betAt)
   })
@@ -312,7 +312,7 @@ function createRefundRound({
       amount: betAmount,
       type: 'bet',
       source: 'casino',
-      betId,
+      referenceId: betId,
       meta: { game },
       createdAt: betAt
     },
@@ -322,7 +322,7 @@ function createRefundRound({
       amount: betAmount,
       type: 'refund',
       source: 'casino',
-      betId,
+      referenceId: betId,
       meta: { game },
       createdAt: randomCreatedAt(days, betAt)
     }

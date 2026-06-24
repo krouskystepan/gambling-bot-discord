@@ -35,7 +35,7 @@ describe('casinoBet.service', () => {
     expect(user?.bonusBalance).toBe(0)
     expect(user?.lockedBalance).toBe(80)
 
-    const tx = await Transaction.findOne({ betId: 'bet-1', type: 'bet' })
+    const tx = await Transaction.findOne({ referenceId: 'bet-1', type: 'bet' })
     expect(tx?.amount).toBe(80)
   })
 
@@ -134,7 +134,7 @@ describe('casinoBet.service', () => {
 
     expect(finalBalance).toBe(500)
     expect(
-      await Transaction.countDocuments({ betId: 'bet-zero-win', type: 'win' })
+      await Transaction.countDocuments({ referenceId: 'bet-zero-win', type: 'win' })
     ).toBe(0)
   })
 
@@ -155,7 +155,7 @@ describe('casinoBet.service', () => {
     expect(user?.balance).toBe(700)
     expect(finalBalance).toBe(700)
 
-    const winTx = await Transaction.findOne({ betId: 'bet-3', type: 'win' })
+    const winTx = await Transaction.findOne({ referenceId: 'bet-3', type: 'win' })
     expect(winTx?.amount).toBe(200)
   })
 
@@ -175,7 +175,7 @@ describe('casinoBet.service', () => {
     expect(user?.lockedBalance).toBe(0)
 
     const refundTx = await Transaction.findOne({
-      betId: 'bet-4',
+      referenceId: 'bet-4',
       type: 'refund'
     })
     expect(refundTx?.amount).toBe(75)
@@ -195,7 +195,7 @@ describe('casinoBet.service', () => {
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
     expect(user?.balance).toBe(400)
     expect(user?.lockedBalance).toBe(10)
-    expect(await Transaction.countDocuments({ betId: 'bet-5' })).toBe(0)
+    expect(await Transaction.countDocuments({ referenceId: 'bet-5' })).toBe(0)
   })
 
   it('settles without unlocking when locked balance is below totalBet', async () => {
@@ -215,7 +215,7 @@ describe('casinoBet.service', () => {
     expect(user?.balance).toBe(500)
     expect(finalBalance).toBe(550)
     expect(
-      await Transaction.countDocuments({ betId: 'bet-6', type: 'win' })
+      await Transaction.countDocuments({ referenceId: 'bet-6', type: 'win' })
     ).toBe(0)
   })
 
@@ -309,7 +309,7 @@ describe('casinoBet.service', () => {
       amount: 200,
       type: 'win',
       source: 'casino',
-      betId: 'bet-idem'
+      referenceId: 'bet-idem'
     })
 
     const finalBalance = await settleCasinoWinnings({
@@ -327,7 +327,7 @@ describe('casinoBet.service', () => {
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBe(400)
     expect(
-      await Transaction.countDocuments({ betId: 'bet-idem', type: 'win' })
+      await Transaction.countDocuments({ referenceId: 'bet-idem', type: 'win' })
     ).toBe(1)
   })
 
@@ -491,7 +491,7 @@ describe('casinoBet.service', () => {
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
     expect(user?.lockedBalance).toBe(25)
     expect(
-      await Transaction.countDocuments({ betId: 'dup-bet', type: 'bet' })
+      await Transaction.countDocuments({ referenceId: 'dup-bet', type: 'bet' })
     ).toBe(1)
   })
 
@@ -534,7 +534,7 @@ describe('casinoBet.service', () => {
       amount: 200,
       type: 'win',
       source: 'casino',
-      betId: 'rps-idem'
+      referenceId: 'rps-idem'
     })
 
     await settleRpsGameAtomic({
@@ -730,7 +730,7 @@ describe('casinoBet.service', () => {
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
     expect(p1?.lockedBalance).toBe(50)
     expect(
-      await Transaction.countDocuments({ betId: 'rps-skip', type: 'win' })
+      await Transaction.countDocuments({ referenceId: 'rps-skip', type: 'win' })
     ).toBe(0)
   })
 
@@ -753,7 +753,7 @@ describe('casinoBet.service', () => {
       amount: 180,
       type: 'win',
       source: 'casino',
-      betId: 'rps-idem'
+      referenceId: 'rps-idem'
     })
 
     await settleRpsGameAtomic({

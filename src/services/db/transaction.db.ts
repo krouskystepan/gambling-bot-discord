@@ -11,7 +11,7 @@ export const createTransaction = async ({
   amount,
   type,
   source,
-  betId,
+  referenceId,
   meta,
   handledBy,
   createdAt = new Date()
@@ -22,7 +22,7 @@ export const createTransaction = async ({
     amount,
     type,
     source,
-    betId,
+    referenceId,
     meta,
     handledBy,
     createdAt

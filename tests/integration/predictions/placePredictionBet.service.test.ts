@@ -59,7 +59,7 @@ describe('placePredictionBet.service', () => {
     expect(betId).toBeTruthy()
 
     const tx = await Transaction.findOne({
-      betId,
+      referenceId: betId,
       type: 'bet'
     })
     expect(tx?.amount).toBe(100)

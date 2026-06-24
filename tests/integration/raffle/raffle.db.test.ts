@@ -163,7 +163,7 @@ describe('raffle money via casinoBet.service', () => {
     expect(user?.balance).toBe(140)
 
     const tx = await Transaction.findOne({
-      betId: 'raffle-refund-1',
+      referenceId: 'raffle-refund-1',
       type: 'refund'
     })
     expect(tx?.amount).toBe(40)
@@ -208,7 +208,7 @@ describe('raffle money via casinoBet.service', () => {
     expect(user?.balance).toBe(300)
 
     const tx = await Transaction.findOne({
-      betId: 'raffle-win-1',
+      referenceId: 'raffle-win-1',
       type: 'win'
     })
     expect(tx?.amount).toBe(250)

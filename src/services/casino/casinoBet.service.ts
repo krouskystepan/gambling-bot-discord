@@ -35,7 +35,7 @@ export async function reserveCasinoBet({
   try {
     await session.withTransaction(async () => {
       const duplicateBet = await Transaction.exists({
-        betId,
+        referenceId: betId,
         type: 'bet'
       }).session(session)
       if (duplicateBet) throw new Error('DUPLICATE_BET')
@@ -59,7 +59,7 @@ export async function reserveCasinoBet({
               amount: totalBet,
               type: 'bet',
               source: 'casino',
-              betId,
+              referenceId: betId,
               meta: { game }
             }
           ],
@@ -114,7 +114,7 @@ export async function settleRpsGameAtomic({
   try {
     await session.withTransaction(async () => {
       const alreadySettled = await Transaction.findOne({
-        betId,
+        referenceId: betId,
         type: 'win'
       }).session(session)
 
@@ -149,7 +149,7 @@ export async function settleRpsGameAtomic({
               amount: payout,
               type: 'win',
               source: 'casino',
-              betId,
+              referenceId: betId,
               meta: { game }
             }
           ],
@@ -182,7 +182,7 @@ export async function spendCasinoBalance({
   try {
     await session.withTransaction(async () => {
       const duplicateBet = await Transaction.exists({
-        betId,
+        referenceId: betId,
         type: 'bet'
       }).session(session)
       if (duplicateBet) throw new Error('DUPLICATE_BET')
@@ -220,7 +220,7 @@ export async function spendCasinoBalance({
               amount,
               type: 'bet',
               source: 'casino',
-              betId,
+              referenceId: betId,
               meta: { game }
             }
           ],
