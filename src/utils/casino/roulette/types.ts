@@ -1,14 +1,11 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
+import type {
+  RouletteBetType,
+  RouletteWinMultipliers,
+  RouletteBet as SharedRouletteBet
+} from 'gambling-bot-shared/casino'
 
-export type RouletteBetType =
-  keyof (typeof defaultCasinoSettings)['roulette']['winMultipliers']
+export type { RouletteBetType, RouletteWinMultipliers }
 
-export type RouletteBet = {
-  type: RouletteBetType
-  value: string
-  amount: number
+export type RouletteBet = SharedRouletteBet & {
   displayValue: string
 }
-
-export type RouletteWinMultipliers =
-  (typeof defaultCasinoSettings)['roulette']['winMultipliers']

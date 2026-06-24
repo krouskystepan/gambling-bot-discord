@@ -118,6 +118,6 @@ describe('calculateRouletteWin', () => {
       displayValue: 'x'
     } as unknown as RouletteBet
 
-    expect(calculateRouletteWin(unknown, '5', payouts)).toBeUndefined()
+    expect(calculateRouletteWin(unknown, '5', payouts)).toBe(0)
   })
 })

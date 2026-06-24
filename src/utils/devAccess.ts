@@ -1,21 +1,20 @@
+import {
+  DEV_GUILDS,
+  DEV_USERS,
+  hasDevAccess as hasSharedDevAccess
+} from 'gambling-bot-shared/dev'
+
 import { MessageFlags } from 'discord.js'
 
 import type { CommandMetadata } from 'commandkit'
 
-export const DEV_GUILDS = ['1298805664654561340']
-
-/** Discord user IDs allowed to run dev commands outside dev guilds. */
-export const DEV_USERS: string[] = []
+export { DEV_GUILDS, DEV_USERS }
 
 export function hasDevAccess(interaction: {
   guildId: string | null
   user: { id: string }
 }): boolean {
-  if (interaction.guildId && DEV_GUILDS.includes(interaction.guildId)) {
-    return true
-  }
-
-  return DEV_USERS.includes(interaction.user.id)
+  return hasSharedDevAccess(interaction.user.id, interaction.guildId)
 }
 
 export async function assertDevAccess(interaction: {
