@@ -1,6 +1,8 @@
 import { generateId } from 'gambling-bot-shared/common'
 import { validatePredictionChoiceBet } from 'gambling-bot-shared/predictions'
+import { isUserBanned } from 'gambling-bot-shared/user'
 
+import User from '@/models/User'
 import { refundLockedBet, reserveCasinoBet } from '@/services/casino'
 import { addPredictionBet, getPredictionById } from '@/services/db'
 
@@ -13,6 +15,7 @@ export class PlacePredictionBetError extends Error {
       | 'CHOICE_NOT_FOUND'
       | 'VALIDATION_FAILED'
       | 'PREDICTION_STATE_CHANGED'
+      | 'USER_BANNED'
   ) {
     super(message)
     this.name = 'PlacePredictionBetError'
@@ -69,6 +72,11 @@ export const placePredictionBet = async ({
 
   if (!validation.ok) {
     throw new PlacePredictionBetError(validation.error, 'VALIDATION_FAILED')
+  }
+
+  const user = await User.findOne({ userId, guildId }).lean()
+  if (user && isUserBanned(user)) {
+    throw new PlacePredictionBetError('User is banned', 'USER_BANNED')
   }
 
   const betId = generateId()

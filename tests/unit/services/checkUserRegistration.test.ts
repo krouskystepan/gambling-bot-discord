@@ -61,6 +61,54 @@ describe('checkUserRegistration', () => {
       'Not registered'
     )
   })
+
+  it('replies and returns false when banned', async () => {
+    const user = {
+      userId: 'user-1',
+      guildId: 'guild-1',
+      balance: 100,
+      banned: true
+    }
+    mockGetUser.mockResolvedValue(user as never)
+
+    const interaction = createMockInteraction()
+    const result = await checkUserRegistration({
+      interaction: {
+        user: { id: 'user-1' },
+        guildId: 'guild-1',
+        reply: interaction.reply
+      } as never
+    })
+
+    expect(result).toBe(false)
+    expect(interaction.reply).toHaveBeenCalledOnce()
+    expect(interaction.getLastReply()?.embeds?.[0]?.title).toContain(
+      'Account Restricted'
+    )
+  })
+
+  it('allows banned users when allowBanned is true', async () => {
+    const user = {
+      userId: 'user-1',
+      guildId: 'guild-1',
+      balance: 100,
+      banned: true
+    }
+    mockGetUser.mockResolvedValue(user as never)
+
+    const interaction = {
+      user: { id: 'user-1' },
+      guildId: 'guild-1',
+      reply: vi.fn()
+    }
+    const result = await checkUserRegistration({
+      interaction: interaction as never,
+      allowBanned: true
+    })
+
+    expect(result).toEqual(user)
+    expect(interaction.reply).not.toHaveBeenCalled()
+  })
 })
 
 describe('checkTargetUserRegistration', () => {
