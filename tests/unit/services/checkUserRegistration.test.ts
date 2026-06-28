@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getUser } from '@/services/db/user.db'
 import {
+  assertNotBanned,
   checkTargetUserRegistration,
   checkUserRegistration
 } from '@/services/user/checkUserRegistration.service'
@@ -108,6 +109,43 @@ describe('checkUserRegistration', () => {
 
     expect(result).toEqual(user)
     expect(interaction.reply).not.toHaveBeenCalled()
+  })
+})
+
+describe('assertNotBanned', () => {
+  it('returns true when user is not banned', async () => {
+    const user = { userId: 'user-1', guildId: 'guild-1', balance: 100 }
+    const interaction = { reply: vi.fn() }
+
+    const result = await assertNotBanned({
+      user: user as never,
+      interaction: interaction as never
+    })
+
+    expect(result).toBe(true)
+    expect(interaction.reply).not.toHaveBeenCalled()
+  })
+
+  it('replies and returns false when user is banned', async () => {
+    const user = {
+      userId: 'user-1',
+      guildId: 'guild-1',
+      balance: 100,
+      banned: true
+    }
+    const interaction = createMockInteraction()
+
+    const result = await assertNotBanned({
+      user: user as never,
+      interaction: {
+        reply: interaction.reply
+      } as never
+    })
+
+    expect(result).toBe(false)
+    expect(interaction.getLastReply()?.embeds?.[0]?.title).toContain(
+      'Account Restricted'
+    )
   })
 })
 
