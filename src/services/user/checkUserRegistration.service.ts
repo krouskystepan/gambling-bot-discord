@@ -1,4 +1,8 @@
-import { TUser } from 'gambling-bot-shared/user'
+import {
+  TUser,
+  USER_BANNED_MESSAGE,
+  isUserBanned
+} from 'gambling-bot-shared/user'
 
 import { MessageFlags } from 'discord.js'
 
@@ -8,10 +12,31 @@ import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 import { getUser } from '../db/user.db'
 
-export const checkUserRegistration = async ({
+type RepliableInteraction = Parameters<ChatInputCommand>[0]['interaction']
+
+export async function assertNotBanned({
+  user,
   interaction
 }: {
-  interaction: Parameters<ChatInputCommand>[0]['interaction']
+  user: TUser
+  interaction: RepliableInteraction
+}): Promise<boolean> {
+  if (!isUserBanned(user)) return true
+
+  await interaction.reply({
+    embeds: [createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)],
+    flags: MessageFlags.Ephemeral
+  })
+
+  return false
+}
+
+export const checkUserRegistration = async ({
+  interaction,
+  allowBanned = false
+}: {
+  interaction: RepliableInteraction
+  allowBanned?: boolean
 }): Promise<TUser | false> => {
   const user = await getUser({
     userId: interaction.user.id,
@@ -19,7 +44,7 @@ export const checkUserRegistration = async ({
   })
 
   if (!user) {
-    interaction.reply({
+    await interaction.reply({
       embeds: [
         createErrorEmbed(
           'Error - Not registered',
@@ -31,6 +56,11 @@ export const checkUserRegistration = async ({
     return false
   }
 
+  if (!allowBanned && isUserBanned(user)) {
+    await assertNotBanned({ user, interaction })
+    return false
+  }
+
   return user
 }
 
@@ -38,7 +68,7 @@ export const checkTargetUserRegistration = async ({
   interaction,
   targetUserId
 }: {
-  interaction: Parameters<ChatInputCommand>[0]['interaction']
+  interaction: RepliableInteraction
   targetUserId: string
 }): Promise<TUser | false> => {
   const targetUser = await getUser({
@@ -47,7 +77,7 @@ export const checkTargetUserRegistration = async ({
   })
 
   if (!targetUser) {
-    interaction.reply({
+    await interaction.reply({
       embeds: [
         createErrorEmbed(
           'Error - Not registered',

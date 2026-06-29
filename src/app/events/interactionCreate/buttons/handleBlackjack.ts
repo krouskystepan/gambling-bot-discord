@@ -1,3 +1,8 @@
+import {
+  USER_BANNED_ERROR,
+  USER_BANNED_MESSAGE
+} from 'gambling-bot-shared/user'
+
 import { Interaction, MessageFlags } from 'discord.js'
 
 import { handleUnexpectedButtonError } from '@/errors'
@@ -93,7 +98,16 @@ export default async (interaction: Interaction) => {
           betId,
           game: 'blackjack'
         })
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.message === USER_BANNED_ERROR) {
+          return interaction.followUp({
+            embeds: [
+              createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)
+            ],
+            flags: MessageFlags.Ephemeral
+          })
+        }
+
         return interaction.followUp({
           embeds: [
             createErrorEmbed(
@@ -119,7 +133,16 @@ export default async (interaction: Interaction) => {
           betId,
           game: 'blackjack'
         })
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.message === USER_BANNED_ERROR) {
+          return interaction.followUp({
+            embeds: [
+              createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)
+            ],
+            flags: MessageFlags.Ephemeral
+          })
+        }
+
         return interaction.followUp({
           embeds: [
             createErrorEmbed(

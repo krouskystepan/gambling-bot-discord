@@ -1,3 +1,4 @@
+import { USER_BANNED_ERROR } from 'gambling-bot-shared/user'
 import { describe, expect, it, vi } from 'vitest'
 
 import TransactionModel from '@/models/Transaction'
@@ -37,6 +38,20 @@ describe('casinoBet.service', () => {
 
     const tx = await Transaction.findOne({ referenceId: 'bet-1', type: 'bet' })
     expect(tx?.amount).toBe(80)
+  })
+
+  it('throws USER_BANNED on reserve', async () => {
+    await createTestUser({ balance: 500, banned: true })
+
+    await expect(
+      reserveCasinoBet({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        totalBet: 10,
+        betId: 'reserve-banned',
+        game: 'dice'
+      })
+    ).rejects.toThrow(USER_BANNED_ERROR)
   })
 
   it('throws USER_NOT_FOUND on reserve', async () => {
@@ -233,6 +248,20 @@ describe('casinoBet.service', () => {
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
     expect(user?.balance).toBe(80)
     expect(user?.bonusBalance).toBe(0)
+  })
+
+  it('throws USER_BANNED on spendCasinoBalance', async () => {
+    await createTestUser({ balance: 500, banned: true })
+
+    await expect(
+      spendCasinoBalance({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        amount: 10,
+        betId: 'spend-banned',
+        game: 'dice'
+      })
+    ).rejects.toThrow(USER_BANNED_ERROR)
   })
 
   it('throws USER_NOT_FOUND on spendCasinoBalance', async () => {

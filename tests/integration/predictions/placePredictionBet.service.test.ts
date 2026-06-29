@@ -160,6 +160,26 @@ describe('placePredictionBet.service', () => {
     expect(user?.lockedBalance).toBe(400)
   })
 
+  it('rejects banned user before reserving', async () => {
+    await createTestUser({ balance: 500, banned: true })
+    await seedActivePrediction('pred-banned')
+
+    await expect(
+      placePredictionBet({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        predictionId: 'pred-banned',
+        choiceName: 'Yes',
+        amount: 50,
+        minBet: 10,
+        maxBet: 500
+      })
+    ).rejects.toMatchObject({ code: 'USER_BANNED' })
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.lockedBalance).toBe(0)
+  })
+
   it('rejects bet above per-choice max before reserve', async () => {
     await createTestUser({ balance: 500 })
     await seedActivePrediction('pred-max')

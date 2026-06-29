@@ -1,4 +1,5 @@
 import { formatMoney } from 'gambling-bot-shared/common'
+import { USER_BANNED_MESSAGE } from 'gambling-bot-shared/user'
 
 import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 
@@ -97,7 +98,13 @@ export default async (interaction: Interaction) => {
         betId: raffle.drawId,
         game: 'raffle'
       })
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === 'USER_BANNED') {
+        return interaction.editReply({
+          embeds: [createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)]
+        })
+      }
+
       return interaction.editReply({
         embeds: [
           createErrorEmbed(
