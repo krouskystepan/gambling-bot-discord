@@ -16,6 +16,7 @@ const baseConfig = (globalSettings?: TGuildConfiguration['globalSettings']) =>
     predictionChannelIds: { actions: '', logs: '' },
     raffleChannelIds: { actions: '', logs: '' },
     managerRoleId: '',
+    bannedRoleId: '',
     casinoSettings: {} as TGuildConfiguration['casinoSettings'],
     vipSettings: {
       roleOwnerId: '',
