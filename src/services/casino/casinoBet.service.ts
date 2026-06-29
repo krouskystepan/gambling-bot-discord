@@ -1,5 +1,6 @@
 import type { CasinoGameId } from 'gambling-bot-shared/casino'
 import { createCasinoBetService } from 'gambling-bot-shared/casino'
+import { USER_BANNED_ERROR, isUserBanned } from 'gambling-bot-shared/user'
 import mongoose from 'mongoose'
 
 import Transaction from '@/models/Transaction'
@@ -42,6 +43,7 @@ export async function reserveCasinoBet({
 
       const user = await User.findOne({ userId, guildId }).session(session)
       if (!user) throw new Error('USER_NOT_FOUND')
+      if (isUserBanned(user)) throw new Error(USER_BANNED_ERROR)
 
       const bonusUsed = Math.min(user.bonusBalance ?? 0, totalBet)
       const cashUsed = totalBet - bonusUsed
@@ -189,6 +191,7 @@ export async function spendCasinoBalance({
 
       const user = await User.findOne({ userId, guildId }).session(session)
       if (!user) throw new Error('USER_NOT_FOUND')
+      if (isUserBanned(user)) throw new Error(USER_BANNED_ERROR)
 
       const bonusBalance = user.bonusBalance ?? 0
       const bonusUsed = Math.min(bonusBalance, amount)

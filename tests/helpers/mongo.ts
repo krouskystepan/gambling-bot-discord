@@ -49,7 +49,8 @@ export const createTestUser = async ({
   bonusBalance = 0,
   lockedBalance = 0,
   lastDailyClaim = null,
-  dailyStreak = 0
+  dailyStreak = 0,
+  banned = false
 }: {
   userId?: string
   guildId?: string
@@ -58,6 +59,7 @@ export const createTestUser = async ({
   lockedBalance?: number
   lastDailyClaim?: Date | null
   dailyStreak?: number
+  banned?: boolean
 } = {}) => {
   return User.create({
     userId,
@@ -66,7 +68,8 @@ export const createTestUser = async ({
     bonusBalance,
     lockedBalance,
     lastDailyClaim,
-    dailyStreak
+    dailyStreak,
+    banned
   })
 }
 

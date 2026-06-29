@@ -2,6 +2,7 @@ import {
   formatMoney,
   parseReadableStringToNumber
 } from 'gambling-bot-shared/common'
+import { USER_BANNED_MESSAGE } from 'gambling-bot-shared/user'
 
 import {
   ActionRowBuilder,
@@ -23,6 +24,7 @@ import {
   PlacePredictionBetError,
   placePredictionBet
 } from '@/services/predictions/placePredictionBet.service'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 import {
   createInfoEmbed,
   createSuccessEmbed
@@ -171,6 +173,13 @@ export default async (interaction: Interaction) => {
                   guildConfig.globalSettings
                 )}**.`
               )
+            ]
+          })
+        }
+        if (err.code === 'USER_BANNED') {
+          return modalInteraction.editReply({
+            embeds: [
+              createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)
             ]
           })
         }

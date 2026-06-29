@@ -16,7 +16,7 @@ export const command: CommandData = {
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
-    const user = await checkUserRegistration({ interaction })
+    const user = await checkUserRegistration({ interaction, allowBanned: true })
     if (!user) return
 
     const guildConfig = await getGuildConfigByGuildId({

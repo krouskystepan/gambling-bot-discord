@@ -3,6 +3,7 @@ import {
   generateId,
   parseTimeToSeconds
 } from 'gambling-bot-shared/common'
+import { USER_BANNED_MESSAGE, isUserBanned } from 'gambling-bot-shared/user'
 
 import {
   ApplicationCommandOptionType,
@@ -141,6 +142,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       guildId: interaction.guildId!
     })
 
+    const subcommand = interaction.options.getSubcommand()
+
     if (!user) {
       return interaction.reply({
         embeds: [
@@ -153,7 +156,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       })
     }
 
-    const subcommand = interaction.options.getSubcommand()
+    if (subcommand !== 'info' && isUserBanned(user)) {
+      return interaction.reply({
+        embeds: [createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+
     const pricePerDay = guildConfiguration.vipSettings.pricePerDay
     const pricePerCreate = guildConfiguration.vipSettings.pricePerCreate
 
