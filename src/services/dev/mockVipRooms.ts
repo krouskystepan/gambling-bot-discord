@@ -67,7 +67,7 @@ export async function mockVipRooms({
       await VipRoom.create(doc)
       insertedDocs.push(doc)
     } catch {
-      // Unique ownerId+guildId — skip duplicates when count > unique owners.
+      // Unique ownerId+guildId - skip duplicates when count > unique owners.
     }
   }
 

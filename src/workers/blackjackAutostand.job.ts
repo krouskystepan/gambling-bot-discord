@@ -100,9 +100,7 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
         tryAnnounceBigWin({
           guild,
           guildConfig,
-          userId: game.userId,
-          title: '🃏 Blackjack Big Win!',
-          intro: 'crushed the table!',
+          game: 'blackjack',
           lines: collectBlackjackBigWinLines({
             engine,
             globalSettings,

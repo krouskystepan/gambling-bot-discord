@@ -52,7 +52,7 @@ export const raffleDrawJob = async (client: Client<true>) => {
 
       if (isGlobalFeatureDisabled(guildConfig, 'raffleManagement')) {
         logger.worker(
-          `[RAFFLE] Skipping draw — raffle management disabled (${raffle.guildId})`
+          `[RAFFLE] Skipping draw - raffle management disabled (${raffle.guildId})`
         )
         continue
       }
@@ -158,7 +158,7 @@ export const raffleDrawJob = async (client: Client<true>) => {
         .setTitle('🎉 Raffle Draw Result')
         .setDescription(
           refunded
-            ? 'Not enough participants — all tickets refunded.'
+            ? 'Not enough participants - all tickets refunded.'
             : winnerId
               ? `🏆 **Winner:** <@${winnerId}>\n🎟️ Tickets Sold: **${totalTickets}**\n💰 Pot: **${formatMoneyExact(pot, guildConfig.globalSettings)}**`
               : 'No participants this round.'
@@ -200,11 +200,11 @@ export const raffleDrawJob = async (client: Client<true>) => {
 
       if (refunded) {
         logger.worker(
-          `Raffle "${raffle.raffleId}" refunded — ${participants.length} participant(s)`
+          `Raffle "${raffle.raffleId}" refunded - ${participants.length} participant(s)`
         )
       } else if (winnerId) {
         logger.worker(
-          `Raffle "${raffle.raffleId}" winner ${winnerId} — pot ${formatMoneyExact(pot, guildConfig.globalSettings)}`
+          `Raffle "${raffle.raffleId}" winner ${winnerId} - pot ${formatMoneyExact(pot, guildConfig.globalSettings)}`
         )
       }
 

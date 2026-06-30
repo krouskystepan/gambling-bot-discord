@@ -245,7 +245,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         .setTitle(title)
         .setDescription(
           choicesArray
-            .map((c) => `- **${c.choiceName}** — ${c.odds}x`)
+            .map((c) => `- **${c.choiceName}** - ${c.odds}x`)
             .join('\n')
         )
         .setFooter({ text: `ID: ${messageReply.id}` })
@@ -618,7 +618,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           }
 
           await message.edit({
-            content: '**Status:** Canceled — All bets refunded',
+            content: '**Status:** Canceled - All bets refunded',
             embeds: [editedEmbed],
             components: []
           })
@@ -678,7 +678,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
                 .fetch(b.userId)
                 .catch(() => null)
               const username = member ? `<@${member.id}>` : 'Unknown'
-              return `${username} — Bet: ${formatMoney(b.amount, configReply.globalSettings)}`
+              return `${username} - Bet: ${formatMoney(b.amount, configReply.globalSettings)}`
             })
           )
 

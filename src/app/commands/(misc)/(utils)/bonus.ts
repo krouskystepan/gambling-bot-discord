@@ -167,7 +167,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           { name: '⏰ Next Claim', value: claimInfo, inline: false }
         )
         .setFooter({
-          text: 'Daily bonus credits bonus balance only — never locked balance.'
+          text: 'Daily bonus credits bonus balance only - never locked balance.'
         })
         .setTimestamp()
 
@@ -226,7 +226,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       )
 
       const resetNote = isReset
-        ? '\n\nYour reward cycle has reset — keep the streak going!'
+        ? '\n\nYour reward cycle has reset - keep the streak going!'
         : ''
 
       const embed = new EmbedBuilder()

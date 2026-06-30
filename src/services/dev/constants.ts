@@ -59,7 +59,7 @@ export const MOCK_CASINO_GAME_IDS = [
 
 export type MockCasinoGameId = (typeof MOCK_CASINO_GAME_IDS)[number]
 
-/** Popularity weights — slots/dice dominate; niche games are rarer. */
+/** Popularity weights - slots/dice dominate; niche games are rarer. */
 export const CASINO_GAME_WEIGHTS: Record<MockCasinoGameId, number> = {
   slots: 22,
   dice: 14,
@@ -99,7 +99,7 @@ export const PREDICTION_TITLES = [
   'Will it rain on event day?',
   'Next album release before summer?',
   'Highest grossing movie this month?',
-  'Esports MVP — Player A or Player B?',
+  'Esports MVP - Player A or Player B?',
   'Stock index up or down Friday close?'
 ]
 

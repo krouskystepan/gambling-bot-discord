@@ -716,7 +716,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             'Member Added',
             `${userToAdd} has been added to <@${ownerUser.id}>'s VIP room.` +
               (bypass
-                ? `\n\nBypass mode was used — max member limit ignored.`
+                ? `\n\nBypass mode was used - max member limit ignored.`
                 : '')
           )
         ],

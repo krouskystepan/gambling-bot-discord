@@ -251,7 +251,7 @@ export const approveAtmRequest = async ({
       await editAtmLogMessage({
         client,
         request: completed,
-        content: `❌ Rejected by <@${handledBy}> — user had insufficient available balance at time of approval.`
+        content: `❌ Rejected by <@${handledBy}> - user had insufficient available balance at time of approval.`
       })
     }
 
@@ -290,7 +290,7 @@ export const approveAtmRequest = async ({
       await editAtmLogMessage({
         client,
         request: completed,
-        content: `❌ Rejected by <@${handledBy}> — user had insufficient available balance at time of approval.`
+        content: `❌ Rejected by <@${handledBy}> - user had insufficient available balance at time of approval.`
       })
     }
 

@@ -22,6 +22,7 @@ import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 import { slotEmojis, spinSlotEmotes } from '@/utils/discord/customEmotes'
+import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
@@ -188,7 +189,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         )
       ) {
         announcementSpins.push(
-          `Spin **${i + 1}** — **${resultString}** — **x${spinMultiplier}** → **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+          formatBigWinLine({
+            label: `Spin **${i + 1}**`,
+            middle: [`**${resultString}**`],
+            multiplier: String(spinMultiplier),
+            payout: formatMoney(winnings, configReply.globalSettings),
+            bet: formatMoney(parsedBetAmount, configReply.globalSettings)
+          })
         )
       }
 
@@ -217,9 +224,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     tryAnnounceBigWin({
       guild: interaction.guild,
       guildConfig: configReply,
-      userId,
-      title: '🎰 Slots Big Win!',
-      intro: 'hit a huge combo!',
+      game: 'slots',
       lines: announcementSpins,
       betId,
       sourceChannelId: interaction.channelId

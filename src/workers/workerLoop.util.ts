@@ -11,7 +11,7 @@ export const runWorkerLoop = async (
   if (runningWorkers.has(name)) {
     logger.error(
       { worker: name },
-      'Worker already running — duplicate start prevented'
+      'Worker already running - duplicate start prevented'
     )
     return
   }

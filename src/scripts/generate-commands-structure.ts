@@ -6,8 +6,8 @@ const ROOT = path.resolve('src/app/commands')
 const project = new Project({ tsConfigFilePath: 'tsconfig.json' })
 
 const PERM_TIERS: Record<string, string> = {
-  '(misc)': 'normal users — global player commands',
-  '(mod)': 'moderators — admin / dev-guild commands'
+  '(misc)': 'normal users - global player commands',
+  '(mod)': 'moderators - admin / dev-guild commands'
 }
 
 let output = ''
@@ -36,7 +36,7 @@ function walk(dir: string, prefix = '') {
 
     const permNote = PERM_TIERS[entry.name]
     output += `${prefix}${branch}${entry.name}`
-    if (permNote) output += `  — ${permNote}`
+    if (permNote) output += `  - ${permNote}`
     output += '\n'
 
     if (entry.isDirectory()) {

@@ -3,6 +3,7 @@ import { formatMoney } from 'gambling-bot-shared/common'
 import { GlobalSettings } from 'gambling-bot-shared/guild'
 
 import { EngineState, resolveResult } from '@/utils/casino/blackjack'
+import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 
 export const collectBlackjackBigWinLines = ({
   engine,
@@ -25,7 +26,12 @@ export const collectBlackjackBigWinLines = ({
     if (!shouldAnnounceByMultiplier(multiplier, minMultiplier)) continue
 
     lines.push(
-      `Hand **${i + 1}** — **x${multiplier.toFixed(2)}** → **${formatMoney(result.payout, globalSettings)}** (bet **${formatMoney(hand.betAmount, globalSettings)}**)`
+      formatBigWinLine({
+        label: `Hand **${i + 1}**`,
+        multiplier: multiplier.toFixed(2),
+        payout: formatMoney(result.payout, globalSettings),
+        bet: formatMoney(hand.betAmount, globalSettings)
+      })
     )
   }
 

@@ -1,7 +1,7 @@
 src/app/commands
 Permission tiers: (misc) = players | (mod) = moderators/admins
 
-├── (misc)  — normal users — global player commands
+├── (misc)  - normal users - global player commands
 │   ├── (atm)
 │   │   ├── deposit.ts
 │   │   │   └─ /deposit – Deposit money to your account.
@@ -84,7 +84,7 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │              ├─ extend – Extend your current VIP duration.
 │              ├─ add-member – Add a user to your VIP room.
 │              ├─ remove-member – Remove a user from your VIP room.
-└── (mod)  — moderators — admin / dev-guild commands
+└── (mod)  - moderators - admin / dev-guild commands
     ├── (auth)
     │   ├── force-register.ts
     │   │   └─ /force-register – Force register a user.

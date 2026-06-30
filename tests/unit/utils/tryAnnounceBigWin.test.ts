@@ -28,8 +28,7 @@ describe('tryAnnounceBigWin', () => {
     tryAnnounceBigWin({
       guild,
       guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: 'Win',
+      game: 'dice',
       lines: []
     })
 
@@ -40,20 +39,18 @@ describe('tryAnnounceBigWin', () => {
     tryAnnounceBigWin({
       guild: null,
       guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: 'Win',
+      game: 'dice',
       lines: ['line 1']
     })
 
     expect(announceBigWin).not.toHaveBeenCalled()
   })
 
-  it('announces joined lines without intro', () => {
+  it('announces formatted message for the game', () => {
     tryAnnounceBigWin({
       guild,
       guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: 'Win',
+      game: 'dice',
       lines: ['line 1', 'line 2'],
       betId: 'bet-1',
       sourceChannelId: 'source-ch'
@@ -62,32 +59,9 @@ describe('tryAnnounceBigWin', () => {
     expect(announceBigWin).toHaveBeenCalledWith({
       guild,
       guildConfig: baseConfig,
-      userId: 'user-1',
-      title: 'Win',
-      description: 'line 1\nline 2',
-      betId: 'bet-1',
+      message:
+        '🎉 **Someone won big on Dice!**\n\nline 1\nline 2\n\n`ID: bet-1`',
       sourceChannelId: 'source-ch'
-    })
-  })
-
-  it('announces intro followed by lines', () => {
-    tryAnnounceBigWin({
-      guild,
-      guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: 'Win',
-      lines: ['line 1'],
-      intro: 'intro line'
-    })
-
-    expect(announceBigWin).toHaveBeenCalledWith({
-      guild,
-      guildConfig: baseConfig,
-      userId: 'user-1',
-      title: 'Win',
-      description: 'intro line\nline 1',
-      betId: undefined,
-      sourceChannelId: undefined
     })
   })
 })

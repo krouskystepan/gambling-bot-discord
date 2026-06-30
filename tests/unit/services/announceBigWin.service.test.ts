@@ -3,15 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { announceBigWin } from '@/services/discord/announceBigWin.service'
 
-vi.mock('@/utils/discord/createEmbed', () => ({
-  createBetEmbed: vi.fn(() => ({ title: 'embed' }))
-}))
-
 vi.mock('@/utils/logger', () => ({
   logger: { error: vi.fn() }
 }))
 
-const { createBetEmbed } = await import('@/utils/discord/createEmbed')
 const { logger } = await import('@/utils/logger')
 
 const baseConfig = {
@@ -33,9 +28,7 @@ describe('announceBigWin', () => {
     await announceBigWin({
       guild: guild as never,
       guildConfig: { ...baseConfig, winAnnouncementsChannelId: '' } as never,
-      userId: 'user-1',
-      title: 'Win',
-      description: 'Big win'
+      message: 'Big win'
     })
 
     expect(guild.channels.fetch).not.toHaveBeenCalled()
@@ -51,9 +44,7 @@ describe('announceBigWin', () => {
     await announceBigWin({
       guild: guild as never,
       guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: 'Win',
-      description: 'Big win',
+      message: 'Big win',
       sourceChannelId: 'announce-ch'
     })
 
@@ -71,13 +62,10 @@ describe('announceBigWin', () => {
     await announceBigWin({
       guild: guild as never,
       guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: 'Win',
-      description: 'Big win'
+      message: 'Big win'
     })
 
     expect(guild.channels.fetch).toHaveBeenCalledWith('announce-ch')
-    expect(createBetEmbed).not.toHaveBeenCalled()
   })
 
   it('skips when channel fetch fails', async () => {
@@ -91,15 +79,13 @@ describe('announceBigWin', () => {
     await announceBigWin({
       guild: guild as never,
       guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: 'Win',
-      description: 'Big win'
+      message: 'Big win'
     })
 
-    expect(createBetEmbed).not.toHaveBeenCalled()
+    expect(guild.channels.fetch).toHaveBeenCalledWith('announce-ch')
   })
 
-  it('sends embed when channel is configured and sendable', async () => {
+  it('sends plain message when channel is configured and sendable', async () => {
     const send = vi.fn().mockResolvedValue(undefined)
     const guild = {
       id: 'guild-1',
@@ -111,25 +97,16 @@ describe('announceBigWin', () => {
       }
     }
 
+    const message =
+      '🎉 **Someone just hit the Golden Jackpot!**\n\nline 1\n\n`ID: bet-1`'
+
     await announceBigWin({
       guild: guild as never,
       guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: '🏆 Golden Jackpot!',
-      description: 'hit the jackpot',
-      betId: 'bet-1'
+      message
     })
 
-    expect(createBetEmbed).toHaveBeenCalledWith(
-      '🏆 Golden Jackpot!',
-      'Gold',
-      'hit the jackpot',
-      'bet-1'
-    )
-    expect(send).toHaveBeenCalledWith({
-      content: '<@user-1>',
-      embeds: [{ title: 'embed' }]
-    })
+    expect(send).toHaveBeenCalledWith({ content: message })
   })
 
   it('logs when send fails', async () => {
@@ -148,9 +125,7 @@ describe('announceBigWin', () => {
     await announceBigWin({
       guild: guild as never,
       guildConfig: baseConfig as never,
-      userId: 'user-1',
-      title: 'Win',
-      description: 'Big win'
+      message: 'Big win'
     })
 
     await vi.waitFor(() => {
