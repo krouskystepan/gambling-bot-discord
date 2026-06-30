@@ -2,18 +2,29 @@ name: Deploy gambling-bot-discord
 
 on:
   push:
-    branches:
-      - main
+    branches: ['main']
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: sudo -u deploy /usr/local/bin/deploy/gambling-bot.sh
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy (retry 3x)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 2
+          max_attempts: 3
+          retry_wait_seconds: 5
+          command: |
+            ssh \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              -o ServerAliveInterval=5 \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+              "sudo -u deploy /usr/local/bin/deploy/gambling-bot.sh"

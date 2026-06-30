@@ -44,7 +44,7 @@ export const command: CommandData = {
         {
           name: 'include-guild-users',
           description:
-            'Mix in real guild/DB users (default: false — synthetic users only).',
+            'Mix in real guild/DB users (default: false - synthetic users only).',
           type: ApplicationCommandOptionType.Boolean,
           required: false
         }
@@ -89,7 +89,7 @@ export const command: CommandData = {
         {
           name: 'include-guild-users',
           description:
-            'Mix in real guild/DB users (default: false — synthetic users only).',
+            'Mix in real guild/DB users (default: false - synthetic users only).',
           type: ApplicationCommandOptionType.Boolean,
           required: false
         }
@@ -176,7 +176,7 @@ export const command: CommandData = {
         {
           name: 'include-guild-users',
           description:
-            'Mix in real guild/DB users (default: false — synthetic users only).',
+            'Mix in real guild/DB users (default: false - synthetic users only).',
           type: ApplicationCommandOptionType.Boolean,
           required: false
         }

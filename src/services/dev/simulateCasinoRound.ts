@@ -280,7 +280,7 @@ function simulateRaffleRound(ctx: SimulateCtx): SimulatedCasinoRound {
 
   const txs: SimulatedCasinoTx[] = [betTx(ctx, 'raffle', totalCost)]
 
-  // ~18% — won a draw (pot after house cut, simulates shared ticket pool)
+  // ~18% - won a draw (pot after house cut, simulates shared ticket pool)
   if (Math.random() < 0.18) {
     const poolMultiplier = randomInt(4, 25)
     const pot = Math.round(

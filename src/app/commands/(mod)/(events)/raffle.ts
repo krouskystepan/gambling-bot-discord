@@ -419,7 +419,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       const lines = raffle.participants
         .filter((p) => p.tickets > 0)
-        .map((p) => `<@${p.userId}> — Tickets bought: **${p.tickets}**`)
+        .map((p) => `<@${p.userId}> - Tickets bought: **${p.tickets}**`)
 
       const embed = new EmbedBuilder()
         .setColor(Colors.Blurple)

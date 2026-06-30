@@ -28,6 +28,7 @@ import {
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
@@ -246,7 +247,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             )
           ) {
             announcementHits.push(
-              `Spin **${i + 1}** — **${color} ${spinResult}** — **${bet.displayValue ?? bet.value}** — **x${betMultiplier.toFixed(2)}** → **${formatMoney(winAmount, configReply.globalSettings)}** (bet **${formatMoney(bet.amount, configReply.globalSettings)}**)`
+              formatBigWinLine({
+                label: `Spin **${i + 1}**`,
+                middle: [
+                  `**${color} ${spinResult}**`,
+                  `**${bet.displayValue ?? bet.value}**`
+                ],
+                multiplier: betMultiplier.toFixed(2),
+                payout: formatMoney(winAmount, configReply.globalSettings),
+                bet: formatMoney(bet.amount, configReply.globalSettings)
+              })
             )
           }
         }
@@ -279,9 +289,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     tryAnnounceBigWin({
       guild: interaction.guild,
       guildConfig: configReply,
-      userId,
-      title: '🌀 Roulette Big Win!',
-      intro: 'landed a huge bet!',
+      game: 'roulette',
       lines: announcementHits,
       betId,
       sourceChannelId: interaction.channelId

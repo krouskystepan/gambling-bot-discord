@@ -1,7 +1,6 @@
 import { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
-import { createBetEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 type AnnounceGuild = {
@@ -14,20 +13,14 @@ type AnnounceGuild = {
 type BigWinAnnouncement = {
   guild: AnnounceGuild
   guildConfig: TGuildConfiguration
-  userId: string
-  title: string
-  description: string
-  betId?: string
+  message: string
   sourceChannelId?: string
 }
 
 export const announceBigWin = async ({
   guild,
   guildConfig,
-  userId,
-  title,
-  description,
-  betId,
+  message,
   sourceChannelId
 }: BigWinAnnouncement) => {
   const channelId = guildConfig.winAnnouncementsChannelId
@@ -43,9 +36,7 @@ export const announceBigWin = async ({
     return
   }
 
-  const embed = createBetEmbed(title, 'Gold', description, betId)
-
-  channel.send({ content: `<@${userId}>`, embeds: [embed] }).catch((err) => {
+  channel.send({ content: message }).catch((err) => {
     logger.error(
       { err, guildId: guild.id, channelId },
       'Failed to send big win announcement'

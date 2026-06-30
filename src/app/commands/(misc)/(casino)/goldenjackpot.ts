@@ -257,8 +257,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     tryAnnounceBigWin({
       guild: interaction.guild,
       guildConfig: configReply,
-      userId,
-      title: '🏆 Golden Jackpot!',
+      game: 'goldenjackpot',
       lines: announcementHits,
       betId,
       sourceChannelId: interaction.channelId

@@ -27,6 +27,7 @@ import { dropPlinkoPath } from '@/utils/casino/rng'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
+import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
@@ -229,7 +230,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         )
       ) {
         announcementBalls.push(
-          `Ball **${i + 1}** — **x${formattedMultiplier}** → **${formatMoney(winnings, configReply.globalSettings)}**`
+          formatBigWinLine({
+            label: `Ball **${i + 1}**`,
+            multiplier: formattedMultiplier,
+            payout: formatMoney(winnings, configReply.globalSettings)
+          })
         )
       }
     }
@@ -247,9 +252,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     tryAnnounceBigWin({
       guild: interaction.guild,
       guildConfig: configReply,
-      userId,
-      title: '🎯 Plinko Big Win!',
-      intro: 'landed huge multipliers!',
+      game: 'plinko',
       lines: announcementBalls,
       betId
     })

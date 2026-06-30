@@ -1,6 +1,10 @@
 import { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
 import { announceBigWin } from '@/services/discord/announceBigWin.service'
+import {
+  type BigWinGame,
+  formatBigWinMessage
+} from '@/utils/discord/formatBigWinMessage'
 
 type AnnounceGuild = {
   id: string
@@ -12,33 +16,24 @@ type AnnounceGuild = {
 export const tryAnnounceBigWin = ({
   guild,
   guildConfig,
-  userId,
-  title,
+  game,
   lines,
-  intro,
   betId,
   sourceChannelId
 }: {
   guild: AnnounceGuild | null | undefined
   guildConfig: TGuildConfiguration
-  userId: string
-  title: string
+  game: BigWinGame
   lines: string[]
-  intro?: string
   betId?: string
   sourceChannelId?: string
 }) => {
   if (lines.length === 0 || !guild) return
 
-  const description = intro ? `${intro}\n${lines.join('\n')}` : lines.join('\n')
-
   void announceBigWin({
     guild,
     guildConfig,
-    userId,
-    title,
-    description,
-    betId,
+    message: formatBigWinMessage({ game, lines, betId }),
     sourceChannelId
   })
 }

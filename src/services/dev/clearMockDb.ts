@@ -11,6 +11,7 @@ import Prediction from '@/models/Prediction'
 import Raffle from '@/models/Raffle'
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
+import UserBan from '@/models/UserBan'
 import VipRoom from '@/models/VipRoom'
 
 import type { MockDbEntity } from './index'
@@ -29,6 +30,7 @@ const WIPE_MODELS: GuildDataWipeModels = {
   predictions: Prediction,
   vipRooms: VipRoom,
   blackjackGames: BlackjackGame,
+  userBans: UserBan,
   users: User
 }
 

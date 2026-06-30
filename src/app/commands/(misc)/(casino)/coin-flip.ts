@@ -22,6 +22,7 @@ import { isUserOnCooldown } from '@/utils/common/userCooldown'
 import { checkValidBet } from '@/utils/common/utils'
 import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 import { coinEmojis, flipCoinEmote } from '@/utils/discord/customEmotes'
+import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
@@ -188,7 +189,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         )
       ) {
         announcementFlips.push(
-          `Flip **${i + 1}** — ${coinEmojis[flipResult]} — **x${flipMultiplier.toFixed(2)}** → **${formatMoney(winnings, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
+          formatBigWinLine({
+            label: `Flip **${i + 1}**`,
+            middle: [coinEmojis[flipResult]],
+            multiplier: flipMultiplier.toFixed(2),
+            payout: formatMoney(winnings, configReply.globalSettings),
+            bet: formatMoney(parsedBetAmount, configReply.globalSettings)
+          })
         )
       }
 
@@ -217,9 +224,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     tryAnnounceBigWin({
       guild: interaction.guild,
       guildConfig: configReply,
-      userId,
-      title: '🪙 Coin Flip Big Win!',
-      intro: 'called it right!',
+      game: 'coin-flip',
       lines: announcementFlips,
       betId,
       sourceChannelId: interaction.channelId

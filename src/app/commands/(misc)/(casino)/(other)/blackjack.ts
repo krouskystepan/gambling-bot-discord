@@ -168,9 +168,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           tryAnnounceBigWin({
             guild: interaction.guild,
             guildConfig: configReply,
-            userId: user.userId,
-            title: '🃏 Blackjack Big Win!',
-            intro: 'hit blackjack!',
+            game: 'blackjack',
             lines: [
               `**x${blackjackMultiplier.toFixed(2)}** → **${formatMoney(payout, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
             ],
