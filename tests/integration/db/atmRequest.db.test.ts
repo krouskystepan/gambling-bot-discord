@@ -260,6 +260,24 @@ describe('atmRequest.db', () => {
     expect(wrongType).toBeNull()
   })
 
+  it('getUserAtmRequest works without type filter', async () => {
+    await createAtmRequest({
+      requestId: 'atm-user-no-type',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'deposit',
+      amount: 75,
+      account: 'acc-user-no-type'
+    })
+
+    const match = await getUserAtmRequest({
+      requestId: 'atm-user-no-type',
+      guildId: 'guild-1',
+      userId: 'user-1'
+    })
+    expect(match?.requestId).toBe('atm-user-no-type')
+  })
+
   it('getUserAtmRequest returns null for another user request', async () => {
     await createAtmRequest({
       requestId: 'atm-user-2',
