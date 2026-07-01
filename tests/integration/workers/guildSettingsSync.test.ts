@@ -138,7 +138,8 @@ describe('mergeGuildSettingsSections', () => {
         $set: {
           casinoSettings: {},
           globalSettings: {
-            disableDeposits: 'true'
+            disableDeposits: 'true',
+            timezone: 'Invalid/Zone'
           }
         }
       }
@@ -157,5 +158,6 @@ describe('mergeGuildSettingsSections', () => {
     }).lean()
     expect(reloaded?.casinoSettings).toEqual(normalizeCasinoSettings({}))
     expect(reloaded?.globalSettings?.disableDeposits).toBe(true)
+    expect(reloaded?.globalSettings?.timezone).toBe(defaultGlobalSettings.timezone)
   })
 })
