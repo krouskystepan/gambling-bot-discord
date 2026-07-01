@@ -6,8 +6,11 @@ import {
   createAtmRequest,
   deleteAtmRequest,
   getAtmRequestCounts,
+  getLatestUserAtmRequest,
   getPendingAtmRequest,
-  listAtmRequests
+  getUserAtmRequest,
+  listAtmRequests,
+  searchUserAtmRequestsForAutocomplete
 } from '@/services/db/atmRequest.db'
 
 import { AtmRequest, setupMongoTests } from '../../helpers/mongo'
@@ -228,5 +231,160 @@ describe('atmRequest.db', () => {
 
     await deleteAtmRequest('atm-5')
     expect(await AtmRequest.countDocuments({ requestId: 'atm-5' })).toBe(0)
+  })
+
+  it('getUserAtmRequest returns doc only for matching user, guild, and type', async () => {
+    await createAtmRequest({
+      requestId: 'atm-user-1',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 100,
+      account: 'acc-user-1'
+    })
+
+    const match = await getUserAtmRequest({
+      requestId: 'atm-user-1',
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'withdraw'
+    })
+    expect(match?.requestId).toBe('atm-user-1')
+
+    const wrongType = await getUserAtmRequest({
+      requestId: 'atm-user-1',
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'deposit'
+    })
+    expect(wrongType).toBeNull()
+  })
+
+  it('getUserAtmRequest works without type filter', async () => {
+    await createAtmRequest({
+      requestId: 'atm-user-no-type',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'deposit',
+      amount: 75,
+      account: 'acc-user-no-type'
+    })
+
+    const match = await getUserAtmRequest({
+      requestId: 'atm-user-no-type',
+      guildId: 'guild-1',
+      userId: 'user-1'
+    })
+    expect(match?.requestId).toBe('atm-user-no-type')
+  })
+
+  it('getUserAtmRequest returns null for another user request', async () => {
+    await createAtmRequest({
+      requestId: 'atm-user-2',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 100,
+      account: 'acc-user-2'
+    })
+
+    const otherUser = await getUserAtmRequest({
+      requestId: 'atm-user-2',
+      guildId: 'guild-1',
+      userId: 'user-2',
+      type: 'withdraw'
+    })
+    expect(otherUser).toBeNull()
+  })
+
+  it('getLatestUserAtmRequest returns newest request by createdAt', async () => {
+    await createAtmRequest({
+      requestId: 'atm-latest-1',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 10,
+      account: 'acc-latest-1'
+    })
+    await createAtmRequest({
+      requestId: 'atm-latest-2',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 20,
+      account: 'acc-latest-2'
+    })
+
+    await AtmRequest.collection.updateOne(
+      { requestId: 'atm-latest-1' },
+      { $set: { createdAt: new Date('2026-01-01T00:00:00Z') } }
+    )
+    await AtmRequest.collection.updateOne(
+      { requestId: 'atm-latest-2' },
+      { $set: { createdAt: new Date('2026-06-01T00:00:00Z') } }
+    )
+
+    const latest = await getLatestUserAtmRequest({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'withdraw'
+    })
+    expect(latest?.requestId).toBe('atm-latest-2')
+  })
+
+  it('searchUserAtmRequestsForAutocomplete filters by user, type, query, and limit', async () => {
+    for (let i = 1; i <= 30; i++) {
+      await createAtmRequest({
+        requestId: `atm-ac-${i}`,
+        userId: 'user-1',
+        guildId: 'guild-1',
+        type: 'withdraw',
+        amount: i,
+        account: `PayPal-${i}`
+      })
+    }
+
+    await createAtmRequest({
+      requestId: 'atm-ac-other-user',
+      userId: 'user-2',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 999,
+      account: 'PayPal-other'
+    })
+    await createAtmRequest({
+      requestId: 'atm-ac-deposit',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'deposit',
+      amount: 500,
+      account: 'PayPal-deposit'
+    })
+
+    const all = await searchUserAtmRequestsForAutocomplete({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'withdraw',
+      query: ''
+    })
+    expect(all).toHaveLength(25)
+
+    const byAccount = await searchUserAtmRequestsForAutocomplete({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'withdraw',
+      query: 'PayPal-30'
+    })
+    expect(byAccount).toHaveLength(1)
+    expect(byAccount[0]?.requestId).toBe('atm-ac-30')
+
+    const byRequestId = await searchUserAtmRequestsForAutocomplete({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'withdraw',
+      query: 'atm-ac-7'
+    })
+    expect(byRequestId).toHaveLength(1)
+    expect(byRequestId[0]?.requestId).toBe('atm-ac-7')
   })
 })

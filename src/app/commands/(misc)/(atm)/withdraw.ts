@@ -16,7 +16,7 @@ import {
   MessageFlags
 } from 'discord.js'
 
-import { ChatInputCommand, CommandData } from 'commandkit'
+import { AutocompleteCommand, ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
@@ -25,8 +25,12 @@ import {
   checkAtmChannels,
   checkUserRegistration,
   createAtmRequest,
+  createAtmRequestSubcommandOptions,
+  createAtmStatusSubcommand,
   deleteAtmRequest,
-  previewWithdraw
+  handleAtmStatusSubcommand,
+  previewWithdraw,
+  respondAtmRequestStatusAutocomplete
 } from '@/services'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
@@ -40,23 +44,24 @@ export const command: CommandData = {
   description: 'Withdraw money from your account.',
   options: [
     {
-      name: 'amount',
-      description: 'The amount you want to withdraw (e.g., 1000, 2k, 10.5k).',
-      type: ApplicationCommandOptionType.String,
-      required: true
+      name: 'request',
+      description: 'Request a withdrawal from your account.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: createAtmRequestSubcommandOptions('withdraw')
     },
-    {
-      name: 'account',
-      description: 'The account you want to send the money to.',
-      type: ApplicationCommandOptionType.String,
-      required: true
-    }
+    createAtmStatusSubcommand('withdraw')
   ],
   dm_permission: false
 }
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
+    const subcommand = interaction.options.getSubcommand()
+
+    if (subcommand === 'status') {
+      return handleAtmStatusSubcommand(interaction, 'withdraw')
+    }
+
     const user = await checkUserRegistration({ interaction })
     if (!user) return
 
@@ -227,7 +232,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       embeds: [
         createSuccessEmbed(
           'ATM - Withdraw',
-          `You have requested to withdraw **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**.\nPlease wait for the transaction to be processed.`,
+          `You have requested to withdraw **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**.\nPlease wait for the transaction to be processed.\n\nCheck status anytime with \`/withdraw status\`.`,
           requestId
         )
       ],
@@ -236,4 +241,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
   } catch (error) {
     await handleUnexpectedInteractionError(interaction, error)
   }
+}
+
+export const autocomplete: AutocompleteCommand = async ({ interaction }) => {
+  if (!interaction.isAutocomplete()) return
+  if (interaction.commandName !== 'withdraw') return
+  if (interaction.options.getSubcommand() !== 'status') return
+
+  return respondAtmRequestStatusAutocomplete(interaction, 'withdraw')
 }

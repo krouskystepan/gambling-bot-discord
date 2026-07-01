@@ -5,14 +5,12 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   ├── (atm)
 │   │   ├── deposit.ts
 │   │   │   └─ /deposit – Deposit money to your account.
-│   │   │      ├─ amount – The amount you want to deposit (e.g., 1000, 2k, 10.5k).
-│   │   │      ├─ account – The account from which you are sending money.
+│   │   │      ├─ request – Request a deposit to your account.
 │   │   ├── register.ts
 │   │   │   └─ /register – Register yourself in the system.
 │   │   └── withdraw.ts
 │   │       └─ /withdraw – Withdraw money from your account.
-│   │          ├─ amount – The amount you want to withdraw (e.g., 1000, 2k, 10.5k).
-│   │          ├─ account – The account you want to send the money to.
+│   │          ├─ request – Request a withdrawal from your account.
 │   ├── (casino)
 │   │   ├── (other)
 │   │   │   ├── blackjack.ts
@@ -133,10 +131,12 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     │          ├─ set-create-price – Set the one-time price for creating a VIP room.
     │          ├─ set-add-member-price – Set the one-time price for adding a member to room.
     ├── (dev)
-    │   ├── mock-db.ts
-    │   │   └─ /mock-db – Seed the database with realistic mock data for Admin testing (dev only).
-    │   └── clear-mock-db.ts
-    │       └─ /clear-mock-db – Remove mock / operational guild data (keeps guild config). Dev only.
+    │   ├── clear-mock-db.ts
+    │   │   └─ /clear-mock-db – Remove mock / operational guild data from the DB (keeps guild config). Dev only.
+    │   │      ├─ all – Clear users, transactions, ATM, raffles, predictions, VIP, and blackjack games.
+    │   │      ├─ entity – Clear a single collection.
+    │   └── mock-db.ts
+    │       └─ /mock-db – Seed the database with realistic mock data for Admin testing (dev only).
     │          ├─ all – Fill all collections (users, txs, ATM, raffles, predictions, VIP).
     │          ├─ entity – Fill a single collection.
     │          ├─ custom – Fill all collections with custom counts.
