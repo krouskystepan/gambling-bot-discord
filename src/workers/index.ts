@@ -1,6 +1,7 @@
 export { runWorkerLoop } from './workerLoop.util'
 
 export { blackjackAutostandJob } from './blackjackAutostand.job'
+export { guildOrphanCleanupJob } from './guildOrphanCleanup.job'
 export { guildSettingsSyncJob } from './guildSettingsSync.job'
 export { predictionAutolockJob } from './predictionAutolock.job'
 export { predictionCleanupJob } from './predictionCleanup.job'

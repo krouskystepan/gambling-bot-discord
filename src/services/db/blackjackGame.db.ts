@@ -18,6 +18,14 @@ export const getBlackjackGameByBetId = async ({
   return BlackjackGame.findOne({ betId, guildId })
 }
 
+export const getBlackjackGamesByGuildId = async ({
+  guildId
+}: {
+  guildId: string
+}) => {
+  return BlackjackGame.find({ guildId })
+}
+
 export const getAllOldBlackjackGames = async (days: number) => {
   return BlackjackGame.find({
     updatedAt: {

@@ -3,6 +3,7 @@ import { EventHandler } from 'commandkit'
 import { logger } from '@/utils/logger'
 import {
   blackjackAutostandJob,
+  guildOrphanCleanupJob,
   guildSettingsSyncJob,
   predictionAutolockJob,
   predictionCleanupJob,
@@ -47,6 +48,9 @@ const handler: EventHandler<'clientReady'> = (client) => {
   setTimeout(() => {
     void runWorkerLoop('Prediction cleanup', ONE_DAY, () =>
       predictionCleanupJob()
+    )
+    void runWorkerLoop('Guild orphan cleanup', ONE_DAY, () =>
+      guildOrphanCleanupJob(client)
     )
   }, ONE_MINUTE)
 
