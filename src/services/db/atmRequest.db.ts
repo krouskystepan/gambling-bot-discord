@@ -107,6 +107,64 @@ export const listAtmRequests = async ({
   return { requests, total }
 }
 
+export const getUserAtmRequest = async ({
+  requestId,
+  guildId,
+  userId,
+  type
+}: {
+  requestId: string
+  guildId: string
+  userId: string
+  type?: TAtmRequest['type']
+}) => {
+  const query: Record<string, unknown> = { requestId, guildId, userId }
+  if (type) query.type = type
+
+  return AtmRequest.findOne(query).lean()
+}
+
+export const getLatestUserAtmRequest = async ({
+  guildId,
+  userId,
+  type
+}: {
+  guildId: string
+  userId: string
+  type: TAtmRequest['type']
+}) => {
+  return AtmRequest.findOne({ guildId, userId, type })
+    .sort({ createdAt: -1 })
+    .lean()
+}
+
+export const searchUserAtmRequestsForAutocomplete = async ({
+  guildId,
+  userId,
+  type,
+  query
+}: {
+  guildId: string
+  userId: string
+  type: TAtmRequest['type']
+  query: string
+}) => {
+  const filter: Record<string, unknown> = { guildId, userId, type }
+
+  if (query) {
+    filter.$or = [
+      { requestId: { $regex: query, $options: 'i' } },
+      { account: { $regex: query, $options: 'i' } }
+    ]
+  }
+
+  return AtmRequest.find(filter)
+    .sort({ createdAt: -1 })
+    .limit(25)
+    .select('requestId amount status account createdAt')
+    .lean()
+}
+
 export const getAtmRequestCounts = async ({ guildId }: { guildId: string }) => {
   const rows = await AtmRequest.aggregate([
     { $match: { guildId } },

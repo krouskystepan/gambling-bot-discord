@@ -16,7 +16,7 @@ import {
   MessageFlags
 } from 'discord.js'
 
-import { ChatInputCommand, CommandData } from 'commandkit'
+import { AutocompleteCommand, ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
@@ -25,7 +25,11 @@ import {
   checkAtmChannels,
   checkUserRegistration,
   createAtmRequest,
-  deleteAtmRequest
+  createAtmRequestSubcommandOptions,
+  createAtmStatusSubcommand,
+  deleteAtmRequest,
+  handleAtmStatusSubcommand,
+  respondAtmRequestStatusAutocomplete
 } from '@/services'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
 import {
@@ -39,23 +43,24 @@ export const command: CommandData = {
   description: 'Deposit money to your account.',
   options: [
     {
-      name: 'amount',
-      description: 'The amount you want to deposit (e.g., 1000, 2k, 10.5k).',
-      type: ApplicationCommandOptionType.String,
-      required: true
+      name: 'request',
+      description: 'Request a deposit to your account.',
+      type: ApplicationCommandOptionType.Subcommand,
+      options: createAtmRequestSubcommandOptions('deposit')
     },
-    {
-      name: 'account',
-      description: 'The account from which you are sending money.',
-      type: ApplicationCommandOptionType.String,
-      required: true
-    }
+    createAtmStatusSubcommand('deposit')
   ],
   dm_permission: false
 }
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
+    const subcommand = interaction.options.getSubcommand()
+
+    if (subcommand === 'status') {
+      return handleAtmStatusSubcommand(interaction, 'deposit')
+    }
+
     const user = await checkUserRegistration({ interaction })
     if (!user) return
 
@@ -192,7 +197,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       embeds: [
         createSuccessEmbed(
           'ATM - Deposit',
-          `You have successfully deposited **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to your account.\nPlease wait for the transaction to be processed.`,
+          `You have successfully deposited **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to your account.\nPlease wait for the transaction to be processed.\n\nCheck status anytime with \`/deposit status\`.`,
           requestId
         )
       ],
@@ -201,4 +206,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
   } catch (error) {
     await handleUnexpectedInteractionError(interaction, error)
   }
+}
+
+export const autocomplete: AutocompleteCommand = async ({ interaction }) => {
+  if (!interaction.isAutocomplete()) return
+  if (interaction.commandName !== 'deposit') return
+  if (interaction.options.getSubcommand() !== 'status') return
+
+  return respondAtmRequestStatusAutocomplete(interaction, 'deposit')
 }
