@@ -1,3 +1,8 @@
+import {
+  blackjackAutostandIdleMs,
+  blackjackIdleNudgeThresholdMs
+} from 'gambling-bot-shared/blackjack'
+
 import BlackjackGame from '@/models/BlackjackGame'
 import { TGetBlackjackGame, TUpsertBlackjackGame } from '@/types/types'
 
@@ -34,9 +39,40 @@ export const getAllOldBlackjackGames = async (days: number) => {
   })
 }
 
+export const getBlackjackGamesNeedingIdleNudge = async () => {
+  const now = Date.now()
+
+  return BlackjackGame.find({
+    updatedAt: {
+      $lte: new Date(now - blackjackIdleNudgeThresholdMs()),
+      $gt: new Date(now - blackjackAutostandIdleMs())
+    },
+    $or: [{ idleNudgeSentAt: null }, { idleNudgeSentAt: { $exists: false } }]
+  })
+}
+
+export const markBlackjackIdleNudgeSent = async ({
+  userId,
+  guildId
+}: {
+  userId: string
+  guildId: string
+}) => {
+  return BlackjackGame.findOneAndUpdate(
+    {
+      userId,
+      guildId,
+      $or: [{ idleNudgeSentAt: null }, { idleNudgeSentAt: { $exists: false } }]
+    },
+    { $set: { idleNudgeSentAt: new Date() } },
+    { returnDocument: 'after' }
+  )
+}
+
 export const updateBlackjackGame = async (
   game: typeof BlackjackGame.prototype
 ) => {
+  game.idleNudgeSentAt = null
   await game.save()
 }
 
@@ -65,7 +101,8 @@ export const upsertBlackjackGame = async ({
         hands,
         activeHandIndex,
         phase,
-        dealerCards
+        dealerCards,
+        idleNudgeSentAt: null
       }
     },
     {

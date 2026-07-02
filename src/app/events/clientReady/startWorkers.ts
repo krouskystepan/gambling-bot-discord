@@ -3,6 +3,7 @@ import { EventHandler } from 'commandkit'
 import { logger } from '@/utils/logger'
 import {
   blackjackAutostandJob,
+  blackjackIdleNudgeJob,
   guildOrphanCleanupJob,
   guildSettingsSyncJob,
   predictionAutolockJob,
@@ -40,6 +41,9 @@ const handler: EventHandler<'clientReady'> = (client) => {
   )
 
   setTimeout(() => {
+    void runWorkerLoop('Blackjack idle nudge', ONE_HOUR, () =>
+      blackjackIdleNudgeJob(client)
+    )
     void runWorkerLoop('Blackjack auto-stand', ONE_HOUR, () =>
       blackjackAutostandJob(client)
     )
