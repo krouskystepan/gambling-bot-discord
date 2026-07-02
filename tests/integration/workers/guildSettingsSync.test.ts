@@ -7,7 +7,7 @@ import {
 import { describe, expect, it } from 'vitest'
 
 import { createGuildConfiguration } from '@/services/db/guildConfiguration.db'
-import { mergeGuildSettingsSections } from '@/workers/guildSettingsSync.job'
+import { mergeGuildSettingsSections } from '@/workers/jobs/guildSettingsSync.job'
 
 import { GuildConfiguration, setupMongoTests } from '../../helpers/mongo'
 

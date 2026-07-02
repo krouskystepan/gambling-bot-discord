@@ -6,7 +6,7 @@ import type { Client } from 'commandkit'
 import {
   checkGuildOrphaned,
   isUnknownGuildError
-} from '@/workers/guildOrphanCleanup.job'
+} from '@/workers/jobs/guildOrphanCleanup.job'
 
 describe('guildOrphanCleanup detection', () => {
   it('detects Unknown Guild API errors', () => {
