@@ -7,7 +7,6 @@ export const predictionDb = createPredictionDb(Prediction)
 export const {
   getPredictionById,
   getPredictionToLock,
-  getOldPredictions,
   createPrediction,
   updatePredictionStatus,
   deletePrediction,

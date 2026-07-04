@@ -13,7 +13,6 @@ import {
   guildOrphanCleanupJob,
   guildSettingsSyncJob,
   predictionAutolockJob,
-  predictionCleanupJob,
   raffleDrawJob,
   vipExpirationJob,
   vipExpiryWarningJob
@@ -64,9 +63,6 @@ export const workerDefinitions: WorkerDefinition[] = [
   ),
   ...withStartDelay(
     MINUTE_MS,
-    scheduleEvery(DAY_MS, [
-      ['Prediction cleanup', predictionCleanupJob],
-      ['Guild orphan cleanup', guildOrphanCleanupJob]
-    ])
+    scheduleEvery(DAY_MS, [['Guild orphan cleanup', guildOrphanCleanupJob]])
   )
 ]

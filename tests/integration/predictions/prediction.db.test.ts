@@ -5,7 +5,6 @@ import {
   createPrediction,
   deletePrediction,
   findPredictions,
-  getOldPredictions,
   getPredictionById,
   getPredictionToLock,
   updatePredictionStatus
@@ -140,31 +139,6 @@ describe('prediction.db', () => {
     })
 
     expect(allActive.map((p) => p.predictionId)).toContain('pred-no-autolock')
-  })
-
-  it('returns old predictions by status and age', async () => {
-    await createPrediction({
-      predictionId: 'pred-old',
-      guildId: 'guild-1',
-      channelId: 'channel-1',
-      creatorId: 'mod-1',
-      title: 'Old',
-      choices: [{ choiceName: 'A', odds: 2, bets: [] }],
-      autolock: new Date('2020-01-01T00:00:00Z'),
-      status: 'ended'
-    })
-    await Prediction.findOneAndUpdate(
-      { predictionId: 'pred-old' },
-      { $set: { updatedAt: new Date('2020-01-01T00:00:00Z') } },
-      { timestamps: false }
-    )
-
-    const old = await getOldPredictions({
-      statuses: ['ended'],
-      olderThanDays: 1
-    })
-
-    expect(old.map((p) => p.predictionId)).toContain('pred-old')
   })
 
   it('deletes prediction by id', async () => {

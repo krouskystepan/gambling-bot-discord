@@ -7,7 +7,6 @@ import { EngineState } from '@/utils/casino/blackjack'
 export type {
   TAddPredictionBet,
   TCreatePrediction,
-  TGetOldPredictions,
   TGetPrediction,
   TUpdatePredictionStatus
 } from 'gambling-bot-shared/predictions'
