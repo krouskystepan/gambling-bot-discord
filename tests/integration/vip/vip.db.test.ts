@@ -4,6 +4,7 @@ import { createGuildConfiguration } from '@/services/db/guildConfiguration.db'
 import {
   addMemberToVip,
   addVipMemberAtomic,
+  clearVipExpiryWarnings,
   createVip,
   deleteVipByOwnerId,
   extendVipAtomic,
@@ -13,6 +14,8 @@ import {
   getAllActiveVips,
   getAllActiveVipsByGuildId,
   getAllOldVips,
+  getVipsNeedingExpiryWarning,
+  markVipExpiryWarningSent,
   refundVipPurchase,
   removeMemberFromVip,
   removeVipMemberAtomic,
@@ -230,6 +233,58 @@ describe('vip.db money flows', () => {
     expect(
       await getActiveVipByOwner({ ownerId: 'user-1', guildId: 'guild-1' })
     ).toBeNull()
+  })
+
+  it('clears expiry warnings on extendVipExpiry', async () => {
+    const expiry = new Date(Date.now() + 30 * 60 * 1000)
+    await VipRoom.create({
+      ownerId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'vip-ch',
+      expiresAt: expiry,
+      expiryWarningsSent: ['1h']
+    })
+
+    const extended = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    await extendVipExpiry({
+      ownerId: 'user-1',
+      guildId: 'guild-1',
+      newExpiry: extended
+    })
+
+    const vip = await VipRoom.findOne({ ownerId: 'user-1', guildId: 'guild-1' })
+    expect(vip?.expiresAt).toEqual(extended)
+    expect(vip?.expiryWarningsSent).toEqual([])
+  })
+
+  it('marks and clears expiry warning tiers', async () => {
+    const expiry = new Date(Date.now() + 30 * 60 * 1000)
+    await VipRoom.create({
+      ownerId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'vip-ch',
+      expiresAt: expiry
+    })
+
+    await markVipExpiryWarningSent({
+      ownerId: 'user-1',
+      guildId: 'guild-1',
+      tier: '1h'
+    })
+
+    expect(
+      await getVipsNeedingExpiryWarning('1h').then((rooms) =>
+        rooms.map((room) => room.ownerId)
+      )
+    ).not.toContain('user-1')
+
+    await clearVipExpiryWarnings({ ownerId: 'user-1', guildId: 'guild-1' })
+
+    expect(
+      await getVipsNeedingExpiryWarning('1h').then((rooms) =>
+        rooms.map((room) => room.ownerId)
+      )
+    ).toContain('user-1')
   })
 
   it('adds and removes VIP members without charge', async () => {

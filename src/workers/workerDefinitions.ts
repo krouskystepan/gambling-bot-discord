@@ -1,3 +1,10 @@
+import {
+  DAY_MS,
+  HOUR_MS,
+  MINUTE_MS,
+  SECOND_MS
+} from 'gambling-bot-shared/common'
+
 import { Client } from 'commandkit'
 
 import {
@@ -8,17 +15,12 @@ import {
   predictionAutolockJob,
   predictionCleanupJob,
   raffleDrawJob,
-  vipExpirationJob
+  vipExpirationJob,
+  vipExpiryWarningJob
 } from './jobs'
 
-const THIRTY_SECONDS = 30 * 1000
-
-const ONE_MINUTE = 60 * 1000
-
-const ONE_HOUR = 60 * ONE_MINUTE
-const SIX_HOURS = 6 * ONE_HOUR
-
-const ONE_DAY = 24 * 60 * ONE_MINUTE
+const THIRTY_SECONDS = 30 * SECOND_MS
+const SIX_HOURS = 6 * HOUR_MS
 
 type WorkerJob = (client: Client<true>) => Promise<void>
 type WorkerEntry = readonly [name: string, run: WorkerJob]
@@ -46,7 +48,8 @@ const withStartDelay = (
   }))
 
 export const workerDefinitions: WorkerDefinition[] = [
-  ...scheduleEvery(ONE_MINUTE, [
+  ...scheduleEvery(MINUTE_MS, [
+    ['VIP expiry warning', vipExpiryWarningJob],
     ['VIP expiration', vipExpirationJob],
     ['Prediction autolock', predictionAutolockJob],
     ['Raffle auto-draw', raffleDrawJob]
@@ -54,14 +57,14 @@ export const workerDefinitions: WorkerDefinition[] = [
   ...scheduleEvery(SIX_HOURS, [['Guild settings sync', guildSettingsSyncJob]]),
   ...withStartDelay(
     THIRTY_SECONDS,
-    scheduleEvery(ONE_HOUR, [
+    scheduleEvery(HOUR_MS, [
       ['Blackjack idle nudge', blackjackIdleNudgeJob],
       ['Blackjack auto-stand', blackjackAutostandJob]
     ])
   ),
   ...withStartDelay(
-    ONE_MINUTE,
-    scheduleEvery(ONE_DAY, [
+    MINUTE_MS,
+    scheduleEvery(DAY_MS, [
       ['Prediction cleanup', predictionCleanupJob],
       ['Guild orphan cleanup', guildOrphanCleanupJob]
     ])

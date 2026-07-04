@@ -1,6 +1,5 @@
-import { TVipRoom } from 'gambling-bot-shared/vip'
-// NEW
-
+import { DAY_MS, HOUR_MS } from 'gambling-bot-shared/common'
+import { TVipRoom, VipExpiryWarningTier } from 'gambling-bot-shared/vip'
 import mongoose from 'mongoose'
 
 import GuildConfiguration from '@/models/GuildConfiguration'
@@ -39,6 +38,47 @@ export const getAllOldVips = async () => {
   return vipInfos
 }
 
+export const getVipsNeedingExpiryWarning = async (
+  tier: VipExpiryWarningTier
+) => {
+  const now = Date.now()
+  const minDate = new Date(tier === '24h' ? now + HOUR_MS : now)
+  const maxDate = new Date(tier === '24h' ? now + DAY_MS : now + HOUR_MS)
+
+  return VipRoom.find({
+    expiresAt: { $gt: minDate, $lte: maxDate },
+    expiryWarningsSent: { $nin: [tier] }
+  })
+}
+
+export const markVipExpiryWarningSent = async ({
+  ownerId,
+  guildId,
+  tier
+}: {
+  ownerId: string
+  guildId: string
+  tier: VipExpiryWarningTier
+}) => {
+  await VipRoom.findOneAndUpdate(
+    { ownerId, guildId },
+    { $addToSet: { expiryWarningsSent: tier } }
+  )
+}
+
+export const clearVipExpiryWarnings = async ({
+  ownerId,
+  guildId
+}: {
+  ownerId: string
+  guildId: string
+}) => {
+  await VipRoom.findOneAndUpdate(
+    { ownerId, guildId },
+    { $set: { expiryWarningsSent: [] } }
+  )
+}
+
 export const createVip = async ({
   ownerId,
   guildId,
@@ -74,7 +114,7 @@ export const extendVipExpiry = async ({
 }) => {
   const updatedVip = await VipRoom.findOneAndUpdate(
     { ownerId, guildId },
-    { $set: { expiresAt: newExpiry } }
+    { $set: { expiresAt: newExpiry, expiryWarningsSent: [] } }
   )
 
   return updatedVip
@@ -111,7 +151,6 @@ export const removeMemberFromVip = async ({
   )
 }
 
-// NEW
 export const getActiveVipByOwner = async ({ guildId, ownerId }: TGetVip) => {
   const vipInfo = await VipRoom.findOne({
     guildId,
@@ -242,6 +281,7 @@ export async function extendVipAtomic({
 
       user.balance -= totalPrice
       vip.expiresAt = newExpiry
+      vip.expiryWarningsSent = []
 
       await user.save({ session })
       await vip.save({ session })
