@@ -1,3 +1,4 @@
+export { banRoleSyncJob } from './banRoleSync.job'
 export { blackjackAutostandJob } from './blackjackAutostand.job'
 export { blackjackIdleNudgeJob } from './blackjackIdleNudge.job'
 export { guildOrphanCleanupJob } from './guildOrphanCleanup.job'

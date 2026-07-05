@@ -8,6 +8,7 @@ import {
 import { Client } from 'commandkit'
 
 import {
+  banRoleSyncJob,
   blackjackAutostandJob,
   blackjackIdleNudgeJob,
   guildOrphanCleanupJob,
@@ -53,7 +54,10 @@ export const workerDefinitions: WorkerDefinition[] = [
     ['Prediction autolock', predictionAutolockJob],
     ['Raffle auto-draw', raffleDrawJob]
   ]),
-  ...scheduleEvery(SIX_HOURS, [['Guild settings sync', guildSettingsSyncJob]]),
+  ...scheduleEvery(SIX_HOURS, [
+    ['Guild settings sync', guildSettingsSyncJob],
+    ['Ban role sync', banRoleSyncJob]
+  ]),
   ...withStartDelay(
     THIRTY_SECONDS,
     scheduleEvery(HOUR_MS, [
