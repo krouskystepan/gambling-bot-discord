@@ -13,6 +13,7 @@ import {
   blackjackIdleNudgeJob,
   guildOrphanCleanupJob,
   guildSettingsSyncJob,
+  lockedBalanceReconciliationJob,
   predictionAutolockJob,
   raffleDrawJob,
   vipExpirationJob,
@@ -68,5 +69,11 @@ export const workerDefinitions: WorkerDefinition[] = [
   ...withStartDelay(
     MINUTE_MS,
     scheduleEvery(DAY_MS, [['Guild orphan cleanup', guildOrphanCleanupJob]])
+  ),
+  ...withStartDelay(
+    MINUTE_MS,
+    scheduleEvery(15 * MINUTE_MS, [
+      ['Locked balance reconciliation', lockedBalanceReconciliationJob]
+    ])
   )
 ]
