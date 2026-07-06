@@ -34,26 +34,16 @@ const buildWorkerEmbed = ({
   level = 'info'
 }: Omit<WorkerLogPayload, 'guildId'>): EmbedBuilder => {
   const embedTitle = `${worker} — ${title}`
-  const timestamp = Math.floor(Date.now() / 1000)
-  const footer = `${worker} • <t:${timestamp}:F>`
 
   switch (level) {
     case 'success':
-      return createSuccessEmbed(embedTitle, description).setFooter({
-        text: footer
-      })
+      return createSuccessEmbed(embedTitle, description).setTimestamp()
     case 'warning':
-      return createWarningEmbed(embedTitle, description).setFooter({
-        text: footer
-      })
+      return createWarningEmbed(embedTitle, description).setTimestamp()
     case 'error':
-      return createErrorEmbed(embedTitle, description).setFooter({
-        text: footer
-      })
+      return createErrorEmbed(embedTitle, description).setTimestamp()
     default:
-      return createInfoEmbed(embedTitle, description).setFooter({
-        text: footer
-      })
+      return createInfoEmbed(embedTitle, description).setTimestamp()
   }
 }
 

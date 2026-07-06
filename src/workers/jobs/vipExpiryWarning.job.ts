@@ -10,7 +10,7 @@ import {
 } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
-import { createInfoEmbed } from '@/utils/discord/createEmbed'
+import { createWarningEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 const WARNING_TIERS: readonly VipExpiryWarningTier[] = ['24h', '1h']
@@ -57,7 +57,7 @@ export const vipExpiryWarningJob = async (client: Client<true>) => {
         await channel.send({
           content: `<@${room.ownerId}>`,
           embeds: [
-            createInfoEmbed(warningMessage.title, warningMessage.description)
+            createWarningEmbed(warningMessage.title, warningMessage.description)
           ]
         })
 

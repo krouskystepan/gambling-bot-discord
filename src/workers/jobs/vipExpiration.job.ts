@@ -9,7 +9,7 @@ import {
 } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
-import { createInfoEmbed } from '@/utils/discord/createEmbed'
+import { createWarningEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 export const vipExpirationJob = async (client: Client<true>) => {
@@ -76,7 +76,7 @@ export const vipExpirationJob = async (client: Client<true>) => {
         .send({
           content: room.ownerId ? `<@${room.ownerId}>` : undefined,
           embeds: [
-            createInfoEmbed(
+            createWarningEmbed(
               'VIP Channel Expired',
               '⏰ Your VIP time has expired. You no longer have access to this channel.'
             )
@@ -102,7 +102,8 @@ export const vipExpirationJob = async (client: Client<true>) => {
         worker: 'VIP expiration',
         title: `Processed ${count} room(s)`,
         description:
-          'Roles removed, permissions revoked, and expiry notices sent in VIP channels.'
+          'Roles removed, permissions revoked, and expiry notices sent in VIP channels.',
+        level: 'warning'
       })
     }
   }

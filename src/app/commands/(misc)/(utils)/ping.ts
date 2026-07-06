@@ -3,7 +3,7 @@ import { MessageFlags } from 'discord.js'
 import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
-import { createSuccessEmbed } from '@/utils/discord/createEmbed'
+import { createInfoEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'ping',
@@ -41,7 +41,7 @@ export const chatInput: ChatInputCommand = async ({ interaction, client }) => {
 
     await interaction.editReply({
       embeds: [
-        createSuccessEmbed(
+        createInfoEmbed(
           '🏓 Pong!',
           [
             `**Client latency:** \`${clientPing}ms\``,

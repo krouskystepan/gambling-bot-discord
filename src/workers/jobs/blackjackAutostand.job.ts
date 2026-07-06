@@ -158,7 +158,8 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
         worker: 'Blackjack auto-stand',
         title: `Processed ${count} game(s)`,
         description:
-          'Inactive blackjack games were auto-stood, settled, and removed.'
+          'Inactive blackjack games were auto-stood, settled, and removed.',
+        level: 'warning'
       })
     }
   }

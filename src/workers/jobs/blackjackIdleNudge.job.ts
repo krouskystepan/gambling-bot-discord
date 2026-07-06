@@ -10,7 +10,7 @@ import {
 } from '@/services/db/blackjackGame.db'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
-import { createInfoEmbed } from '@/utils/discord/createEmbed'
+import { createWarningEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 export const blackjackIdleNudgeJob = async (client: Client<true>) => {
@@ -31,13 +31,19 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
       if (!channel || channel.type !== ChannelType.GuildText) continue
 
       const hoursLeft = hoursUntilBlackjackAutostand(game.updatedAt)
+      const gameMessageLink = `https://discord.com/channels/${game.guildId}/${game.channelId}/${game.messageId}`
 
       await channel.send({
         content: `<@${game.userId}>`,
         embeds: [
-          createInfoEmbed(
+          createWarningEmbed(
             'Blackjack Game Idle',
-            `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**. Use the buttons on your game message to continue.`
+            [
+              `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**.`,
+              '',
+              `[Jump to your game message](${gameMessageLink})`
+            ].join('\n'),
+            game.betId
           )
         ]
       })
@@ -64,7 +70,8 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
         worker: 'Blackjack idle nudge',
         title: `Sent ${count} nudge(s)`,
         description:
-          'Players with inactive blackjack games were reminded before auto-stand.'
+          'Players with inactive blackjack games were reminded before auto-stand.',
+        level: 'warning'
       })
     }
   }

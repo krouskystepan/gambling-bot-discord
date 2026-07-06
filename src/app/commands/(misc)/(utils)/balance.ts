@@ -6,7 +6,7 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { checkUserRegistration, getGuildConfigByGuildId } from '@/services'
-import { createSuccessEmbed } from '@/utils/discord/createEmbed'
+import { createInfoEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'balance',
@@ -30,7 +30,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     return interaction.reply({
       embeds: [
-        createSuccessEmbed(
+        createInfoEmbed(
           'ATM - Balance',
           [
             `💰 Available Balance: **${formatMoney(roundedBalance, globalSettings)}** (${formatMoneyExact(roundedBalance, globalSettings)})`,

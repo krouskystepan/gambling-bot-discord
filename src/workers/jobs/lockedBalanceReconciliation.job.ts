@@ -83,7 +83,8 @@ export const lockedBalanceReconciliationJob = async (client: Client<true>) => {
         guildId,
         worker: 'Locked balance reconciliation',
         title: `Reconciled ${stats.users} user(s)`,
-        description: `Refunded **${stats.refunded}** total across **${stats.betIds}** bet ID(s).`
+        description: `Refunded **${stats.refunded}** total across **${stats.betIds}** bet ID(s).`,
+        level: 'warning'
       })
     }
   }

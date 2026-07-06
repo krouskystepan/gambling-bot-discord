@@ -7,7 +7,7 @@ import { MessageFlags } from 'discord.js'
 
 import { ChatInputCommand } from 'commandkit'
 
-import { createInfoEmbed } from '../discord/createEmbed'
+import { createErrorEmbed } from '../discord/createEmbed'
 
 export const sleep = (ms: number) =>
   new Promise<void>((res) => setTimeout(res, ms))
@@ -32,7 +32,7 @@ export const checkValidBet = (
     case 'INVALID_NUMBER':
       interaction.reply({
         embeds: [
-          createInfoEmbed('Invalid Input', 'Bet must be a valid number.')
+          createErrorEmbed('Invalid Input', 'Bet must be a valid number.')
         ],
         flags: MessageFlags.Ephemeral
       })
@@ -40,7 +40,7 @@ export const checkValidBet = (
     case 'TOO_MANY_DECIMALS':
       interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Bet Amount',
             'Bet must have at most 2 decimal places.'
           )
@@ -51,7 +51,7 @@ export const checkValidBet = (
     case 'BELOW_MINIMUM':
       interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Bet Amount',
             `Minimum possible bet is **$1**.`
           )
@@ -62,7 +62,7 @@ export const checkValidBet = (
     case 'ABOVE_MAXIMUM':
       interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Above Maximum Bet',
             `The maximum bet is **${formatMoney(maxBet, globalSettings)}**.`
           )
@@ -73,7 +73,7 @@ export const checkValidBet = (
     case 'BELOW_MIN_BET':
       interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Below Minimum Bet',
             `The minimum bet is **${formatMoney(minBet, globalSettings)}**.`
           )
