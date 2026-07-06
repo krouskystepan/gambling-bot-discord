@@ -30,3 +30,7 @@ export const createGuildConfiguration = async ({
 
   return guildConfiguration
 }
+
+export const getAllGuildConfigIds = async (): Promise<string[]> => {
+  return GuildConfiguration.distinct('guildId')
+}

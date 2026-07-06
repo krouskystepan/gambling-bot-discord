@@ -166,6 +166,48 @@ export async function settleRpsGameAtomic({
   }
 }
 
+export async function releaseExcessLockedBalance({
+  userId,
+  guildId,
+  amount
+}: {
+  userId: string
+  guildId: string
+  amount: number
+}) {
+  const session = await mongoose.startSession()
+
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findOne({ userId, guildId }).session(session)
+      if (!user) throw new Error('USER_NOT_FOUND')
+
+      const releaseAmount = Math.min(amount, user.lockedBalance)
+      if (releaseAmount <= 0) return
+
+      user.lockedBalance -= releaseAmount
+      user.balance += releaseAmount
+      await user.save({ session })
+
+      await Transaction.create(
+        [
+          {
+            userId,
+            guildId,
+            amount: releaseAmount,
+            type: 'refund',
+            source: 'system',
+            meta: { reason: 'locked_balance_reconciliation' }
+          }
+        ],
+        { session }
+      )
+    })
+  } finally {
+    session.endSession()
+  }
+}
+
 export async function spendCasinoBalance({
   userId,
   guildId,

@@ -7,6 +7,7 @@ import {
   getAllOldVips,
   getGuildConfigByGuildId
 } from '@/services'
+import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { createInfoEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
@@ -16,6 +17,7 @@ export const vipExpirationJob = async (client: Client<true>) => {
   if (!expiredRooms.length) return
 
   let processed = 0
+  const guildCounts = new Map<string, number>()
 
   for (const room of expiredRooms) {
     try {
@@ -83,6 +85,7 @@ export const vipExpirationJob = async (client: Client<true>) => {
         .catch(() => null)
 
       processed++
+      guildCounts.set(room.guildId, (guildCounts.get(room.guildId) ?? 0) + 1)
 
       await sleep(500)
     } catch (err) {
@@ -92,5 +95,15 @@ export const vipExpirationJob = async (client: Client<true>) => {
 
   if (processed > 0) {
     logger.worker(`VIP expiration: processed ${processed}`)
+
+    for (const [guildId, count] of guildCounts) {
+      await postWorkerLog(client, {
+        guildId,
+        worker: 'VIP expiration',
+        title: `Processed ${count} room(s)`,
+        description:
+          'Roles removed, permissions revoked, and expiry notices sent in VIP channels.'
+      })
+    }
   }
 }

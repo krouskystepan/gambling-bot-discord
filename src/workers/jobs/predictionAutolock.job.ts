@@ -3,6 +3,7 @@ import { Colors } from 'discord.js'
 import { Client } from 'commandkit'
 
 import { getPredictionToLock, updatePredictionStatus } from '@/services'
+import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
@@ -14,6 +15,7 @@ export const predictionAutolockJob = async (client: Client<true>) => {
   })
 
   let locked = 0
+  const guildLocked = new Map<string, number>()
 
   for (const prediction of predictions) {
     try {
@@ -43,6 +45,10 @@ export const predictionAutolockJob = async (client: Client<true>) => {
       })
 
       locked++
+      guildLocked.set(
+        prediction.guildId,
+        (guildLocked.get(prediction.guildId) ?? 0) + 1
+      )
       await sleep(300)
     } catch (err) {
       logger.error(
@@ -54,5 +60,14 @@ export const predictionAutolockJob = async (client: Client<true>) => {
 
   if (locked > 0) {
     logger.worker(`Prediction autolock: locked ${locked}`)
+
+    for (const [guildId, count] of guildLocked) {
+      await postWorkerLog(client, {
+        guildId,
+        worker: 'Prediction autolock',
+        title: `Locked ${count} prediction(s)`,
+        description: 'Active predictions past their autolock time were ended.'
+      })
+    }
   }
 }

@@ -208,3 +208,18 @@ export const updateUserBalanceAtomic = async ({
 
   return User.findOneAndUpdate(query, update, { returnDocument: 'after' })
 }
+
+const DEFAULT_MIN_LOCKED = 0.0001
+
+export const getUsersWithLockedBalance = async ({
+  minLocked = DEFAULT_MIN_LOCKED,
+  limit = 500
+}: {
+  minLocked?: number
+  limit?: number
+} = {}) => {
+  return User.find({ lockedBalance: { $gt: minLocked } })
+    .select('userId guildId lockedBalance')
+    .limit(limit)
+    .lean()
+}
