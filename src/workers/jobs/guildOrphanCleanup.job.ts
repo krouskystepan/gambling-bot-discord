@@ -4,6 +4,7 @@ import { Client } from 'commandkit'
 
 import { getAllGuildConfigIds } from '@/services/db/guildConfiguration.db'
 import { runGuildOrphanCleanup } from '@/services/guild/guildOrphanCleanup.service'
+import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
@@ -48,6 +49,25 @@ export const guildOrphanCleanupJob = async (client: Client<true>) => {
       logger.worker(
         `Guild orphan cleanup: ${guildId} — predictions=${summary.predictions}, raffles=${summary.raffles}, blackjack=${summary.blackjack}, vip=${summary.vipRooms}, atm=${summary.atmRejected}, errors=${summary.errors.length}`
       )
+
+      await postWorkerLog(client, {
+        guildId,
+        worker: 'Guild orphan cleanup',
+        title: 'Orphan data cleaned',
+        description: [
+          `Predictions: **${summary.predictions}**`,
+          `Raffles: **${summary.raffles}**`,
+          `Blackjack: **${summary.blackjack}**`,
+          `VIP rooms: **${summary.vipRooms}**`,
+          `ATM rejected: **${summary.atmRejected}**`,
+          summary.errors.length > 0
+            ? `Errors: **${summary.errors.length}**`
+            : null
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        level: summary.errors.length > 0 ? 'warning' : 'info'
+      })
 
       await sleep(500)
     } catch (error) {

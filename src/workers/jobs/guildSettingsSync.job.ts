@@ -12,6 +12,7 @@ import { Client } from 'commandkit'
 
 import GuildConfiguration from '@/models/GuildConfiguration'
 import { createGuildConfiguration } from '@/services'
+import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { logger } from '@/utils/logger'
 
 type SettingsSectionKey = 'casinoSettings' | 'globalSettings' | 'bonusSettings'
@@ -102,6 +103,13 @@ export const guildSettingsSyncJob = async (client: Client<true>) => {
       if (!dbSettings) {
         await createGuildConfiguration({ guildId: guild.id })
         logger.worker(`🆕 Created settings => ${guild.name} (${guild.id})`)
+        await postWorkerLog(client, {
+          guildId: guild.id,
+          worker: 'Guild settings sync',
+          title: 'Settings created',
+          description: `Created default settings for **${guild.name}**.`,
+          level: 'success'
+        })
         continue
       }
 
@@ -112,6 +120,12 @@ export const guildSettingsSyncJob = async (client: Client<true>) => {
         logger.worker(
           `🔧 Updated settings (${changed.join(', ')}) => ${guild.name} (${guild.id})`
         )
+        await postWorkerLog(client, {
+          guildId: guild.id,
+          worker: 'Guild settings sync',
+          title: 'Settings updated',
+          description: `Updated **${changed.join(', ')}** for **${guild.name}**.`
+        })
       }
     } catch (err) {
       logger.error(`Guild settings sync failed for guild ${guild.id}`, err)

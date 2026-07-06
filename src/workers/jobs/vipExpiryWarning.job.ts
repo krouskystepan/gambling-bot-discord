@@ -8,6 +8,7 @@ import {
   getVipsNeedingExpiryWarning,
   markVipExpiryWarningSent
 } from '@/services'
+import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { createInfoEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
@@ -36,6 +37,7 @@ const createWarningMessage = (
 export const vipExpiryWarningJob = async (client: Client<true>) => {
   let sent24h = 0
   let sent1h = 0
+  const guildSummary = new Map<string, { sent24h: number; sent1h: number }>()
 
   for (const tier of WARNING_TIERS) {
     const rooms = await getVipsNeedingExpiryWarning(tier)
@@ -71,6 +73,17 @@ export const vipExpiryWarningJob = async (client: Client<true>) => {
           sent1h++
         }
 
+        const summary = guildSummary.get(room.guildId) ?? {
+          sent24h: 0,
+          sent1h: 0
+        }
+        if (tier === '24h') {
+          summary.sent24h++
+        } else {
+          summary.sent1h++
+        }
+        guildSummary.set(room.guildId, summary)
+
         await sleep(500)
       } catch (error) {
         logger.error(
@@ -86,5 +99,16 @@ export const vipExpiryWarningJob = async (client: Client<true>) => {
     logger.worker(
       `VIP expiry warning: sent ${totalSent} (24h: ${sent24h}, 1h: ${sent1h})`
     )
+
+    for (const [guildId, summary] of guildSummary) {
+      const total = summary.sent24h + summary.sent1h
+      await postWorkerLog(client, {
+        guildId,
+        worker: 'VIP expiry warning',
+        title: `Sent ${total} warning(s)`,
+        description: `24h warnings: **${summary.sent24h}**\n1h warnings: **${summary.sent1h}**`,
+        level: 'warning'
+      })
+    }
   }
 }

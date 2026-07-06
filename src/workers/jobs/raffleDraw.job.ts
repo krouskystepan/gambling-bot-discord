@@ -21,6 +21,7 @@ import {
   completeRaffleDraw,
   getRafflesReadyToDraw
 } from '@/services/db/raffle.db'
+import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
@@ -107,6 +108,13 @@ export const raffleDrawJob = async (client: Client<true>) => {
             },
             'Raffle draw: Discord channel missing after settlement'
           )
+          await postWorkerLog(client, {
+            guildId: raffle.guildId,
+            worker: 'Raffle draw',
+            title: 'Settlement completed, Discord channel missing',
+            description: `Raffle \`${raffle.raffleId}\` was settled but channel <#${raffle.channelId}> could not be reached.`,
+            level: 'error'
+          })
         }
         continue
       }
@@ -202,10 +210,24 @@ export const raffleDrawJob = async (client: Client<true>) => {
         logger.worker(
           `Raffle "${raffle.raffleId}" refunded - ${participants.length} participant(s)`
         )
+        await postWorkerLog(client, {
+          guildId: raffle.guildId,
+          worker: 'Raffle draw',
+          title: 'Tickets refunded',
+          description: `Raffle \`${raffle.raffleId}\` had only **${participants.length}** participant(s). All tickets were refunded.`,
+          level: 'warning'
+        })
       } else if (winnerId) {
         logger.worker(
           `Raffle "${raffle.raffleId}" winner ${winnerId} - pot ${formatMoneyExact(pot, guildConfig.globalSettings)}`
         )
+        await postWorkerLog(client, {
+          guildId: raffle.guildId,
+          worker: 'Raffle draw',
+          title: 'Draw completed',
+          description: `Raffle \`${raffle.raffleId}\` winner: <@${winnerId}>\nPot: **${formatMoneyExact(pot, guildConfig.globalSettings)}**`,
+          level: 'success'
+        })
       }
 
       await sleep(500)

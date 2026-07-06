@@ -9,6 +9,7 @@ import {
   settleCasinoWinnings,
   updateBlackjackGame
 } from '@/services'
+import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import {
   FinalGameResultId,
   applyAction,
@@ -28,6 +29,7 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
   const oldGames = await getAllOldBlackjackGames(1) // older than 1 day
 
   let processed = 0
+  const guildProcessed = new Map<string, number>()
 
   for (const game of oldGames) {
     try {
@@ -136,6 +138,10 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
       })
 
       processed++
+      guildProcessed.set(
+        game.guildId,
+        (guildProcessed.get(game.guildId) ?? 0) + 1
+      )
 
       await sleep(300)
     } catch (err) {
@@ -145,5 +151,15 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
 
   if (processed > 0) {
     logger.worker(`Blackjack auto-stand: processed ${processed}`)
+
+    for (const [guildId, count] of guildProcessed) {
+      await postWorkerLog(client, {
+        guildId,
+        worker: 'Blackjack auto-stand',
+        title: `Processed ${count} game(s)`,
+        description:
+          'Inactive blackjack games were auto-stood, settled, and removed.'
+      })
+    }
   }
 }

@@ -42,6 +42,13 @@ export const createErrorEmbed = (title: string, description: string) => {
     .setDescription(description)
 }
 
+export const createWarningEmbed = (title: string, description: string) => {
+  return new EmbedBuilder()
+    .setTitle(title)
+    .setColor('Yellow')
+    .setDescription(description)
+}
+
 export const createInfoEmbed = (title: string, description: string) => {
   return new EmbedBuilder()
     .setTitle(title)

@@ -2,6 +2,7 @@ import { Client } from 'commandkit'
 
 import GuildConfiguration from '@/models/GuildConfiguration'
 import { syncGuildBannedRoles } from '@/services/moderation'
+import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { logger } from '@/utils/logger'
 
 type BanRoleSyncGuildConfig = {
@@ -10,10 +11,6 @@ type BanRoleSyncGuildConfig = {
 }
 
 export const banRoleSyncJob = async (client: Client<true>) => {
-  let guildsProcessed = 0
-  let totalAdded = 0
-  let totalRemoved = 0
-
   for (const guild of client.guilds.cache.values()) {
     const config = await GuildConfiguration.findOne({ guildId: guild.id })
       .select('bannedRoleId botLeftAt')
@@ -26,14 +23,16 @@ export const banRoleSyncJob = async (client: Client<true>) => {
       bannedRoleId: config.bannedRoleId
     })
 
-    guildsProcessed++
-    totalAdded += result.added
-    totalRemoved += result.removed
-  }
-
-  if (totalAdded > 0 || totalRemoved > 0) {
-    logger.worker(
-      `Ban role sync: +${totalAdded} -${totalRemoved} across ${guildsProcessed} guild(s)`
-    )
+    if (result.added > 0 || result.removed > 0) {
+      logger.worker(
+        `Ban role sync: +${result.added} -${result.removed} in ${guild.name} (${guild.id})`
+      )
+      await postWorkerLog(client, {
+        guildId: guild.id,
+        worker: 'Ban role sync',
+        title: 'Banned roles updated',
+        description: `Added **${result.added}** and removed **${result.removed}** banned role assignment(s).`
+      })
+    }
   }
 }
