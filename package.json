@@ -22,7 +22,7 @@
     "test:unit:check": "vitest run tests/unit",
     "test:integration:check": "vitest run tests/integration",
     "test:watch": "vitest",
-    "check": "pnpm format:check && pnpm lint:check && pnpm type:check && pnpm test:check",
+    "check": "pnpm format:check && pnpm lint:check && pnpm type:check && pnpm test:check && pnpm test:coverage:check",
     "clean": "rm -rf dist .commandkit node_modules coverage",
     "docs:commands": "tsx src/scripts/generate-commands-structure.ts",
     "audit:economy": "tsx src/scripts/audit-economy-summary.ts",

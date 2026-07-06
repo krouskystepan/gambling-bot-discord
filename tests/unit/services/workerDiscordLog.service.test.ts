@@ -102,6 +102,89 @@ describe('postWorkerLog', () => {
     )
   })
 
+  it('skips when channel fetch fails', async () => {
+    vi.mocked(getGuildConfigByGuildId).mockResolvedValue({
+      workerLogChannelId: 'worker-log-ch'
+    } as never)
+
+    const client = {
+      guilds: {
+        fetch: vi.fn().mockResolvedValue({
+          id: 'guild-1',
+          channels: {
+            fetch: vi.fn().mockRejectedValue(new Error('channel missing'))
+          }
+        })
+      }
+    }
+
+    await postWorkerLog(client as never, basePayload)
+
+    expect(client.guilds.fetch).toHaveBeenCalledWith('guild-1')
+  })
+
+  it('skips when guild is missing', async () => {
+    vi.mocked(getGuildConfigByGuildId).mockResolvedValue({
+      workerLogChannelId: 'worker-log-ch'
+    } as never)
+
+    const send = vi.fn()
+    const client = {
+      guilds: {
+        fetch: vi.fn().mockResolvedValue(null)
+      }
+    }
+
+    await postWorkerLog(client as never, basePayload)
+
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('skips when guild fetch fails', async () => {
+    vi.mocked(getGuildConfigByGuildId).mockResolvedValue({
+      workerLogChannelId: 'worker-log-ch'
+    } as never)
+
+    const client = {
+      guilds: {
+        fetch: vi.fn().mockRejectedValue(new Error('guild missing'))
+      }
+    }
+
+    await postWorkerLog(client as never, basePayload)
+
+    expect(client.guilds.fetch).toHaveBeenCalledWith('guild-1')
+  })
+
+  it.each(['success', 'warning', 'error'] as const)(
+    'sends %s level embed',
+    async (level) => {
+      vi.mocked(getGuildConfigByGuildId).mockResolvedValue({
+        workerLogChannelId: 'worker-log-ch'
+      } as never)
+
+      const send = vi.fn().mockResolvedValue(undefined)
+      const client = {
+        guilds: {
+          fetch: vi.fn().mockResolvedValue({
+            id: 'guild-1',
+            channels: {
+              fetch: vi.fn().mockResolvedValue({
+                send,
+                guild: { id: 'guild-1' }
+              })
+            }
+          })
+        }
+      }
+
+      await postWorkerLog(client as never, { ...basePayload, level })
+
+      expect(send).toHaveBeenCalledTimes(1)
+      expect(send.mock.calls[0][0].embeds).toHaveLength(1)
+    }
+  )
+
   it('logs when send fails', async () => {
     vi.mocked(getGuildConfigByGuildId).mockResolvedValue({
       workerLogChannelId: 'worker-log-ch'

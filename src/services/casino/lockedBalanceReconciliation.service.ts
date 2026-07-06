@@ -72,18 +72,15 @@ async function getUnsettledCasinoBetTxs({
 }: {
   userId: string
   guildId: string
-  createdAtFilter?: { $gte?: Date; $lt?: Date }
+  createdAtFilter: { $gte?: Date; $lt?: Date }
 }): Promise<UnsettledBetTx[]> {
   const query: Record<string, unknown> = {
     userId,
     guildId,
     type: 'bet',
     source: 'casino',
-    referenceId: { $ne: null }
-  }
-
-  if (createdAtFilter) {
-    query.createdAt = createdAtFilter
+    referenceId: { $ne: null },
+    createdAt: createdAtFilter
   }
 
   const bets = await Transaction.find(query).lean()
@@ -332,8 +329,7 @@ export async function reconcileUserLockedBalance({
     guildId
   })
 
-  const remainder =
-    (userAfter?.lockedBalance ?? 0) - (justifiedAfter ?? justified)
+  const remainder = (userAfter?.lockedBalance ?? 0) - justifiedAfter
   let released = 0
 
   if (remainder > LOCK_EPSILON) {

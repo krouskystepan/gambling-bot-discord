@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import TransactionModel from '@/models/Transaction'
 import {
   refundLockedBet,
+  releaseExcessLockedBalance,
   reserveCasinoBet,
   settleCasinoWinnings,
   settleRpsGameAtomic,
@@ -800,5 +801,30 @@ describe('casinoBet.service', () => {
     const p1 = await User.findOne({ userId: 'p1', guildId: 'guild-1' })
     expect(p1?.lockedBalance).toBe(100)
     expect(p1?.balance).toBe(0)
+  })
+
+  it('throws USER_NOT_FOUND on releaseExcessLockedBalance', async () => {
+    await expect(
+      releaseExcessLockedBalance({
+        userId: 'missing',
+        guildId: 'guild-1',
+        amount: 10
+      })
+    ).rejects.toThrow('USER_NOT_FOUND')
+  })
+
+  it('no-ops releaseExcessLockedBalance when locked balance is zero', async () => {
+    await createTestUser({ balance: 100, lockedBalance: 0 })
+
+    await releaseExcessLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      amount: 50
+    })
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.balance).toBe(100)
+    expect(user?.lockedBalance).toBe(0)
+    expect(await Transaction.countDocuments({ userId: 'user-1' })).toBe(0)
   })
 })
