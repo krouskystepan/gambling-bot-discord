@@ -135,11 +135,15 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     │   │   └─ /clear-mock-db – Remove mock / operational guild data from the DB (keeps guild config). Dev only.
     │   │      ├─ all – Clear users, transactions, ATM, raffles, predictions, VIP, and blackjack games.
     │   │      ├─ entity – Clear a single collection.
-    │   └── mock-db.ts
-    │       └─ /mock-db – Seed the database with realistic mock data for Admin testing (dev only).
-    │          ├─ all – Fill all collections (users, txs, ATM, raffles, predictions, VIP).
-    │          ├─ entity – Fill a single collection.
-    │          ├─ custom – Fill all collections with custom counts.
+    │   ├── mock-db.ts
+    │   │   └─ /mock-db – Seed the database with realistic mock data for Admin testing (dev only).
+    │   │      ├─ all – Fill all collections (users, txs, ATM, raffles, predictions, VIP).
+    │   │      ├─ entity – Fill a single collection.
+    │   │      ├─ custom – Fill all collections with custom counts.
+    │   └── mock-worker-db.ts
+    │       └─ /mock-worker-db – Seed broken DB state to test background workers (dev only).
+    │          ├─ all – Seed every worker scenario in the database.
+    │          ├─ entity – Seed a single worker scenario.
     ├── (events)
     │   ├── prediction.ts
     │   │   └─ /prediction – Manage predictions.

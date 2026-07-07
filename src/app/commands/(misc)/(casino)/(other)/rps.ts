@@ -23,11 +23,7 @@ import {
   settleRpsGameAtomic
 } from '@/services'
 import { checkValidBet } from '@/utils/common/utils'
-import {
-  createBetEmbed,
-  createErrorEmbed,
-  createInfoEmbed
-} from '@/utils/discord/createEmbed'
+import { createBetEmbed, createErrorEmbed } from '@/utils/discord/createEmbed'
 
 const choices = [
   { name: 'rock', emoji: '🪨', beats: 'scissors' },
@@ -74,7 +70,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (interaction.user.id === targetDiscordUser.id || targetDiscordUser.bot) {
       return interaction.reply({
         embeds: [
-          createInfoEmbed('Invalid Input', 'Cannot play against this user.')
+          createErrorEmbed('Invalid Input', 'Cannot play against this user.')
         ],
         flags: MessageFlags.Ephemeral
       })

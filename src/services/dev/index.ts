@@ -218,3 +218,10 @@ export {
   type ClearMockDbEntity,
   type ClearMockDbSummary
 } from './clearMockDb'
+
+export {
+  runMockWorkerDb,
+  type WorkerMockEntity,
+  type WorkerMockOptions,
+  type WorkerMockSummary
+} from './mockWorkerDb'

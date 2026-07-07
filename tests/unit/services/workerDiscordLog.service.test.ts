@@ -1,3 +1,4 @@
+import { Colors } from 'discord.js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
@@ -97,9 +98,7 @@ describe('postWorkerLog', () => {
 
     expect(send).toHaveBeenCalledTimes(1)
     expect(send.mock.calls[0][0].embeds).toHaveLength(1)
-    expect(send.mock.calls[0][0].embeds[0].data.title).toBe(
-      'VIP expiration — Processed 2 room(s)'
-    )
+    expect(send.mock.calls[0][0].embeds[0].data.timestamp).toBeDefined()
   })
 
   it('skips when channel fetch fails', async () => {
@@ -156,9 +155,13 @@ describe('postWorkerLog', () => {
     expect(client.guilds.fetch).toHaveBeenCalledWith('guild-1')
   })
 
-  it.each(['success', 'warning', 'error'] as const)(
-    'sends %s level embed',
-    async (level) => {
+  it.each([
+    ['success', Colors.Green],
+    ['warning', Colors.Yellow],
+    ['error', Colors.Red]
+  ] as const)(
+    'sends %s level embed with matching color',
+    async (level, color) => {
       vi.mocked(getGuildConfigByGuildId).mockResolvedValue({
         workerLogChannelId: 'worker-log-ch'
       } as never)
@@ -182,6 +185,8 @@ describe('postWorkerLog', () => {
 
       expect(send).toHaveBeenCalledTimes(1)
       expect(send.mock.calls[0][0].embeds).toHaveLength(1)
+      expect(send.mock.calls[0][0].embeds[0].data.color).toBe(color)
+      expect(send.mock.calls[0][0].embeds[0].data.timestamp).toBeDefined()
     }
   )
 

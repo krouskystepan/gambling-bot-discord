@@ -17,7 +17,6 @@ import {
 import { DEV_GUILDS } from '@/utils/devGuilds'
 import {
   createErrorEmbed,
-  createInfoEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
@@ -321,7 +320,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (isNaN(parsedBetAmount)) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Not a number',
               'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
             )
@@ -333,7 +332,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (parsedBetAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Non-positive number',
               'The number you provided must be greater than 0.\nPlease enter a positive value.'
             )
@@ -362,7 +361,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (isNaN(parsedBetAmount)) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Not a number',
               'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
             )
@@ -374,7 +373,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (parsedBetAmount < 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Negative number',
               'The number you provided cannot be negative.\nPlease enter 0 or a positive value.'
             )
@@ -403,7 +402,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (isNaN(parsedBetAmount)) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Not a number',
               'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
             )
@@ -415,7 +414,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (parsedBetAmount < 0) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createErrorEmbed(
               'Invalid Input - Negative number',
               'The number you provided cannot be negative.\nPlease enter 0 or a positive value.'
             )

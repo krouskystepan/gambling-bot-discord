@@ -15,7 +15,10 @@ import {
   resetUserBalance,
   updateUserBalanceAtomic
 } from '@/services'
-import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
+import {
+  createErrorEmbed,
+  createWarningEmbed
+} from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
 //! DB TRANSACTIONS
@@ -69,7 +72,7 @@ export default async (interaction: Interaction, client: Client) => {
       if (user.balance > parsedAmount * 5) {
         return interaction.reply({
           embeds: [
-            createInfoEmbed(
+            createWarningEmbed(
               'Balance too high',
               `You can only receive money if your balance is below **${formatMoney(parsedAmount * 5, guildConfiguration.globalSettings)}**.`
             )

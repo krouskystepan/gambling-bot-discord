@@ -10,8 +10,9 @@ import {
 } from '@/services/db/blackjackGame.db'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
-import { createInfoEmbed } from '@/utils/discord/createEmbed'
+import { createWarningEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
+import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
 export const blackjackIdleNudgeJob = async (client: Client<true>) => {
   const games = await getBlackjackGamesNeedingIdleNudge()
@@ -31,13 +32,19 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
       if (!channel || channel.type !== ChannelType.GuildText) continue
 
       const hoursLeft = hoursUntilBlackjackAutostand(game.updatedAt)
+      const gameMessageLink = `https://discord.com/channels/${game.guildId}/${game.channelId}/${game.messageId}`
 
       await channel.send({
         content: `<@${game.userId}>`,
         embeds: [
-          createInfoEmbed(
+          createWarningEmbed(
             'Blackjack Game Idle',
-            `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**. Use the buttons on your game message to continue.`
+            [
+              `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**.`,
+              '',
+              `[Jump to your game message](${gameMessageLink})`
+            ].join('\n'),
+            game.betId
           )
         ]
       })
@@ -56,15 +63,23 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
   }
 
   if (sent > 0) {
-    logger.worker(`Blackjack idle nudge: sent ${sent}`)
+    logMultiGuildCountSummary({
+      client,
+      job: 'Blackjack idle nudge',
+      verb: 'sent',
+      total: sent,
+      unit: 'nudge(s)',
+      guildCounts: guildSent
+    })
 
     for (const [guildId, count] of guildSent) {
       await postWorkerLog(client, {
         guildId,
-        worker: 'Blackjack idle nudge',
-        title: `Sent ${count} nudge(s)`,
+        worker: 'Blackjack reminders',
+        title: `Reminded ${count} idle player(s)`,
         description:
-          'Players with inactive blackjack games were reminded before auto-stand.'
+          'Players with inactive blackjack games were pinged before auto-stand.',
+        level: 'info'
       })
     }
   }

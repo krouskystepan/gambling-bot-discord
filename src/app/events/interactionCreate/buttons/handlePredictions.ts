@@ -24,10 +24,10 @@ import {
   PlacePredictionBetError,
   placePredictionBet
 } from '@/services/predictions/placePredictionBet.service'
-import { createErrorEmbed } from '@/utils/discord/createEmbed'
 import {
-  createInfoEmbed,
-  createSuccessEmbed
+  createErrorEmbed,
+  createSuccessEmbed,
+  createWarningEmbed
 } from '@/utils/discord/createEmbed'
 
 export default async (interaction: Interaction) => {
@@ -56,7 +56,7 @@ export default async (interaction: Interaction) => {
     if (targetPrediction.status !== 'active') {
       return await interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Not Active',
             'This prediction is not active.'
           )
@@ -68,7 +68,7 @@ export default async (interaction: Interaction) => {
     if (!targetPrediction.choices || targetPrediction.choices.length === 0) {
       return await interaction.reply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - No Choices',
             'This prediction has no choices available.'
           )
@@ -121,7 +121,7 @@ export default async (interaction: Interaction) => {
     if (isNaN(parsedBetAmount) || parsedBetAmount <= 0) {
       return modalInteraction.editReply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Invalid Input - Non-positive number',
             'Please enter a valid positive number.'
           )
@@ -151,7 +151,7 @@ export default async (interaction: Interaction) => {
               .reduce((sum, bet) => sum + bet.amount, 0)
             return modalInteraction.editReply({
               embeds: [
-                createInfoEmbed(
+                createErrorEmbed(
                   'Invalid Input - Above Maximum Bet',
                   `The maximum bet per choice is **${formatMoney(
                     casinoSettings.prediction.maxBet,
@@ -166,7 +166,7 @@ export default async (interaction: Interaction) => {
           }
           return modalInteraction.editReply({
             embeds: [
-              createInfoEmbed(
+              createErrorEmbed(
                 'Invalid Input - Below Minimum Bet',
                 `The minimum bet is **${formatMoney(
                   casinoSettings.prediction.minBet,
@@ -186,7 +186,7 @@ export default async (interaction: Interaction) => {
         if (err.code === 'PREDICTION_STATE_CHANGED') {
           return modalInteraction.editReply({
             embeds: [
-              createInfoEmbed(
+              createWarningEmbed(
                 'Bet Failed',
                 'This prediction changed while placing your bet. Your funds were refunded.'
               )

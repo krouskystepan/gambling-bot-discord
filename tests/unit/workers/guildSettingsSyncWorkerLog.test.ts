@@ -47,9 +47,9 @@ describe('guildSettingsSyncJob worker logs', () => {
 
     expect(postWorkerLog).toHaveBeenCalledWith(client, {
       guildId: 'guild-1',
-      worker: 'Guild settings sync',
+      worker: 'Settings sync',
       title: 'Settings created',
-      description: 'Created default settings for **Test Guild**.',
+      description: 'Default settings were created for **Test Guild**.',
       level: 'success'
     })
   })

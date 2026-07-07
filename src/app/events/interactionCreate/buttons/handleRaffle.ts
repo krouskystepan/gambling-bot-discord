@@ -80,7 +80,7 @@ export default async (interaction: Interaction) => {
     ) {
       return interaction.editReply({
         embeds: [
-          createInfoEmbed(
+          createErrorEmbed(
             'Ticket Limit Exceeded',
             `Maximum tickets per user is **${raffle.maxTicketsPerUser}**.`
           )

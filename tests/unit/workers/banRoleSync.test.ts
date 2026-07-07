@@ -61,9 +61,9 @@ describe('banRoleSyncJob', () => {
     )
     expect(postWorkerLog).toHaveBeenCalledWith(client, {
       guildId: 'guild-1',
-      worker: 'Ban role sync',
-      title: 'Banned roles updated',
-      description: 'Added **2** and removed **1** banned role assignment(s).'
+      worker: 'Ban sync',
+      title: 'Ban roles updated',
+      description: '**2** players got the ban role. **1** had it removed.'
     })
   })
 

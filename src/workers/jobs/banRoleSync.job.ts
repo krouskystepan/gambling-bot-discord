@@ -29,9 +29,9 @@ export const banRoleSyncJob = async (client: Client<true>) => {
       )
       await postWorkerLog(client, {
         guildId: guild.id,
-        worker: 'Ban role sync',
-        title: 'Banned roles updated',
-        description: `Added **${result.added}** and removed **${result.removed}** banned role assignment(s).`
+        worker: 'Ban sync',
+        title: 'Ban roles updated',
+        description: `**${result.added}** players got the ban role. **${result.removed}** had it removed.`
       })
     }
   }

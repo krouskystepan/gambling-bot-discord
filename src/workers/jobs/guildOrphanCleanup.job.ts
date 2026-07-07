@@ -52,16 +52,16 @@ export const guildOrphanCleanupJob = async (client: Client<true>) => {
 
       await postWorkerLog(client, {
         guildId,
-        worker: 'Guild orphan cleanup',
-        title: 'Orphan data cleaned',
+        worker: 'Guild cleanup',
+        title: 'Cleaned up old data',
         description: [
           `Predictions: **${summary.predictions}**`,
           `Raffles: **${summary.raffles}**`,
           `Blackjack: **${summary.blackjack}**`,
           `VIP rooms: **${summary.vipRooms}**`,
-          `ATM rejected: **${summary.atmRejected}**`,
+          `ATM requests: **${summary.atmRejected}**`,
           summary.errors.length > 0
-            ? `Errors: **${summary.errors.length}**`
+            ? `Some items could not be cleaned: **${summary.errors.length}**`
             : null
         ]
           .filter(Boolean)

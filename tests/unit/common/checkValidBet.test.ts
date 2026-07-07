@@ -1,3 +1,4 @@
+import { Colors } from 'discord.js'
 import { describe, expect, it } from 'vitest'
 
 import { checkValidBet } from '@/utils/common/utils'
@@ -7,6 +8,11 @@ import { MessageFlags, createMockInteraction } from '../../helpers/discord-mock'
 const embedTitle = (interaction: ReturnType<typeof createMockInteraction>) => {
   const embed = interaction.getLastReply()?.embeds?.[0]
   return embed && 'data' in embed ? embed.data?.title : undefined
+}
+
+const embedColor = (interaction: ReturnType<typeof createMockInteraction>) => {
+  const embed = interaction.getLastReply()?.embeds?.[0]
+  return embed && 'data' in embed ? embed.data?.color : undefined
 }
 
 describe('checkValidBet', () => {
@@ -24,6 +30,7 @@ describe('checkValidBet', () => {
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({ flags: MessageFlags.Ephemeral })
     )
+    expect(embedColor(interaction)).toBe(Colors.Red)
   })
 
   it('replies when bet exceeds maximum', () => {

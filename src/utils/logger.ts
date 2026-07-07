@@ -64,6 +64,11 @@ type LoggerEventFn = {
   (context: LogContext, message: string): void
 }
 
+type LoggerWorkerFn = {
+  (message: string): void
+  (context: LogContext, message: string): void
+}
+
 type LoggerErrorFn = {
   (message: string): void
   (message: string, err?: unknown): void
@@ -76,6 +81,14 @@ const eventFn: LoggerEventFn = (arg1: string | LogContext, arg2?: string) => {
     return
   }
   logCategory('EVENT', arg2 ?? '', arg1)
+}
+
+const workerFn: LoggerWorkerFn = (arg1: string | LogContext, arg2?: string) => {
+  if (typeof arg1 === 'string') {
+    logCategory('WORKER', arg1)
+    return
+  }
+  logCategory('WORKER', arg2 ?? '', arg1)
 }
 
 const errorFn: LoggerErrorFn = (
@@ -114,7 +127,7 @@ export const logger: {
    * Background jobs, schedulers, intervals.
    * Use for workers and automated tasks.
    */
-  worker: (message: string) => void
+  worker: LoggerWorkerFn
 
   /**
    * User actions or framework events.
@@ -130,7 +143,7 @@ export const logger: {
 } = {
   boot: (msg) => logCategory('BOOT', msg),
   ready: (msg) => logCategory('READY', msg),
-  worker: (msg) => logCategory('WORKER', msg),
+  worker: workerFn,
   event: eventFn,
   error: errorFn
 }
