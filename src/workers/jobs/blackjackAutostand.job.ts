@@ -29,30 +29,33 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
   const oldGames = await getAllOldBlackjackGames(1) // older than 1 day
 
   let processed = 0
-  const guildProcessed = new Map<string, number>()
+  const guildProcessed = new Map<
+    string,
+    { finished: number; channelMissed: number }
+  >()
 
   for (const game of oldGames) {
     try {
       const guild = await client.guilds.fetch(game.guildId).catch(() => null)
       if (!guild) continue
 
-      const channel = await guild.channels
-        .fetch(game.channelId)
-        .catch(() => null)
-
-      if (!channel || channel.type !== ChannelType.GuildText) continue
-
       const guildConfig = await getGuildConfigByGuildId({
         guildId: game.guildId
       })
       const globalSettings = guildConfig?.globalSettings
 
-      const message = await channel.messages
-        .fetch(game.messageId)
+      const channel = await guild.channels
+        .fetch(game.channelId)
         .catch(() => null)
-      if (!message) continue
 
-      await message.edit({ components: [] })
+      const message =
+        channel?.type === ChannelType.GuildText
+          ? await channel.messages.fetch(game.messageId).catch(() => null)
+          : null
+
+      if (message) {
+        await message.edit({ components: [] })
+      }
 
       const engine = docToEngine(game)
       applyAction(engine, 'STAND')
@@ -114,23 +117,25 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
         })
       }
 
-      await message.edit({
-        content: 'This game was inactive, so auto-stand was executed.',
-        embeds: [
-          renderBlackjackEmbed({
-            userId: game.userId,
-            guildId: game.guildId,
-            betId: game.betId,
-            hands: engine.hands,
-            activeHandIndex: -1,
-            dealerCards: engine.dealerCards,
-            result: { kind: 'FINAL', finalResultId, netProfit: net },
-            showBalance: false,
-            globalSettings
-          })
-        ],
-        components: []
-      })
+      if (message) {
+        await message.edit({
+          content: 'This game was inactive, so auto-stand was executed.',
+          embeds: [
+            renderBlackjackEmbed({
+              userId: game.userId,
+              guildId: game.guildId,
+              betId: game.betId,
+              hands: engine.hands,
+              activeHandIndex: -1,
+              dealerCards: engine.dealerCards,
+              result: { kind: 'FINAL', finalResultId, netProfit: net },
+              showBalance: false,
+              globalSettings
+            })
+          ],
+          components: []
+        })
+      }
 
       await deleteBlackjackGame({
         userId: game.userId,
@@ -138,10 +143,13 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
       })
 
       processed++
-      guildProcessed.set(
-        game.guildId,
-        (guildProcessed.get(game.guildId) ?? 0) + 1
-      )
+      const stats = guildProcessed.get(game.guildId) ?? {
+        finished: 0,
+        channelMissed: 0
+      }
+      stats.finished++
+      if (!message) stats.channelMissed++
+      guildProcessed.set(game.guildId, stats)
 
       await sleep(300)
     } catch (err) {
@@ -152,14 +160,22 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
   if (processed > 0) {
     logger.worker(`Blackjack auto-stand: processed ${processed}`)
 
-    for (const [guildId, count] of guildProcessed) {
+    for (const [guildId, stats] of guildProcessed) {
+      const description = [
+        'Blackjack games left inactive for 24h+ were finished automatically.',
+        stats.channelMissed > 0
+          ? `**${stats.channelMissed}** game message(s) could not be updated in Discord.`
+          : null
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
       await postWorkerLog(client, {
         guildId,
-        worker: 'Blackjack auto-stand',
-        title: `Processed ${count} game(s)`,
-        description:
-          'Inactive blackjack games were auto-stood, settled, and removed.',
-        level: 'warning'
+        worker: 'Blackjack auto-finish',
+        title: `Finished ${stats.finished} idle game(s)`,
+        description,
+        level: stats.channelMissed > 0 ? 'warning' : 'info'
       })
     }
   }

@@ -3,14 +3,19 @@ import { defineConfig } from 'vitest/config'
 import path from 'node:path'
 
 /** 100% coverage on src/services/** and src/utils/** except coverageExclude (barrels, infra, embeds, render, types). RNG: rng.ts; rules: engine/math/path. */
+const devExclude = [
+  'src/services/dev/**',
+  'src/app/commands/(mod)/(dev)/**',
+  'src/utils/devAccess.ts',
+  'src/utils/devGuilds.ts'
+]
+
 const coverageExclude = [
   'src/**/index.ts',
   'src/services/db/base.db.ts',
 
   'src/utils/logger.ts',
-  'src/utils/devGuilds.ts',
-  'src/utils/devAccess.ts',
-  'src/services/dev/**',
+  ...devExclude,
   'src/utils/discord/createEmbed.ts',
   'src/utils/discord/customEmotes.ts',
 
@@ -26,6 +31,7 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
+    exclude: ['tests/**/dev/**'],
     setupFiles: ['tests/setup.ts'],
     fileParallelism: false,
     slowTestThreshold: 60_000,

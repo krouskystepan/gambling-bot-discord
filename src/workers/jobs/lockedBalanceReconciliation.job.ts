@@ -1,6 +1,9 @@
+import { formatMoneyExact } from 'gambling-bot-shared/common'
+
 import { Client } from 'commandkit'
 
 import GuildConfiguration from '@/models/GuildConfiguration'
+import { getGuildConfigByGuildId } from '@/services'
 import { reconcileUserLockedBalance } from '@/services/casino/lockedBalanceReconciliation.service'
 import { getUsersWithLockedBalance } from '@/services/db/user.db'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
@@ -8,6 +11,7 @@ import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
 const USER_DELAY_MS = 150
+const USER_BATCH_LIMIT = 500
 
 type LockedBalanceReconciliationGuildConfig = {
   botLeftAt?: Date | null
@@ -15,11 +19,11 @@ type LockedBalanceReconciliationGuildConfig = {
 
 export const lockedBalanceReconciliationJob = async (client: Client<true>) => {
   const users = await getUsersWithLockedBalance()
-  const limit = 500
+  const hitBatchLimit = users.length >= USER_BATCH_LIMIT
 
-  if (users.length >= limit) {
+  if (hitBatchLimit) {
     logger.worker(
-      `Locked balance reconciliation: hit user batch limit (${limit})`
+      `Locked balance reconciliation: hit user batch limit (${USER_BATCH_LIMIT})`
     )
   }
 
@@ -79,12 +83,26 @@ export const lockedBalanceReconciliationJob = async (client: Client<true>) => {
     )
 
     for (const [guildId, stats] of guildStats) {
+      const guildConfig = await getGuildConfigByGuildId({ guildId })
+      const formattedRefund = guildConfig
+        ? formatMoneyExact(stats.refunded, guildConfig.globalSettings)
+        : String(stats.refunded)
+
+      const description = [
+        `Returned **${formattedRefund}** to **${stats.users}** player(s) from **${stats.betIds}** unfinished bet(s).`,
+        hitBatchLimit
+          ? 'More stuck balances may still remain — the worker hit its batch limit.'
+          : null
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
       await postWorkerLog(client, {
         guildId,
-        worker: 'Locked balance reconciliation',
-        title: `Reconciled ${stats.users} user(s)`,
-        description: `Refunded **${stats.refunded}** total across **${stats.betIds}** bet ID(s).`,
-        level: 'warning'
+        worker: 'Stuck balances',
+        title: `Fixed ${stats.users} player balance(s)`,
+        description,
+        level: hitBatchLimit ? 'warning' : 'info'
       })
     }
   }

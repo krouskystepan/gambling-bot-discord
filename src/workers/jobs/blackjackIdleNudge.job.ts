@@ -67,11 +67,11 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
     for (const [guildId, count] of guildSent) {
       await postWorkerLog(client, {
         guildId,
-        worker: 'Blackjack idle nudge',
-        title: `Sent ${count} nudge(s)`,
+        worker: 'Blackjack reminders',
+        title: `Reminded ${count} idle player(s)`,
         description:
-          'Players with inactive blackjack games were reminded before auto-stand.',
-        level: 'warning'
+          'Players with inactive blackjack games were pinged before auto-stand.',
+        level: 'info'
       })
     }
   }

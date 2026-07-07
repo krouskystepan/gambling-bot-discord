@@ -52,7 +52,7 @@ describe('guildSettingsSyncJob integration worker logs', () => {
 
     expect(postWorkerLog).toHaveBeenCalledWith(client, {
       guildId: 'guild-worker-log',
-      worker: 'Guild settings sync',
+      worker: 'Settings sync',
       title: 'Settings updated',
       description: 'Updated **casinoSettings** for **Worker Log Guild**.'
     })

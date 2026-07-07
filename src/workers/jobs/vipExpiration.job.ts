@@ -17,7 +17,10 @@ export const vipExpirationJob = async (client: Client<true>) => {
   if (!expiredRooms.length) return
 
   let processed = 0
-  const guildCounts = new Map<string, number>()
+  const guildCounts = new Map<
+    string,
+    { expired: number; channelMissed: number }
+  >()
 
   for (const room of expiredRooms) {
     try {
@@ -53,39 +56,46 @@ export const vipExpirationJob = async (client: Client<true>) => {
         guildId: room.guildId
       })
 
+      processed++
+      const stats = guildCounts.get(room.guildId) ?? {
+        expired: 0,
+        channelMissed: 0
+      }
+      stats.expired++
+      guildCounts.set(room.guildId, stats)
+
       const channel = await guild.channels
         .fetch(room.channelId)
         .catch(() => null)
-      if (!channel || channel.type !== ChannelType.GuildText) continue
-
-      if (room.ownerId) {
-        await channel.permissionOverwrites
-          .edit(room.ownerId, { SendMessages: false })
-          .catch(() => null)
-      }
-
-      if (room.memberIds?.length) {
-        for (const memberId of room.memberIds) {
+      if (channel?.type === ChannelType.GuildText) {
+        if (room.ownerId) {
           await channel.permissionOverwrites
-            .edit(memberId, { SendMessages: false })
+            .edit(room.ownerId, { SendMessages: false })
             .catch(() => null)
         }
+
+        if (room.memberIds?.length) {
+          for (const memberId of room.memberIds) {
+            await channel.permissionOverwrites
+              .edit(memberId, { SendMessages: false })
+              .catch(() => null)
+          }
+        }
+
+        await channel
+          .send({
+            content: room.ownerId ? `<@${room.ownerId}>` : undefined,
+            embeds: [
+              createWarningEmbed(
+                'VIP Channel Expired',
+                '⏰ Your VIP time has expired. You no longer have access to this channel.'
+              )
+            ]
+          })
+          .catch(() => null)
+      } else {
+        stats.channelMissed++
       }
-
-      await channel
-        .send({
-          content: room.ownerId ? `<@${room.ownerId}>` : undefined,
-          embeds: [
-            createWarningEmbed(
-              'VIP Channel Expired',
-              '⏰ Your VIP time has expired. You no longer have access to this channel.'
-            )
-          ]
-        })
-        .catch(() => null)
-
-      processed++
-      guildCounts.set(room.guildId, (guildCounts.get(room.guildId) ?? 0) + 1)
 
       await sleep(500)
     } catch (err) {
@@ -96,14 +106,22 @@ export const vipExpirationJob = async (client: Client<true>) => {
   if (processed > 0) {
     logger.worker(`VIP expiration: processed ${processed}`)
 
-    for (const [guildId, count] of guildCounts) {
+    for (const [guildId, stats] of guildCounts) {
+      const description = [
+        'VIP time ran out. Roles were removed and channels were locked.',
+        stats.channelMissed > 0
+          ? `**${stats.channelMissed}** room(s) could not be updated in Discord.`
+          : null
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
       await postWorkerLog(client, {
         guildId,
-        worker: 'VIP expiration',
-        title: `Processed ${count} room(s)`,
-        description:
-          'Roles removed, permissions revoked, and expiry notices sent in VIP channels.',
-        level: 'warning'
+        worker: 'VIP rooms',
+        title: `Expired ${stats.expired} VIP room(s)`,
+        description,
+        level: stats.channelMissed > 0 ? 'warning' : 'info'
       })
     }
   }

@@ -104,9 +104,9 @@ export const vipExpiryWarningJob = async (client: Client<true>) => {
       const total = summary.sent24h + summary.sent1h
       await postWorkerLog(client, {
         guildId,
-        worker: 'VIP expiry warning',
-        title: `Sent ${total} warning(s)`,
-        description: `24h warnings: **${summary.sent24h}**\n1h warnings: **${summary.sent1h}**`,
+        worker: 'VIP reminders',
+        title: `Sent ${total} expiry reminder(s)`,
+        description: `**${summary.sent24h}** sent 24 hours before expiry\n**${summary.sent1h}** sent 1 hour before expiry`,
         level: 'warning'
       })
     }

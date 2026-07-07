@@ -3,6 +3,7 @@ import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
+import { formatMockWorkerReplyMessages } from '@/services/dev/formatMockWorkerReply'
 import {
   type WorkerMockEntity,
   runMockWorkerDb
@@ -135,12 +136,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       vipWarningTier
     })
 
-    await interaction.editReply({
-      content:
-        `✅ Worker test data seeded in DB (**${summary.entity}**)\n` +
-        `🧹 Clear with \`/clear-mock-db\` when finished\n\n` +
-        summary.lines.join('\n')
-    })
+    const messages = formatMockWorkerReplyMessages(summary, count)
+
+    await interaction.editReply({ content: messages[0] })
+
+    for (const chunk of messages.slice(1)) {
+      await interaction.followUp({
+        content: chunk,
+        flags: MessageFlags.Ephemeral
+      })
+    }
   } catch (error) {
     await handleUnexpectedInteractionError(interaction, error)
   }

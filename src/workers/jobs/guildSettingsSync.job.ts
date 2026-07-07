@@ -105,9 +105,9 @@ export const guildSettingsSyncJob = async (client: Client<true>) => {
         logger.worker(`🆕 Created settings => ${guild.name} (${guild.id})`)
         await postWorkerLog(client, {
           guildId: guild.id,
-          worker: 'Guild settings sync',
+          worker: 'Settings sync',
           title: 'Settings created',
-          description: `Created default settings for **${guild.name}**.`,
+          description: `Default settings were created for **${guild.name}**.`,
           level: 'success'
         })
         continue
@@ -122,7 +122,7 @@ export const guildSettingsSyncJob = async (client: Client<true>) => {
         )
         await postWorkerLog(client, {
           guildId: guild.id,
-          worker: 'Guild settings sync',
+          worker: 'Settings sync',
           title: 'Settings updated',
           description: `Updated **${changed.join(', ')}** for **${guild.name}**.`
         })
