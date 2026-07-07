@@ -11,6 +11,7 @@ import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { createWarningEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
+import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
 export const vipExpirationJob = async (client: Client<true>) => {
   const expiredRooms = await getAllOldVips()
@@ -104,7 +105,20 @@ export const vipExpirationJob = async (client: Client<true>) => {
   }
 
   if (processed > 0) {
-    logger.worker(`VIP expiration: processed ${processed}`)
+    const guildRoomCounts = new Map(
+      [...guildCounts.entries()].map(([guildId, stats]) => [
+        guildId,
+        stats.expired
+      ])
+    )
+    logMultiGuildCountSummary({
+      client,
+      job: 'VIP expiration',
+      verb: 'processed',
+      total: processed,
+      unit: 'room(s)',
+      guildCounts: guildRoomCounts
+    })
 
     for (const [guildId, stats] of guildCounts) {
       const description = [

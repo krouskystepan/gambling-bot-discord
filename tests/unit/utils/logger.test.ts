@@ -89,4 +89,25 @@ describe('logger', () => {
       'Admin balance deposit'
     )
   })
+
+  it('logs structured worker output via logger.worker(context, message)', async () => {
+    const { logger } = await import('@/utils/logger')
+
+    logger.worker(
+      {
+        guilds: { 'guild-1': 3, 'guild-2': 2 },
+        guildCount: 2
+      },
+      'VIP expiration: processed 5 room(s) across 2 guild(s)'
+    )
+
+    expect(mockInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'WORKER',
+        guilds: { 'guild-1': 3, 'guild-2': 2 },
+        guildCount: 2
+      }),
+      'VIP expiration: processed 5 room(s) across 2 guild(s)'
+    )
+  })
 })

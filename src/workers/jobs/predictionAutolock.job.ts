@@ -6,6 +6,7 @@ import { getPredictionToLock, updatePredictionStatus } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
+import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
 export const predictionAutolockJob = async (client: Client<true>) => {
   const predictions = await getPredictionToLock({
@@ -81,7 +82,14 @@ export const predictionAutolockJob = async (client: Client<true>) => {
   }
 
   if (locked > 0) {
-    logger.worker(`Prediction autolock: locked ${locked}`)
+    logMultiGuildCountSummary({
+      client,
+      job: 'Prediction autolock',
+      verb: 'locked',
+      total: locked,
+      unit: 'prediction(s)',
+      guildCounts: guildLocked
+    })
 
     for (const [guildId, count] of guildLocked) {
       const missed = guildDiscordMissed.get(guildId) ?? 0

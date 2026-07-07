@@ -12,6 +12,7 @@ import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { createWarningEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
+import { formatGuildDetailBreakdown } from '@/utils/worker/multiGuildWorkerLog'
 
 const WARNING_TIERS: readonly VipExpiryWarningTier[] = ['24h', '1h']
 
@@ -96,8 +97,17 @@ export const vipExpiryWarningJob = async (client: Client<true>) => {
 
   const totalSent = sent24h + sent1h
   if (totalSent > 0) {
+    const breakdown = formatGuildDetailBreakdown(
+      client,
+      guildSummary,
+      (summary) => `24h: ${summary.sent24h}, 1h: ${summary.sent1h}`
+    )
     logger.worker(
-      `VIP expiry warning: sent ${totalSent} (24h: ${sent24h}, 1h: ${sent1h})`
+      {
+        guilds: Object.fromEntries(guildSummary),
+        guildCount: guildSummary.size
+      },
+      `VIP expiry warning: sent ${totalSent} (24h: ${sent24h}, 1h: ${sent1h}) — ${breakdown}`
     )
 
     for (const [guildId, summary] of guildSummary) {

@@ -12,6 +12,7 @@ import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { createWarningEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
+import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
 export const blackjackIdleNudgeJob = async (client: Client<true>) => {
   const games = await getBlackjackGamesNeedingIdleNudge()
@@ -62,7 +63,14 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
   }
 
   if (sent > 0) {
-    logger.worker(`Blackjack idle nudge: sent ${sent}`)
+    logMultiGuildCountSummary({
+      client,
+      job: 'Blackjack idle nudge',
+      verb: 'sent',
+      total: sent,
+      unit: 'nudge(s)',
+      guildCounts: guildSent
+    })
 
     for (const [guildId, count] of guildSent) {
       await postWorkerLog(client, {

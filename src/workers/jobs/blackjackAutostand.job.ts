@@ -24,6 +24,7 @@ import { collectBlackjackBigWinLines } from '@/utils/casino/blackjackBigWin'
 import { sleep } from '@/utils/common/utils'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 import { logger } from '@/utils/logger'
+import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
 export const blackjackAutostandJob = async (client: Client<true>) => {
   const oldGames = await getAllOldBlackjackGames(1) // older than 1 day
@@ -158,7 +159,20 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
   }
 
   if (processed > 0) {
-    logger.worker(`Blackjack auto-stand: processed ${processed}`)
+    const guildGameCounts = new Map(
+      [...guildProcessed.entries()].map(([guildId, stats]) => [
+        guildId,
+        stats.finished
+      ])
+    )
+    logMultiGuildCountSummary({
+      client,
+      job: 'Blackjack auto-stand',
+      verb: 'processed',
+      total: processed,
+      unit: 'game(s)',
+      guildCounts: guildGameCounts
+    })
 
     for (const [guildId, stats] of guildProcessed) {
       const description = [

@@ -9,6 +9,7 @@ import { getUsersWithLockedBalance } from '@/services/db/user.db'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
+import { formatGuildDetailBreakdown } from '@/utils/worker/multiGuildWorkerLog'
 
 const USER_DELAY_MS = 150
 const USER_BATCH_LIMIT = 500
@@ -78,8 +79,17 @@ export const lockedBalanceReconciliationJob = async (client: Client<true>) => {
   }
 
   if (usersReconciled > 0 || totalRefunded > 0) {
+    const breakdown = formatGuildDetailBreakdown(
+      client,
+      guildStats,
+      (stats) => `${stats.users} user(s), refunded ${stats.refunded}`
+    )
     logger.worker(
-      `Locked balance reconciliation: ${usersReconciled} user(s), refunded ${totalRefunded} total across ${totalBetIds} betId(s)`
+      {
+        guilds: Object.fromEntries(guildStats),
+        guildCount: guildStats.size
+      },
+      `Locked balance reconciliation: ${usersReconciled} user(s), refunded ${totalRefunded} total across ${totalBetIds} betId(s) — ${breakdown}`
     )
 
     for (const [guildId, stats] of guildStats) {
