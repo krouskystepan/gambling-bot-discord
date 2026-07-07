@@ -2,11 +2,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { raffleDrawJob } from '@/workers/jobs/raffleDraw.job'
 
-vi.mock('@/services', () => ({
-  getGuildConfigByGuildId: vi.fn(),
-  payRaffleWinner: vi.fn(),
-  refundRafflePurchase: vi.fn()
-}))
+vi.mock('@/services', async () => {
+  const { calculateRaffleDrawSummary } = await vi.importActual<
+    typeof import('@/services/raffles/raffleDrawLog.service')
+  >('@/services/raffles/raffleDrawLog.service')
+  return {
+    calculateRaffleDrawSummary,
+    getGuildConfigByGuildId: vi.fn(),
+    payRaffleWinner: vi.fn(),
+    refundRafflePurchase: vi.fn(),
+    postRaffleDrawLog: vi.fn()
+  }
+})
 
 vi.mock('@/services/db/raffle.db', () => ({
   getRafflesReadyToDraw: vi.fn(),
@@ -25,7 +32,8 @@ vi.mock('@/utils/logger', () => ({
   logger: { worker: vi.fn(), error: vi.fn() }
 }))
 
-const { getGuildConfigByGuildId, payRaffleWinner } = await import('@/services')
+const { getGuildConfigByGuildId, payRaffleWinner, postRaffleDrawLog } =
+  await import('@/services')
 const { getRafflesReadyToDraw, completeRaffleDraw } = await import(
   '@/services/db/raffle.db'
 )
@@ -36,7 +44,8 @@ const { logger } = await import('@/utils/logger')
 
 const guildConfig = {
   globalSettings: { currencySymbol: '$', locale: 'en-US' },
-  casinoSettings: { raffle: { casinoCut: 0.1 } }
+  casinoSettings: { raffle: { casinoCut: 0.1 } },
+  raffleChannelIds: { logs: 'raffle-logs-ch', actions: 'raffle-actions-ch' }
 }
 
 const baseRaffle = {
@@ -86,6 +95,18 @@ describe('raffleDrawJob', () => {
         worker: 'Raffles',
         title: 'Winner picked',
         level: 'warning'
+      })
+    )
+    expect(postRaffleDrawLog).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        guildId: 'guild-1',
+        logsChannelId: 'raffle-logs-ch',
+        summary: expect.objectContaining({
+          outcome: 'won',
+          drawId: 'draw-1',
+          winnerId: expect.any(String)
+        })
       })
     )
   })

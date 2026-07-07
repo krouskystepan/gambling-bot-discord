@@ -13,8 +13,11 @@ import { Colors, EmbedBuilder } from 'discord.js'
 import { Client } from 'commandkit'
 
 import {
+  type RaffleDrawOutcome,
+  calculateRaffleDrawSummary,
   getGuildConfigByGuildId,
   payRaffleWinner,
+  postRaffleDrawLog,
   refundRafflePurchase
 } from '@/services'
 import {
@@ -201,6 +204,29 @@ export const raffleDrawJob = async (client: Client<true>) => {
             game: 'raffle'
           })
         }
+      }
+
+      const outcome: RaffleDrawOutcome = refunded
+        ? 'refunded'
+        : winnerId
+          ? 'won'
+          : 'no_participants'
+      const drawSummary = calculateRaffleDrawSummary({
+        participants,
+        ticketPrice: raffle.ticketPrice,
+        houseCutRate: houseCut,
+        drawId: raffle.drawId,
+        outcome,
+        winnerId
+      })
+      const logsChannelId = guildConfig.raffleChannelIds?.logs
+      if (logsChannelId) {
+        await postRaffleDrawLog(client, {
+          guildId: raffle.guildId,
+          logsChannelId,
+          summary: drawSummary,
+          globalSettings: guildConfig.globalSettings
+        })
       }
 
       const cycle = computeNextRaffleCycle(raffle)
