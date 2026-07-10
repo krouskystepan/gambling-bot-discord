@@ -1,4 +1,7 @@
 export * from './atmApproval.service'
 export * from './atmCommandOptions'
+export * from './atmLogMessage.service'
+export * from './atmRequestCancel.service'
 export * from './atmRequestStatus.service'
 export * from './atmRequestStatusEmbed'
+export * from './cancelAtmRequest.service'

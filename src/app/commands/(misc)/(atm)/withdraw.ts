@@ -24,12 +24,15 @@ import {
   attachAtmRequestMessage,
   checkAtmChannels,
   checkUserRegistration,
+  createAtmCancelSubcommand,
   createAtmRequest,
   createAtmRequestSubcommandOptions,
   createAtmStatusSubcommand,
   deleteAtmRequest,
+  handleAtmCancelSubcommand,
   handleAtmStatusSubcommand,
   previewWithdraw,
+  respondAtmRequestCancelAutocomplete,
   respondAtmRequestStatusAutocomplete
 } from '@/services'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
@@ -49,7 +52,8 @@ export const command: CommandData = {
       type: ApplicationCommandOptionType.Subcommand,
       options: createAtmRequestSubcommandOptions('withdraw')
     },
-    createAtmStatusSubcommand('withdraw')
+    createAtmStatusSubcommand('withdraw'),
+    createAtmCancelSubcommand('withdraw')
   ],
   dm_permission: false
 }
@@ -60,6 +64,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     if (subcommand === 'status') {
       return handleAtmStatusSubcommand(interaction, 'withdraw')
+    }
+
+    if (subcommand === 'cancel') {
+      return handleAtmCancelSubcommand(interaction, 'withdraw')
     }
 
     const user = await checkUserRegistration({ interaction })
@@ -232,7 +240,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       embeds: [
         createSuccessEmbed(
           'ATM - Withdraw',
-          `You have requested to withdraw **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**.\nPlease wait for the transaction to be processed.\n\nCheck status anytime with \`/withdraw status\`.`,
+          `You have requested to withdraw **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**.\nPlease wait for the transaction to be processed.\n\nCheck status with \`/withdraw status\` or cancel a pending request with \`/withdraw cancel\`.`,
           requestId
         )
       ],
@@ -246,7 +254,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 export const autocomplete: AutocompleteCommand = async ({ interaction }) => {
   if (!interaction.isAutocomplete()) return
   if (interaction.commandName !== 'withdraw') return
-  if (interaction.options.getSubcommand() !== 'status') return
-
-  return respondAtmRequestStatusAutocomplete(interaction, 'withdraw')
+  const subcommand = interaction.options.getSubcommand()
+  if (subcommand === 'status') {
+    return respondAtmRequestStatusAutocomplete(interaction, 'withdraw')
+  }
+  if (subcommand === 'cancel') {
+    return respondAtmRequestCancelAutocomplete(interaction, 'withdraw')
+  }
 }

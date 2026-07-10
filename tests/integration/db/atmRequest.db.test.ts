@@ -7,10 +7,12 @@ import {
   deleteAtmRequest,
   getAtmRequestCounts,
   getLatestUserAtmRequest,
+  getLatestUserPendingAtmRequest,
   getPendingAtmRequest,
   getUserAtmRequest,
   listAtmRequests,
-  searchUserAtmRequestsForAutocomplete
+  searchUserAtmRequestsForAutocomplete,
+  searchUserPendingAtmRequestsForAutocomplete
 } from '@/services/db/atmRequest.db'
 
 import { AtmRequest, setupMongoTests } from '../../helpers/mongo'
@@ -295,6 +297,149 @@ describe('atmRequest.db', () => {
       type: 'withdraw'
     })
     expect(otherUser).toBeNull()
+  })
+
+  it('completes pending request as cancelled', async () => {
+    await createAtmRequest({
+      requestId: 'atm-cancel-1',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'deposit',
+      amount: 75,
+      account: 'acc-cancel'
+    })
+
+    const completed = await completeAtmRequest({
+      requestId: 'atm-cancel-1',
+      status: 'cancelled',
+      meta: { source: 'player-cancel' }
+    })
+
+    expect(completed?.status).toBe('cancelled')
+    expect(completed?.handledBy).toBeUndefined()
+    expect(completed?.meta).toMatchObject({ source: 'player-cancel' })
+    expect(await getPendingAtmRequest('atm-cancel-1')).toBeNull()
+  })
+
+  it('getLatestUserPendingAtmRequest ignores approved and rejected requests', async () => {
+    await createAtmRequest({
+      requestId: 'atm-pending-latest-1',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 10,
+      account: 'acc-pending-1'
+    })
+    await createAtmRequest({
+      requestId: 'atm-pending-latest-2',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 20,
+      account: 'acc-pending-2'
+    })
+    await createAtmRequest({
+      requestId: 'atm-pending-latest-3',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 30,
+      account: 'acc-pending-3'
+    })
+
+    await AtmRequest.collection.updateOne(
+      { requestId: 'atm-pending-latest-1' },
+      { $set: { createdAt: new Date('2026-01-01T00:00:00Z') } }
+    )
+    await AtmRequest.collection.updateOne(
+      { requestId: 'atm-pending-latest-2' },
+      { $set: { createdAt: new Date('2026-06-01T00:00:00Z') } }
+    )
+    await AtmRequest.collection.updateOne(
+      { requestId: 'atm-pending-latest-3' },
+      { $set: { createdAt: new Date('2026-03-01T00:00:00Z') } }
+    )
+
+    await completeAtmRequest({
+      requestId: 'atm-pending-latest-2',
+      status: 'approved',
+      handledBy: 'mod-1'
+    })
+
+    const latest = await getLatestUserPendingAtmRequest({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'withdraw'
+    })
+    expect(latest?.requestId).toBe('atm-pending-latest-3')
+  })
+
+  it('searchUserPendingAtmRequestsForAutocomplete returns only pending requests', async () => {
+    await createAtmRequest({
+      requestId: 'atm-pending-ac-1',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'deposit',
+      amount: 100,
+      account: 'PayPal-pending-1'
+    })
+    await createAtmRequest({
+      requestId: 'atm-pending-ac-2',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'deposit',
+      amount: 200,
+      account: 'PayPal-pending-2'
+    })
+    await completeAtmRequest({
+      requestId: 'atm-pending-ac-2',
+      status: 'approved',
+      handledBy: 'mod-1'
+    })
+
+    const pending = await searchUserPendingAtmRequestsForAutocomplete({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'deposit',
+      query: ''
+    })
+    expect(pending).toHaveLength(1)
+    expect(pending[0]?.requestId).toBe('atm-pending-ac-1')
+    expect(pending[0]?.status).toBe('pending')
+  })
+
+  it('searchUserAtmRequestsForAutocomplete filters by status when provided', async () => {
+    await createAtmRequest({
+      requestId: 'atm-status-filter-1',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 50,
+      account: 'acc-status-1'
+    })
+    await createAtmRequest({
+      requestId: 'atm-status-filter-2',
+      userId: 'user-1',
+      guildId: 'guild-1',
+      type: 'withdraw',
+      amount: 60,
+      account: 'acc-status-2'
+    })
+    await completeAtmRequest({
+      requestId: 'atm-status-filter-2',
+      status: 'cancelled',
+      meta: { source: 'player-cancel' }
+    })
+
+    const cancelledOnly = await searchUserAtmRequestsForAutocomplete({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'withdraw',
+      query: '',
+      status: 'cancelled'
+    })
+    expect(cancelledOnly).toHaveLength(1)
+    expect(cancelledOnly[0]?.requestId).toBe('atm-status-filter-2')
   })
 
   it('getLatestUserAtmRequest returns newest request by createdAt', async () => {

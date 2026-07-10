@@ -43,3 +43,24 @@ export const createAtmStatusSubcommand = (type: 'withdraw' | 'deposit') => ({
     }
   ]
 })
+
+export const createAtmCancelSubcommand = (type: 'withdraw' | 'deposit') => ({
+  name: 'cancel',
+  description:
+    type === 'withdraw'
+      ? 'Cancel one of your pending withdrawal requests.'
+      : 'Cancel one of your pending deposit requests.',
+  type: ApplicationCommandOptionType.Subcommand as const,
+  options: [
+    {
+      name: 'request',
+      description:
+        type === 'withdraw'
+          ? 'Pending withdrawal to cancel (defaults to your latest pending)'
+          : 'Pending deposit to cancel (defaults to your latest pending)',
+      type: ApplicationCommandOptionType.String as const,
+      required: false,
+      autocomplete: true
+    }
+  ]
+})

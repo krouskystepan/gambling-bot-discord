@@ -15,7 +15,8 @@ import {
   createErrorEmbed,
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
-import { logger } from '@/utils/logger'
+
+import { editAtmLogMessage } from './atmLogMessage.service'
 
 export type AtmApprovalSource = 'discord' | 'web'
 
@@ -41,31 +42,6 @@ const buildTransactionMeta = ({
   account: request.account,
   ...(notes ? { notes } : {})
 })
-
-const editAtmLogMessage = async ({
-  client,
-  request,
-  content
-}: {
-  client: Client
-  request: TAtmRequest
-  content: string
-}) => {
-  if (!request.logChannelId || !request.logMessageId) return
-
-  try {
-    const logChannel = (await client.channels.fetch(
-      request.logChannelId
-    )) as TextChannel
-    const logMessage = await logChannel.messages.fetch(request.logMessageId)
-    await logMessage.edit({ content, components: [] })
-  } catch (err) {
-    logger.error(
-      { err, requestId: request.requestId, handler: 'atmApproval' },
-      'Failed to update ATM log message'
-    )
-  }
-}
 
 const notifyAtmUser = async ({
   client,

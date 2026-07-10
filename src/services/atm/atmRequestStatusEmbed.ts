@@ -7,13 +7,15 @@ import { Colors, EmbedBuilder } from 'discord.js'
 const STATUS_COLORS = {
   pending: Colors.Blue,
   approved: Colors.Green,
-  rejected: Colors.Red
+  rejected: Colors.Red,
+  cancelled: Colors.Grey
 } as const
 
 const STATUS_LABELS = {
   pending: 'Pending',
   approved: 'Approved',
-  rejected: 'Rejected'
+  rejected: 'Rejected',
+  cancelled: 'Cancelled'
 } as const
 
 export const buildAtmRequestStatusEmbed = (
@@ -27,7 +29,8 @@ export const buildAtmRequestStatusEmbed = (
     | 'createdAt'
     | 'handledAt'
     | 'notes'
-  >,
+  > &
+    Partial<Pick<TAtmRequest, 'userId' | 'handledBy' | 'meta'>>,
   globalSettings?: Partial<GlobalSettings> | null
 ) => {
   const title =
@@ -57,6 +60,12 @@ export const buildAtmRequestStatusEmbed = (
 
   if (request.status === 'pending') {
     embed.setDescription('Awaiting manager review.')
+  }
+
+  if (request.status === 'cancelled') {
+    if (request.meta?.source === 'player-cancel') {
+      embed.setDescription('Cancelled by you.')
+    }
   }
 
   if (request.status !== 'pending' && request.handledAt) {

@@ -6,11 +6,15 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │   ├── deposit.ts
 │   │   │   └─ /deposit – Deposit money to your account.
 │   │   │      ├─ request – Request a deposit to your account.
+│   │   │      ├─ status – Check the status of your deposit requests.
+│   │   │      ├─ cancel – Cancel one of your pending deposit requests.
 │   │   ├── register.ts
 │   │   │   └─ /register – Register yourself in the system.
 │   │   └── withdraw.ts
 │   │       └─ /withdraw – Withdraw money from your account.
 │   │          ├─ request – Request a withdrawal from your account.
+│   │          ├─ status – Check the status of your withdrawal requests.
+│   │          ├─ cancel – Cancel one of your pending withdrawal requests.
 │   ├── (casino)
 │   │   ├── (other)
 │   │   │   ├── blackjack.ts
@@ -119,17 +123,22 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     │   │      ├─ remove-actions – Remove a channel from raffle actions.
     │   │      ├─ add-logs – Set a channel for raffle logs (results).
     │   │      ├─ remove-logs – Remove the raffle logs channel.
-    │   └── setup-vip.ts
-    │       └─ /setup-vip – Manage VIP settings.
-    │          ├─ add-category – Set a category for VIP rooms.
-    │          ├─ remove-category – Remove the VIP category.
-    │          ├─ add-owner-role – Set a owner role for VIP users.
-    │          ├─ remove-owner-role – Remove the owner VIP role.
-    │          ├─ add-member-role – Set a member role for VIP users.
-    │          ├─ remove-member-role – Remove the member VIP role.
-    │          ├─ set-price-per-day – Set the price per day for VIP access.
-    │          ├─ set-create-price – Set the one-time price for creating a VIP room.
-    │          ├─ set-add-member-price – Set the one-time price for adding a member to room.
+    │   ├── setup-vip.ts
+    │   │   └─ /setup-vip – Manage VIP settings.
+    │   │      ├─ add-category – Set a category for VIP rooms.
+    │   │      ├─ remove-category – Remove the VIP category.
+    │   │      ├─ add-owner-role – Set a owner role for VIP users.
+    │   │      ├─ remove-owner-role – Remove the owner VIP role.
+    │   │      ├─ add-member-role – Set a member role for VIP users.
+    │   │      ├─ remove-member-role – Remove the member VIP role.
+    │   │      ├─ set-price-per-day – Set the price per day for VIP access.
+    │   │      ├─ set-create-price – Set the one-time price for creating a VIP room.
+    │   │      ├─ set-add-member-price – Set the one-time price for adding a member to room.
+    │   └── setup-worker-logs.ts
+    │       └─ /setup-worker-logs – Manage the background worker logs channel.
+    │          ├─ add – Set a channel for background worker activity summaries.
+    │          ├─ remove – Remove the worker logs channel using its ID.
+    │          ├─ status – Show the current worker logs channel.
     ├── (dev)
     │   ├── clear-mock-db.ts
     │   │   └─ /clear-mock-db – Remove mock / operational guild data from the DB (keeps guild config). Dev only.
@@ -141,7 +150,7 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     │   │      ├─ entity – Fill a single collection.
     │   │      ├─ custom – Fill all collections with custom counts.
     │   └── mock-worker-db.ts
-    │       └─ /mock-worker-db – Seed broken DB state to test background workers (dev only).
+    │       └─ /mock-worker-db – Seed intentionally broken DB state to test background workers (dev only).
     │          ├─ all – Seed every worker scenario in the database.
     │          ├─ entity – Seed a single worker scenario.
     ├── (events)

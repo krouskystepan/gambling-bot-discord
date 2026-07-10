@@ -85,29 +85,71 @@ function walk(dir: string, prefix = '') {
     if (!optionsInit) return
 
     optionsInit.getElements().forEach((el) => {
-      if (!el.isKind(SyntaxKind.ObjectLiteralExpression)) return
+      if (el.isKind(SyntaxKind.ObjectLiteralExpression)) {
+        appendSubcommandFromObject(el, nextPrefix)
+        return
+      }
 
-      const name = el
-        .getProperty('name')
-        ?.asKind(SyntaxKind.PropertyAssignment)
-        ?.getInitializer()
-        ?.getText()
-        .replace(/['"`]/g, '')
-
-      const desc = el
-        .getProperty('description')
-        ?.asKind(SyntaxKind.PropertyAssignment)
-        ?.getInitializer()
-        ?.getText()
-        .replace(/['"`]/g, '')
-
-      if (!name) return
-
-      output += `${nextPrefix}   ├─ ${name}`
-      if (desc) output += ` – ${desc}`
-      output += '\n'
+      if (el.isKind(SyntaxKind.CallExpression)) {
+        appendSubcommandFromCall(el, nextPrefix)
+      }
     })
   })
+}
+
+function appendSubcommandFromObject(
+  el: import('ts-morph').ObjectLiteralExpression,
+  nextPrefix: string
+) {
+  const name = el
+    .getProperty('name')
+    ?.asKind(SyntaxKind.PropertyAssignment)
+    ?.getInitializer()
+    ?.getText()
+    .replace(/['"`]/g, '')
+
+  const desc = el
+    .getProperty('description')
+    ?.asKind(SyntaxKind.PropertyAssignment)
+    ?.getInitializer()
+    ?.getText()
+    .replace(/['"`]/g, '')
+
+  if (!name) return
+
+  output += `${nextPrefix}   ├─ ${name}`
+  if (desc) output += ` – ${desc}`
+  output += '\n'
+}
+
+function appendSubcommandFromCall(
+  el: import('ts-morph').CallExpression,
+  nextPrefix: string
+) {
+  const expression = el.getExpression().getText()
+  const typeArg = el.getArguments()[0]?.getText().replace(/['"`]/g, '') as
+    | 'deposit'
+    | 'withdraw'
+    | undefined
+
+  if (!typeArg) return
+
+  if (expression === 'createAtmStatusSubcommand') {
+    const desc =
+      typeArg === 'withdraw'
+        ? 'Check the status of your withdrawal requests.'
+        : 'Check the status of your deposit requests.'
+    output += `${nextPrefix}   ├─ status – ${desc}\n`
+    return
+  }
+
+  if (expression === 'createAtmCancelSubcommand') {
+    const desc =
+      typeArg === 'withdraw'
+        ? 'Cancel one of your pending withdrawal requests.'
+        : 'Cancel one of your pending deposit requests.'
+    output += `${nextPrefix}   ├─ cancel – ${desc}\n`
+  }
 }
 
 output += 'src/app/commands\n'
