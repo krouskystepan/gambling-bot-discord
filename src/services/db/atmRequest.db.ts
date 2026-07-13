@@ -52,8 +52,8 @@ export const completeAtmRequest = async ({
   meta
 }: {
   requestId: string
-  status: 'approved' | 'rejected'
-  handledBy: string
+  status: 'approved' | 'rejected' | 'cancelled'
+  handledBy?: string
   notes?: string
   meta?: Record<string, unknown>
 }) => {
@@ -61,8 +61,8 @@ export const completeAtmRequest = async ({
     { requestId, status: 'pending' },
     {
       status,
-      handledBy,
       handledAt: new Date(),
+      ...(handledBy !== undefined ? { handledBy } : {}),
       ...(notes !== undefined ? { notes } : {}),
       ...(meta !== undefined ? { meta } : {})
     },
@@ -124,6 +124,20 @@ export const getUserAtmRequest = async ({
   return AtmRequest.findOne(query).lean()
 }
 
+export const getLatestUserPendingAtmRequest = async ({
+  guildId,
+  userId,
+  type
+}: {
+  guildId: string
+  userId: string
+  type: TAtmRequest['type']
+}) => {
+  return AtmRequest.findOne({ guildId, userId, type, status: 'pending' })
+    .sort({ createdAt: -1 })
+    .lean()
+}
+
 export const getLatestUserAtmRequest = async ({
   guildId,
   userId,
@@ -142,14 +156,20 @@ export const searchUserAtmRequestsForAutocomplete = async ({
   guildId,
   userId,
   type,
-  query
+  query,
+  status
 }: {
   guildId: string
   userId: string
   type: TAtmRequest['type']
   query: string
+  status?: TAtmRequest['status']
 }) => {
   const filter: Record<string, unknown> = { guildId, userId, type }
+
+  if (status) {
+    filter.status = status
+  }
 
   if (query) {
     filter.$or = [
@@ -165,6 +185,26 @@ export const searchUserAtmRequestsForAutocomplete = async ({
     .lean()
 }
 
+export const searchUserPendingAtmRequestsForAutocomplete = async ({
+  guildId,
+  userId,
+  type,
+  query
+}: {
+  guildId: string
+  userId: string
+  type: TAtmRequest['type']
+  query: string
+}) => {
+  return searchUserAtmRequestsForAutocomplete({
+    guildId,
+    userId,
+    type,
+    query,
+    status: 'pending'
+  })
+}
+
 export const getAtmRequestCounts = async ({ guildId }: { guildId: string }) => {
   const rows = await AtmRequest.aggregate([
     { $match: { guildId } },
@@ -175,6 +215,7 @@ export const getAtmRequestCounts = async ({ guildId }: { guildId: string }) => {
     pending: 0,
     approved: 0,
     rejected: 0,
+    cancelled: 0,
     total: 0
   }
 

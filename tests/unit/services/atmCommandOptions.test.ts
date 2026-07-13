@@ -2,6 +2,7 @@ import { ApplicationCommandOptionType } from 'discord.js'
 import { describe, expect, it } from 'vitest'
 
 import {
+  createAtmCancelSubcommand,
   createAtmRequestSubcommandOptions,
   createAtmStatusSubcommand
 } from '@/services/atm/atmCommandOptions'
@@ -48,5 +49,28 @@ describe('atmCommandOptions', () => {
 
     expect(subcommand.description).toContain('deposit')
     expect(subcommand.options[0]?.description).toContain('Deposit request')
+  })
+
+  it('builds withdraw cancel subcommand', () => {
+    const subcommand = createAtmCancelSubcommand('withdraw')
+
+    expect(subcommand).toMatchObject({
+      name: 'cancel',
+      type: ApplicationCommandOptionType.Subcommand
+    })
+    expect(subcommand.description).toContain('pending withdrawal')
+    expect(subcommand.options[0]).toMatchObject({
+      name: 'request',
+      type: ApplicationCommandOptionType.String,
+      required: false,
+      autocomplete: true
+    })
+  })
+
+  it('builds deposit cancel subcommand', () => {
+    const subcommand = createAtmCancelSubcommand('deposit')
+
+    expect(subcommand.description).toContain('pending deposit')
+    expect(subcommand.options[0]?.description).toContain('Pending deposit')
   })
 })

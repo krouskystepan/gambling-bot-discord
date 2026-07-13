@@ -24,11 +24,14 @@ import {
   attachAtmRequestMessage,
   checkAtmChannels,
   checkUserRegistration,
+  createAtmCancelSubcommand,
   createAtmRequest,
   createAtmRequestSubcommandOptions,
   createAtmStatusSubcommand,
   deleteAtmRequest,
+  handleAtmCancelSubcommand,
   handleAtmStatusSubcommand,
+  respondAtmRequestCancelAutocomplete,
   respondAtmRequestStatusAutocomplete
 } from '@/services'
 import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
@@ -48,7 +51,8 @@ export const command: CommandData = {
       type: ApplicationCommandOptionType.Subcommand,
       options: createAtmRequestSubcommandOptions('deposit')
     },
-    createAtmStatusSubcommand('deposit')
+    createAtmStatusSubcommand('deposit'),
+    createAtmCancelSubcommand('deposit')
   ],
   dm_permission: false
 }
@@ -59,6 +63,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     if (subcommand === 'status') {
       return handleAtmStatusSubcommand(interaction, 'deposit')
+    }
+
+    if (subcommand === 'cancel') {
+      return handleAtmCancelSubcommand(interaction, 'deposit')
     }
 
     const user = await checkUserRegistration({ interaction })
@@ -197,7 +205,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       embeds: [
         createSuccessEmbed(
           'ATM - Deposit',
-          `You have successfully deposited **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to your account.\nPlease wait for the transaction to be processed.\n\nCheck status anytime with \`/deposit status\`.`,
+          `You have successfully deposited **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to your account.\nPlease wait for the transaction to be processed.\n\nCheck status with \`/deposit status\` or cancel a pending request with \`/deposit cancel\`.`,
           requestId
         )
       ],
@@ -211,7 +219,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 export const autocomplete: AutocompleteCommand = async ({ interaction }) => {
   if (!interaction.isAutocomplete()) return
   if (interaction.commandName !== 'deposit') return
-  if (interaction.options.getSubcommand() !== 'status') return
-
-  return respondAtmRequestStatusAutocomplete(interaction, 'deposit')
+  const subcommand = interaction.options.getSubcommand()
+  if (subcommand === 'status') {
+    return respondAtmRequestStatusAutocomplete(interaction, 'deposit')
+  }
+  if (subcommand === 'cancel') {
+    return respondAtmRequestCancelAutocomplete(interaction, 'deposit')
+  }
 }

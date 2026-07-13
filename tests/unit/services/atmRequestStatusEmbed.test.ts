@@ -63,4 +63,47 @@ describe('buildAtmRequestStatusEmbed', () => {
       'Invalid account details'
     )
   })
+
+  it('builds cancelled deposit embed with player-cancel copy', () => {
+    const handledAt = new Date('2026-06-16T10:00:00Z')
+    const embed = buildAtmRequestStatusEmbed({
+      ...baseRequest,
+      type: 'deposit',
+      status: 'cancelled',
+      handledAt,
+      meta: { source: 'player-cancel' }
+    })
+
+    expect(embed.data.color).toBe(Colors.Grey)
+    expect(embed.data.description).toBe('Cancelled by you.')
+    expect(embed.data.fields?.[0]?.value).toBe('Cancelled')
+    expect(embed.data.fields?.map((field) => field.name)).toContain('Processed')
+    expect(
+      embed.data.fields?.find((field) => field.name === 'Notes')
+    ).toBeUndefined()
+  })
+
+  it('builds cancelled embed without player description when cancelled by staff', () => {
+    const embed = buildAtmRequestStatusEmbed({
+      ...baseRequest,
+      type: 'withdraw',
+      status: 'cancelled',
+      handledBy: 'mod-1',
+      handledAt: new Date('2026-06-16T10:00:00Z')
+    })
+
+    expect(embed.data.description).toBeUndefined()
+    expect(embed.data.fields?.[0]?.value).toBe('Cancelled')
+  })
+
+  it('builds cancelled embed from meta source alone', () => {
+    const embed = buildAtmRequestStatusEmbed({
+      ...baseRequest,
+      type: 'withdraw',
+      status: 'cancelled',
+      meta: { source: 'player-cancel' }
+    })
+
+    expect(embed.data.description).toBe('Cancelled by you.')
+  })
 })
