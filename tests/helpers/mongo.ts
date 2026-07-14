@@ -16,6 +16,8 @@ import '@/models/Transaction'
 import Transaction from '@/models/Transaction'
 import '@/models/User'
 import User from '@/models/User'
+import '@/models/UserBan'
+import UserBan from '@/models/UserBan'
 import '@/models/VipRoom'
 import VipRoom from '@/models/VipRoom'
 
@@ -79,6 +81,7 @@ export {
   GuildConfiguration,
   Transaction,
   User,
+  UserBan,
   Prediction,
   VipRoom,
   Raffle

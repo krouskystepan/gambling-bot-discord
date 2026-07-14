@@ -167,6 +167,10 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     │          ├─ cancel – Cancel raffle and refund all tickets.
     │          ├─ check – Check how many tickets each user has bought in a raffle.
     └── (utils)
+        ├── ban.ts
+        │   └─ /ban – Ban a registered user from economy actions.
+        │      ├─ user – The user to ban.
+        │      ├─ reason – Optional reason for the ban.
         ├── casino-games.ts
         │   └─ /casino-games – Show available casino games and how to use them.
         ├── casino-info.ts
@@ -195,6 +199,10 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
         ├── role-info.ts
         │   └─ /role-info – Display information about a role.
         │      ├─ role – The role you want to get information about.
+        ├── unban.ts
+        │   └─ /unban – Unban a registered user and restore economy access.
+        │      ├─ user – The user to unban.
+        │      ├─ reason – Optional reason for the unban.
         └── who-is.ts
             └─ /who-is – Get information about a user.
                ├─ user – The user you want to get information about.

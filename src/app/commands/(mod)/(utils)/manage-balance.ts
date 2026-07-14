@@ -11,6 +11,7 @@ import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
   addUserBonus,
+  assertManagerOrAdmin,
   checkAtmChannels,
   checkTargetUserRegistration,
   createTransaction,
@@ -148,24 +149,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const configReply = await checkAtmChannels(interaction)
     if (!configReply) return
 
-    const member = await interaction.guild?.members.fetch(interaction.user.id)
-    const hasAdmin = member?.permissions.has('Administrator')
-    const managerRoleId = configReply.managerRoleId
-    const hasManager = managerRoleId && member?.roles.cache.has(managerRoleId)
-
-    if (!hasAdmin && !hasManager) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Permission Denied',
-            `You need to be an **Administrator** or have the ${
-              managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
-            } to use this command.`
-          )
-        ],
-        flags: MessageFlags.Ephemeral
-      })
-    }
+    const access = await assertManagerOrAdmin(interaction, configReply)
+    if (!access.ok) return
 
     const options = interaction.options
     const subcommand = options.getSubcommand()
