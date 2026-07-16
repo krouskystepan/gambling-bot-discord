@@ -1,3 +1,4 @@
+import { previewWithdrawBalance } from 'gambling-bot-shared/atm'
 import {
   formatMoney,
   formatMoneyExact,
@@ -246,9 +247,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      const withdrawable = targetUser.balance - targetUser.lockedBalance
+      const preview = previewWithdrawBalance(
+        targetUser.balance,
+        targetUser.lockedBalance,
+        parsedAmount
+      )
 
-      if (withdrawable < parsedAmount) {
+      if (!preview.ok) {
         return interaction.reply({
           embeds: [
             createErrorEmbed(

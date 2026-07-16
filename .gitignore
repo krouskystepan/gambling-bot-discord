@@ -3,6 +3,7 @@
 .DS_store
 .commandkit
 node_modules/
+.pnpm-store/
 temp/
 logs/
 dist/
