@@ -1,5 +1,6 @@
-import { Colors } from 'discord.js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { Colors } from 'discord.js'
 
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 

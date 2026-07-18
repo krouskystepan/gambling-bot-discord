@@ -1,18 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  getLatestUserAtmRequest,
-  getUserAtmRequest,
-  searchUserAtmRequestsForAutocomplete
-} from '@/services/db/atmRequest.db'
+import { checkUserRegistration, getGuildConfigByGuildId } from '@/services'
 import {
   handleAtmStatusSubcommand,
   respondAtmRequestStatusAutocomplete
 } from '@/services/atm/atmRequestStatus.service'
 import {
-  checkUserRegistration,
-  getGuildConfigByGuildId
-} from '@/services'
+  getLatestUserAtmRequest,
+  getUserAtmRequest,
+  searchUserAtmRequestsForAutocomplete
+} from '@/services/db/atmRequest.db'
 import { logger } from '@/utils/logger'
 
 vi.mock('@/services', () => ({
@@ -84,9 +81,7 @@ const createAutocompleteInteraction = ({
   guildId: 'guild-1',
   options: {
     getFocused: (all?: boolean) =>
-      all
-        ? { name: focusedName, value: focusedValue }
-        : focusedValue,
+      all ? { name: focusedName, value: focusedValue } : focusedValue,
     getSubcommand: () => subcommand
   },
   respond: vi.fn().mockResolvedValue(undefined)

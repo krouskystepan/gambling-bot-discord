@@ -123,7 +123,11 @@ describe('claimDailyBonusAtomic', () => {
   })
 
   it('returns ALREADY_CLAIMED when conditional update does not match', async () => {
-    await createTestUser({ bonusBalance: 0, dailyStreak: 2, lastDailyClaim: null })
+    await createTestUser({
+      bonusBalance: 0,
+      dailyStreak: 2,
+      lastDailyClaim: null
+    })
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
 
     vi.spyOn(User, 'findOne').mockReturnValue({

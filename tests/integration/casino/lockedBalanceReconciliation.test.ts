@@ -314,7 +314,10 @@ describe('lockedBalanceReconciliation.service', () => {
       game: 'dice'
     })
 
-    await backdateBetTx('unsettled-null-settled', RECONCILIATION_GRACE_MS + 60_000)
+    await backdateBetTx(
+      'unsettled-null-settled',
+      RECONCILIATION_GRACE_MS + 60_000
+    )
 
     const findSpy = vi.spyOn(Transaction, 'find')
     findSpy.mockImplementation((query: unknown) => {
@@ -326,10 +329,12 @@ describe('lockedBalanceReconciliation.service', () => {
       ) {
         return {
           select: vi.fn().mockReturnValue({
-            lean: vi.fn().mockResolvedValue([
-              { referenceId: null },
-              { referenceId: 'unsettled-null-settled' }
-            ])
+            lean: vi
+              .fn()
+              .mockResolvedValue([
+                { referenceId: null },
+                { referenceId: 'unsettled-null-settled' }
+              ])
           })
         } as never
       }
@@ -490,7 +495,10 @@ describe('lockedBalanceReconciliation.service', () => {
       { $set: { lockedBalance: 70 } }
     )
 
-    await backdateBetTx('orphan-with-remainder', RECONCILIATION_GRACE_MS + 60_000)
+    await backdateBetTx(
+      'orphan-with-remainder',
+      RECONCILIATION_GRACE_MS + 60_000
+    )
 
     const result = await reconcileUserLockedBalance({
       userId: 'user-1',
@@ -546,7 +554,11 @@ describe('lockedBalanceReconciliation.service', () => {
 
   it('ignores other users prediction bets when justifying lock', async () => {
     await createTestUser({ balance: 500, bonusBalance: 0 })
-    await createTestUser({ userId: 'other-user', balance: 500, bonusBalance: 0 })
+    await createTestUser({
+      userId: 'other-user',
+      balance: 500,
+      bonusBalance: 0
+    })
     await createPrediction({
       predictionId: 'pred-other-user',
       guildId: 'guild-1',
@@ -636,10 +648,12 @@ describe('lockedBalanceReconciliation.service', () => {
       const q = query as Record<string, unknown>
       if (q['meta.game'] === 'rps') {
         return {
-          lean: vi.fn().mockResolvedValue([
-            { referenceId: null },
-            { referenceId: 'rps-valid' }
-          ])
+          lean: vi
+            .fn()
+            .mockResolvedValue([
+              { referenceId: null },
+              { referenceId: 'rps-valid' }
+            ])
         } as never
       }
 

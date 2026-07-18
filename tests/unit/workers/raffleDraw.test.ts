@@ -34,12 +34,10 @@ vi.mock('@/utils/logger', () => ({
 
 const { getGuildConfigByGuildId, payRaffleWinner, postRaffleDrawLog } =
   await import('@/services')
-const { getRafflesReadyToDraw, completeRaffleDraw } = await import(
-  '@/services/db/raffle.db'
-)
-const { postWorkerLog } = await import(
-  '@/services/worker/workerDiscordLog.service'
-)
+const { getRafflesReadyToDraw, completeRaffleDraw } =
+  await import('@/services/db/raffle.db')
+const { postWorkerLog } =
+  await import('@/services/worker/workerDiscordLog.service')
 const { logger } = await import('@/utils/logger')
 
 const guildConfig = {

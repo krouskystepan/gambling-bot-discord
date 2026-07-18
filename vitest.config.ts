@@ -12,7 +12,7 @@ const devExclude = [
 
 const coverageExclude = [
   'src/**/index.ts',
-  'src/services/db/base.db.ts',
+  'src/utils/db/connect.ts',
 
   'src/utils/logger.ts',
   ...devExclude,

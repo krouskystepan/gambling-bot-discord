@@ -1,5 +1,6 @@
-import { ChannelType } from 'discord.js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { ChannelType } from 'discord.js'
 
 import { blackjackIdleNudgeJob } from '@/workers/jobs/blackjackIdleNudge.job'
 

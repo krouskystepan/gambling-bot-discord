@@ -1,5 +1,6 @@
-import { Client } from 'commandkit'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { Client } from 'commandkit'
 
 import {
   formatGuildCountBreakdown,

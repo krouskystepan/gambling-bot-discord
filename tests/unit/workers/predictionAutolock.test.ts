@@ -1,5 +1,6 @@
-import { DiscordAPIError } from 'discord.js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { DiscordAPIError } from 'discord.js'
 
 import { predictionAutolockJob } from '@/workers/jobs/predictionAutolock.job'
 
@@ -20,12 +21,10 @@ vi.mock('@/utils/logger', () => ({
   logger: { worker: vi.fn(), error: vi.fn() }
 }))
 
-const { getPredictionToLock, updatePredictionStatus } = await import(
-  '@/services'
-)
-const { postWorkerLog } = await import(
-  '@/services/worker/workerDiscordLog.service'
-)
+const { getPredictionToLock, updatePredictionStatus } =
+  await import('@/services')
+const { postWorkerLog } =
+  await import('@/services/worker/workerDiscordLog.service')
 const { logger } = await import('@/utils/logger')
 
 const basePrediction = {
@@ -46,16 +45,18 @@ describe('predictionAutolockJob', () => {
 
     const client = {
       channels: {
-        fetch: vi.fn().mockRejectedValue(
-          new DiscordAPIError(
-            { message: 'Unknown Channel', code: 10003 },
-            404,
-            10003,
-            'GET',
-            'https://discord.com/api/v10/channels/channel-missing',
-            {}
+        fetch: vi
+          .fn()
+          .mockRejectedValue(
+            new DiscordAPIError(
+              { message: 'Unknown Channel', code: 10003 },
+              404,
+              10003,
+              'GET',
+              'https://discord.com/api/v10/channels/channel-missing',
+              {}
+            )
           )
-        )
       }
     }
 

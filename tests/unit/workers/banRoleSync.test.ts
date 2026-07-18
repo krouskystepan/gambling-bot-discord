@@ -22,9 +22,8 @@ vi.mock('@/utils/logger', () => ({
 
 const GuildConfiguration = (await import('@/models/GuildConfiguration')).default
 const { syncGuildBannedRoles } = await import('@/services/moderation')
-const { postWorkerLog } = await import(
-  '@/services/worker/workerDiscordLog.service'
-)
+const { postWorkerLog } =
+  await import('@/services/worker/workerDiscordLog.service')
 const { logger } = await import('@/utils/logger')
 
 describe('banRoleSyncJob', () => {

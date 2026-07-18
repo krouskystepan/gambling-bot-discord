@@ -1,5 +1,6 @@
-import { Colors } from 'discord.js'
 import { describe, expect, it } from 'vitest'
+
+import { Colors } from 'discord.js'
 
 import { buildAtmRequestStatusEmbed } from '@/services/atm/atmRequestStatusEmbed'
 
@@ -44,9 +45,9 @@ describe('buildAtmRequestStatusEmbed', () => {
     expect(embed.data.title).toBe('ATM - Deposit Status')
     expect(embed.data.color).toBe(Colors.Green)
     expect(embed.data.fields?.map((field) => field.name)).toContain('Processed')
-    expect(embed.data.fields?.find((field) => field.name === 'Processed')?.value).toBe(
-      `<t:${Math.floor(handledAt.getTime() / 1000)}:F>`
-    )
+    expect(
+      embed.data.fields?.find((field) => field.name === 'Processed')?.value
+    ).toBe(`<t:${Math.floor(handledAt.getTime() / 1000)}:F>`)
   })
 
   it('includes rejection notes when present', () => {
@@ -59,9 +60,9 @@ describe('buildAtmRequestStatusEmbed', () => {
     })
 
     expect(embed.data.color).toBe(Colors.Red)
-    expect(embed.data.fields?.find((field) => field.name === 'Notes')?.value).toBe(
-      'Invalid account details'
-    )
+    expect(
+      embed.data.fields?.find((field) => field.name === 'Notes')?.value
+    ).toBe('Invalid account details')
   })
 
   it('builds cancelled deposit embed with player-cancel copy', () => {

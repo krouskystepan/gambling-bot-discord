@@ -1,5 +1,6 @@
-import { DiscordAPIError } from 'discord.js'
 import { describe, expect, it, vi } from 'vitest'
+
+import { DiscordAPIError } from 'discord.js'
 
 import type { Client } from 'commandkit'
 
@@ -50,16 +51,18 @@ describe('guildOrphanCleanup detection', () => {
     const client = {
       guilds: {
         cache: { has: vi.fn().mockReturnValue(false) },
-        fetch: vi.fn().mockRejectedValue(
-          new DiscordAPIError(
-            { message: 'Unknown Guild', code: 10004 },
-            404,
-            10004,
-            'GET',
-            'https://discord.com/api/v10/guilds/123',
-            {}
+        fetch: vi
+          .fn()
+          .mockRejectedValue(
+            new DiscordAPIError(
+              { message: 'Unknown Guild', code: 10004 },
+              404,
+              10004,
+              'GET',
+              'https://discord.com/api/v10/guilds/123',
+              {}
+            )
           )
-        )
       }
     } as unknown as Client<true>
 
