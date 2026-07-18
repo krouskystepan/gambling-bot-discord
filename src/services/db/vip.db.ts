@@ -7,7 +7,7 @@ import Transaction from '@/models/Transaction'
 import User from '@/models/User'
 
 import VipRoom from '../../models/VipRoom'
-import { TCreateVip, TGetVip } from '../../types/types'
+import { TCreateVip, TGetVip } from './vip.db.types'
 
 export const getAllActiveVipsByGuildId = async ({
   guildId

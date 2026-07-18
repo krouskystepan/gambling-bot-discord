@@ -3,7 +3,7 @@ import {
   TCreateMultipleTransactions,
   TCreateTransaction,
   TDeleteAllTransactions
-} from '../../types/types'
+} from './transaction.db.types'
 
 export const createTransaction = async ({
   userId,

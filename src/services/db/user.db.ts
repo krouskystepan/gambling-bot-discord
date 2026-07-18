@@ -3,7 +3,8 @@ import { TUser } from 'gambling-bot-shared/user'
 import type { UpdateQuery } from 'mongoose'
 
 import User from '@/models/User'
-import { TCreateUser, TGetUser } from '@/types/types'
+
+import { TCreateUser, TGetUser } from './user.db.types'
 
 export const getUser = async ({
   userId,
