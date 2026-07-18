@@ -6,12 +6,12 @@ import { ChatInputCommand } from 'commandkit'
 
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
-import { getGuildConfigByGuildId } from '../db/guildConfiguration.db'
 import { getActiveVipChannels } from '../vip/getActiveVipChannels.service'
 import {
   assertGlobalFeature,
   assertNotMaintenance
 } from './checkGlobalFeature.service'
+import { getGuildConfigByGuildId } from './guildConfiguration.db'
 
 export const checkAtmChannels = async (
   interaction: Parameters<ChatInputCommand>[0]['interaction']

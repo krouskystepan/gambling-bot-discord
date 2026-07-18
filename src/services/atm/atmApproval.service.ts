@@ -6,11 +6,11 @@ import { Client, TextChannel } from 'discord.js'
 import {
   completeAtmRequest,
   createTransaction,
-  getGuildConfigByGuildId,
   getPendingAtmRequest,
   previewWithdraw,
   updateUserBalanceAtomic
 } from '@/services/db'
+import { getGuildConfigByGuildId } from '@/services/guild/guildConfiguration.db'
 import {
   createErrorEmbed,
   createSuccessEmbed

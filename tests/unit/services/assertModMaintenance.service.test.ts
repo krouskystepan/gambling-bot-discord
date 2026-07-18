@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PermissionFlagsBits } from 'discord.js'
 
-import { getGuildConfigByGuildId } from '@/services/db/guildConfiguration.db'
-import { assertModMaintenanceAllowed } from '@/services/guildConfiguration/assertModMaintenance.service'
+import { assertModMaintenanceAllowed } from '@/services/guild/assertModMaintenance.service'
+import { getGuildConfigByGuildId } from '@/services/guild/guildConfiguration.db'
 
 import { createMockInteraction } from '../../helpers/discord-mock'
 
-vi.mock('@/services/db/guildConfiguration.db', () => ({
+vi.mock('@/services/guild/guildConfiguration.db', () => ({
   getGuildConfigByGuildId: vi.fn()
 }))
 

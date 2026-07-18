@@ -1,18 +1,27 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  approveAtmRequest,
+  rejectAtmRequest
+} from '@/services/atm/atmApproval.service'
+import {
   attachAtmRequestMessage,
   createAtmRequest,
   getPendingAtmRequest
 } from '@/services/db/atmRequest.db'
-import { createGuildConfiguration } from '@/services/db/guildConfiguration.db'
 import * as atmRequestDb from '@/services/db/atmRequest.db'
 import * as userDb from '@/services/db/user.db'
-import {
-  approveAtmRequest,
-  rejectAtmRequest
-} from '@/services/atm/atmApproval.service'
+import { createGuildConfiguration } from '@/services/guild/guildConfiguration.db'
 import { logger } from '@/utils/logger'
+
+import { createMockDiscordClient } from '../../helpers/discord-client-mock'
+import {
+  GuildConfiguration,
+  Transaction,
+  User,
+  createTestUser,
+  setupMongoTests
+} from '../../helpers/mongo'
 
 vi.mock('@/utils/discord/createEmbed', () => ({
   createErrorEmbed: (title: string, description: string) => ({
@@ -24,15 +33,6 @@ vi.mock('@/utils/discord/createEmbed', () => ({
     description
   })
 }))
-
-import { createMockDiscordClient } from '../../helpers/discord-client-mock'
-import {
-  GuildConfiguration,
-  Transaction,
-  User,
-  createTestUser,
-  setupMongoTests
-} from '../../helpers/mongo'
 
 setupMongoTests()
 
@@ -106,7 +106,9 @@ describe('rejectAtmRequest', () => {
     await seedPendingDeposit('reject-race')
     const pending = await getPendingAtmRequest('reject-race')
 
-    vi.spyOn(atmRequestDb, 'getPendingAtmRequest').mockResolvedValueOnce(pending)
+    vi.spyOn(atmRequestDb, 'getPendingAtmRequest').mockResolvedValueOnce(
+      pending
+    )
     vi.spyOn(atmRequestDb, 'completeAtmRequest').mockResolvedValueOnce(null)
 
     const result = await rejectAtmRequest({
@@ -174,9 +176,9 @@ describe('rejectAtmRequest', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(actionChannelSend.mock.calls[0]?.[0]?.embeds?.[0]?.description).toContain(
-      'Withdrawal'
-    )
+    expect(
+      actionChannelSend.mock.calls[0]?.[0]?.embeds?.[0]?.description
+    ).toContain('Withdrawal')
   })
 
   it('skips log edit when message ids are missing', async () => {
@@ -323,9 +325,9 @@ describe('approveAtmRequest', () => {
       content: '✅ Approved by <@mod-1>',
       components: []
     })
-    expect(actionChannelSend.mock.calls[0]?.[0]?.embeds?.[0]?.description).toContain(
-      'Deposit'
-    )
+    expect(
+      actionChannelSend.mock.calls[0]?.[0]?.embeds?.[0]?.description
+    ).toContain('Deposit')
   })
 
   it('returns RACE_CONDITION when deposit completion fails', async () => {
@@ -334,7 +336,9 @@ describe('approveAtmRequest', () => {
     await seedPendingDeposit('approve-deposit-race')
     const pending = await getPendingAtmRequest('approve-deposit-race')
 
-    vi.spyOn(atmRequestDb, 'getPendingAtmRequest').mockResolvedValueOnce(pending)
+    vi.spyOn(atmRequestDb, 'getPendingAtmRequest').mockResolvedValueOnce(
+      pending
+    )
     vi.spyOn(atmRequestDb, 'completeAtmRequest').mockResolvedValueOnce(null)
 
     const result = await approveAtmRequest({
@@ -403,9 +407,9 @@ describe('approveAtmRequest', () => {
 
     expect(result.ok).toBe(true)
     expect(logMessageEdit).toHaveBeenCalled()
-    expect(actionChannelSend.mock.calls[0]?.[0]?.embeds?.[0]?.description).toContain(
-      'Withdrawal'
-    )
+    expect(
+      actionChannelSend.mock.calls[0]?.[0]?.embeds?.[0]?.description
+    ).toContain('Withdrawal')
   })
 
   it('rejects withdrawal when preview shows insufficient withdrawable funds', async () => {
@@ -448,7 +452,9 @@ describe('approveAtmRequest', () => {
     await seedPendingWithdraw('approve-withdraw-preview-race', { amount: 50 })
     const pending = await getPendingAtmRequest('approve-withdraw-preview-race')
 
-    vi.spyOn(atmRequestDb, 'getPendingAtmRequest').mockResolvedValueOnce(pending)
+    vi.spyOn(atmRequestDb, 'getPendingAtmRequest').mockResolvedValueOnce(
+      pending
+    )
     vi.spyOn(atmRequestDb, 'completeAtmRequest').mockResolvedValueOnce(null)
 
     const result = await approveAtmRequest({

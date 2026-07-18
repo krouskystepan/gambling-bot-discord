@@ -2,7 +2,7 @@ import { DiscordAPIError } from 'discord.js'
 
 import { Client } from 'commandkit'
 
-import { getAllGuildConfigIds } from '@/services/db/guildConfiguration.db'
+import { getAllGuildConfigIds } from '@/services/guild/guildConfiguration.db'
 import { runGuildOrphanCleanup } from '@/services/guild/guildOrphanCleanup.service'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { sleep } from '@/utils/common/utils'

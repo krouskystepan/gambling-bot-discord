@@ -1,7 +1,7 @@
 import { normalizeCasinoSettings } from 'gambling-bot-shared/casino'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createGuildConfiguration } from '@/services/db/guildConfiguration.db'
+import { createGuildConfiguration } from '@/services/guild/guildConfiguration.db'
 import { guildSettingsSyncJob } from '@/workers/jobs/guildSettingsSync.job'
 
 import { GuildConfiguration, setupMongoTests } from '../../helpers/mongo'
@@ -10,9 +10,8 @@ vi.mock('@/services/worker/workerDiscordLog.service', () => ({
   postWorkerLog: vi.fn()
 }))
 
-const { postWorkerLog } = await import(
-  '@/services/worker/workerDiscordLog.service'
-)
+const { postWorkerLog } =
+  await import('@/services/worker/workerDiscordLog.service')
 
 setupMongoTests()
 
@@ -45,9 +44,9 @@ describe('guildSettingsSyncJob integration worker logs', () => {
       guildId: 'guild-worker-log'
     }).lean()
     expect(updated?.casinoSettings).toEqual(
-      normalizeCasinoSettings(
-        { dice: { minBet: 5 } } as Parameters<typeof normalizeCasinoSettings>[0]
-      )
+      normalizeCasinoSettings({ dice: { minBet: 5 } } as Parameters<
+        typeof normalizeCasinoSettings
+      >[0])
     )
 
     expect(postWorkerLog).toHaveBeenCalledWith(client, {

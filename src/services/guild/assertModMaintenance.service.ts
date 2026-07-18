@@ -1,10 +1,10 @@
 import { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
-import { getGuildConfigByGuildId } from '../db/guildConfiguration.db'
 import {
   RepliableInteractionLike,
   assertNotMaintenance
 } from './checkGlobalFeature.service'
+import { getGuildConfigByGuildId } from './guildConfiguration.db'
 
 /** Blocks mod/setup commands during maintenance unless the user is a server admin. */
 export const assertModMaintenanceAllowed = async (

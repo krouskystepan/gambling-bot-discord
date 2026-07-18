@@ -6,7 +6,7 @@ import {
 } from 'gambling-bot-shared/guild'
 import { describe, expect, it } from 'vitest'
 
-import { createGuildConfiguration } from '@/services/db/guildConfiguration.db'
+import { createGuildConfiguration } from '@/services/guild/guildConfiguration.db'
 import { mergeGuildSettingsSections } from '@/workers/jobs/guildSettingsSync.job'
 
 import { GuildConfiguration, setupMongoTests } from '../../helpers/mongo'
@@ -94,7 +94,9 @@ describe('mergeGuildSettingsSections', () => {
       guildId: 'guild-global'
     }).lean()
     expect(reloaded?.globalSettings?.disableDeposits).toBe(true)
-    expect(reloaded?.globalSettings?.timezone).toBe(defaultGlobalSettings.timezone)
+    expect(reloaded?.globalSettings?.timezone).toBe(
+      defaultGlobalSettings.timezone
+    )
   })
 
   it('clamps bonus drift above caps', async () => {
@@ -158,6 +160,8 @@ describe('mergeGuildSettingsSections', () => {
     }).lean()
     expect(reloaded?.casinoSettings).toEqual(normalizeCasinoSettings({}))
     expect(reloaded?.globalSettings?.disableDeposits).toBe(true)
-    expect(reloaded?.globalSettings?.timezone).toBe(defaultGlobalSettings.timezone)
+    expect(reloaded?.globalSettings?.timezone).toBe(
+      defaultGlobalSettings.timezone
+    )
   })
 })

@@ -5,11 +5,12 @@ import {
 } from 'gambling-bot-shared/guild'
 
 import GuildConfiguration from '@/models/GuildConfiguration'
-import { TGetGuildcongifuration } from '@/types/types'
+
+import { TGetGuildConfiguration } from './guildConfiguration.db.types'
 
 export const getGuildConfigByGuildId = async ({
   guildId
-}: TGetGuildcongifuration) => {
+}: TGetGuildConfiguration) => {
   const doc = await GuildConfiguration.findOne({ guildId })
   if (!doc) return null
 

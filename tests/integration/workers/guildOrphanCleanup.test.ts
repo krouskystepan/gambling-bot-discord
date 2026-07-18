@@ -2,9 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { rejectAtmRequest } from '@/services/atm/atmApproval.service'
 import { refundLockedBet, reserveCasinoBet } from '@/services/casino'
-import { deleteVipByOwnerId } from '@/services/db/vip.db'
-import { cancelRaffle } from '@/services/raffles/cancelRaffle.service'
-import { cancelPrediction } from '@/services/predictions/payPrediction.service'
 import {
   attachAtmRequestMessage,
   createAtmRequest
@@ -14,18 +11,21 @@ import {
   upsertBlackjackGame
 } from '@/services/db/blackjackGame.db'
 import {
-  createGuildConfiguration,
-  getAllGuildConfigIds
-} from '@/services/db/guildConfiguration.db'
-import {
   createPrediction,
   updatePredictionStatus
 } from '@/services/db/prediction.db'
 import { upsertRaffle } from '@/services/db/raffle.db'
 import { createTransaction } from '@/services/db/transaction.db'
+import { deleteVipByOwnerId } from '@/services/db/vip.db'
 import { createVip } from '@/services/db/vip.db'
+import {
+  createGuildConfiguration,
+  getAllGuildConfigIds
+} from '@/services/guild/guildConfiguration.db'
 import { runGuildOrphanCleanup } from '@/services/guild/guildOrphanCleanup.service'
+import { cancelPrediction } from '@/services/predictions/payPrediction.service'
 import { placePredictionBet } from '@/services/predictions/placePredictionBet.service'
+import { cancelRaffle } from '@/services/raffles/cancelRaffle.service'
 
 import { card } from '../../helpers/cards'
 import {
@@ -58,7 +58,9 @@ vi.mock('@/services/atm/atmApproval.service', async (importOriginal) => {
 
 vi.mock('@/services/raffles/cancelRaffle.service', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import('@/services/raffles/cancelRaffle.service')>()
+    await importOriginal<
+      typeof import('@/services/raffles/cancelRaffle.service')
+    >()
   return {
     ...actual,
     cancelRaffle: vi.fn(actual.cancelRaffle)
@@ -74,16 +76,19 @@ vi.mock('@/services/db/prediction.db', async (importOriginal) => {
   }
 })
 
-vi.mock('@/services/predictions/payPrediction.service', async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import('@/services/predictions/payPrediction.service')
-    >()
-  return {
-    ...actual,
-    cancelPrediction: vi.fn(actual.cancelPrediction)
+vi.mock(
+  '@/services/predictions/payPrediction.service',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('@/services/predictions/payPrediction.service')
+      >()
+    return {
+      ...actual,
+      cancelPrediction: vi.fn(actual.cancelPrediction)
+    }
   }
-})
+)
 
 vi.mock('@/services/casino', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/casino')>()
@@ -570,7 +575,9 @@ describe('runGuildOrphanCleanup', () => {
     const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
 
     expect(summary.vipRooms).toBe(0)
-    expect(summary.errors).toEqual(['vip user-vip-fail: Error: VIP delete failed'])
+    expect(summary.errors).toEqual([
+      'vip user-vip-fail: Error: VIP delete failed'
+    ])
     expect(await VipRoom.countDocuments({ guildId: GUILD_ID })).toBe(1)
   })
 
