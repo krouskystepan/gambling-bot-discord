@@ -152,6 +152,10 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
         │      ├─ games – Show information about casino games
         │      ├─ config – Show server casino configuration
         │      ├─ admin – Show administrator-only information
+        ├── history.ts
+        │   └─ /history – Show recent ledger transactions for a player.
+        │      ├─ user – The player whose history to show.
+        │      ├─ type – Optional transaction type filter.
         ├── manage-balance.ts
         │   └─ /manage-balance – Manage user balances.
         │      ├─ deposit – Add money to a user.
