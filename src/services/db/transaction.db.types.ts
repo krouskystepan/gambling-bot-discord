@@ -6,3 +6,8 @@ export type TCreateTransaction = Omit<TTransaction, 'createdAt'> & {
 }
 export type TCreateMultipleTransactions = TTransaction[]
 export type TDeleteAllTransactions = Pick<TUser, 'userId' | 'guildId'>
+
+export type TListUserTransactions = Pick<TUser, 'userId' | 'guildId'> & {
+  types?: TTransaction['type'][]
+  limit?: number
+}
