@@ -1,22 +1,13 @@
-import {
-  ApplicationCommandOptionType,
-  ChannelType,
-  MessageFlags
-} from 'discord.js'
+import { ApplicationCommandOptionType, ChannelType } from 'discord.js'
 
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  assertModMaintenanceAllowed,
-  createGuildConfiguration,
-  getGuildConfigByGuildId
+  handleChannelSetup,
+  resolveGuildConfigurationForSetup
 } from '@/services'
 import { DEV_GUILDS } from '@/utils/devGuilds'
-import {
-  createErrorEmbed,
-  createSuccessEmbed
-} from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'setup-raffle',
@@ -88,133 +79,69 @@ export const metadata: CommandMetadata = {
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
-    let guildConfiguration = await getGuildConfigByGuildId({
-      guildId: interaction.guildId!
-    })
+    const guildConfiguration =
+      await resolveGuildConfigurationForSetup(interaction)
+    if (!guildConfiguration) return
 
-    if (!guildConfiguration) {
-      guildConfiguration = await createGuildConfiguration({
-        guildId: interaction.guildId!
-      })
-    } else if (
-      (await assertModMaintenanceAllowed(interaction, interaction.guildId!)) ===
-      false
-    ) {
-      return
-    }
+    const subcommand = interaction.options.getSubcommand()
 
-    const options = interaction.options
-    const subcommand = options.getSubcommand()
-
-    if (subcommand === 'add-actions') {
-      const channel = options.getChannel('channel', true)
-
-      if (guildConfiguration.raffleChannelIds.actions === channel.id) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Raffle Channel Setup - Add Actions',
-              `Channel ${channel} is already set for raffle actions.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      guildConfiguration.raffleChannelIds.actions = channel.id
-      await guildConfiguration.save()
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Raffle Channel Setup - Add Actions',
-            `Channel ${channel} has been successfully set for raffle actions.`
-          )
-        ]
-      })
-    }
-
-    if (subcommand === 'remove-actions') {
-      const channelId = options.getString('channel-id', true)
-
-      if (guildConfiguration.raffleChannelIds.actions !== channelId) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Raffle Channel Setup - Remove Actions',
-              `Channel with ID ${channelId} is not set for raffle actions.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      guildConfiguration.raffleChannelIds.actions = ''
-      await guildConfiguration.save()
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Raffle Channel Setup - Remove Actions',
+    if (subcommand === 'add-actions' || subcommand === 'remove-actions') {
+      return handleChannelSetup({
+        interaction,
+        guildConfiguration,
+        op: subcommand === 'add-actions' ? 'add' : 'remove',
+        mode: {
+          kind: 'scalar',
+          get: (config) => config.raffleChannelIds.actions,
+          set: (config, channelId) => {
+            config.raffleChannelIds.actions = channelId
+          },
+          clear: (config) => {
+            config.raffleChannelIds.actions = ''
+          }
+        },
+        messages: {
+          titleAdd: 'Raffle Channel Setup - Add Actions',
+          titleRemove: 'Raffle Channel Setup - Remove Actions',
+          alreadySet: (channel) =>
+            `Channel ${channel} is already set for raffle actions.`,
+          addSuccess: (channel) =>
+            `Channel ${channel} has been successfully set for raffle actions.`,
+          notSet: (channelId) =>
+            `Channel with ID ${channelId} is not set for raffle actions.`,
+          removeSuccess: (channelId) =>
             `Channel with ID ${channelId} has been removed from raffle actions.`
-          )
-        ]
+        }
       })
     }
 
-    if (subcommand === 'add-logs') {
-      const channel = options.getChannel('channel', true)
-
-      if (guildConfiguration.raffleChannelIds.logs === channel.id) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Raffle Channel Setup - Add Logs',
-              `Channel ${channel} is already set for raffle logs.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      guildConfiguration.raffleChannelIds.logs = channel.id
-      await guildConfiguration.save()
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Raffle Channel Setup - Add Logs',
-            `Channel ${channel} has been successfully set for raffle logs.`
-          )
-        ]
-      })
-    }
-
-    if (subcommand === 'remove-logs') {
-      const channelId = options.getString('channel-id', true)
-
-      if (guildConfiguration.raffleChannelIds.logs !== channelId) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Raffle Channel Setup - Remove Logs',
-              `Channel with ID ${channelId} is not set for raffle logs.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      guildConfiguration.raffleChannelIds.logs = ''
-      await guildConfiguration.save()
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Raffle Channel Setup - Remove Logs',
+    if (subcommand === 'add-logs' || subcommand === 'remove-logs') {
+      return handleChannelSetup({
+        interaction,
+        guildConfiguration,
+        op: subcommand === 'add-logs' ? 'add' : 'remove',
+        mode: {
+          kind: 'scalar',
+          get: (config) => config.raffleChannelIds.logs,
+          set: (config, channelId) => {
+            config.raffleChannelIds.logs = channelId
+          },
+          clear: (config) => {
+            config.raffleChannelIds.logs = ''
+          }
+        },
+        messages: {
+          titleAdd: 'Raffle Channel Setup - Add Logs',
+          titleRemove: 'Raffle Channel Setup - Remove Logs',
+          alreadySet: (channel) =>
+            `Channel ${channel} is already set for raffle logs.`,
+          addSuccess: (channel) =>
+            `Channel ${channel} has been successfully set for raffle logs.`,
+          notSet: (channelId) =>
+            `Channel with ID ${channelId} is not set for raffle logs.`,
+          removeSuccess: (channelId) =>
             `Channel with ID ${channelId} has been removed from raffle logs.`
-          )
-        ]
+        }
       })
     }
   } catch (error) {
