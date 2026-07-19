@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  getLatestUserPendingAtmRequest,
-  getUserAtmRequest,
-  searchUserPendingAtmRequestsForAutocomplete
-} from '@/services/db/atmRequest.db'
+import { checkUserRegistration, getGuildConfigByGuildId } from '@/services'
 import {
   handleAtmCancelSubcommand,
   respondAtmRequestCancelAutocomplete
 } from '@/services/atm/atmRequestCancel.service'
 import { cancelUserAtmRequest } from '@/services/atm/cancelAtmRequest.service'
-import { checkUserRegistration, getGuildConfigByGuildId } from '@/services'
+import {
+  getLatestUserPendingAtmRequest,
+  getUserAtmRequest,
+  searchUserPendingAtmRequestsForAutocomplete
+} from '@/services/db/atmRequest.db'
 
 vi.mock('@/services', () => ({
   checkUserRegistration: vi.fn(),
@@ -193,9 +193,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [
-          expect.objectContaining({ title: 'No Pending Withdrawals' })
-        ]
+        embeds: [expect.objectContaining({ title: 'No Pending Withdrawals' })]
       })
     )
   })
@@ -207,9 +205,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [
-          expect.objectContaining({ title: 'No Pending Withdrawals' })
-        ]
+        embeds: [expect.objectContaining({ title: 'No Pending Withdrawals' })]
       })
     )
   })
@@ -276,9 +272,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [
-          expect.objectContaining({ title: 'ATM - Deposit Cancelled' })
-        ]
+        embeds: [expect.objectContaining({ title: 'ATM - Deposit Cancelled' })]
       })
     )
   })
@@ -325,14 +319,14 @@ describe('respondAtmRequestCancelAutocomplete', () => {
 
     await respondAtmRequestCancelAutocomplete(interaction as never, 'withdraw')
 
-    expect(mockSearchUserPendingAtmRequestsForAutocomplete).toHaveBeenCalledWith(
-      {
-        guildId: 'guild-1',
-        userId: 'user-1',
-        type: 'withdraw',
-        query: 'pay'
-      }
-    )
+    expect(
+      mockSearchUserPendingAtmRequestsForAutocomplete
+    ).toHaveBeenCalledWith({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      type: 'withdraw',
+      query: 'pay'
+    })
     expect(interaction.respond).toHaveBeenCalledWith([
       expect.objectContaining({ value: 'req-1' })
     ])

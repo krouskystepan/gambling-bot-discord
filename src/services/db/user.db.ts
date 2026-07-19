@@ -1,8 +1,10 @@
+import { previewWithdrawBalance } from 'gambling-bot-shared/atm'
 import { TUser } from 'gambling-bot-shared/user'
 import type { UpdateQuery } from 'mongoose'
 
 import User from '@/models/User'
-import { TCreateUser, TGetUser } from '@/types/types'
+
+import { TCreateUser, TGetUser } from './user.db.types'
 
 export const getUser = async ({
   userId,
@@ -132,22 +134,26 @@ export const previewWithdraw = async ({
   const user = await getUser({ userId, guildId })
   if (!user) return { ok: false, reason: 'NO_USER' }
 
-  const withdrawable = user.balance - user.lockedBalance
+  const result = previewWithdrawBalance(
+    user.balance,
+    user.lockedBalance,
+    amount
+  )
 
-  if (user.balance < amount) {
-    return {
-      ok: false,
-      reason: 'INSUFFICIENT_BALANCE',
-      balance: user.balance
+  if (!result.ok) {
+    if (result.reason === 'INSUFFICIENT_BALANCE') {
+      return {
+        ok: false,
+        reason: 'INSUFFICIENT_BALANCE',
+        balance: result.balance
+      }
     }
-  }
 
-  if (withdrawable < amount) {
     return {
       ok: false,
       reason: 'INSUFFICIENT_WITHDRAWABLE',
-      withdrawable,
-      locked: user.lockedBalance
+      withdrawable: result.withdrawable,
+      locked: result.locked
     }
   }
 

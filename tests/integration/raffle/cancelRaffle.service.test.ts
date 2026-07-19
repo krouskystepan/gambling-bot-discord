@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { cancelRaffle } from '@/services/raffles/cancelRaffle.service'
 import { upsertRaffle } from '@/services/db/raffle.db'
+import { cancelRaffle } from '@/services/raffles/cancelRaffle.service'
 
 import {
   Raffle,
@@ -70,7 +70,9 @@ describe('cancelRaffle.service', () => {
     expect(user1?.balance).toBe(120)
     expect(user2?.balance).toBe(60)
 
-    const refunds = await Transaction.find({ type: 'refund' }).sort({ amount: 1 })
+    const refunds = await Transaction.find({ type: 'refund' }).sort({
+      amount: 1
+    })
     expect(refunds).toHaveLength(2)
     expect(refunds.map((tx) => tx.amount)).toEqual([10, 20])
   })

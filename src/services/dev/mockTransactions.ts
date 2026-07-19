@@ -1,7 +1,7 @@
 import type { TCasinoSettings } from 'gambling-bot-shared/casino'
 
 import { createMultipleTransactions } from '@/services/db/transaction.db'
-import { TCreateTransaction } from '@/types/types'
+import { TCreateTransaction } from '@/services/db/transaction.db.types'
 
 import {
   EVENT_WEIGHTS,

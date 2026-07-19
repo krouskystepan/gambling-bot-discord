@@ -1,46 +1,26 @@
-import {
-  formatMoney,
-  generateId,
-  parseReadableStringToNumber
-} from 'gambling-bot-shared/common'
+import { formatMoney } from 'gambling-bot-shared/common'
 
-import {
-  ActionRowBuilder,
-  ApplicationCommandOptionType,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder,
-  GuildMember,
-  GuildTextBasedChannel,
-  Message,
-  MessageFlags
-} from 'discord.js'
+import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
 import { AutocompleteCommand, ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
   assertGlobalFeature,
-  attachAtmRequestMessage,
   checkAtmChannels,
   checkUserRegistration,
   createAtmCancelSubcommand,
-  createAtmRequest,
   createAtmRequestSubcommandOptions,
   createAtmStatusSubcommand,
-  deleteAtmRequest,
   handleAtmCancelSubcommand,
   handleAtmStatusSubcommand,
+  parseAtmAmount,
   previewWithdraw,
   respondAtmRequestCancelAutocomplete,
-  respondAtmRequestStatusAutocomplete
+  respondAtmRequestStatusAutocomplete,
+  submitAtmRequest
 } from '@/services'
-import { isGuildSendableChannel } from '@/utils/discord/channelGuards'
-import {
-  createErrorEmbed,
-  createSuccessEmbed
-} from '@/utils/discord/createEmbed'
-import { logger } from '@/utils/logger'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'withdraw',
@@ -83,27 +63,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     const account = interaction.options.getString('account', true)
     const amount = interaction.options.getString('amount', true)
-    const parsedAmount = parseReadableStringToNumber(amount)
-    if (isNaN(parsedAmount)) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Invalid Input - Not a number',
-            'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
-          )
-        ],
-        flags: MessageFlags.Ephemeral
-      })
-    }
+    const parsed = parseAtmAmount(amount)
 
-    if (parsedAmount <= 0) {
+    if (!parsed.ok) {
       return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Invalid Input - Non-positive number',
-            'The number you provided must be greater than 0.\nPlease enter a positive value.'
-          )
-        ],
+        embeds: [parsed.embed],
         flags: MessageFlags.Ephemeral
       })
     }
@@ -111,7 +75,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const preview = await previewWithdraw({
       userId: interaction.user.id,
       guildId: interaction.guildId!,
-      amount: parsedAmount
+      amount: parsed.amount
     })
 
     if (!preview.ok) {
@@ -120,7 +84,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Funds',
-              `You don't have enough funds to withdraw **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**.\nYour current balance is **${formatMoney(preview.balance, guildConfiguration.globalSettings)}**.`
+              `You don't have enough funds to withdraw **${formatMoney(parsed.amount, guildConfiguration.globalSettings)}**.\nYour current balance is **${formatMoney(preview.balance, guildConfiguration.globalSettings)}**.`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -132,7 +96,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Insufficient Withdrawable Funds',
-              `You requested **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**, but you can only withdraw **${formatMoney(preview.withdrawable, guildConfiguration.globalSettings)}**.\n` +
+              `You requested **${formatMoney(parsed.amount, guildConfiguration.globalSettings)}**, but you can only withdraw **${formatMoney(preview.withdrawable, guildConfiguration.globalSettings)}**.\n` +
                 `**${formatMoney(preview.locked, guildConfiguration.globalSettings)}** is currently locked.`
             )
           ],
@@ -146,104 +110,18 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       })
     }
 
-    const logChannel = await interaction
-      .guild!.channels.fetch(guildConfiguration.atmChannelIds.logs)
-      .catch(() => null)
-
-    if (!isGuildSendableChannel(logChannel)) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Wrong Discord Configuration',
-            'Log channel misconfigured or inaccessible.'
-          )
-        ],
-        flags: MessageFlags.Ephemeral
-      })
-    }
-
-    const sendableLogChannel = logChannel as GuildTextBasedChannel
-
-    const requestId = generateId()
-
-    await createAtmRequest({
-      requestId,
-      userId: interaction.user.id,
-      guildId: interaction.guildId!,
+    const submitted = await submitAtmRequest({
+      interaction,
       type: 'withdraw',
-      amount: parsedAmount,
-      account
+      amount: parsed.amount,
+      account,
+      guildConfiguration
     })
 
-    const member = interaction.member as GuildMember | null
-    const displayName =
-      member?.displayName ||
-      interaction.user.globalName ||
-      interaction.user.username
-
-    const managerRole = guildConfiguration.managerRoleId
-
-    let logMessage: Message<true>
-
-    try {
-      logMessage = await sendableLogChannel.send({
-        content: managerRole ? `<@&${managerRole}>` : '',
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(
-              `ATM - Withdrawal by ${displayName} (${interaction.user.username})`
-            )
-            .setColor('Red')
-            .setDescription(
-              `<@${interaction.user.id}> requested a withdrawal of **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}** to account **${account}**.`
-            )
-            .setFooter({ text: `ID: ${requestId}` })
-        ],
-        components: []
-      })
-    } catch (err) {
-      await deleteAtmRequest(requestId)
-      throw err
-    }
-
-    await attachAtmRequestMessage(
-      requestId,
-      sendableLogChannel.id,
-      logMessage.id
-    )
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`atm.approve.${requestId}`)
-        .setLabel('Approve')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`atm.reject.${requestId}`)
-        .setLabel('Reject')
-        .setStyle(ButtonStyle.Danger)
-    )
-
-    await logMessage.edit({ components: [row] })
-
-    logger.event(
-      {
-        action: 'atm_withdraw_requested',
-        userId: interaction.user.id,
-        requestId,
-        amount: parsedAmount,
-        guildId: interaction.guildId
-      },
-      'ATM withdrawal request created'
-    )
+    if (!submitted.ok) return
 
     return interaction.reply({
-      embeds: [
-        createSuccessEmbed(
-          'ATM - Withdraw',
-          `You have requested to withdraw **${formatMoney(parsedAmount, guildConfiguration.globalSettings)}**.\nPlease wait for the transaction to be processed.\n\nCheck status with \`/withdraw status\` or cancel a pending request with \`/withdraw cancel\`.`,
-          requestId
-        )
-      ],
+      embeds: [submitted.playerEmbed],
       flags: MessageFlags.Ephemeral
     })
   } catch (error) {

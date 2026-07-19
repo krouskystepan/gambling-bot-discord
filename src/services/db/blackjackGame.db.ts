@@ -4,7 +4,11 @@ import {
 } from 'gambling-bot-shared/blackjack'
 
 import BlackjackGame from '@/models/BlackjackGame'
-import { TGetBlackjackGame, TUpsertBlackjackGame } from '@/types/types'
+
+import {
+  TGetBlackjackGame,
+  TUpsertBlackjackGame
+} from './blackjackGame.db.types'
 
 export const getBlackjackGameByUserAndGuild = async ({
   userId,

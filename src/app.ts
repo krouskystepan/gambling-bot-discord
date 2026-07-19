@@ -3,8 +3,7 @@ import 'dotenv/config'
 import { Client, GatewayIntentBits } from 'discord.js'
 
 import '@/bootstrap/logging'
-
-import { connectToDatabase } from './services'
+import { connectToDatabase } from '@/utils/db/connect'
 
 const client = new Client({
   intents: [

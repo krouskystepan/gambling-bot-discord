@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createGuildConfiguration,
   getGuildConfigByGuildId
-} from '@/services/db/guildConfiguration.db'
+} from '@/services/guild/guildConfiguration.db'
 
 import { GuildConfiguration, setupMongoTests } from '../../helpers/mongo'
 

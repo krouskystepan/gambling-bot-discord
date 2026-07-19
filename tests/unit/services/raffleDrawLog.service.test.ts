@@ -1,12 +1,13 @@
-import { Colors } from 'discord.js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { Colors } from 'discord.js'
+
 import {
+  type RaffleDrawSummary,
   buildRaffleDrawLogEmbed,
   calculateRaffleDrawSummary,
   formatParticipantBreakdown,
-  postRaffleDrawLog,
-  type RaffleDrawSummary
+  postRaffleDrawLog
 } from '@/services/raffles/raffleDrawLog.service'
 
 vi.mock('@/utils/logger', () => ({
@@ -65,8 +66,10 @@ const noParticipantsSummary: RaffleDrawSummary = {
   participants: []
 }
 
-const getFieldValue = (embed: ReturnType<typeof buildRaffleDrawLogEmbed>, name: string) =>
-  embed.data.fields?.find((field) => field.name === name)?.value
+const getFieldValue = (
+  embed: ReturnType<typeof buildRaffleDrawLogEmbed>,
+  name: string
+) => embed.data.fields?.find((field) => field.name === name)?.value
 
 describe('calculateRaffleDrawSummary', () => {
   it('summarizes a winning draw with house cut and sorts by tickets', () => {

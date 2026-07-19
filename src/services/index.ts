@@ -1,7 +1,6 @@
 export * from './db'
 export * from './casino'
 export * from './guild'
-export * from './guildConfiguration'
 export * from './moderation'
 export * from './user'
 export * from './vip'

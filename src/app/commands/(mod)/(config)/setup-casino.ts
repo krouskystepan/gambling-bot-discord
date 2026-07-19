@@ -1,22 +1,13 @@
-import {
-  ApplicationCommandOptionType,
-  ChannelType,
-  MessageFlags
-} from 'discord.js'
+import { ApplicationCommandOptionType, ChannelType } from 'discord.js'
 
 import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  assertModMaintenanceAllowed,
-  createGuildConfiguration,
-  getGuildConfigByGuildId
+  handleChannelSetup,
+  resolveGuildConfigurationForSetup
 } from '@/services'
 import { DEV_GUILDS } from '@/utils/devGuilds'
-import {
-  createErrorEmbed,
-  createSuccessEmbed
-} from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'setup-casino',
@@ -89,136 +80,69 @@ export const metadata: CommandMetadata = {
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
-    let guildConfiguration = await getGuildConfigByGuildId({
-      guildId: interaction.guildId!
-    })
+    const guildConfiguration =
+      await resolveGuildConfigurationForSetup(interaction)
+    if (!guildConfiguration) return
 
-    if (!guildConfiguration) {
-      guildConfiguration = await createGuildConfiguration({
-        guildId: interaction.guildId!
-      })
-    } else if (
-      (await assertModMaintenanceAllowed(interaction, interaction.guildId!)) ===
-      false
-    ) {
-      return
-    }
+    const subcommand = interaction.options.getSubcommand()
 
-    const options = interaction.options
-
-    const subcommand = options.getSubcommand()
-
-    if (subcommand === 'add') {
-      const channel = interaction.options.getChannel('channel', true)
-
-      if (guildConfiguration.casinoChannelIds.includes(channel.id)) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Casino Channel Setup - Add',
-              `The channel ${channel} is already configured for casino betting commands.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      guildConfiguration.casinoChannelIds.push(channel.id)
-      await guildConfiguration.save()
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Casino Channel Setup - Add',
-            `The channel ${channel} has been successfully set up for casino betting commands.`
-          )
-        ]
-      })
-    }
-
-    if (subcommand === 'remove') {
-      const channelId = options.getString('channel-id', true)
-
-      if (!guildConfiguration.casinoChannelIds.includes(channelId)) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Casino Channel Setup - Remove',
-              `The channel with ID ${channelId} is not set up for casino betting commands.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      guildConfiguration.casinoChannelIds =
-        guildConfiguration.casinoChannelIds.filter((id) => id !== channelId)
-
-      await guildConfiguration.save()
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Casino Channel Setup - Remove',
+    if (subcommand === 'add' || subcommand === 'remove') {
+      return handleChannelSetup({
+        interaction,
+        guildConfiguration,
+        op: subcommand === 'add' ? 'add' : 'remove',
+        mode: {
+          kind: 'list',
+          get: (config) => config.casinoChannelIds,
+          set: (config, channelIds) => {
+            config.casinoChannelIds = channelIds
+          }
+        },
+        messages: {
+          titleAdd: 'Casino Channel Setup - Add',
+          titleRemove: 'Casino Channel Setup - Remove',
+          alreadySet: (channel) =>
+            `The channel ${channel} is already configured for casino betting commands.`,
+          addSuccess: (channel) =>
+            `The channel ${channel} has been successfully set up for casino betting commands.`,
+          notSet: (channelId) =>
+            `The channel with ID ${channelId} is not set up for casino betting commands.`,
+          removeSuccess: (channelId) =>
             `The channel with ID ${channelId} has been successfully removed from casino betting commands.`
-          )
-        ]
+        }
       })
     }
 
-    if (subcommand === 'add-announcements') {
-      const channel = interaction.options.getChannel('channel', true)
-
-      if (guildConfiguration.winAnnouncementsChannelId === channel.id) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Win Announcements Setup - Add',
-              `Channel ${channel} is already set for big-win announcements.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      guildConfiguration.winAnnouncementsChannelId = channel.id
-      await guildConfiguration.save()
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Win Announcements Setup - Add',
-            `Channel ${channel} has been set for public big-win announcements.`
-          )
-        ]
-      })
-    }
-
-    if (subcommand === 'remove-announcements') {
-      const channelId = options.getString('channel-id', true)
-
-      if (guildConfiguration.winAnnouncementsChannelId !== channelId) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Win Announcements Setup - Remove',
-              `Channel with ID ${channelId} is not set for big-win announcements.`
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      guildConfiguration.winAnnouncementsChannelId = ''
-      await guildConfiguration.save()
-
-      return interaction.reply({
-        embeds: [
-          createSuccessEmbed(
-            'Win Announcements Setup - Remove',
+    if (
+      subcommand === 'add-announcements' ||
+      subcommand === 'remove-announcements'
+    ) {
+      return handleChannelSetup({
+        interaction,
+        guildConfiguration,
+        op: subcommand === 'add-announcements' ? 'add' : 'remove',
+        mode: {
+          kind: 'scalar',
+          get: (config) => config.winAnnouncementsChannelId,
+          set: (config, channelId) => {
+            config.winAnnouncementsChannelId = channelId
+          },
+          clear: (config) => {
+            config.winAnnouncementsChannelId = ''
+          }
+        },
+        messages: {
+          titleAdd: 'Win Announcements Setup - Add',
+          titleRemove: 'Win Announcements Setup - Remove',
+          alreadySet: (channel) =>
+            `Channel ${channel} is already set for big-win announcements.`,
+          addSuccess: (channel) =>
+            `Channel ${channel} has been set for public big-win announcements.`,
+          notSet: (channelId) =>
+            `Channel with ID ${channelId} is not set for big-win announcements.`,
+          removeSuccess: (channelId) =>
             `Channel with ID ${channelId} has been removed from big-win announcements.`
-          )
-        ]
+        }
       })
     }
   } catch (error) {

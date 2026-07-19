@@ -3,7 +3,7 @@ import { formatNumberToReadableString } from 'gambling-bot-shared/common'
 
 import { PermissionFlagsBits } from 'discord.js'
 
-import { getGuildConfigByGuildId } from '@/services/db/guildConfiguration.db'
+import { getGuildConfigByGuildId } from '@/services/guild/guildConfiguration.db'
 
 import {
   MOCK_SCALE_PRESETS,

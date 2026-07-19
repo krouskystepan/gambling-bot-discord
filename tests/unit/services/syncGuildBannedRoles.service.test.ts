@@ -79,7 +79,10 @@ describe('syncGuildBannedRoles', () => {
   })
 
   it('adds, removes, skips, and records errors across both passes', async () => {
-    const bannedMember = createMockMember({ userId: 'banned-1', hasRole: false })
+    const bannedMember = createMockMember({
+      userId: 'banned-1',
+      hasRole: false
+    })
     const alreadyBannedMember = createMockMember({
       userId: 'banned-2',
       hasRole: true
@@ -100,11 +103,13 @@ describe('syncGuildBannedRoles', () => {
 
     vi.spyOn(User, 'find').mockReturnValue({
       select: vi.fn().mockReturnValue({
-        lean: vi.fn().mockResolvedValue([
-          { userId: 'banned-1' },
-          { userId: 'banned-2' },
-          { userId: 'missing-member' }
-        ])
+        lean: vi
+          .fn()
+          .mockResolvedValue([
+            { userId: 'banned-1' },
+            { userId: 'banned-2' },
+            { userId: 'missing-member' }
+          ])
       })
     } as never)
 
@@ -112,13 +117,15 @@ describe('syncGuildBannedRoles', () => {
       const q = query as { userId?: string }
       return {
         select: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue(
-            q.userId === 'stale-role' || q.userId === 'missing-role'
-              ? { banned: false }
-              : q.userId === 'still-banned'
-                ? { banned: true }
-                : null
-          )
+          lean: vi
+            .fn()
+            .mockResolvedValue(
+              q.userId === 'stale-role' || q.userId === 'missing-role'
+                ? { banned: false }
+                : q.userId === 'still-banned'
+                  ? { banned: true }
+                  : null
+            )
         })
       } as never
     })
@@ -138,11 +145,13 @@ describe('syncGuildBannedRoles', () => {
       roles: {
         fetch: vi.fn().mockResolvedValue({
           members: {
-            values: vi.fn().mockReturnValue(
-              [staleRoleMember, stillBannedMember, missingMember][
-                Symbol.iterator
-              ]()
-            )
+            values: vi
+              .fn()
+              .mockReturnValue(
+                [staleRoleMember, stillBannedMember, missingMember][
+                  Symbol.iterator
+                ]()
+              )
           }
         })
       }

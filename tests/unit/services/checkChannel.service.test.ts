@@ -1,18 +1,18 @@
 import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getGuildConfigByGuildId } from '@/services/db/guildConfiguration.db'
 import {
   checkAtmChannels,
   checkCasinoChannels,
   checkPredictionChannels,
   checkRaffleChannels
-} from '@/services/guildConfiguration/checkChannel.service'
+} from '@/services/guild/checkChannel.service'
+import { getGuildConfigByGuildId } from '@/services/guild/guildConfiguration.db'
 import { getActiveVipChannels } from '@/services/vip/getActiveVipChannels.service'
 
 import { createMockInteraction } from '../../helpers/discord-mock'
 
-vi.mock('@/services/db/guildConfiguration.db', () => ({
+vi.mock('@/services/guild/guildConfiguration.db', () => ({
   getGuildConfigByGuildId: vi.fn()
 }))
 

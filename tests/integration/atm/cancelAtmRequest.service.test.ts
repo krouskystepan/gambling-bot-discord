@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { cancelUserAtmRequest } from '@/services/atm/cancelAtmRequest.service'
 import {
   attachAtmRequestMessage,
   createAtmRequest,
   getPendingAtmRequest
 } from '@/services/db/atmRequest.db'
 import * as atmRequestDb from '@/services/db/atmRequest.db'
-import { cancelUserAtmRequest } from '@/services/atm/cancelAtmRequest.service'
 import { logger } from '@/utils/logger'
 
 import { createMockDiscordClient } from '../../helpers/discord-client-mock'

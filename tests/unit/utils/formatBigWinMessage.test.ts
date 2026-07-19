@@ -24,9 +24,7 @@ describe('formatBigWinMessage', () => {
         lines: ['line 1'],
         betId: 'MQY906T40ICB3'
       })
-    ).toBe(
-      '🎉 **Someone won big on Slots!**\n\nline 1\n\n`ID: MQY906T40ICB3`'
-    )
+    ).toBe('🎉 **Someone won big on Slots!**\n\nline 1\n\n`ID: MQY906T40ICB3`')
   })
 })
 

@@ -1,5 +1,6 @@
-import { Colors } from 'discord.js'
 import { describe, expect, it } from 'vitest'
+
+import { Colors } from 'discord.js'
 
 import { checkValidBet } from '@/utils/common/utils'
 

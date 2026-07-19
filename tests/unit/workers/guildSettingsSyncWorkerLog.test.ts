@@ -22,9 +22,8 @@ vi.mock('@/utils/logger', () => ({
 
 const GuildConfiguration = (await import('@/models/GuildConfiguration')).default
 const { createGuildConfiguration } = await import('@/services')
-const { postWorkerLog } = await import(
-  '@/services/worker/workerDiscordLog.service'
-)
+const { postWorkerLog } =
+  await import('@/services/worker/workerDiscordLog.service')
 
 describe('guildSettingsSyncJob worker logs', () => {
   beforeEach(() => vi.clearAllMocks())

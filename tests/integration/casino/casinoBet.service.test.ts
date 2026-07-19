@@ -150,7 +150,10 @@ describe('casinoBet.service', () => {
 
     expect(finalBalance).toBe(500)
     expect(
-      await Transaction.countDocuments({ referenceId: 'bet-zero-win', type: 'win' })
+      await Transaction.countDocuments({
+        referenceId: 'bet-zero-win',
+        type: 'win'
+      })
     ).toBe(0)
   })
 
@@ -171,7 +174,10 @@ describe('casinoBet.service', () => {
     expect(user?.balance).toBe(700)
     expect(finalBalance).toBe(700)
 
-    const winTx = await Transaction.findOne({ referenceId: 'bet-3', type: 'win' })
+    const winTx = await Transaction.findOne({
+      referenceId: 'bet-3',
+      type: 'win'
+    })
     expect(winTx?.amount).toBe(200)
   })
 

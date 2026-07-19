@@ -11,7 +11,7 @@ import {
   assertGlobalFeature,
   assertNotMaintenance,
   canBypassMaintenance
-} from '@/services/guildConfiguration/checkGlobalFeature.service'
+} from '@/services/guild/checkGlobalFeature.service'
 
 import { createMockInteraction } from '../../helpers/discord-mock'
 
