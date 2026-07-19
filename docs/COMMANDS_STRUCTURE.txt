@@ -27,49 +27,23 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │   │          ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
 │   │   ├── coin-flip.ts
 │   │   │   └─ /coin-flip – Flip a coin!
-│   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
 │   │   │      ├─ side – Choose the coin side.
-│   │   │      ├─ flips – Number of flips.
-│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
-│   │   │      ├─ skip-animations – Skip game animations for faster results.
 │   │   ├── dice.ts
 │   │   │   └─ /dice – Play a dice game!
-│   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
 │   │   │      ├─ side – Choose a dice side.
-│   │   │      ├─ rolls – Number of rolls.
-│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
-│   │   │      ├─ skip-animations – Skip game animations for faster results.
 │   │   ├── goldenjackpot.ts
 │   │   │   └─ /goldenjackpot – Try your luck at the Golden Jackpot HUGEx!
-│   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
 │   │   │      ├─ entries – Number of entries (max is ${GOLDEN_JACKPOT_MAX_ENTRIES}).
-│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
-│   │   │      ├─ skip-animations – Skip game animations for faster results.
 │   │   ├── lottery.ts
 │   │   │   └─ /lottery – Play the lottery! Pick 4 numbers and see if you win.
-│   │   │      ├─ bet – Your bet amount (e.g., 100, 1k, 5k).
 │   │   │      ├─ numbers – Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).
-│   │   │      ├─ entries – Number of entries.
-│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
-│   │   │      ├─ skip-animations – Skip game animations for faster results.
 │   │   ├── plinko.ts
 │   │   │   └─ /plinko – Drop balls down the Plinko board!
-│   │   │      ├─ bet – Bet per ball (e.g., 1000, 2k, 4.5k).
-│   │   │      ├─ balls – How many balls to drop.
-│   │   │      ├─ show-balance – Displays the current balance (VISIBLE TO EVERYONE).
-│   │   │      ├─ skip-animations – Skip animations for faster results.
 │   │   ├── roulette.ts
 │   │   │   └─ /roulette – Play Mini Roulette with multiple bets!
 │   │   │      ├─ bets – Your bets (e.g., 100 red, 50 17, 200 d2, 75 c1)
-│   │   │      ├─ spins – Number of spins.
-│   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
-│   │   │      ├─ skip-animations – Skip game animations for faster results.
 │   │   └── slots.ts
 │   │       └─ /slots – Spin the slot machine!
-│   │          ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
-│   │          ├─ spins – Number of spins.
-│   │          ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
-│   │          ├─ skip-animations – Skip game animations for faster results.
 │   └── (utils)
 │       ├── balance.ts
 │       │   └─ /balance – Check your current balance (only you can see this).

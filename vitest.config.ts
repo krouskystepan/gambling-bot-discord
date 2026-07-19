@@ -18,6 +18,7 @@ const coverageExclude = [
   ...devExclude,
   'src/utils/discord/createEmbed.ts',
   'src/utils/discord/customEmotes.ts',
+  'src/services/casino/casinoSlashOptions.ts',
 
   'src/utils/casino/**/render.ts',
   'src/utils/casino/**/types.ts'
