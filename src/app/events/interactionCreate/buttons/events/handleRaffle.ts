@@ -140,7 +140,7 @@ export default async (interaction: Interaction) => {
       )
       const rawPot = totalTickets * raffle.ticketPrice
 
-      const houseCut = guildConfigEarly.casinoSettings.raffle.casinoCut
+      const houseCut = guildConfigEarly.casinoSettings.raffle.houseEdge
       const pot = rawPot * (1 - houseCut)
 
       const drawUnix = Math.floor(

@@ -3,7 +3,10 @@ import {
   LOTTERY_NUM_TO_DRAW,
   LOTTERY_TOTAL_NUMBERS,
   MINI_NUMBERS,
-  TCasinoSettings
+  SUITES,
+  TCasinoSettings,
+  VALUES,
+  hiloRankFromLabel
 } from 'gambling-bot-shared/casino'
 
 import type { Card } from './blackjack/types'
@@ -11,6 +14,62 @@ import { buildPlinkoPath } from './plinko/path'
 
 const random = () => {
   return crypto.randomInt(0, 1_000_000) / 1_000_000
+}
+
+export type HiloCard = {
+  label: string
+  suite: (typeof SUITES)[number]
+  rank: number
+}
+
+/** Same display as blackjack: `K♠️`. */
+export const formatHiloCard = (card: Pick<HiloCard, 'label' | 'suite'>) =>
+  `${card.label}${card.suite}`
+
+const buildHiloDeck = (): HiloCard[] =>
+  SUITES.flatMap((suite) =>
+    VALUES.map(({ label }) => ({
+      label,
+      suite,
+      rank: hiloRankFromLabel(label)
+    }))
+  )
+
+/** Fisher–Yates shuffle of a Hi-Lo deck. */
+export const shuffleHiloDeck = (deck: HiloCard[]): HiloCard[] => {
+  const arr = [...deck]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j]!, arr[i]!]
+  }
+  return arr
+}
+
+/** Fresh shuffled 52-card deck (one of each label+suit). */
+export const createShuffledHiloDeck = (): HiloCard[] =>
+  shuffleHiloDeck(buildHiloDeck())
+
+/** Draw from the end of a mutable deck (no replacement). */
+export const drawHiloCard = (deck: HiloCard[]): HiloCard => {
+  const card = deck.pop()
+  if (!card) throw new Error('Hi-Lo deck is empty')
+  return card
+}
+
+/** Two distinct cards from one shuffled deck. */
+export const dealHiloCards = (): { first: HiloCard; second: HiloCard } => {
+  const deck = createShuffledHiloDeck()
+  return { first: drawHiloCard(deck), second: drawHiloCard(deck) }
+}
+
+export const rollHiloCard = (): HiloCard =>
+  drawHiloCard(createShuffledHiloDeck())
+
+export const rollHiloRank = (): number => rollHiloCard().rank
+
+export const rollHiloRanks = (): { first: number; second: number } => {
+  const { first, second } = dealHiloCards()
+  return { first: first.rank, second: second.rank }
 }
 
 export const spinSlot = (slotConfig: {

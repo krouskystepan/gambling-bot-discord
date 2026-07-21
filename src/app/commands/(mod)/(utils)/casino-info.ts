@@ -114,6 +114,13 @@ const buildGamesSections = (
     ...(showAdmin ? [rtpLine('coinflip', settings.coinflip)] : [])
   ]),
 
+  section('🃏 Hi-Lo', [
+    `- **House Edge:** ${settings.hilo.houseEdge * 100}%`,
+    bet('Max Bet', settings.hilo.maxBet, globalSettings),
+    bet('Min Bet', settings.hilo.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('hilo', settings.hilo)] : [])
+  ]),
+
   section('🎲 Dice', [
     multiplier(settings.dice.winMultiplier),
     bet('Max Bet', settings.dice.maxBet, globalSettings),
@@ -178,7 +185,7 @@ const buildGamesSections = (
   ]),
 
   section('🪨📄✂️ RPS', [
-    `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
+    `- **House Edge:** ${settings.rps.houseEdge * 100}%`,
     bet('Max Bet', settings.rps.maxBet, globalSettings),
     bet('Min Bet', settings.rps.minBet, globalSettings)
   ]),
@@ -189,7 +196,7 @@ const buildGamesSections = (
   ]),
 
   section('🎫 Raffle', [
-    `- **Casino Cut:** ${settings.raffle.casinoCut * 100}%`,
+    `- **House Edge:** ${settings.raffle.houseEdge * 100}%`,
     ...(showAdmin ? [rtpLine('raffle', settings.raffle)] : [])
   ])
 ]

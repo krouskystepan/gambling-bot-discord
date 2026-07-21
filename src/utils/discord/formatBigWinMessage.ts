@@ -1,6 +1,7 @@
 export type BigWinGame =
   | 'dice'
   | 'coin-flip'
+  | 'hilo'
   | 'slots'
   | 'roulette'
   | 'plinko'
@@ -11,6 +12,7 @@ export type BigWinGame =
 export const BIG_WIN_HEADLINES: Record<BigWinGame, string> = {
   dice: 'Someone won big on Dice!',
   'coin-flip': 'Someone won big on Coin Flip!',
+  hilo: 'Someone won big on Hi-Lo!',
   slots: 'Someone won big on Slots!',
   roulette: 'Someone won big on Roulette!',
   plinko: 'Someone won big on Plinko!',

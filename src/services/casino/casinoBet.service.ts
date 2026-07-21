@@ -97,7 +97,7 @@ export async function settleRpsGameAtomic({
   p2GuildId,
   betAmount,
   winnerUserId,
-  casinoCut,
+  houseEdge,
   betId,
   game
 }: {
@@ -107,7 +107,7 @@ export async function settleRpsGameAtomic({
   p2GuildId: string
   betAmount: number
   winnerUserId: string | null
-  casinoCut: number
+  houseEdge: number
   betId: string
   game: CasinoGameId
 }) {
@@ -138,7 +138,7 @@ export async function settleRpsGameAtomic({
         p2.balance += betAmount
       } else {
         const pot = betAmount * 2
-        const payout = pot * (1 - casinoCut)
+        const payout = pot * (1 - houseEdge)
 
         const winner = winnerUserId === p1.userId ? p1 : p2
         winner.balance += payout

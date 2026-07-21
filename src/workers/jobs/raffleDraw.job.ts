@@ -174,7 +174,7 @@ export const raffleDrawJob = async (client: Client<true>) => {
       const participants = raffle.participants.filter((p) => p.tickets > 0)
       const totalTickets = participants.reduce((s, p) => s + p.tickets, 0)
       const rawPot = totalTickets * raffle.ticketPrice
-      const houseCut = guildConfig.casinoSettings.raffle.casinoCut
+      const houseCut = guildConfig.casinoSettings.raffle.houseEdge
       const pot = rawPot * (1 - houseCut)
 
       let winnerId: string | null = null
