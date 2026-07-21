@@ -1,10 +1,13 @@
 import type { CasinoGameId, TCasinoSettings } from 'gambling-bot-shared/casino'
 import {
+  type HiloGuess,
   LOTTERY_NUM_TO_DRAW,
   LOTTERY_TOTAL_NUMBERS,
   PLINKO_ROW_COUNT,
+  getHiloWinMultiplier,
   getPlinkoMultiplierAtPathIndex,
-  normalizePlinkoBinMultipliers
+  normalizePlinkoBinMultipliers,
+  resolveHiloRound
 } from 'gambling-bot-shared/casino'
 import { generateId } from 'gambling-bot-shared/common'
 
@@ -14,6 +17,7 @@ import {
   dropPlinkoBall,
   flipCoin,
   rollDice,
+  rollHiloRanks,
   spinRouletteWheel,
   spinSlot
 } from '@/utils/casino/rng'
@@ -153,6 +157,19 @@ function simulateRngGame(
         ? betAmount * ctx.casinoSettings.coinflip.winMultiplier
         : 0
     }
+    case 'hilo': {
+      const { first, second } = rollHiloRanks()
+      const houseEdge = ctx.casinoSettings.hilo.houseEdge
+      const options = (['higher', 'lower'] as const).filter(
+        (guess) => getHiloWinMultiplier(first, guess, houseEdge) != null
+      )
+      const guess = randomChoice(options) as HiloGuess
+      const outcome = resolveHiloRound(first, second, guess)
+      if (outcome === 'push') return betAmount
+      if (outcome === 'lose') return 0
+      const mult = getHiloWinMultiplier(first, guess, houseEdge) ?? 0
+      return betAmount * mult
+    }
     case 'slots': {
       const spinResult = spinSlot({
         symbolWeights: ctx.casinoSettings.slots.symbolWeights
@@ -235,7 +252,7 @@ function simulateRpsRound(ctx: SimulateCtx): SimulatedCasinoRound {
   if (p1Wins || p2Wins) {
     const winnerId = p1Wins ? ctx.userId : opponentId
     const pot = betAmount * 2
-    const payout = Math.round(pot * (1 - ctx.casinoSettings.rps.casinoCut))
+    const payout = Math.round(pot * (1 - ctx.casinoSettings.rps.houseEdge))
     txs.push(winTx(ctx, 'rps', payout, winnerId))
   }
 
@@ -284,7 +301,7 @@ function simulateRaffleRound(ctx: SimulateCtx): SimulatedCasinoRound {
   if (Math.random() < 0.18) {
     const poolMultiplier = randomInt(4, 25)
     const pot = Math.round(
-      totalCost * poolMultiplier * (1 - ctx.casinoSettings.raffle.casinoCut)
+      totalCost * poolMultiplier * (1 - ctx.casinoSettings.raffle.houseEdge)
     )
     if (pot > 0) {
       txs.push(winTx(ctx, 'raffle', pot))
