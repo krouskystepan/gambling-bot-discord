@@ -8,13 +8,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DECK } from '@/utils/casino/blackjack/deck'
 import type { Card } from '@/utils/casino/blackjack/types'
 import {
+  createShuffledHiloDeck,
+  dealHiloCards,
   drawGoldenJackpot,
+  drawHiloCard,
   drawLottery,
   drawNextCard,
   dropPlinkoBall,
   dropPlinkoPath,
   flipCoin,
+  formatHiloCard,
   rollDice,
+  rollHiloCard,
+  rollHiloRank,
+  rollHiloRanks,
   shuffleDeck,
   spinRouletteWheel,
   spinSlot
@@ -51,6 +58,38 @@ describe('rng', () => {
   it('flipCoin returns tails at or above 0.5', () => {
     mockRandomInt(600_000)
     expect(flipCoin()).toBe('tails')
+  })
+
+  it('deals two distinct cards from one 52-card deck', () => {
+    mockRandomInt(0)
+    const { first, second } = dealHiloCards()
+    expect(`${first.label}${first.suite}`).not.toBe(
+      `${second.label}${second.suite}`
+    )
+
+    const deck = createShuffledHiloDeck()
+    expect(deck).toHaveLength(52)
+    expect(new Set(deck.map((c) => `${c.label}${c.suite}`)).size).toBe(52)
+
+    const drawn = drawHiloCard(deck)
+    expect(formatHiloCard(drawn)).toBe(`${drawn.label}${drawn.suite}`)
+    expect(deck).toHaveLength(51)
+  })
+
+  it('drawHiloCard throws when the deck is empty', () => {
+    expect(() => drawHiloCard([])).toThrow(/Hi-Lo deck is empty/)
+  })
+
+  it('rollHiloCard and rollHiloRanks use deck draws', () => {
+    mockRandomInt(999_999)
+    const card = rollHiloCard()
+    expect(card.rank).toBeGreaterThanOrEqual(2)
+    expect(card.rank).toBeLessThanOrEqual(14)
+    expect(rollHiloRank()).toBeGreaterThanOrEqual(2)
+
+    const ranks = rollHiloRanks()
+    expect(ranks.first).toBeGreaterThanOrEqual(2)
+    expect(ranks.second).toBeGreaterThanOrEqual(2)
   })
 
   it('spinSlot builds a 3-symbol result from weights', () => {
