@@ -68,6 +68,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       ),
 
       renderSection(
+        '🚀 Limbo',
+        formatCommand('limbo', [
+          { name: 'bet', example: '2000', required: true },
+          { name: 'target', example: '2', required: true },
+          { name: 'rolls', example: '10' },
+          { name: 'show-balance', example: 'true' },
+          { name: 'skip-animations', example: 'true' }
+        ])
+      ),
+
+      renderSection(
         '🎲 Dice',
         formatCommand('dice', [
           { name: 'bet', example: '3000', required: true },

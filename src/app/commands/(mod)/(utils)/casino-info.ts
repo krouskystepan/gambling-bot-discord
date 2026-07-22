@@ -121,6 +121,13 @@ const buildGamesSections = (
     ...(showAdmin ? [rtpLine('hilo', settings.hilo)] : [])
   ]),
 
+  section('🚀 Limbo', [
+    `- **House Edge:** ${settings.limbo.houseEdge * 100}%`,
+    bet('Max Bet', settings.limbo.maxBet, globalSettings),
+    bet('Min Bet', settings.limbo.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('limbo', settings.limbo)] : [])
+  ]),
+
   section('🎲 Dice', [
     multiplier(settings.dice.winMultiplier),
     bet('Max Bet', settings.dice.maxBet, globalSettings),

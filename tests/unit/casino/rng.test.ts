@@ -22,6 +22,7 @@ import {
   rollHiloCard,
   rollHiloRank,
   rollHiloRanks,
+  rollLimbo,
   shuffleDeck,
   spinRouletteWheel,
   spinSlot
@@ -58,6 +59,16 @@ describe('rng', () => {
   it('flipCoin returns tails at or above 0.5', () => {
     mockRandomInt(600_000)
     expect(flipCoin()).toBe('tails')
+  })
+
+  it('rollLimbo floors at 1.00 when U is 1', () => {
+    mockRandomInt(0) // random()=0 → U=1 → raw 0.97 → 1.00
+    expect(rollLimbo(0.03)).toBe(1)
+  })
+
+  it('rollLimbo returns target-style multiplier for mid U', () => {
+    mockRandomInt(515_000) // random()=0.515 → U=0.485 → ~2.00
+    expect(rollLimbo(0.03)).toBe(2)
   })
 
   it('deals two distinct cards from one 52-card deck', () => {

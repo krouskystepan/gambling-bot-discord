@@ -1,11 +1,14 @@
 import type { CasinoGameId, TCasinoSettings } from 'gambling-bot-shared/casino'
 import {
   type HiloGuess,
+  LIMBO_MAX_TARGET,
+  LIMBO_MIN_TARGET,
   LOTTERY_NUM_TO_DRAW,
   LOTTERY_TOTAL_NUMBERS,
   PLINKO_ROW_COUNT,
   getHiloWinMultiplier,
   getPlinkoMultiplierAtPathIndex,
+  isLimboWin,
   normalizePlinkoBinMultipliers,
   resolveHiloRound
 } from 'gambling-bot-shared/casino'
@@ -18,6 +21,7 @@ import {
   flipCoin,
   rollDice,
   rollHiloRanks,
+  rollLimbo,
   spinRouletteWheel,
   spinSlot
 } from '@/utils/casino/rng'
@@ -169,6 +173,15 @@ function simulateRngGame(
       if (outcome === 'lose') return 0
       const mult = getHiloWinMultiplier(first, guess, houseEdge) ?? 0
       return betAmount * mult
+    }
+    case 'limbo': {
+      const houseEdge = ctx.casinoSettings.limbo.houseEdge
+      const targetChoices = [1.5, 2, 5, 10, 25, 50, 100].filter(
+        (t) => t >= LIMBO_MIN_TARGET && t <= LIMBO_MAX_TARGET
+      )
+      const target = randomChoice(targetChoices)
+      const result = rollLimbo(houseEdge)
+      return isLimboWin(result, target) ? betAmount * target : 0
     }
     case 'slots': {
       const spinResult = spinSlot({
