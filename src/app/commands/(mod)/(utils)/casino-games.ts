@@ -156,6 +156,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       ),
 
       renderSection(
+        '💣 Mines',
+        formatCommand('mines', [
+          { name: 'bet', example: '2000', required: true },
+          { name: 'mines', example: '3', required: true },
+          { name: 'show-balance', example: 'true' }
+        ])
+      ),
+
+      renderSection(
         '🪨📄✂️ RPS',
         formatCommand('rps', [
           { name: 'player', example: '@User', required: true },
