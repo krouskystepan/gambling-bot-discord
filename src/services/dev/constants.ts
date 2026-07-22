@@ -54,6 +54,7 @@ export const MOCK_CASINO_GAME_IDS = [
   'lottery',
   'goldenJackpot',
   'blackjack',
+  'mines',
   'rps',
   'prediction',
   'raffle'
@@ -71,6 +72,7 @@ export const CASINO_GAME_WEIGHTS: Record<MockCasinoGameId, number> = {
   roulette: 9,
   plinko: 7,
   blackjack: 8,
+  mines: 7,
   lottery: 4,
   goldenJackpot: 3,
   rps: 6,

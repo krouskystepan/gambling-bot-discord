@@ -4,9 +4,15 @@ import {
   blackjackIdleNudgeThresholdMs
 } from 'gambling-bot-shared/blackjack'
 import { HOUR_MS, generateId } from 'gambling-bot-shared/common'
+import {
+  createMinesEngine,
+  minesAutoResolveIdleMs,
+  minesIdleNudgeThresholdMs
+} from 'gambling-bot-shared/mines'
 import type { VipExpiryWarningTier } from 'gambling-bot-shared/vip'
 
 import BlackjackGame from '@/models/BlackjackGame'
+import MinesGame from '@/models/MinesGame'
 import Raffle from '@/models/Raffle'
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
@@ -14,6 +20,7 @@ import VipRoom from '@/models/VipRoom'
 import { reserveCasinoBet } from '@/services/casino/casinoBet.service'
 import { RECONCILIATION_GRACE_MS } from '@/services/casino/lockedBalanceReconciliation.service'
 import { upsertBlackjackGame } from '@/services/db/blackjackGame.db'
+import { upsertMinesGame } from '@/services/db/minesGame.db'
 import { createPrediction } from '@/services/db/prediction.db'
 import { upsertRaffle } from '@/services/db/raffle.db'
 
@@ -24,6 +31,8 @@ export type WorkerMockEntity =
   | 'locked-balance'
   | 'blackjack-idle-nudge'
   | 'blackjack-autostand'
+  | 'mines-idle-nudge'
+  | 'mines-autostand'
   | 'vip-expired'
   | 'vip-expiry-warning'
   | 'prediction-autolock'
@@ -42,7 +51,6 @@ export type WorkerMockSummary = {
   lines: string[]
 }
 
-const MS_PER_HOUR = HOUR_MS
 const DEFAULT_COUNT = 1
 const MAX_COUNT = 5
 const FUNDING_BALANCE = 50_000
@@ -249,7 +257,7 @@ async function seedBlackjackIdleNudges({
   invokingUserId: string
   count: number
 }): Promise<string[]> {
-  const idleMs = blackjackIdleNudgeThresholdMs() + Math.floor(MS_PER_HOUR * 0.5)
+  const idleMs = blackjackIdleNudgeThresholdMs() + Math.floor(HOUR_MS * 0.5)
   const updatedAt = new Date(Date.now() - idleMs)
   const userIds = await pickBlackjackUsers(guildId, invokingUserId, count)
   const lines: string[] = []
@@ -281,9 +289,7 @@ async function seedBlackjackAutostands({
   invokingUserId: string
   count: number
 }): Promise<string[]> {
-  const updatedAt = new Date(
-    Date.now() - blackjackAutostandIdleMs() - MS_PER_HOUR
-  )
+  const updatedAt = new Date(Date.now() - blackjackAutostandIdleMs() - HOUR_MS)
   const userIds = await pickBlackjackUsers(guildId, invokingUserId, count)
   const lines: string[] = []
 
@@ -299,6 +305,164 @@ async function seedBlackjackAutostands({
   }
 
   lines.unshift('⏳ Auto-stand window: games idle 24h+')
+
+  return lines
+}
+
+async function setMinesUpdatedAt(
+  userId: string,
+  guildId: string,
+  updatedAt: Date
+): Promise<void> {
+  await MinesGame.collection.updateOne(
+    { userId, guildId },
+    { $set: { updatedAt } }
+  )
+}
+
+async function pickMinesUsers(
+  guildId: string,
+  invokingUserId: string,
+  count: number
+): Promise<string[]> {
+  const candidates = pickTestUserIds(invokingUserId, count)
+  const available: string[] = []
+
+  for (const userId of candidates) {
+    const existing = await MinesGame.exists({ userId, guildId })
+    if (!existing) available.push(userId)
+    if (available.length >= count) break
+  }
+
+  while (available.length < count) {
+    const syntheticId = fakeDiscordSnowflake()
+    const existing = await MinesGame.exists({
+      userId: syntheticId,
+      guildId
+    })
+    if (!existing && !available.includes(syntheticId)) {
+      available.push(syntheticId)
+    }
+  }
+
+  return available.slice(0, count)
+}
+
+async function seedMinesGame({
+  guildId,
+  userId,
+  invokingUserId,
+  updatedAt,
+  withReveal
+}: {
+  guildId: string
+  userId: string
+  invokingUserId: string
+  updatedAt: Date
+  withReveal: boolean
+}): Promise<string> {
+  await ensureFundedUser(userId, guildId)
+
+  const betId = generateId()
+  const channelId = fakeChannelId()
+  const messageId = fakeDiscordSnowflake()
+  const engine = createMinesEngine({
+    betAmount: 100,
+    mineCount: 3,
+    houseEdgeSnapshot: 0.03,
+    mineIndices: [0, 1, 2]
+  })
+
+  if (withReveal) {
+    engine.revealedIndices = [5]
+  }
+
+  await reserveCasinoBet({
+    userId,
+    guildId,
+    totalBet: 100,
+    betId,
+    game: 'mines'
+  })
+
+  await upsertMinesGame({
+    userId,
+    guildId,
+    channelId,
+    messageId,
+    betId,
+    betAmount: engine.betAmount,
+    mineCount: engine.mineCount,
+    mineIndices: engine.mineIndices,
+    revealedIndices: engine.revealedIndices,
+    houseEdgeSnapshot: engine.houseEdgeSnapshot,
+    status: 'ACTIVE'
+  })
+
+  await setMinesUpdatedAt(userId, guildId, updatedAt)
+
+  return `💣 Mines game for ${formatUserRef(userId, invokingUserId)} (\`${betId}\`, updated ${updatedAt.toISOString()})`
+}
+
+async function seedMinesIdleNudges({
+  guildId,
+  invokingUserId,
+  count
+}: {
+  guildId: string
+  invokingUserId: string
+  count: number
+}): Promise<string[]> {
+  const idleMs = minesIdleNudgeThresholdMs() + Math.floor(HOUR_MS * 0.5)
+  const updatedAt = new Date(Date.now() - idleMs)
+  const userIds = await pickMinesUsers(guildId, invokingUserId, count)
+  const lines: string[] = []
+
+  for (const userId of userIds) {
+    lines.push(
+      await seedMinesGame({
+        guildId,
+        userId,
+        invokingUserId,
+        updatedAt,
+        withReveal: true
+      })
+    )
+  }
+
+  lines.unshift(
+    '⏰ Idle nudge window: games idle 3h+ but within the 24h auto-resolve window'
+  )
+
+  return lines
+}
+
+async function seedMinesAutostands({
+  guildId,
+  invokingUserId,
+  count
+}: {
+  guildId: string
+  invokingUserId: string
+  count: number
+}): Promise<string[]> {
+  const updatedAt = new Date(Date.now() - minesAutoResolveIdleMs() - HOUR_MS)
+  const userIds = await pickMinesUsers(guildId, invokingUserId, count)
+  const lines: string[] = []
+
+  for (let i = 0; i < userIds.length; i++) {
+    lines.push(
+      await seedMinesGame({
+        guildId,
+        userId: userIds[i]!,
+        invokingUserId,
+        updatedAt,
+        withReveal: i % 2 === 0
+      })
+    )
+  }
+
+  lines.unshift('⏳ Auto-resolve window: games idle 24h+')
 
   return lines
 }
@@ -501,6 +665,10 @@ const ENTITY_RUNNERS: Record<
     seedBlackjackIdleNudges({ guildId, invokingUserId, count }),
   'blackjack-autostand': ({ guildId, invokingUserId, count }) =>
     seedBlackjackAutostands({ guildId, invokingUserId, count }),
+  'mines-idle-nudge': ({ guildId, invokingUserId, count }) =>
+    seedMinesIdleNudges({ guildId, invokingUserId, count }),
+  'mines-autostand': ({ guildId, invokingUserId, count }) =>
+    seedMinesAutostands({ guildId, invokingUserId, count }),
   'vip-expired': ({ guildId, invokingUserId, count }) =>
     seedExpiredVipRooms({ guildId, invokingUserId, count }),
   'vip-expiry-warning': ({ guildId, invokingUserId, count, vipWarningTier }) =>

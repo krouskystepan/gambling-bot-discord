@@ -8,6 +8,8 @@ import '@/models/BlackjackGame'
 import BlackjackGame from '@/models/BlackjackGame'
 import '@/models/GuildConfiguration'
 import GuildConfiguration from '@/models/GuildConfiguration'
+import '@/models/MinesGame'
+import MinesGame from '@/models/MinesGame'
 import '@/models/Prediction'
 import Prediction from '@/models/Prediction'
 import '@/models/Raffle'
@@ -79,6 +81,7 @@ export {
   AtmRequest,
   BlackjackGame,
   GuildConfiguration,
+  MinesGame,
   Transaction,
   User,
   UserBan,

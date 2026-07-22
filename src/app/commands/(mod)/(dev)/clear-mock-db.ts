@@ -18,7 +18,7 @@ export const command: CommandData = {
     {
       name: 'all',
       description:
-        'Clear users, transactions, ATM, raffles, predictions, VIP, and blackjack games.',
+        'Clear users, transactions, ATM, raffles, predictions, VIP, blackjack, and mines games.',
       type: ApplicationCommandOptionType.Subcommand
     },
     {
