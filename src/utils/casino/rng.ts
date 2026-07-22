@@ -6,7 +6,8 @@ import {
   SUITES,
   TCasinoSettings,
   VALUES,
-  hiloRankFromLabel
+  hiloRankFromLabel,
+  rollLimboResult
 } from 'gambling-bot-shared/casino'
 
 import type { Card } from './blackjack/types'
@@ -91,6 +92,10 @@ export const rollDice = () => {
 export const flipCoin = () => {
   return random() < 0.5 ? 'heads' : 'tails'
 }
+
+/** Limbo result multiplier; `random()` is [0,1) so `1 - random()` is (0,1]. */
+export const rollLimbo = (houseEdge: number): number =>
+  rollLimboResult(houseEdge, 1 - random())
 
 export const drawLottery = () => {
   const pool = Array.from({ length: LOTTERY_TOTAL_NUMBERS }, (_, i) => i + 1)
