@@ -48,6 +48,7 @@ export default async (interaction: Interaction) => {
   try {
     const guildConfig = await getGuildConfigByGuildId({ guildId })
     const globalSettings = guildConfig?.globalSettings
+    const winMultipliers = guildConfig?.casinoSettings.blackjack.winMultipliers
 
     const game = await getBlackjackGameByBetId({ betId, guildId })
 
@@ -191,7 +192,7 @@ export default async (interaction: Interaction) => {
       if (allPlayerHandsBusted) {
         let totalPayout = 0
         for (let i = 0; i < engine.hands.length; i++) {
-          const r = resolveResult(engine, i)
+          const r = resolveResult(engine, i, winMultipliers)
           if (r.finished) totalPayout += r.payout
         }
 
@@ -268,7 +269,7 @@ export default async (interaction: Interaction) => {
 
       let totalPayout = 0
       for (let i = 0; i < engine.hands.length; i++) {
-        const r = resolveResult(engine, i)
+        const r = resolveResult(engine, i, winMultipliers)
         if (r.finished) totalPayout += r.payout
       }
 
@@ -294,6 +295,7 @@ export default async (interaction: Interaction) => {
           lines: collectBlackjackBigWinLines({
             engine,
             globalSettings,
+            winMultipliers,
             minMultiplier:
               guildConfig.casinoSettings.winAnnouncements.blackjackMinMultiplier
           }),

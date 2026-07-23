@@ -50,7 +50,11 @@ export type GamePhaseId = 'PLAYER_TURN' | 'DEALER_DRAWING'
 export type FinalGameResultId = 'WIN' | 'LOSS' | 'EVEN'
 
 export type RenderResult =
-  | { kind: 'START'; startResultId: StartBlackjackResultId }
+  | {
+      kind: 'START'
+      startResultId: StartBlackjackResultId
+      payout: number
+    }
   | { kind: 'PHASE'; gamePhaseId: GamePhaseId }
   | { kind: 'FINAL'; finalResultId: FinalGameResultId; netProfit: number }
 

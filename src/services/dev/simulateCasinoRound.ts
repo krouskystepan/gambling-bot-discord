@@ -255,7 +255,10 @@ function simulateBlackjackRound(ctx: SimulateCtx): SimulatedCasinoRound {
     'blackjack',
     ctx.fallbackMaxBet
   )
-  const winAmount = simulateBlackjackWinnings(betAmount)
+  const winAmount = simulateBlackjackWinnings(
+    betAmount,
+    ctx.casinoSettings.blackjack.winMultipliers
+  )
   return singlePlayerRound(ctx, 'blackjack', betAmount, winAmount)
 }
 

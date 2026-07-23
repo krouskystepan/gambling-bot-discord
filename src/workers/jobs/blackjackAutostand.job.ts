@@ -44,6 +44,8 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
         guildId: game.guildId
       })
       const globalSettings = guildConfig?.globalSettings
+      const winMultipliers =
+        guildConfig?.casinoSettings.blackjack.winMultipliers
 
       const channel = await guild.channels
         .fetch(game.channelId)
@@ -80,7 +82,7 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
 
       let totalPayout = 0
       for (let i = 0; i < engine.hands.length; i++) {
-        const r = resolveResult(engine, i)
+        const r = resolveResult(engine, i, winMultipliers)
         if (r.finished) totalPayout += r.payout
       }
 
@@ -110,6 +112,7 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
           lines: collectBlackjackBigWinLines({
             engine,
             globalSettings,
+            winMultipliers,
             minMultiplier:
               guildConfig.casinoSettings.winAnnouncements.blackjackMinMultiplier
           }),

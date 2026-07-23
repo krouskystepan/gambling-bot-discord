@@ -194,8 +194,10 @@ const buildGamesSections = (
   ]),
 
   section('🃏 Blackjack', [
+    multiplier(settings.blackjack.winMultipliers),
     bet('Max Bet', settings.blackjack.maxBet, globalSettings),
-    bet('Min Bet', settings.blackjack.minBet, globalSettings)
+    bet('Min Bet', settings.blackjack.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('blackjack', settings.blackjack)] : [])
   ]),
 
   section('💣 Mines', [

@@ -73,6 +73,7 @@ const formatPhaseResult = (
 const formatStartResult = (
   result: StartBlackjackResultId,
   totalBet: number,
+  payout: number,
   globalSettings?: Partial<GlobalSettings> | null
 ): {
   color: ColorResolvable
@@ -82,7 +83,7 @@ const formatStartResult = (
     case 'PBJ':
       return {
         color: 'Green',
-        text: `You have Blackjack!\n💰 Total: 🟢 **${formatMoney(totalBet * 2.5, globalSettings)}**`
+        text: `You have Blackjack!\n💰 Total: 🟢 **${formatMoney(payout, globalSettings)}**`
       }
 
     case 'DBJ':
@@ -144,6 +145,7 @@ export const renderBlackjackEmbed = ({
         const formatted = formatStartResult(
           result.startResultId,
           totalBet,
+          result.payout,
           globalSettings
         )
         color = formatted.color

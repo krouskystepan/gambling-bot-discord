@@ -1,4 +1,7 @@
-import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
+import {
+  getBlackjackPayout,
+  shouldAnnounceByMultiplier
+} from 'gambling-bot-shared/casino'
 import {
   formatMoney,
   generateId,
@@ -133,16 +136,22 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     const dealerHasBlackjack =
       dealerCards.length === 2 && calculateHandValue(dealerCards) === 21
 
+    const { winMultipliers } = configReply.casinoSettings.blackjack
+
     if (playerHasBlackjack || dealerHasBlackjack) {
       let startResultId: StartBlackjackResultId
       let payout = 0
 
       if (playerHasBlackjack && dealerHasBlackjack) {
         startResultId = 'BBJ'
-        payout = parsedBetAmount
+        payout = getBlackjackPayout(parsedBetAmount, 'push', winMultipliers)
       } else if (playerHasBlackjack) {
         startResultId = 'PBJ'
-        payout = parsedBetAmount * 2.5
+        payout = getBlackjackPayout(
+          parsedBetAmount,
+          'blackjack',
+          winMultipliers
+        )
       } else {
         startResultId = 'DBJ'
         payout = 0
@@ -198,7 +207,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             dealerCards,
             showBalance,
             userBalance: finalBalance,
-            result: { kind: 'START', startResultId },
+            result: { kind: 'START', startResultId, payout },
             globalSettings: configReply.globalSettings
           })
         ]
