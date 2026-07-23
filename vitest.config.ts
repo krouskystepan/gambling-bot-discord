@@ -21,6 +21,7 @@ const coverageExclude = [
   'src/services/casino/casinoSlashOptions.ts',
 
   'src/utils/casino/**/render.ts',
+  'src/utils/casino/**/playRound.ts',
   'src/utils/casino/**/types.ts'
 ]
 

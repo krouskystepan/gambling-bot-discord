@@ -1,5 +1,7 @@
 import type { CasinoGameId, TCasinoSettings } from 'gambling-bot-shared/casino'
 import {
+  BACCARAT_BET_SIDES,
+  type BaccaratBetSide,
   type HiloGuess,
   LIMBO_MAX_TARGET,
   LIMBO_MIN_TARGET,
@@ -10,11 +12,13 @@ import {
   getPlinkoMultiplierAtPathIndex,
   isLimboWin,
   normalizePlinkoBinMultipliers,
+  resolveBaccaratBet,
   resolveHiloRound
 } from 'gambling-bot-shared/casino'
 import { generateId } from 'gambling-bot-shared/common'
 
 import {
+  dealBaccarat,
   drawGoldenJackpot,
   drawLottery,
   dropPlinkoBall,
@@ -212,6 +216,16 @@ function simulateRngGame(
         spinResult,
         ctx.casinoSettings.roulette.winMultipliers
       )
+    }
+    case 'baccarat': {
+      const side = randomChoice(BACCARAT_BET_SIDES) as BaccaratBetSide
+      const round = dealBaccarat()
+      const { multiplier } = resolveBaccaratBet(
+        side,
+        round,
+        ctx.casinoSettings.baccarat.winMultipliers
+      )
+      return betAmount * multiplier
     }
     case 'plinko': {
       const binMultipliers = normalizePlinkoBinMultipliers(

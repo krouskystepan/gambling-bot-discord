@@ -8,6 +8,8 @@ import {
 import { Client } from 'commandkit'
 
 import {
+  baccaratIdleNudgeJob,
+  baccaratIdleRefundJob,
   banRoleSyncJob,
   blackjackAutostandJob,
   blackjackIdleNudgeJob,
@@ -66,6 +68,8 @@ export const workerDefinitions: WorkerDefinition[] = [
     scheduleEvery(HOUR_MS, [
       ['Blackjack idle nudge', blackjackIdleNudgeJob],
       ['Blackjack auto-stand', blackjackAutostandJob],
+      ['Baccarat idle nudge', baccaratIdleNudgeJob],
+      ['Baccarat idle refund', baccaratIdleRefundJob],
       ['Mines idle nudge', minesIdleNudgeJob],
       ['Mines auto-resolve', minesAutoResolveJob]
     ])

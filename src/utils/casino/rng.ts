@@ -1,11 +1,15 @@
 import crypto from 'crypto'
 import {
+  BACCARAT_DECK_COUNT,
+  type BaccaratCard,
+  type BaccaratRoundResult,
   LOTTERY_NUM_TO_DRAW,
   LOTTERY_TOTAL_NUMBERS,
   MINI_NUMBERS,
   SUITES,
   TCasinoSettings,
   VALUES,
+  dealBaccaratRound,
   hiloRankFromLabel,
   rollLimboResult
 } from 'gambling-bot-shared/casino'
@@ -26,6 +30,11 @@ export type HiloCard = {
 /** Same display as blackjack: `K♠️`. */
 export const formatHiloCard = (card: Pick<HiloCard, 'label' | 'suite'>) =>
   `${card.label}${card.suite}`
+
+/** Baccarat card display matches hi-lo / blackjack: `A♠️`. */
+export const formatBaccaratCard = (
+  card: Pick<BaccaratCard, 'label' | 'suite'>
+) => `${card.label}${card.suite}`
 
 const buildHiloDeck = (): HiloCard[] =>
   SUITES.flatMap((suite) =>
@@ -71,6 +80,39 @@ export const rollHiloRank = (): number => rollHiloCard().rank
 export const rollHiloRanks = (): { first: number; second: number } => {
   const { first, second } = dealHiloCards()
   return { first: first.rank, second: second.rank }
+}
+
+const buildBaccaratShoe = (decks = BACCARAT_DECK_COUNT): BaccaratCard[] =>
+  Array.from({ length: decks }, () =>
+    SUITES.flatMap((suite) => VALUES.map(({ label }) => ({ label, suite })))
+  ).flat()
+
+/** Fisher–Yates shuffle of a baccarat shoe. */
+export const shuffleBaccaratShoe = (shoe: BaccaratCard[]): BaccaratCard[] => {
+  const arr = [...shoe]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j]!, arr[i]!]
+  }
+  return arr
+}
+
+/** Fresh shuffled 8-deck shoe (416 cards). */
+export const createShuffledBaccaratShoe = (
+  decks = BACCARAT_DECK_COUNT
+): BaccaratCard[] => shuffleBaccaratShoe(buildBaccaratShoe(decks))
+
+/** Draw from the end of a mutable baccarat shoe. */
+export const drawBaccaratCard = (shoe: BaccaratCard[]): BaccaratCard => {
+  const card = shoe.pop()
+  if (!card) throw new Error('Baccarat shoe is empty')
+  return card
+}
+
+/** Deal one punto banco round from a fresh shuffled shoe. */
+export const dealBaccarat = (): BaccaratRoundResult => {
+  const shoe = createShuffledBaccaratShoe()
+  return dealBaccaratRound(() => drawBaccaratCard(shoe))
 }
 
 export const spinSlot = (slotConfig: {

@@ -1,5 +1,6 @@
 export * from './atmRequest.db'
 export * from './blackjackGame.db'
+export * from './baccaratGame.db'
 export * from './minesGame.db'
 export * from './prediction.db'
 export * from './raffle.db'
