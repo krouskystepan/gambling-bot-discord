@@ -138,6 +138,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       ),
 
       renderSection(
+        '🃏 Baccarat',
+        formatCommand('baccarat', [
+          { name: 'bet', example: '2000', required: true },
+          { name: 'show-balance', example: 'true' },
+          { name: 'skip-animations', example: 'true' }
+        ])
+      ),
+
+      renderSection(
         '🎰 Slots',
         formatCommand('slots', [
           { name: 'bet', example: '5000', required: true },

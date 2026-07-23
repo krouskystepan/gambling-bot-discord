@@ -172,6 +172,13 @@ const buildGamesSections = (
     ...(showAdmin ? [rtpLine('roulette', settings.roulette)] : [])
   ]),
 
+  section('🃏 Baccarat', [
+    multiplier(settings.baccarat.winMultipliers),
+    bet('Max Bet', settings.baccarat.maxBet, globalSettings),
+    bet('Min Bet', settings.baccarat.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('baccarat', settings.baccarat)] : [])
+  ]),
+
   section('🎰 Slots', [
     multiplier(settings.slots.winMultipliers),
     bet('Max Bet', settings.slots.maxBet, globalSettings),
