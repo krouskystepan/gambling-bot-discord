@@ -84,6 +84,29 @@ describe('resolveResult', () => {
     })
   })
 
+  it('uses custom win / push multipliers', () => {
+    const multipliers = { win: 1.8, blackjack: 3, push: 0.5 }
+    const winState = baseState(
+      [card('10', 10), card('K', 10)],
+      [card('9', 9), card('9', 9)]
+    )
+    const pushState = baseState(
+      [card('10', 10), card('8', 8)],
+      [card('9', 9), card('9', 9)]
+    )
+
+    expect(resolveResult(winState, 0, multipliers)).toEqual({
+      finished: true,
+      resultId: 'PW',
+      payout: 180
+    })
+    expect(resolveResult(pushState, 0, multipliers)).toEqual({
+      finished: true,
+      resultId: 'PUSH',
+      payout: 50
+    })
+  })
+
   it('returns dealer win when hand index is invalid', () => {
     const state = baseState(
       [card('10', 10), card('8', 8)],

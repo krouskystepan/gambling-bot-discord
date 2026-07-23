@@ -1,4 +1,9 @@
 import type { TBlackjackHand } from 'gambling-bot-shared/blackjack'
+import {
+  type BlackjackWinMultipliers,
+  defaultCasinoSettings,
+  getBlackjackPayout
+} from 'gambling-bot-shared/casino'
 
 import {
   DECK,
@@ -11,8 +16,13 @@ import {
 } from '@/utils/casino/blackjack'
 import type { EngineState } from '@/utils/casino/blackjack/types'
 
+const defaultWinMultipliers = defaultCasinoSettings.blackjack.winMultipliers
+
 /** Auto-plays one blackjack hand using the real engine + deck RNG. */
-export function simulateBlackjackWinnings(betAmount: number): number {
+export function simulateBlackjackWinnings(
+  betAmount: number,
+  winMultipliers: BlackjackWinMultipliers = defaultWinMultipliers
+): number {
   const shuffledDeck = shuffleDeck(DECK)
   const playerCards = [shuffledDeck[0]!, shuffledDeck[1]!]
   const dealerCards = [shuffledDeck[2]!, shuffledDeck[3]!]
@@ -21,8 +31,12 @@ export function simulateBlackjackWinnings(betAmount: number): number {
   const dealerValue = calculateHandValue(dealerCards)
 
   if (playerValue === 21 || dealerValue === 21) {
-    if (playerValue === 21 && dealerValue === 21) return betAmount
-    if (playerValue === 21) return betAmount * 2.5
+    if (playerValue === 21 && dealerValue === 21) {
+      return getBlackjackPayout(betAmount, 'push', winMultipliers)
+    }
+    if (playerValue === 21) {
+      return getBlackjackPayout(betAmount, 'blackjack', winMultipliers)
+    }
     return 0
   }
 
@@ -68,7 +82,7 @@ export function simulateBlackjackWinnings(betAmount: number): number {
 
   let totalPayout = 0
   for (let i = 0; i < engine.hands.length; i++) {
-    const result = resolveResult(engine, i)
+    const result = resolveResult(engine, i, winMultipliers)
     if (result.finished && 'payout' in result) {
       totalPayout += result.payout
     }

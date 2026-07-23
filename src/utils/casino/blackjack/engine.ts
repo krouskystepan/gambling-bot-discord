@@ -1,7 +1,14 @@
 import { TBlackjackHand } from 'gambling-bot-shared/blackjack'
+import {
+  type BlackjackWinMultipliers,
+  defaultCasinoSettings,
+  getBlackjackPayout
+} from 'gambling-bot-shared/casino'
 
 import { calculateHandValue } from './math'
 import type { Card, EngineResult, EngineState, PlayerAction } from './types'
+
+const defaultWinMultipliers = defaultCasinoSettings.blackjack.winMultipliers
 
 const draw = (s: EngineState): Card => {
   const card = s.deck[s.deckIndex]
@@ -97,7 +104,8 @@ export const dealerShouldDraw = (s: EngineState): boolean => {
 
 export const resolveResult = (
   s: EngineState,
-  handIndex: number
+  handIndex: number,
+  winMultipliers: BlackjackWinMultipliers = defaultWinMultipliers
 ): EngineResult => {
   const hand = s.hands[handIndex]
   if (!hand) {
@@ -112,15 +120,27 @@ export const resolveResult = (
   }
 
   if (d > 21) {
-    return { finished: true, resultId: 'DB', payout: hand.betAmount * 2 }
+    return {
+      finished: true,
+      resultId: 'DB',
+      payout: getBlackjackPayout(hand.betAmount, 'win', winMultipliers)
+    }
   }
 
   if (p === d) {
-    return { finished: true, resultId: 'PUSH', payout: hand.betAmount }
+    return {
+      finished: true,
+      resultId: 'PUSH',
+      payout: getBlackjackPayout(hand.betAmount, 'push', winMultipliers)
+    }
   }
 
   if (p > d) {
-    return { finished: true, resultId: 'PW', payout: hand.betAmount * 2 }
+    return {
+      finished: true,
+      resultId: 'PW',
+      payout: getBlackjackPayout(hand.betAmount, 'win', winMultipliers)
+    }
   }
 
   return { finished: true, resultId: 'DW', payout: 0 }
