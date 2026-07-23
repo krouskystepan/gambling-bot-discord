@@ -1,6 +1,8 @@
 export { banRoleSyncJob } from './banRoleSync.job'
 export { blackjackAutostandJob } from './blackjackAutostand.job'
 export { blackjackIdleNudgeJob } from './blackjackIdleNudge.job'
+export { baccaratIdleNudgeJob } from './baccaratIdleNudge.job'
+export { baccaratIdleRefundJob } from './baccaratIdleRefund.job'
 export { guildOrphanCleanupJob } from './guildOrphanCleanup.job'
 export { guildSettingsSyncJob } from './guildSettingsSync.job'
 export { lockedBalanceReconciliationJob } from './lockedBalanceReconciliation.job'

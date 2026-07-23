@@ -3,6 +3,7 @@ import type { TPrediction } from 'gambling-bot-shared/predictions'
 
 import Prediction from '@/models/Prediction'
 import Transaction from '@/models/Transaction'
+import { getBaccaratGameByUserAndGuild } from '@/services/db/baccaratGame.db'
 import { getBlackjackGameByUserAndGuild } from '@/services/db/blackjackGame.db'
 import { getUser } from '@/services/db/user.db'
 
@@ -29,6 +30,7 @@ type UnsettledBetTx = {
 
 type JustifiedBreakdown = {
   blackjack: number
+  baccarat: number
   predictions: number
   graceBets: number
   pendingRps: number
@@ -167,6 +169,7 @@ export async function computeJustifiedLockedAmount({
 }): Promise<{ justified: number; breakdown: JustifiedBreakdown }> {
   const breakdown: JustifiedBreakdown = {
     blackjack: 0,
+    baccarat: 0,
     predictions: 0,
     graceBets: 0,
     pendingRps: 0
@@ -183,12 +186,23 @@ export async function computeJustifiedLockedAmount({
     )
   }
 
+  const baccaratGame = await getBaccaratGameByUserAndGuild({
+    userId,
+    guildId
+  })
+  if (baccaratGame) {
+    breakdown.baccarat = baccaratGame.betAmount
+  }
+
   const predictionContext = await getPredictionLockContext({ userId, guildId })
   breakdown.predictions = predictionContext.total
 
   const excludedFromCasinoBets = new Set(predictionContext.betIds)
   if (blackjackGame?.betId) {
     excludedFromCasinoBets.add(blackjackGame.betId)
+  }
+  if (baccaratGame?.betId) {
+    excludedFromCasinoBets.add(baccaratGame.betId)
   }
 
   const cutoff = graceCutoff()
@@ -221,6 +235,7 @@ export async function computeJustifiedLockedAmount({
 
   const justified =
     breakdown.blackjack +
+    breakdown.baccarat +
     breakdown.predictions +
     breakdown.graceBets +
     breakdown.pendingRps
@@ -239,21 +254,30 @@ export async function findOrphanBetRefunds({
 }): Promise<{ betId: string; amount: number; game: CasinoGameId }[]> {
   const cutoff = graceCutoff()
 
-  const [blackjackGame, predictionContext, pendingRpsRefs, oldBets] =
-    await Promise.all([
-      getBlackjackGameByUserAndGuild({ userId, guildId }),
-      getPredictionLockContext({ userId, guildId }),
-      getPendingRpsReferenceIds(guildId),
-      getUnsettledCasinoBetTxs({
-        userId,
-        guildId,
-        createdAtFilter: { $lt: cutoff }
-      })
-    ])
+  const [
+    blackjackGame,
+    baccaratGame,
+    predictionContext,
+    pendingRpsRefs,
+    oldBets
+  ] = await Promise.all([
+    getBlackjackGameByUserAndGuild({ userId, guildId }),
+    getBaccaratGameByUserAndGuild({ userId, guildId }),
+    getPredictionLockContext({ userId, guildId }),
+    getPendingRpsReferenceIds(guildId),
+    getUnsettledCasinoBetTxs({
+      userId,
+      guildId,
+      createdAtFilter: { $lt: cutoff }
+    })
+  ])
 
   const excludedRefs = new Set(predictionContext.betIds)
   if (blackjackGame?.betId) {
     excludedRefs.add(blackjackGame.betId)
+  }
+  if (baccaratGame?.betId) {
+    excludedRefs.add(baccaratGame.betId)
   }
 
   const eligible = oldBets

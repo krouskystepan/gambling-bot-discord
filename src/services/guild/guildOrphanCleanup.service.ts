@@ -5,6 +5,10 @@ import VipRoom from '@/models/VipRoom'
 import { rejectAtmRequest } from '@/services/atm/atmApproval.service'
 import { refundLockedBet } from '@/services/casino'
 import {
+  deleteBaccaratGame,
+  getBaccaratGamesByGuildId
+} from '@/services/db/baccaratGame.db'
+import {
   deleteBlackjackGame,
   getBlackjackGamesByGuildId
 } from '@/services/db/blackjackGame.db'
@@ -19,6 +23,7 @@ export type GuildOrphanCleanupSummary = {
   predictions: number
   raffles: number
   blackjack: number
+  baccarat: number
   vipRooms: number
   atmRejected: number
   errors: string[]
@@ -35,6 +40,7 @@ export const runGuildOrphanCleanup = async ({
     predictions: 0,
     raffles: 0,
     blackjack: 0,
+    baccarat: 0,
     vipRooms: 0,
     atmRejected: 0,
     errors: []
@@ -139,6 +145,32 @@ export const runGuildOrphanCleanup = async ({
       await sleep(CLEANUP_ITEM_DELAY_MS)
     } catch (error) {
       const message = `blackjack ${game.betId}: ${String(error)}`
+      summary.errors.push(message)
+      logger.error(`Guild orphan cleanup failed for ${message}`, error)
+    }
+  }
+
+  const baccaratGames = await getBaccaratGamesByGuildId({ guildId })
+
+  for (const game of baccaratGames) {
+    try {
+      await refundLockedBet({
+        userId: game.userId,
+        guildId: game.guildId,
+        amount: game.betAmount,
+        betId: game.betId,
+        game: 'baccarat'
+      })
+
+      await deleteBaccaratGame({
+        userId: game.userId,
+        guildId: game.guildId
+      })
+
+      summary.baccarat++
+      await sleep(CLEANUP_ITEM_DELAY_MS)
+    } catch (error) {
+      const message = `baccarat ${game.betId}: ${String(error)}`
       summary.errors.push(message)
       logger.error(`Guild orphan cleanup failed for ${message}`, error)
     }
