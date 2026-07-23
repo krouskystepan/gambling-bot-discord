@@ -4,6 +4,8 @@ import { afterAll, beforeAll, beforeEach } from 'vitest'
 
 import '@/models/AtmRequest'
 import AtmRequest from '@/models/AtmRequest'
+import '@/models/BaccaratGame'
+import BaccaratGame from '@/models/BaccaratGame'
 import '@/models/BlackjackGame'
 import BlackjackGame from '@/models/BlackjackGame'
 import '@/models/GuildConfiguration'
@@ -77,6 +79,7 @@ export const createTestUser = async ({
 
 export {
   AtmRequest,
+  BaccaratGame,
   BlackjackGame,
   GuildConfiguration,
   Transaction,

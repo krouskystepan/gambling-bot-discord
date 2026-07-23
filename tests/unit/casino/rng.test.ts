@@ -8,8 +8,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DECK } from '@/utils/casino/blackjack/deck'
 import type { Card } from '@/utils/casino/blackjack/types'
 import {
+  createShuffledBaccaratShoe,
   createShuffledHiloDeck,
+  dealBaccarat,
   dealHiloCards,
+  drawBaccaratCard,
   drawGoldenJackpot,
   drawHiloCard,
   drawLottery,
@@ -17,6 +20,7 @@ import {
   dropPlinkoBall,
   dropPlinkoPath,
   flipCoin,
+  formatBaccaratCard,
   formatHiloCard,
   rollDice,
   rollHiloCard,
@@ -89,6 +93,24 @@ describe('rng', () => {
 
   it('drawHiloCard throws when the deck is empty', () => {
     expect(() => drawHiloCard([])).toThrow(/Hi-Lo deck is empty/)
+  })
+
+  it('creates an 8-deck baccarat shoe and deals a valid round', () => {
+    mockRandomInt(0)
+    const shoe = createShuffledBaccaratShoe()
+    expect(shoe).toHaveLength(416)
+
+    const round = dealBaccarat()
+    expect(round.playerCards.length).toBeGreaterThanOrEqual(2)
+    expect(round.bankerCards.length).toBeGreaterThanOrEqual(2)
+    expect(['player', 'banker', 'tie']).toContain(round.outcome)
+    expect(formatBaccaratCard(round.playerCards[0]!)).toBe(
+      `${round.playerCards[0]!.label}${round.playerCards[0]!.suite}`
+    )
+  })
+
+  it('drawBaccaratCard throws when the shoe is empty', () => {
+    expect(() => drawBaccaratCard([])).toThrow(/Baccarat shoe is empty/)
   })
 
   it('rollHiloCard and rollHiloRanks use deck draws', () => {

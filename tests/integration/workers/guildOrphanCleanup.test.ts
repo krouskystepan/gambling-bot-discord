@@ -7,6 +7,10 @@ import {
   createAtmRequest
 } from '@/services/db/atmRequest.db'
 import {
+  getBaccaratGameByUserAndGuild,
+  upsertBaccaratGame
+} from '@/services/db/baccaratGame.db'
+import {
   getBlackjackGameByUserAndGuild,
   upsertBlackjackGame
 } from '@/services/db/blackjackGame.db'
@@ -265,6 +269,44 @@ describe('runGuildOrphanCleanup', () => {
     expect(user?.lockedBalance).toBe(0)
   })
 
+  it('refunds and deletes active baccarat games', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 100,
+      betId: 'bet-bc-orphan',
+      game: 'baccarat'
+    })
+
+    await upsertBaccaratGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'ch-1',
+      messageId: 'msg-bc-1',
+      betId: 'bet-bc-orphan',
+      betAmount: 100,
+      showBalance: false,
+      skipAnimations: false
+    })
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.baccarat).toBe(1)
+
+    const game = await getBaccaratGameByUserAndGuild({
+      userId: 'user-1',
+      guildId: GUILD_ID
+    })
+    expect(game).toBeNull()
+
+    const user = await User.findOne({ userId: 'user-1', guildId: GUILD_ID })
+    expect(user?.balance).toBe(1000)
+    expect(user?.lockedBalance).toBe(0)
+  })
+
   it('deletes VIP rooms for the guild', async () => {
     await seedGuild()
 
@@ -336,6 +378,7 @@ describe('runGuildOrphanCleanup', () => {
       predictions: 0,
       raffles: 0,
       blackjack: 0,
+      baccarat: 0,
       vipRooms: 0,
       atmRejected: 0,
       errors: []
@@ -470,6 +513,41 @@ describe('runGuildOrphanCleanup', () => {
     expect(summary.blackjack).toBe(0)
     expect(summary.errors).toEqual([
       'blackjack bet-fail-bj: Error: blackjack refund failed'
+    ])
+  })
+
+  it('records baccarat cleanup errors without stopping', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 100,
+      betId: 'bet-fail-bc',
+      game: 'baccarat'
+    })
+
+    await upsertBaccaratGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-bc-fail',
+      betId: 'bet-fail-bc',
+      betAmount: 100,
+      showBalance: false,
+      skipAnimations: false
+    })
+
+    vi.mocked(refundLockedBet).mockRejectedValueOnce(
+      new Error('baccarat refund failed')
+    )
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.baccarat).toBe(0)
+    expect(summary.errors).toEqual([
+      'baccarat bet-fail-bc: Error: baccarat refund failed'
     ])
   })
 
