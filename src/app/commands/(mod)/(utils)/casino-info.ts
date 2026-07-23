@@ -198,6 +198,14 @@ const buildGamesSections = (
     bet('Min Bet', settings.blackjack.minBet, globalSettings)
   ]),
 
+  section('💣 Mines', [
+    `- **House Edge:** ${settings.mines.houseEdge * 100}%`,
+    `- **Mines Range:** ${settings.mines.minMines}–${settings.mines.maxMines}`,
+    bet('Max Bet', settings.mines.maxBet, globalSettings),
+    bet('Min Bet', settings.mines.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('mines', settings.mines)] : [])
+  ]),
+
   section('🪨📄✂️ RPS', [
     `- **House Edge:** ${settings.rps.houseEdge * 100}%`,
     bet('Max Bet', settings.rps.maxBet, globalSettings),

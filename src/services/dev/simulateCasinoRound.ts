@@ -41,6 +41,7 @@ import {
   randomMockCasinoGame
 } from './constants'
 import { simulateBlackjackWinnings } from './simulateBlackjack'
+import { simulateMinesWinnings } from './simulateMines'
 
 export type SimulatedCasinoTx = {
   userId: string
@@ -258,6 +259,19 @@ function simulateBlackjackRound(ctx: SimulateCtx): SimulatedCasinoRound {
   return singlePlayerRound(ctx, 'blackjack', betAmount, winAmount)
 }
 
+function simulateMinesRound(ctx: SimulateCtx): SimulatedCasinoRound {
+  const betAmount = pickBetAmountForGame(
+    ctx.casinoSettings,
+    'mines',
+    ctx.fallbackMaxBet
+  )
+  const winAmount = simulateMinesWinnings(
+    betAmount,
+    ctx.casinoSettings.mines.houseEdge
+  )
+  return singlePlayerRound(ctx, 'mines', betAmount, winAmount)
+}
+
 function simulateRpsRound(ctx: SimulateCtx): SimulatedCasinoRound {
   const betAmount = pickBetAmountForGame(
     ctx.casinoSettings,
@@ -345,6 +359,8 @@ function simulateByGame(
   switch (game) {
     case 'blackjack':
       return simulateBlackjackRound(ctx)
+    case 'mines':
+      return simulateMinesRound(ctx)
     case 'rps':
       return simulateRpsRound(ctx)
     case 'prediction':

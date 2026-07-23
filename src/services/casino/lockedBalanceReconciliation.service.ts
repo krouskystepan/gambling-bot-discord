@@ -5,6 +5,7 @@ import Prediction from '@/models/Prediction'
 import Transaction from '@/models/Transaction'
 import { getBaccaratGameByUserAndGuild } from '@/services/db/baccaratGame.db'
 import { getBlackjackGameByUserAndGuild } from '@/services/db/blackjackGame.db'
+import { getMinesGameByUserAndGuild } from '@/services/db/minesGame.db'
 import { getUser } from '@/services/db/user.db'
 
 import {
@@ -31,6 +32,7 @@ type UnsettledBetTx = {
 type JustifiedBreakdown = {
   blackjack: number
   baccarat: number
+  mines: number
   predictions: number
   graceBets: number
   pendingRps: number
@@ -170,6 +172,7 @@ export async function computeJustifiedLockedAmount({
   const breakdown: JustifiedBreakdown = {
     blackjack: 0,
     baccarat: 0,
+    mines: 0,
     predictions: 0,
     graceBets: 0,
     pendingRps: 0
@@ -194,6 +197,11 @@ export async function computeJustifiedLockedAmount({
     breakdown.baccarat = baccaratGame.betAmount
   }
 
+  const minesGame = await getMinesGameByUserAndGuild({ userId, guildId })
+  if (minesGame) {
+    breakdown.mines = minesGame.betAmount
+  }
+
   const predictionContext = await getPredictionLockContext({ userId, guildId })
   breakdown.predictions = predictionContext.total
 
@@ -203,6 +211,9 @@ export async function computeJustifiedLockedAmount({
   }
   if (baccaratGame?.betId) {
     excludedFromCasinoBets.add(baccaratGame.betId)
+  }
+  if (minesGame?.betId) {
+    excludedFromCasinoBets.add(minesGame.betId)
   }
 
   const cutoff = graceCutoff()
@@ -236,6 +247,7 @@ export async function computeJustifiedLockedAmount({
   const justified =
     breakdown.blackjack +
     breakdown.baccarat +
+    breakdown.mines +
     breakdown.predictions +
     breakdown.graceBets +
     breakdown.pendingRps
@@ -257,12 +269,14 @@ export async function findOrphanBetRefunds({
   const [
     blackjackGame,
     baccaratGame,
+    minesGame,
     predictionContext,
     pendingRpsRefs,
     oldBets
   ] = await Promise.all([
     getBlackjackGameByUserAndGuild({ userId, guildId }),
     getBaccaratGameByUserAndGuild({ userId, guildId }),
+    getMinesGameByUserAndGuild({ userId, guildId }),
     getPredictionLockContext({ userId, guildId }),
     getPendingRpsReferenceIds(guildId),
     getUnsettledCasinoBetTxs({
@@ -278,6 +292,9 @@ export async function findOrphanBetRefunds({
   }
   if (baccaratGame?.betId) {
     excludedRefs.add(baccaratGame.betId)
+  }
+  if (minesGame?.betId) {
+    excludedRefs.add(minesGame.betId)
   }
 
   const eligible = oldBets

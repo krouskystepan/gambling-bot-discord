@@ -11,6 +11,10 @@ import {
   upsertBaccaratGame
 } from '@/services/db/baccaratGame.db'
 import {
+  getMinesGameByUserAndGuild,
+  upsertMinesGame
+} from '@/services/db/minesGame.db'
+import {
   getBlackjackGameByUserAndGuild,
   upsertBlackjackGame
 } from '@/services/db/blackjackGame.db'
@@ -307,6 +311,48 @@ describe('runGuildOrphanCleanup', () => {
     expect(user?.lockedBalance).toBe(0)
   })
 
+
+  it('refunds mines games and deletes them', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 100,
+      betId: 'bet-orphan-mines',
+      game: 'mines'
+    })
+
+    await upsertMinesGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      betId: 'bet-orphan-mines',
+      betAmount: 100,
+      mineCount: 3,
+      mineIndices: [0, 1, 2],
+      revealedIndices: [5],
+      houseEdgeSnapshot: 0.03,
+      status: 'ACTIVE'
+    })
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.mines).toBe(1)
+
+    const game = await getMinesGameByUserAndGuild({
+      userId: 'user-1',
+      guildId: GUILD_ID
+    })
+    expect(game).toBeNull()
+
+    const user = await User.findOne({ userId: 'user-1', guildId: GUILD_ID })
+    expect(user?.balance).toBe(1000)
+    expect(user?.lockedBalance).toBe(0)
+  })
+
   it('deletes VIP rooms for the guild', async () => {
     await seedGuild()
 
@@ -379,6 +425,7 @@ describe('runGuildOrphanCleanup', () => {
       raffles: 0,
       blackjack: 0,
       baccarat: 0,
+      mines: 0,
       vipRooms: 0,
       atmRejected: 0,
       errors: []
@@ -548,6 +595,45 @@ describe('runGuildOrphanCleanup', () => {
     expect(summary.baccarat).toBe(0)
     expect(summary.errors).toEqual([
       'baccarat bet-fail-bc: Error: baccarat refund failed'
+    ])
+  })
+
+
+  it('records mines refund failures without deleting the game', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 50,
+      betId: 'bet-fail-mines',
+      game: 'mines'
+    })
+
+    await upsertMinesGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      betId: 'bet-fail-mines',
+      betAmount: 50,
+      mineCount: 2,
+      mineIndices: [0, 1],
+      revealedIndices: [],
+      houseEdgeSnapshot: 0.03,
+      status: 'ACTIVE'
+    })
+
+    vi.mocked(refundLockedBet).mockRejectedValueOnce(
+      new Error('mines refund failed')
+    )
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.mines).toBe(0)
+    expect(summary.errors).toEqual([
+      'mines bet-fail-mines: Error: mines refund failed'
     ])
   })
 

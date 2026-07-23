@@ -47,7 +47,7 @@ export const guildOrphanCleanupJob = async (client: Client<true>) => {
 
       processed++
       logger.worker(
-        `Guild orphan cleanup: ${guildId} — predictions=${summary.predictions}, raffles=${summary.raffles}, blackjack=${summary.blackjack}, baccarat=${summary.baccarat}, vip=${summary.vipRooms}, atm=${summary.atmRejected}, errors=${summary.errors.length}`
+        `Guild orphan cleanup: ${guildId} - predictions=${summary.predictions}, raffles=${summary.raffles}, blackjack=${summary.blackjack}, baccarat=${summary.baccarat}, mines=${summary.mines}, vip=${summary.vipRooms}, atm=${summary.atmRejected}, errors=${summary.errors.length}`
       )
 
       await postWorkerLog(client, {
@@ -59,6 +59,7 @@ export const guildOrphanCleanupJob = async (client: Client<true>) => {
           `Raffles: **${summary.raffles}**`,
           `Blackjack: **${summary.blackjack}**`,
           `Baccarat: **${summary.baccarat}**`,
+          `Mines: **${summary.mines}**`,
           `VIP rooms: **${summary.vipRooms}**`,
           `ATM requests: **${summary.atmRejected}**`,
           summary.errors.length > 0

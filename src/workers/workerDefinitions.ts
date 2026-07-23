@@ -16,6 +16,8 @@ import {
   guildOrphanCleanupJob,
   guildSettingsSyncJob,
   lockedBalanceReconciliationJob,
+  minesAutoResolveJob,
+  minesIdleNudgeJob,
   predictionAutolockJob,
   raffleDrawJob,
   vipExpirationJob,
@@ -67,7 +69,9 @@ export const workerDefinitions: WorkerDefinition[] = [
       ['Blackjack idle nudge', blackjackIdleNudgeJob],
       ['Blackjack auto-stand', blackjackAutostandJob],
       ['Baccarat idle nudge', baccaratIdleNudgeJob],
-      ['Baccarat idle refund', baccaratIdleRefundJob]
+      ['Baccarat idle refund', baccaratIdleRefundJob],
+      ['Mines idle nudge', minesIdleNudgeJob],
+      ['Mines auto-resolve', minesAutoResolveJob]
     ])
   ),
   ...withStartDelay(
