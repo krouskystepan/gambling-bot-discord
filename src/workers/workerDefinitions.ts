@@ -14,6 +14,8 @@ import {
   guildOrphanCleanupJob,
   guildSettingsSyncJob,
   lockedBalanceReconciliationJob,
+  minesAutoResolveJob,
+  minesIdleNudgeJob,
   predictionAutolockJob,
   raffleDrawJob,
   vipExpirationJob,
@@ -63,7 +65,9 @@ export const workerDefinitions: WorkerDefinition[] = [
     THIRTY_SECONDS,
     scheduleEvery(HOUR_MS, [
       ['Blackjack idle nudge', blackjackIdleNudgeJob],
-      ['Blackjack auto-stand', blackjackAutostandJob]
+      ['Blackjack auto-stand', blackjackAutostandJob],
+      ['Mines idle nudge', minesIdleNudgeJob],
+      ['Mines auto-resolve', minesAutoResolveJob]
     ])
   ),
   ...withStartDelay(

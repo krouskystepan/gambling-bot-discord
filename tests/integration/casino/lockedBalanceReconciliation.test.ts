@@ -12,6 +12,7 @@ import {
   reconcileUserLockedBalance
 } from '@/services/casino/lockedBalanceReconciliation.service'
 import { upsertBlackjackGame } from '@/services/db/blackjackGame.db'
+import { upsertMinesGame } from '@/services/db/minesGame.db'
 import { createPrediction } from '@/services/db/prediction.db'
 import { getUsersWithLockedBalance } from '@/services/db/user.db'
 import * as userDb from '@/services/db/user.db'
@@ -92,6 +93,44 @@ describe('lockedBalanceReconciliation.service', () => {
     expect(justified).toBe(100)
     expect(breakdown.blackjack).toBe(100)
     expect(justified - 100).toBeLessThanOrEqual(LOCK_EPSILON)
+
+    const result = await reconcileUserLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(result).toBeNull()
+  })
+
+  it('justifies lock when mines game is active', async () => {
+    await createTestUser({ balance: 900, lockedBalance: 100 })
+    await upsertMinesGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      betId: 'mines-bet-1',
+      betAmount: 100,
+      mineCount: 3,
+      mineIndices: [0, 1, 2],
+      revealedIndices: [],
+      houseEdgeSnapshot: 0.03,
+      status: 'ACTIVE'
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(100)
+    expect(breakdown.mines).toBe(100)
+
+    const orphans = await findOrphanBetRefunds({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      maxExcess: 100
+    })
+    expect(orphans.every((o) => o.betId !== 'mines-bet-1')).toBe(true)
 
     const result = await reconcileUserLockedBalance({
       userId: 'user-1',
