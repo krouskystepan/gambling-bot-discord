@@ -25,6 +25,7 @@ export const renderHiloPromptEmbed = ({
   higherMult,
   lowerMult,
   bet,
+  timeoutFee,
   betId,
   globalSettings
 }: {
@@ -32,6 +33,7 @@ export const renderHiloPromptEmbed = ({
   higherMult: number | null
   lowerMult: number | null
   bet: number
+  timeoutFee: number
   betId: string
   globalSettings: MoneySettings
 }) =>
@@ -41,7 +43,8 @@ export const renderHiloPromptEmbed = ({
     [
       betLine(bet, globalSettings),
       `**Card**\n${firstCard}`,
-      `**Odds**\n⬆ Higher · **${formatMult(higherMult)}**\n⬇ Lower · **${formatMult(lowerMult)}**`
+      `**Odds**\n⬆ Higher · **${formatMult(higherMult)}**\n⬇ Lower · **${formatMult(lowerMult)}**`,
+      `_No guess in time takes a ${(timeoutFee * 100).toFixed(0)}% timeout fee._`
     ].join('\n\n'),
     betId
   )
@@ -74,15 +77,30 @@ export const renderHiloRevealEmbed = ({
 
 export const renderHiloTimeoutEmbed = ({
   firstCard,
-  betId
+  bet,
+  timeoutFee,
+  feeKept,
+  refunded,
+  betId,
+  globalSettings
 }: {
   firstCard: string
+  bet: number
+  timeoutFee: number
+  feeKept: number
+  refunded: number
   betId: string
+  globalSettings: MoneySettings
 }) =>
   createBetEmbed(
-    '🃏 Hi-Lo — Timed Out',
+    '🃏 Hi-Lo - Timed Out',
     'Red',
-    ['No guess in time — bet refunded.', `**Card**\n${firstCard}`].join('\n\n'),
+    [
+      betLine(bet, globalSettings),
+      `**Card**\n${firstCard}`,
+      `No guess in time - **${(timeoutFee * 100).toFixed(0)}%** timeout fee.`,
+      `🔴 Kept: **${formatMoney(feeKept, globalSettings)}**\n🟢 Returned: **${formatMoney(refunded, globalSettings)}**`
+    ].join('\n\n'),
     betId
   )
 

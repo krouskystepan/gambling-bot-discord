@@ -116,6 +116,7 @@ const buildGamesSections = (
 
   section('🃏 Hi-Lo', [
     `- **House Edge:** ${settings.hilo.houseEdge * 100}%`,
+    `- **Timeout Fee:** ${settings.hilo.timeoutFee * 100}%`,
     bet('Max Bet', settings.hilo.maxBet, globalSettings),
     bet('Min Bet', settings.hilo.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('hilo', settings.hilo)] : [])

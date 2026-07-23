@@ -1,5 +1,6 @@
 import {
   type HiloGuess,
+  getHiloTimeoutRefund,
   getHiloWinMultiplier,
   resolveHiloRound,
   shouldAnnounceByMultiplier
@@ -132,6 +133,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           higherMult,
           lowerMult,
           bet: totalBet,
+          timeoutFee: guildConfig.casinoSettings.hilo.timeoutFee,
           betId,
           globalSettings
         })
@@ -160,9 +162,33 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         time: HILO_TIMEOUT_MS
       })
       .catch(async () => {
-        await refundIfNeeded()
+        const timeoutFee = guildConfig.casinoSettings.hilo.timeoutFee
+        const refunded = getHiloTimeoutRefund(totalBet, timeoutFee)
+        const feeKept = totalBet - refunded
+
+        await settleCasinoWinnings({
+          userId: userId!,
+          guildId: guildId!,
+          totalBet,
+          winnings: refunded,
+          betId: betId!,
+          game: 'hilo'
+        })
+        settled = true
+        reserved = false
+
         await reply.edit({
-          embeds: [renderHiloTimeoutEmbed({ firstCard, betId: betId! })],
+          embeds: [
+            renderHiloTimeoutEmbed({
+              firstCard,
+              bet: totalBet,
+              timeoutFee,
+              feeKept,
+              refunded,
+              betId: betId!,
+              globalSettings
+            })
+          ],
           components: []
         })
         return null
