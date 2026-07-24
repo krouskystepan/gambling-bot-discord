@@ -17,6 +17,10 @@ import {
   getMinesGamesByGuildId
 } from '@/services/db/minesGame.db'
 import { updatePredictionStatus } from '@/services/db/prediction.db'
+import {
+  deleteRouletteGame,
+  getRouletteGamesByGuildId
+} from '@/services/db/rouletteGame.db'
 import { deleteVipByOwnerId } from '@/services/db/vip.db'
 import { cancelPrediction } from '@/services/predictions/payPrediction.service'
 import { cancelRaffle } from '@/services/raffles/cancelRaffle.service'
@@ -29,6 +33,7 @@ export type GuildOrphanCleanupSummary = {
   blackjack: number
   baccarat: number
   mines: number
+  roulette: number
   vipRooms: number
   atmRejected: number
   errors: string[]
@@ -47,6 +52,7 @@ export const runGuildOrphanCleanup = async ({
     blackjack: 0,
     baccarat: 0,
     mines: 0,
+    roulette: 0,
     vipRooms: 0,
     atmRejected: 0,
     errors: []
@@ -203,6 +209,34 @@ export const runGuildOrphanCleanup = async ({
       await sleep(CLEANUP_ITEM_DELAY_MS)
     } catch (error) {
       const message = `mines ${game.betId}: ${String(error)}`
+      summary.errors.push(message)
+      logger.error(`Guild orphan cleanup failed for ${message}`, error)
+    }
+  }
+
+  const rouletteGames = await getRouletteGamesByGuildId({ guildId })
+
+  for (const game of rouletteGames) {
+    try {
+      if (game.activeBetId && game.lockedAmount && game.lockedAmount > 0) {
+        await refundLockedBet({
+          userId: game.userId,
+          guildId: game.guildId,
+          amount: game.lockedAmount,
+          betId: game.activeBetId,
+          game: 'roulette'
+        })
+      }
+
+      await deleteRouletteGame({
+        userId: game.userId,
+        guildId: game.guildId
+      })
+
+      summary.roulette++
+      await sleep(CLEANUP_ITEM_DELAY_MS)
+    } catch (error) {
+      const message = `roulette ${game.gameId}: ${String(error)}`
       summary.errors.push(message)
       logger.error(`Guild orphan cleanup failed for ${message}`, error)
     }

@@ -20,6 +20,8 @@ import {
   minesIdleNudgeJob,
   predictionAutolockJob,
   raffleDrawJob,
+  rouletteIdleCloseJob,
+  rouletteIdleNudgeJob,
   vipExpirationJob,
   vipExpiryWarningJob
 } from './jobs'
@@ -71,7 +73,9 @@ export const workerDefinitions: WorkerDefinition[] = [
       ['Baccarat idle nudge', baccaratIdleNudgeJob],
       ['Baccarat idle refund', baccaratIdleRefundJob],
       ['Mines idle nudge', minesIdleNudgeJob],
-      ['Mines auto-resolve', minesAutoResolveJob]
+      ['Mines auto-resolve', minesAutoResolveJob],
+      ['Roulette idle nudge', rouletteIdleNudgeJob],
+      ['Roulette idle close', rouletteIdleCloseJob]
     ])
   ),
   ...withStartDelay(
