@@ -16,6 +16,8 @@ import '@/models/Prediction'
 import Prediction from '@/models/Prediction'
 import '@/models/Raffle'
 import Raffle from '@/models/Raffle'
+import '@/models/RouletteGame'
+import RouletteGame from '@/models/RouletteGame'
 import '@/models/Transaction'
 import Transaction from '@/models/Transaction'
 import '@/models/User'
@@ -85,6 +87,7 @@ export {
   BlackjackGame,
   GuildConfiguration,
   MinesGame,
+  RouletteGame,
   Transaction,
   User,
   UserBan,
