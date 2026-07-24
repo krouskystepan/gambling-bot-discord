@@ -1,7 +1,8 @@
 import {
   ButtonInteraction,
   MessageComponentInteraction,
-  MessageFlags
+  MessageFlags,
+  ModalSubmitInteraction
 } from 'discord.js'
 
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
@@ -13,7 +14,10 @@ export type ButtonErrorContext = {
 }
 
 export const handleUnexpectedButtonError = async (
-  interaction: ButtonInteraction | MessageComponentInteraction,
+  interaction:
+    | ButtonInteraction
+    | MessageComponentInteraction
+    | ModalSubmitInteraction,
   error: unknown,
   context: ButtonErrorContext
 ): Promise<void> => {
