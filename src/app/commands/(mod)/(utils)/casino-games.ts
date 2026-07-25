@@ -124,15 +124,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         '🌀 Roulette',
         [
           formatCommand('roulette', [
-            {
-              name: 'bets',
-              example: '100 red, 50 17, 200 d2, 75 c1, 100 low',
-              required: true
-            },
-            { name: 'spins', example: '5' },
             { name: 'show-balance', example: 'true' },
             { name: 'skip-animations', example: 'true' }
           ]),
+          'Open a live table, tap outcomes (modal for amount), then Spin. Rebet repeats your last slip.',
           getRouletteHelpers()
         ].join('\n')
       ),
