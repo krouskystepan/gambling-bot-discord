@@ -22,6 +22,8 @@ import {
   raffleDrawJob,
   rouletteIdleCloseJob,
   rouletteIdleNudgeJob,
+  slotsIdleCloseJob,
+  slotsIdleNudgeJob,
   vipExpirationJob,
   vipExpiryWarningJob
 } from './jobs'
@@ -75,7 +77,9 @@ export const workerDefinitions: WorkerDefinition[] = [
       ['Mines idle nudge', minesIdleNudgeJob],
       ['Mines auto-resolve', minesAutoResolveJob],
       ['Roulette idle nudge', rouletteIdleNudgeJob],
-      ['Roulette idle close', rouletteIdleCloseJob]
+      ['Roulette idle close', rouletteIdleCloseJob],
+      ['Slots idle nudge', slotsIdleNudgeJob],
+      ['Slots idle close', slotsIdleCloseJob]
     ])
   ),
   ...withStartDelay(

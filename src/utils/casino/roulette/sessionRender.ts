@@ -31,8 +31,8 @@ const OUTSIDE_LABELS: Record<
   black: 'Black',
   odd: 'Odd',
   even: 'Even',
-  low: 'Low',
-  high: 'High'
+  low: 'Low (1-9)',
+  high: 'High (10-18)'
 }
 
 const miniWheelNumbers = Object.keys(MINI_NUMBERS)
@@ -212,9 +212,7 @@ export const renderRouletteComponents = ({
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(!hasBets),
     new ButtonBuilder()
-      .setCustomId(
-        encodeActionId({ kind: 'action', gameId, action: 'clear' })
-      )
+      .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'clear' }))
       .setLabel('Clear')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(!hasBets),
@@ -224,9 +222,7 @@ export const renderRouletteComponents = ({
       .setStyle(ButtonStyle.Success)
       .setDisabled(!hasBets),
     new ButtonBuilder()
-      .setCustomId(
-        encodeActionId({ kind: 'action', gameId, action: 'close' })
-      )
+      .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'close' }))
       .setLabel('Close')
       .setStyle(ButtonStyle.Danger)
   )

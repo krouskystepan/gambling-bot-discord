@@ -19,6 +19,10 @@ import {
   upsertRouletteGame
 } from '@/services/db/rouletteGame.db'
 import {
+  getSlotsGameByUserAndGuild,
+  upsertSlotsGame
+} from '@/services/db/slotsGame.db'
+import {
   getBlackjackGameByUserAndGuild,
   upsertBlackjackGame
 } from '@/services/db/blackjackGame.db'
@@ -421,6 +425,72 @@ describe('runGuildOrphanCleanup', () => {
     ).toBeNull()
   })
 
+  it('refunds locked slots batches and deletes machines', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 100,
+      betId: 'bet-orphan-slots',
+      game: 'slots'
+    })
+
+    await upsertSlotsGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'sl-orphan-1',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      spinsCount: 2,
+      activeBetId: 'bet-orphan-slots',
+      lockedAmount: 100
+    })
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.slots).toBe(1)
+
+    const game = await getSlotsGameByUserAndGuild({
+      userId: 'user-1',
+      guildId: GUILD_ID
+    })
+    expect(game).toBeNull()
+
+    const user = await User.findOne({ userId: 'user-1', guildId: GUILD_ID })
+    expect(user?.balance).toBe(1000)
+    expect(user?.lockedBalance).toBe(0)
+  })
+
+  it('deletes unlocked slots machines without refunding', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await upsertSlotsGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'sl-unlocked-1',
+      showBalance: false,
+      skipAnimations: false
+    })
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.slots).toBe(1)
+    expect(
+      await getSlotsGameByUserAndGuild({
+        userId: 'user-1',
+        guildId: GUILD_ID
+      })
+    ).toBeNull()
+  })
+
   it('deletes VIP rooms for the guild', async () => {
     await seedGuild()
 
@@ -495,6 +565,7 @@ describe('runGuildOrphanCleanup', () => {
       baccarat: 0,
       mines: 0,
       roulette: 0,
+      slots: 0,
       vipRooms: 0,
       atmRejected: 0,
       errors: []
@@ -739,6 +810,44 @@ describe('runGuildOrphanCleanup', () => {
     expect(summary.roulette).toBe(0)
     expect(summary.errors).toEqual([
       'roulette rl-fail-1: Error: roulette refund failed'
+    ])
+  })
+
+  it('records slots refund failures without deleting the machine', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 50,
+      betId: 'bet-fail-slots',
+      game: 'slots'
+    })
+
+    await upsertSlotsGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'sl-fail-1',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 25,
+      spinsCount: 2,
+      activeBetId: 'bet-fail-slots',
+      lockedAmount: 50
+    })
+
+    vi.mocked(refundLockedBet).mockRejectedValueOnce(
+      new Error('slots refund failed')
+    )
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.slots).toBe(0)
+    expect(summary.errors).toEqual([
+      'slots sl-fail-1: Error: slots refund failed'
     ])
   })
 

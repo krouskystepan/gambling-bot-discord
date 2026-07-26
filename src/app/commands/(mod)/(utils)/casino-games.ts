@@ -143,12 +143,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       renderSection(
         '🎰 Slots',
-        formatCommand('slots', [
-          { name: 'bet', example: '5000', required: true },
-          { name: 'spins', example: '10' },
-          { name: 'show-balance', example: 'true' },
-          { name: 'skip-animations', example: 'true' }
-        ])
+        [
+          formatCommand('slots', [
+            { name: 'show-balance', example: 'true' },
+            { name: 'skip-animations', example: 'true' }
+          ]),
+          'Open a live machine, set your chip (Change bet), pick spins (1-10), then Spin.'
+        ].join('\n')
       ),
 
       renderSection(

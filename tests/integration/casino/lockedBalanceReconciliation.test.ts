@@ -15,6 +15,7 @@ import { upsertBaccaratGame } from '@/services/db/baccaratGame.db'
 import { upsertBlackjackGame } from '@/services/db/blackjackGame.db'
 import { upsertMinesGame } from '@/services/db/minesGame.db'
 import { upsertRouletteGame } from '@/services/db/rouletteGame.db'
+import { upsertSlotsGame } from '@/services/db/slotsGame.db'
 import { createPrediction } from '@/services/db/prediction.db'
 import { getUsersWithLockedBalance } from '@/services/db/user.db'
 import * as userDb from '@/services/db/user.db'
@@ -220,6 +221,70 @@ describe('lockedBalanceReconciliation.service', () => {
     })
 
     expect(refunds.some((r) => r.betId === 'rl-bet-orphan-check')).toBe(false)
+  })
+
+  it('justifies lock when slots batch is reserved', async () => {
+    await createTestUser({ balance: 900, lockedBalance: 100 })
+    await upsertSlotsGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'sl-bet-1',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      spinsCount: 2,
+      activeBetId: 'sl-active-1',
+      lockedAmount: 100
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(100)
+    expect(breakdown.slots).toBe(100)
+
+    const result = await reconcileUserLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(result).toBeNull()
+  })
+
+  it('excludes active slots bet id from orphan refunds', async () => {
+    await createTestUser({ balance: 1000, lockedBalance: 0 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      betId: 'sl-bet-orphan-check',
+      game: 'slots'
+    })
+    await upsertSlotsGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'sl-game-orphan',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      spinsCount: 2,
+      activeBetId: 'sl-bet-orphan-check',
+      lockedAmount: 100
+    })
+    await backdateBetTx('sl-bet-orphan-check', RECONCILIATION_GRACE_MS + 60_000)
+
+    const refunds = await findOrphanBetRefunds({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      maxExcess: 100
+    })
+
+    expect(refunds.some((r) => r.betId === 'sl-bet-orphan-check')).toBe(false)
   })
 
   it('justifies lock when mines game is active', async () => {
