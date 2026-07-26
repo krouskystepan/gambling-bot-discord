@@ -12,6 +12,7 @@ import MinesGame from '@/models/MinesGame'
 import Prediction from '@/models/Prediction'
 import Raffle from '@/models/Raffle'
 import RouletteGame from '@/models/RouletteGame'
+import SlotsGame from '@/models/SlotsGame'
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
 import UserBan from '@/models/UserBan'
@@ -36,6 +37,7 @@ const WIPE_MODELS: GuildDataWipeModels = {
   baccaratGames: BaccaratGame,
   minesGames: MinesGame,
   rouletteGames: RouletteGame,
+  slotsGames: SlotsGame,
   userBans: UserBan,
   users: User
 }
