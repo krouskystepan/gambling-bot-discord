@@ -18,6 +18,8 @@ import '@/models/Raffle'
 import Raffle from '@/models/Raffle'
 import '@/models/RouletteGame'
 import RouletteGame from '@/models/RouletteGame'
+import '@/models/SlotsGame'
+import SlotsGame from '@/models/SlotsGame'
 import '@/models/Transaction'
 import Transaction from '@/models/Transaction'
 import '@/models/User'
@@ -88,6 +90,7 @@ export {
   GuildConfiguration,
   MinesGame,
   RouletteGame,
+  SlotsGame,
   Transaction,
   User,
   UserBan,

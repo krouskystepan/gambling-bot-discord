@@ -1,162 +1,93 @@
-import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
-import {
-  formatMoney,
-  parseReadableStringToNumber
-} from 'gambling-bot-shared/common'
+import { generateId } from 'gambling-bot-shared/common'
+
+import { MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData } from 'commandkit'
 
+import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  betOption,
-  roundCountOption,
-  runInstantCasinoCommand,
+  checkCasinoChannels,
+  checkUserRegistration,
+  getSlotsGameByUserAndGuild,
   showBalanceOption,
-  skipAnimationsOption
+  skipAnimationsOption,
+  upsertSlotsGame
 } from '@/services'
-import { spinSlot } from '@/utils/casino/rng'
-import { sleep } from '@/utils/common/utils'
-import { createBetEmbed } from '@/utils/discord/createEmbed'
-import { slotEmojis, spinSlotEmotes } from '@/utils/discord/customEmotes'
-import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
+import {
+  renderSlotsComponents,
+  renderSlotsMachineEmbed
+} from '@/utils/casino/slots'
+import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'slots',
-  description: 'Spin the slot machine!',
-  options: [
-    betOption,
-    roundCountOption('spins', 10, 'Number of spins.'),
-    showBalanceOption,
-    skipAnimationsOption
-  ],
+  description: 'Open a live slots machine - set your chip, then spin!',
+  options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
-  await runInstantCasinoCommand<{ unitBet: number; spins: number }>({
-    interaction,
-    game: 'slots',
-    prepareInput: async ({ interaction, guildConfig }) => {
-      const spins = interaction.options.getInteger('spins') || 1
-      const betAmount = interaction.options.getString('bet', true)
-      const unitBet = parseReadableStringToNumber(betAmount)
+  try {
+    const user = await checkUserRegistration({ interaction })
+    if (!user) return
 
-      return {
-        ok: true,
-        totalBet: unitBet * spins,
-        validateBetAmount: unitBet,
-        minBet: guildConfig.casinoSettings.slots.minBet,
-        maxBet: guildConfig.casinoSettings.slots.maxBet,
-        input: { unitBet, spins }
-      }
-    },
-    executeGame: async ({
-      interaction,
-      guildConfig,
-      betId,
-      totalBet,
-      showBalance,
-      skipAnimations,
-      input: { unitBet, spins }
-    }) => {
-      let totalWinnings = 0
-      let liveResult = 0
-      const results: string[] = []
-      const announcementSpins: string[] = []
+    const guildConfig = await checkCasinoChannels(interaction)
+    if (!guildConfig) return
 
-      for (let i = 0; i < spins; i++) {
-        if (!skipAnimations) {
-          await interaction.editReply({
-            embeds: [
-              createBetEmbed(
-                `🎰 Spinning...`,
-                'Blue',
-                `💵 Total Bet: **${formatMoney(totalBet, guildConfig.globalSettings)}**\n\n` +
-                  `🕹 Spin Results:\n${results.join('\n')}${
-                    results.length ? '\n' : ''
-                  }${spinSlotEmotes[1]}${spinSlotEmotes[2]}${spinSlotEmotes[3]}` +
-                  `\n\n💰 Total: ${
-                    liveResult > 0 ? '🟢' : liveResult < 0 ? '🔴' : '🟡'
-                  } **${formatMoney(liveResult, guildConfig.globalSettings)}**`,
-                betId
-              )
-            ]
-          })
+    const existingGame = await getSlotsGameByUserAndGuild({
+      userId: interaction.user.id,
+      guildId: interaction.guildId!
+    })
 
-          await sleep(700)
-        }
-
-        const spinResult = spinSlot({
-          symbolWeights: guildConfig.casinoSettings.slots.symbolWeights
-        })
-
-        const resultString = spinResult.replace(
-          /🍒|🫐|🍉|🔔|7️⃣/g,
-          (match) => slotEmojis[match]
-        )
-
-        const spinMultiplier =
-          guildConfig.casinoSettings.slots.winMultipliers[spinResult] || 0
-        const winnings = spinMultiplier * unitBet
-        const isWin = winnings > 0
-
-        if (
-          shouldAnnounceByMultiplier(
-            spinMultiplier,
-            guildConfig.casinoSettings.winAnnouncements.slotsMinMultiplier
+    if (existingGame) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Slots Already Active',
+            'You already have an open slots machine! Close it or finish that game first. 🎰'
           )
-        ) {
-          announcementSpins.push(
-            formatBigWinLine({
-              label: `Spin **${i + 1}**`,
-              middle: [`**${resultString}**`],
-              multiplier: String(spinMultiplier),
-              payout: formatMoney(winnings, guildConfig.globalSettings),
-              bet: formatMoney(unitBet, guildConfig.globalSettings)
-            })
-          )
-        }
-
-        results.push(
-          `**${resultString}** | ${isWin ? '🎉' : '❌'} | ${
-            isWin
-              ? `**+${formatMoney(winnings, guildConfig.globalSettings)}**`
-              : `**-${formatMoney(unitBet, guildConfig.globalSettings)}**`
-          }`
-        )
-
-        totalWinnings += winnings
-        liveResult += winnings - unitBet
-      }
-
-      const isWin = liveResult > 0
-      const isLoss = liveResult < 0
-
-      return {
-        totalWinnings,
-        announce: {
-          game: 'slots',
-          lines: announcementSpins,
-          sourceChannelId: interaction.channelId
-        },
-        buildFinalEmbed: (finalBalance) =>
-          createBetEmbed(
-            isWin
-              ? '🎰 **Win!** 🎉'
-              : isLoss
-                ? '🎰 **Better Luck Next Time...** ❌'
-                : '🎰 **Not Bad...** 👀',
-            isWin ? 'Green' : isLoss ? 'Red' : 'Yellow',
-            `💵 Total Bet: **${formatMoney(totalBet, guildConfig.globalSettings)}**\n\n` +
-              `🕹 **Spin Results:**\n${results.join('\n')}\n\n` +
-              `💰 Total: ${
-                isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-              } **${formatMoney(liveResult, guildConfig.globalSettings)}**\n` +
-              (showBalance
-                ? `🏦 Balance: **${formatMoney(finalBalance, guildConfig.globalSettings)}**`
-                : ''),
-            betId
-          )
-      }
+        ],
+        flags: MessageFlags.Ephemeral
+      })
     }
-  })
+
+    const showBalance = interaction.options.getBoolean('show-balance') || false
+    const skipAnimations =
+      interaction.options.getBoolean('skip-animations') || false
+
+    await interaction.deferReply()
+
+    const gameId = generateId()
+
+    const message = await interaction.editReply({
+      embeds: [
+        renderSlotsMachineEmbed({
+          gameId,
+          phase: 'ready',
+          unitBet: null,
+          spinsCount: 1,
+          showBalance,
+          globalSettings: guildConfig.globalSettings
+        })
+      ],
+      components: renderSlotsComponents({
+        gameId,
+        phase: 'ready',
+        hasUnitBet: false,
+        spinsCount: 1
+      })
+    })
+
+    await upsertSlotsGame({
+      userId: user.userId,
+      guildId: user.guildId,
+      channelId: interaction.channelId,
+      messageId: message.id,
+      gameId,
+      showBalance,
+      skipAnimations
+    })
+  } catch (error) {
+    await handleUnexpectedInteractionError(interaction, error)
+  }
 }
