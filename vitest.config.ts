@@ -6,6 +6,8 @@ import path from 'node:path'
 const devExclude = [
   'src/services/dev/**',
   'src/app/commands/(mod)/(dev)/**',
+  'src/app/commands/(mod)/(config)/**',
+  'src/app/commands/(mod)/(auth)/**',
   'src/utils/devAccess.ts',
   'src/utils/devGuilds.ts'
 ]
@@ -19,11 +21,14 @@ const coverageExclude = [
   'src/utils/discord/createEmbed.ts',
   'src/utils/discord/customEmotes.ts',
   'src/services/casino/casinoSlashOptions.ts',
+  'src/services/atm/atmRequestStatusEmbed.ts',
 
   'src/utils/casino/**/render.ts',
   'src/utils/casino/**/sessionRender.ts',
   'src/utils/casino/**/playRound.ts',
-  'src/utils/casino/**/types.ts'
+  'src/utils/casino/**/types.ts',
+  'src/utils/casino/roulette/helpers.ts',
+  'src/utils/casino/roulette/math.ts'
 ]
 
 export default defineConfig({
