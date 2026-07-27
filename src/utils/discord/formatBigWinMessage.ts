@@ -1,22 +1,30 @@
 export type BigWinGame =
   | 'dice'
   | 'coin-flip'
+  | 'hilo'
+  | 'limbo'
   | 'slots'
   | 'roulette'
+  | 'baccarat'
   | 'plinko'
   | 'lottery'
   | 'goldenjackpot'
   | 'blackjack'
+  | 'mines'
 
 export const BIG_WIN_HEADLINES: Record<BigWinGame, string> = {
   dice: 'Someone won big on Dice!',
   'coin-flip': 'Someone won big on Coin Flip!',
+  hilo: 'Someone won big on Hi-Lo!',
+  limbo: 'Someone won big on Limbo!',
   slots: 'Someone won big on Slots!',
   roulette: 'Someone won big on Roulette!',
+  baccarat: 'Someone won big on Baccarat!',
   plinko: 'Someone won big on Plinko!',
   lottery: 'Someone won big on Lottery!',
   goldenjackpot: 'Someone hit the Golden Jackpot!',
-  blackjack: 'Someone won big on Blackjack!'
+  blackjack: 'Someone won big on Blackjack!',
+  mines: 'Someone won big on Mines!'
 }
 
 export const formatBigWinLine = ({

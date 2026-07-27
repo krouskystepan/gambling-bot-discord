@@ -24,6 +24,14 @@ const WORKER_TARGETS: { name: string; value: WorkerMockEntity }[] = [
     value: 'blackjack-autostand'
   },
   {
+    name: 'Mines idle nudge (3h+ idle)',
+    value: 'mines-idle-nudge'
+  },
+  {
+    name: 'Mines auto-resolve (24h+ idle)',
+    value: 'mines-autostand'
+  },
+  {
     name: 'VIP expired rooms',
     value: 'vip-expired'
   },

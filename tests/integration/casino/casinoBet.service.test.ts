@@ -547,7 +547,7 @@ describe('casinoBet.service', () => {
       p2GuildId: 'guild-1',
       betAmount: 100,
       winnerUserId: 'p2',
-      casinoCut: 0,
+      houseEdge: 0,
       betId: 'rps-p2-win',
       game: 'dice'
     })
@@ -580,7 +580,7 @@ describe('casinoBet.service', () => {
       p2GuildId: 'guild-1',
       betAmount: 100,
       winnerUserId: 'p1',
-      casinoCut: 0,
+      houseEdge: 0,
       betId: 'rps-idem',
       game: 'dice'
     })
@@ -601,7 +601,7 @@ describe('casinoBet.service', () => {
         p2GuildId: 'guild-1',
         betAmount: 100,
         winnerUserId: 'p1',
-        casinoCut: 0,
+        houseEdge: 0,
         betId: 'rps-missing',
         game: 'dice'
       })
@@ -640,7 +640,7 @@ describe('casinoBet.service', () => {
       p2GuildId: 'guild-1',
       betAmount: 100,
       winnerUserId: 'p1',
-      casinoCut: 0.1,
+      houseEdge: 0.1,
       betId: 'rps-1',
       game: 'dice'
     })
@@ -673,7 +673,7 @@ describe('casinoBet.service', () => {
       p2GuildId: 'guild-1',
       betAmount: 100,
       winnerUserId: null,
-      casinoCut: 0.1,
+      houseEdge: 0.1,
       betId: 'rps-draw',
       game: 'dice'
     })
@@ -702,7 +702,7 @@ describe('casinoBet.service', () => {
       p2GuildId: 'guild-1',
       betAmount: 100,
       winnerUserId: 'p2',
-      casinoCut: 0,
+      houseEdge: 0,
       betId: 'rps-p1-low-lock',
       game: 'dice'
     })
@@ -727,7 +727,7 @@ describe('casinoBet.service', () => {
       p2GuildId: 'guild-1',
       betAmount: 100,
       winnerUserId: 'p1',
-      casinoCut: 0,
+      houseEdge: 0,
       betId: 'rps-p2-low-lock',
       game: 'dice'
     })
@@ -758,7 +758,7 @@ describe('casinoBet.service', () => {
       p2GuildId: 'guild-1',
       betAmount: 100,
       winnerUserId: 'p2',
-      casinoCut: 0,
+      houseEdge: 0,
       betId: 'rps-skip',
       game: 'dice'
     })
@@ -799,7 +799,7 @@ describe('casinoBet.service', () => {
       p2GuildId: 'guild-1',
       betAmount: 100,
       winnerUserId: 'p1',
-      casinoCut: 0.1,
+      houseEdge: 0.1,
       betId: 'rps-idem',
       game: 'dice'
     })

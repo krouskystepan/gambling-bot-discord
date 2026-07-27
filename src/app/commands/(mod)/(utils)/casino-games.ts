@@ -60,6 +60,25 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       ),
 
       renderSection(
+        '🃏 Hi-Lo',
+        formatCommand('hilo', [
+          { name: 'bet', example: '2000', required: true },
+          { name: 'show-balance', example: 'true' }
+        ])
+      ),
+
+      renderSection(
+        '🚀 Limbo',
+        formatCommand('limbo', [
+          { name: 'bet', example: '2000', required: true },
+          { name: 'target', example: '2', required: true },
+          { name: 'rolls', example: '10' },
+          { name: 'show-balance', example: 'true' },
+          { name: 'skip-animations', example: 'true' }
+        ])
+      ),
+
+      renderSection(
         '🎲 Dice',
         formatCommand('dice', [
           { name: 'bet', example: '3000', required: true },
@@ -105,33 +124,47 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         '🌀 Roulette',
         [
           formatCommand('roulette', [
-            {
-              name: 'bets',
-              example: '100 red, 50 17, 200 d2, 75 c1, 100 low',
-              required: true
-            },
-            { name: 'spins', example: '5' },
             { name: 'show-balance', example: 'true' },
             { name: 'skip-animations', example: 'true' }
           ]),
+          'Open a live table, tap outcomes (modal for amount), then Spin. Rebet repeats your last slip.',
           getRouletteHelpers()
         ].join('\n')
       ),
 
       renderSection(
-        '🎰 Slots',
-        formatCommand('slots', [
-          { name: 'bet', example: '5000', required: true },
-          { name: 'spins', example: '10' },
+        '🃏 Baccarat',
+        formatCommand('baccarat', [
+          { name: 'bet', example: '2000', required: true },
           { name: 'show-balance', example: 'true' },
           { name: 'skip-animations', example: 'true' }
         ])
       ),
 
       renderSection(
+        '🎰 Slots',
+        [
+          formatCommand('slots', [
+            { name: 'show-balance', example: 'true' },
+            { name: 'skip-animations', example: 'true' }
+          ]),
+          'Open a live machine, set your chip (Change bet), pick spins (1-10), then Spin.'
+        ].join('\n')
+      ),
+
+      renderSection(
         '🃏 Blackjack',
         formatCommand('blackjack', [
           { name: 'bet', example: '2000', required: true },
+          { name: 'show-balance', example: 'true' }
+        ])
+      ),
+
+      renderSection(
+        '💣 Mines',
+        formatCommand('mines', [
+          { name: 'bet', example: '2000', required: true },
+          { name: 'mines', example: '3', required: true },
           { name: 'show-balance', example: 'true' }
         ])
       ),

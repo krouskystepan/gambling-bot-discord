@@ -1,4 +1,7 @@
-import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
+import {
+  type BlackjackWinMultipliers,
+  shouldAnnounceByMultiplier
+} from 'gambling-bot-shared/casino'
 import { formatMoney } from 'gambling-bot-shared/common'
 import { GlobalSettings } from 'gambling-bot-shared/guild'
 
@@ -8,17 +11,19 @@ import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 export const collectBlackjackBigWinLines = ({
   engine,
   globalSettings,
+  winMultipliers,
   minMultiplier
 }: {
   engine: EngineState
   globalSettings: GlobalSettings | undefined
+  winMultipliers?: BlackjackWinMultipliers
   minMultiplier: number
 }) => {
   const lines: string[] = []
 
   for (let i = 0; i < engine.hands.length; i++) {
     const hand = engine.hands[i]
-    const result = resolveResult(engine, i)
+    const result = resolveResult(engine, i, winMultipliers)
 
     if (!hand || !result.finished || result.payout <= 0) continue
 

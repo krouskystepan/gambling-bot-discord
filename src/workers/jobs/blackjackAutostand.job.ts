@@ -3,26 +3,18 @@ import { ChannelType } from 'discord.js'
 import { Client } from 'commandkit'
 
 import {
-  deleteBlackjackGame,
   getAllOldBlackjackGames,
   getGuildConfigByGuildId,
-  settleCasinoWinnings,
   updateBlackjackGame
 } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import {
-  FinalGameResultId,
   applyAction,
-  dealerDrawOne,
-  dealerShouldDraw,
   docToEngine,
   engineToDoc,
-  renderBlackjackEmbed,
-  resolveResult
+  finishBlackjackDealerAndSettle
 } from '@/utils/casino/blackjack'
-import { collectBlackjackBigWinLines } from '@/utils/casino/blackjackBigWin'
 import { sleep } from '@/utils/common/utils'
-import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 import { logger } from '@/utils/logger'
 import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
@@ -43,7 +35,6 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
       const guildConfig = await getGuildConfigByGuildId({
         guildId: game.guildId
       })
-      const globalSettings = guildConfig?.globalSettings
 
       const channel = await guild.channels
         .fetch(game.channelId)
@@ -73,74 +64,16 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
       }
 
       engine.activeHandIndex = engine.hands.length - 1
-
-      while (dealerShouldDraw(engine)) {
-        dealerDrawOne(engine)
-      }
-
-      let totalPayout = 0
-      for (let i = 0; i < engine.hands.length; i++) {
-        const r = resolveResult(engine, i)
-        if (r.finished) totalPayout += r.payout
-      }
-
-      const totalBet = engine.hands.reduce(
-        (sum, hand) => sum + hand.betAmount,
-        0
-      )
-      const net = totalPayout - totalBet
-
-      let finalResultId: FinalGameResultId =
-        totalPayout === 0 ? 'LOSS' : totalPayout === totalBet ? 'EVEN' : 'WIN'
-
-      await settleCasinoWinnings({
-        userId: game.userId,
-        guildId: game.guildId,
-        totalBet,
-        winnings: totalPayout,
-        betId: game.betId,
-        game: 'blackjack'
-      })
-
-      if (guildConfig) {
-        tryAnnounceBigWin({
-          guild,
-          guildConfig,
-          game: 'blackjack',
-          lines: collectBlackjackBigWinLines({
-            engine,
-            globalSettings,
-            minMultiplier:
-              guildConfig.casinoSettings.winAnnouncements.blackjackMinMultiplier
-          }),
-          betId: game.betId,
-          sourceChannelId: game.channelId
-        })
-      }
-
-      if (message) {
-        await message.edit({
-          content: 'This game was inactive, so auto-stand was executed.',
-          embeds: [
-            renderBlackjackEmbed({
-              userId: game.userId,
-              guildId: game.guildId,
-              betId: game.betId,
-              hands: engine.hands,
-              activeHandIndex: -1,
-              dealerCards: engine.dealerCards,
-              result: { kind: 'FINAL', finalResultId, netProfit: net },
-              showBalance: false,
-              globalSettings
-            })
-          ],
-          components: []
-        })
-      }
-
-      await deleteBlackjackGame({
-        userId: game.userId,
-        guildId: game.guildId
+      await finishBlackjackDealerAndSettle({
+        game,
+        engine,
+        guildConfig,
+        guild,
+        sourceChannelId: game.channelId,
+        showBalance: false,
+        message,
+        finalMessageContent:
+          'This game was inactive, so auto-stand was executed.'
       })
 
       processed++

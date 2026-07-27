@@ -4,14 +4,22 @@ import { afterAll, beforeAll, beforeEach } from 'vitest'
 
 import '@/models/AtmRequest'
 import AtmRequest from '@/models/AtmRequest'
+import '@/models/BaccaratGame'
+import BaccaratGame from '@/models/BaccaratGame'
 import '@/models/BlackjackGame'
 import BlackjackGame from '@/models/BlackjackGame'
 import '@/models/GuildConfiguration'
 import GuildConfiguration from '@/models/GuildConfiguration'
+import '@/models/MinesGame'
+import MinesGame from '@/models/MinesGame'
 import '@/models/Prediction'
 import Prediction from '@/models/Prediction'
 import '@/models/Raffle'
 import Raffle from '@/models/Raffle'
+import '@/models/RouletteGame'
+import RouletteGame from '@/models/RouletteGame'
+import '@/models/SlotsGame'
+import SlotsGame from '@/models/SlotsGame'
 import '@/models/Transaction'
 import Transaction from '@/models/Transaction'
 import '@/models/User'
@@ -77,8 +85,12 @@ export const createTestUser = async ({
 
 export {
   AtmRequest,
+  BaccaratGame,
   BlackjackGame,
   GuildConfiguration,
+  MinesGame,
+  RouletteGame,
+  SlotsGame,
   Transaction,
   User,
   UserBan,

@@ -11,7 +11,11 @@ import {
   findOrphanBetRefunds,
   reconcileUserLockedBalance
 } from '@/services/casino/lockedBalanceReconciliation.service'
+import { upsertBaccaratGame } from '@/services/db/baccaratGame.db'
 import { upsertBlackjackGame } from '@/services/db/blackjackGame.db'
+import { upsertMinesGame } from '@/services/db/minesGame.db'
+import { upsertRouletteGame } from '@/services/db/rouletteGame.db'
+import { upsertSlotsGame } from '@/services/db/slotsGame.db'
 import { createPrediction } from '@/services/db/prediction.db'
 import { getUsersWithLockedBalance } from '@/services/db/user.db'
 import * as userDb from '@/services/db/user.db'
@@ -63,6 +67,25 @@ const seedBlackjack = async ({
   })
 }
 
+const seedBaccarat = async ({
+  betAmount = 100,
+  betId = 'bc-bet-1'
+}: {
+  betAmount?: number
+  betId?: string
+} = {}) => {
+  await upsertBaccaratGame({
+    userId: 'user-1',
+    guildId: 'guild-1',
+    channelId: 'channel-1',
+    messageId: 'msg-bc-1',
+    betId,
+    betAmount,
+    showBalance: false,
+    skipAnimations: false
+  })
+}
+
 const seedActivePrediction = async (predictionId: string) => {
   await createPrediction({
     predictionId,
@@ -92,6 +115,208 @@ describe('lockedBalanceReconciliation.service', () => {
     expect(justified).toBe(100)
     expect(breakdown.blackjack).toBe(100)
     expect(justified - 100).toBeLessThanOrEqual(LOCK_EPSILON)
+
+    const result = await reconcileUserLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(result).toBeNull()
+  })
+
+  it('justifies lock when baccarat game is active', async () => {
+    await createTestUser({ balance: 900, lockedBalance: 100 })
+    await seedBaccarat({ betAmount: 100 })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(100)
+    expect(breakdown.baccarat).toBe(100)
+
+    const result = await reconcileUserLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(result).toBeNull()
+  })
+
+  it('excludes active baccarat bet id from orphan refunds', async () => {
+    await createTestUser({ balance: 1000, lockedBalance: 0 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      betId: 'bc-bet-orphan-check',
+      game: 'baccarat'
+    })
+    await seedBaccarat({ betAmount: 100, betId: 'bc-bet-orphan-check' })
+    await backdateBetTx('bc-bet-orphan-check', RECONCILIATION_GRACE_MS + 60_000)
+
+    const refunds = await findOrphanBetRefunds({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      maxExcess: 100
+    })
+
+    expect(refunds.some((r) => r.betId === 'bc-bet-orphan-check')).toBe(false)
+  })
+
+  it('justifies lock when roulette spin is reserved', async () => {
+    await createTestUser({ balance: 900, lockedBalance: 100 })
+    await upsertRouletteGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'rl-bet-1',
+      showBalance: false,
+      skipAnimations: false,
+      activeBetId: 'rl-active-1',
+      lockedAmount: 100
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(100)
+    expect(breakdown.roulette).toBe(100)
+
+    const result = await reconcileUserLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(result).toBeNull()
+  })
+
+  it('excludes active roulette bet id from orphan refunds', async () => {
+    await createTestUser({ balance: 1000, lockedBalance: 0 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      betId: 'rl-bet-orphan-check',
+      game: 'roulette'
+    })
+    await upsertRouletteGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'rl-game-orphan',
+      showBalance: false,
+      skipAnimations: false,
+      activeBetId: 'rl-bet-orphan-check',
+      lockedAmount: 100
+    })
+    await backdateBetTx('rl-bet-orphan-check', RECONCILIATION_GRACE_MS + 60_000)
+
+    const refunds = await findOrphanBetRefunds({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      maxExcess: 100
+    })
+
+    expect(refunds.some((r) => r.betId === 'rl-bet-orphan-check')).toBe(false)
+  })
+
+  it('justifies lock when slots batch is reserved', async () => {
+    await createTestUser({ balance: 900, lockedBalance: 100 })
+    await upsertSlotsGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'sl-bet-1',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      spinsCount: 2,
+      activeBetId: 'sl-active-1',
+      lockedAmount: 100
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(100)
+    expect(breakdown.slots).toBe(100)
+
+    const result = await reconcileUserLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(result).toBeNull()
+  })
+
+  it('excludes active slots bet id from orphan refunds', async () => {
+    await createTestUser({ balance: 1000, lockedBalance: 0 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      betId: 'sl-bet-orphan-check',
+      game: 'slots'
+    })
+    await upsertSlotsGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'sl-game-orphan',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      spinsCount: 2,
+      activeBetId: 'sl-bet-orphan-check',
+      lockedAmount: 100
+    })
+    await backdateBetTx('sl-bet-orphan-check', RECONCILIATION_GRACE_MS + 60_000)
+
+    const refunds = await findOrphanBetRefunds({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      maxExcess: 100
+    })
+
+    expect(refunds.some((r) => r.betId === 'sl-bet-orphan-check')).toBe(false)
+  })
+
+  it('justifies lock when mines game is active', async () => {
+    await createTestUser({ balance: 900, lockedBalance: 100 })
+    await upsertMinesGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      betId: 'mines-bet-1',
+      betAmount: 100,
+      mineCount: 3,
+      mineIndices: [0, 1, 2],
+      revealedIndices: [],
+      houseEdgeSnapshot: 0.03,
+      status: 'ACTIVE'
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(100)
+    expect(breakdown.mines).toBe(100)
+
+    const orphans = await findOrphanBetRefunds({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      maxExcess: 100
+    })
+    expect(orphans.every((o) => o.betId !== 'mines-bet-1')).toBe(true)
 
     const result = await reconcileUserLockedBalance({
       userId: 'user-1',

@@ -2,6 +2,7 @@ import {
   blackjackAutostandIdleMs,
   blackjackIdleNudgeThresholdMs
 } from 'gambling-bot-shared/blackjack'
+import { DAY_MS } from 'gambling-bot-shared/common'
 
 import BlackjackGame from '@/models/BlackjackGame'
 
@@ -38,7 +39,7 @@ export const getBlackjackGamesByGuildId = async ({
 export const getAllOldBlackjackGames = async (days: number) => {
   return BlackjackGame.find({
     updatedAt: {
-      $lte: new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      $lte: new Date(Date.now() - days * DAY_MS)
     }
   })
 }
@@ -124,4 +125,13 @@ export const deleteBlackjackGame = async ({
   guildId: string
 }) => {
   await BlackjackGame.findOneAndDelete({ userId, guildId })
+}
+
+export const getStaleDealerBlackjackGames = async (graceMs: number) => {
+  const cutoff = new Date(Date.now() - graceMs)
+
+  return BlackjackGame.find({
+    phase: 'DEALER',
+    updatedAt: { $lte: cutoff }
+  })
 }

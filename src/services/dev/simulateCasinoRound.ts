@@ -1,19 +1,31 @@
 import type { CasinoGameId, TCasinoSettings } from 'gambling-bot-shared/casino'
 import {
+  BACCARAT_BET_SIDES,
+  type BaccaratBetSide,
+  type HiloGuess,
+  LIMBO_MAX_TARGET,
+  LIMBO_MIN_TARGET,
   LOTTERY_NUM_TO_DRAW,
   LOTTERY_TOTAL_NUMBERS,
   PLINKO_ROW_COUNT,
+  getHiloWinMultiplier,
   getPlinkoMultiplierAtPathIndex,
-  normalizePlinkoBinMultipliers
+  isLimboWin,
+  normalizePlinkoBinMultipliers,
+  resolveBaccaratBet,
+  resolveHiloRound
 } from 'gambling-bot-shared/casino'
 import { generateId } from 'gambling-bot-shared/common'
 
 import {
+  dealBaccarat,
   drawGoldenJackpot,
   drawLottery,
   dropPlinkoBall,
   flipCoin,
   rollDice,
+  rollHiloRanks,
+  rollLimbo,
   spinRouletteWheel,
   spinSlot
 } from '@/utils/casino/rng'
@@ -29,6 +41,7 @@ import {
   randomMockCasinoGame
 } from './constants'
 import { simulateBlackjackWinnings } from './simulateBlackjack'
+import { simulateMinesWinnings } from './simulateMines'
 
 export type SimulatedCasinoTx = {
   userId: string
@@ -153,6 +166,28 @@ function simulateRngGame(
         ? betAmount * ctx.casinoSettings.coinflip.winMultiplier
         : 0
     }
+    case 'hilo': {
+      const { first, second } = rollHiloRanks()
+      const houseEdge = ctx.casinoSettings.hilo.houseEdge
+      const options = (['higher', 'lower'] as const).filter(
+        (guess) => getHiloWinMultiplier(first, guess, houseEdge) != null
+      )
+      const guess = randomChoice(options) as HiloGuess
+      const outcome = resolveHiloRound(first, second, guess)
+      if (outcome === 'push') return betAmount
+      if (outcome === 'lose') return 0
+      const mult = getHiloWinMultiplier(first, guess, houseEdge) ?? 0
+      return betAmount * mult
+    }
+    case 'limbo': {
+      const houseEdge = ctx.casinoSettings.limbo.houseEdge
+      const targetChoices = [1.5, 2, 5, 10, 25, 50, 100].filter(
+        (t) => t >= LIMBO_MIN_TARGET && t <= LIMBO_MAX_TARGET
+      )
+      const target = randomChoice(targetChoices)
+      const result = rollLimbo(houseEdge)
+      return isLimboWin(result, target) ? betAmount * target : 0
+    }
     case 'slots': {
       const spinResult = spinSlot({
         symbolWeights: ctx.casinoSettings.slots.symbolWeights
@@ -182,6 +217,16 @@ function simulateRngGame(
         ctx.casinoSettings.roulette.winMultipliers
       )
     }
+    case 'baccarat': {
+      const side = randomChoice(BACCARAT_BET_SIDES) as BaccaratBetSide
+      const round = dealBaccarat()
+      const { multiplier } = resolveBaccaratBet(
+        side,
+        round,
+        ctx.casinoSettings.baccarat.winMultipliers
+      )
+      return betAmount * multiplier
+    }
     case 'plinko': {
       const binMultipliers = normalizePlinkoBinMultipliers(
         ctx.casinoSettings.plinko.binMultipliers
@@ -210,8 +255,24 @@ function simulateBlackjackRound(ctx: SimulateCtx): SimulatedCasinoRound {
     'blackjack',
     ctx.fallbackMaxBet
   )
-  const winAmount = simulateBlackjackWinnings(betAmount)
+  const winAmount = simulateBlackjackWinnings(
+    betAmount,
+    ctx.casinoSettings.blackjack.winMultipliers
+  )
   return singlePlayerRound(ctx, 'blackjack', betAmount, winAmount)
+}
+
+function simulateMinesRound(ctx: SimulateCtx): SimulatedCasinoRound {
+  const betAmount = pickBetAmountForGame(
+    ctx.casinoSettings,
+    'mines',
+    ctx.fallbackMaxBet
+  )
+  const winAmount = simulateMinesWinnings(
+    betAmount,
+    ctx.casinoSettings.mines.houseEdge
+  )
+  return singlePlayerRound(ctx, 'mines', betAmount, winAmount)
 }
 
 function simulateRpsRound(ctx: SimulateCtx): SimulatedCasinoRound {
@@ -235,7 +296,7 @@ function simulateRpsRound(ctx: SimulateCtx): SimulatedCasinoRound {
   if (p1Wins || p2Wins) {
     const winnerId = p1Wins ? ctx.userId : opponentId
     const pot = betAmount * 2
-    const payout = Math.round(pot * (1 - ctx.casinoSettings.rps.casinoCut))
+    const payout = Math.round(pot * (1 - ctx.casinoSettings.rps.houseEdge))
     txs.push(winTx(ctx, 'rps', payout, winnerId))
   }
 
@@ -284,7 +345,7 @@ function simulateRaffleRound(ctx: SimulateCtx): SimulatedCasinoRound {
   if (Math.random() < 0.18) {
     const poolMultiplier = randomInt(4, 25)
     const pot = Math.round(
-      totalCost * poolMultiplier * (1 - ctx.casinoSettings.raffle.casinoCut)
+      totalCost * poolMultiplier * (1 - ctx.casinoSettings.raffle.houseEdge)
     )
     if (pot > 0) {
       txs.push(winTx(ctx, 'raffle', pot))
@@ -301,6 +362,8 @@ function simulateByGame(
   switch (game) {
     case 'blackjack':
       return simulateBlackjackRound(ctx)
+    case 'mines':
+      return simulateMinesRound(ctx)
     case 'rps':
       return simulateRpsRound(ctx)
     case 'prediction':

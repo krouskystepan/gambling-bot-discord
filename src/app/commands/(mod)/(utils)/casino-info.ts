@@ -114,6 +114,21 @@ const buildGamesSections = (
     ...(showAdmin ? [rtpLine('coinflip', settings.coinflip)] : [])
   ]),
 
+  section('🃏 Hi-Lo', [
+    `- **House Edge:** ${settings.hilo.houseEdge * 100}%`,
+    `- **Timeout Fee:** ${settings.hilo.timeoutFee * 100}%`,
+    bet('Max Bet', settings.hilo.maxBet, globalSettings),
+    bet('Min Bet', settings.hilo.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('hilo', settings.hilo)] : [])
+  ]),
+
+  section('🚀 Limbo', [
+    `- **House Edge:** ${settings.limbo.houseEdge * 100}%`,
+    bet('Max Bet', settings.limbo.maxBet, globalSettings),
+    bet('Min Bet', settings.limbo.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('limbo', settings.limbo)] : [])
+  ]),
+
   section('🎲 Dice', [
     multiplier(settings.dice.winMultiplier),
     bet('Max Bet', settings.dice.maxBet, globalSettings),
@@ -158,6 +173,13 @@ const buildGamesSections = (
     ...(showAdmin ? [rtpLine('roulette', settings.roulette)] : [])
   ]),
 
+  section('🃏 Baccarat', [
+    multiplier(settings.baccarat.winMultipliers),
+    bet('Max Bet', settings.baccarat.maxBet, globalSettings),
+    bet('Min Bet', settings.baccarat.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('baccarat', settings.baccarat)] : [])
+  ]),
+
   section('🎰 Slots', [
     multiplier(settings.slots.winMultipliers),
     bet('Max Bet', settings.slots.maxBet, globalSettings),
@@ -173,12 +195,22 @@ const buildGamesSections = (
   ]),
 
   section('🃏 Blackjack', [
+    multiplier(settings.blackjack.winMultipliers),
     bet('Max Bet', settings.blackjack.maxBet, globalSettings),
-    bet('Min Bet', settings.blackjack.minBet, globalSettings)
+    bet('Min Bet', settings.blackjack.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('blackjack', settings.blackjack)] : [])
+  ]),
+
+  section('💣 Mines', [
+    `- **House Edge:** ${settings.mines.houseEdge * 100}%`,
+    `- **Mines Range:** ${settings.mines.minMines}–${settings.mines.maxMines}`,
+    bet('Max Bet', settings.mines.maxBet, globalSettings),
+    bet('Min Bet', settings.mines.minBet, globalSettings),
+    ...(showAdmin ? [rtpLine('mines', settings.mines)] : [])
   ]),
 
   section('🪨📄✂️ RPS', [
-    `- **Casino Cut:** ${settings.rps.casinoCut * 100}%`,
+    `- **House Edge:** ${settings.rps.houseEdge * 100}%`,
     bet('Max Bet', settings.rps.maxBet, globalSettings),
     bet('Min Bet', settings.rps.minBet, globalSettings)
   ]),
@@ -189,7 +221,7 @@ const buildGamesSections = (
   ]),
 
   section('🎫 Raffle', [
-    `- **Casino Cut:** ${settings.raffle.casinoCut * 100}%`,
+    `- **House Edge:** ${settings.raffle.houseEdge * 100}%`,
     ...(showAdmin ? [rtpLine('raffle', settings.raffle)] : [])
   ])
 ]

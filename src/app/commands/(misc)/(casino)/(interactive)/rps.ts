@@ -83,7 +83,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       interaction.options.getString('bet', true)
     )
     const realWinAmount =
-      betAmount * (1 - configReply.casinoSettings.rps.casinoCut)
+      betAmount * (1 - configReply.casinoSettings.rps.houseEdge)
 
     const isBetValid = checkValidBet(
       interaction,
@@ -108,7 +108,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         p2GuildId: targetUser.guildId,
         betAmount,
         winnerUserId: null, // draw = full refund
-        casinoCut: 0,
+        houseEdge: 0,
         betId,
         game: 'rps'
       })
@@ -246,7 +246,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         p2GuildId: targetUser.guildId,
         betAmount,
         winnerUserId: winnerUser ? winnerUser.userId : null,
-        casinoCut: configReply.casinoSettings.rps.casinoCut,
+        houseEdge: configReply.casinoSettings.rps.houseEdge,
         betId,
         game: 'rps'
       })

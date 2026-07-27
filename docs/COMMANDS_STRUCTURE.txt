@@ -16,34 +16,43 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │          ├─ status – Check the status of your withdrawal requests.
 │   │          ├─ cancel – Cancel one of your pending withdrawal requests.
 │   ├── (casino)
-│   │   ├── (other)
-│   │   │   ├── blackjack.ts
-│   │   │   │   └─ /blackjack – Start a game of blackjack. You can hit, stand, or double down.
-│   │   │   │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
-│   │   │   │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
-│   │   │   └── rps.ts
-│   │   │       └─ /rps – Play rock, paper, scissors with another user.
-│   │   │          ├─ player – The user you want to play against.
-│   │   │          ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
-│   │   ├── coin-flip.ts
-│   │   │   └─ /coin-flip – Flip a coin!
-│   │   │      ├─ side – Choose the coin side.
-│   │   ├── dice.ts
-│   │   │   └─ /dice – Play a dice game!
-│   │   │      ├─ side – Choose a dice side.
-│   │   ├── goldenjackpot.ts
-│   │   │   └─ /goldenjackpot – Try your luck at the Golden Jackpot HUGEx!
-│   │   │      ├─ entries – Number of entries (max is ${GOLDEN_JACKPOT_MAX_ENTRIES}).
-│   │   ├── lottery.ts
-│   │   │   └─ /lottery – Play the lottery! Pick 4 numbers and see if you win.
-│   │   │      ├─ numbers – Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).
-│   │   ├── plinko.ts
-│   │   │   └─ /plinko – Drop balls down the Plinko board!
-│   │   ├── roulette.ts
-│   │   │   └─ /roulette – Play Mini Roulette with multiple bets!
-│   │   │      ├─ bets – Your bets (e.g., 100 red, 50 17, 200 d2, 75 c1)
-│   │   └── slots.ts
-│   │       └─ /slots – Spin the slot machine!
+│   │   ├── (instant)  - slash → resolve (no persistent session)
+│   │   │   ├── coin-flip.ts
+│   │   │   │   └─ /coin-flip – Flip a coin!
+│   │   │   │      ├─ side – Choose the coin side.
+│   │   │   ├── dice.ts
+│   │   │   │   └─ /dice – Play a dice game!
+│   │   │   │      ├─ side – Choose a dice side.
+│   │   │   ├── goldenjackpot.ts
+│   │   │   │   └─ /goldenjackpot – Try your luck at the Golden Jackpot HUGEx!
+│   │   │   │      ├─ entries – Number of entries (max is ${GOLDEN_JACKPOT_MAX_ENTRIES}).
+│   │   │   ├── limbo.ts
+│   │   │   │   └─ /limbo – Aim for a target multiplier.
+│   │   │   ├── lottery.ts
+│   │   │   │   └─ /lottery – Play the lottery! Pick 4 numbers and see if you win.
+│   │   │   │      ├─ numbers – Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).
+│   │   │   └── plinko.ts
+│   │   │       └─ /plinko – Drop balls down the Plinko board!
+│   │   └── (interactive)  - buttons / live sessions / PvP
+│   │       ├── baccarat.ts
+│   │       │   └─ /baccarat – Play punto banco baccarat.
+│   │       ├── blackjack.ts
+│   │       │   └─ /blackjack – Start a game of blackjack. You can hit, stand, or double down.
+│   │       │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
+│   │       │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │       ├── hilo.ts
+│   │       │   └─ /hilo – Higher or lower card game.
+│   │       ├── mines.ts
+│   │       │   └─ /mines – Reveal tiles and cash out before hitting a mine.
+│   │       ├── roulette.ts
+│   │       │   └─ /roulette – Play Mini Roulette with multiple bets!
+│   │       │      ├─ bets – Your bets (e.g., 100 red, 50 17, 200 d2, 75 c1)
+│   │       ├── rps.ts
+│   │       │   └─ /rps – Play rock, paper, scissors with another user.
+│   │       │      ├─ player – The user you want to play against.
+│   │       │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
+│   │       └── slots.ts
+│   │           └─ /slots – Spin the slot machine!
 │   └── (utils)
 │       ├── balance.ts
 │       │   └─ /balance – Check your current balance (only you can see this).

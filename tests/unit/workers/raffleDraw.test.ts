@@ -42,7 +42,7 @@ const { logger } = await import('@/utils/logger')
 
 const guildConfig = {
   globalSettings: { currencySymbol: '$', locale: 'en-US' },
-  casinoSettings: { raffle: { casinoCut: 0.1 } },
+  casinoSettings: { raffle: { houseEdge: 0.1 } },
   raffleChannelIds: { logs: 'raffle-logs-ch', actions: 'raffle-actions-ch' }
 }
 

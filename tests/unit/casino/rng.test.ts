@@ -8,13 +8,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DECK } from '@/utils/casino/blackjack/deck'
 import type { Card } from '@/utils/casino/blackjack/types'
 import {
+  createShuffledBaccaratShoe,
+  createShuffledHiloDeck,
+  dealBaccarat,
+  dealHiloCards,
+  drawBaccaratCard,
   drawGoldenJackpot,
+  drawHiloCard,
   drawLottery,
   drawNextCard,
   dropPlinkoBall,
   dropPlinkoPath,
   flipCoin,
+  formatBaccaratCard,
+  formatHiloCard,
   rollDice,
+  rollHiloCard,
+  rollHiloRank,
+  rollHiloRanks,
+  rollLimbo,
   shuffleDeck,
   spinRouletteWheel,
   spinSlot
@@ -51,6 +63,66 @@ describe('rng', () => {
   it('flipCoin returns tails at or above 0.5', () => {
     mockRandomInt(600_000)
     expect(flipCoin()).toBe('tails')
+  })
+
+  it('rollLimbo floors at 1.00 when U is 1', () => {
+    mockRandomInt(0) // random()=0 → U=1 → raw 0.97 → 1.00
+    expect(rollLimbo(0.03)).toBe(1)
+  })
+
+  it('rollLimbo returns target-style multiplier for mid U', () => {
+    mockRandomInt(515_000) // random()=0.515 → U=0.485 → ~2.00
+    expect(rollLimbo(0.03)).toBe(2)
+  })
+
+  it('deals two distinct cards from one 52-card deck', () => {
+    mockRandomInt(0)
+    const { first, second } = dealHiloCards()
+    expect(`${first.label}${first.suite}`).not.toBe(
+      `${second.label}${second.suite}`
+    )
+
+    const deck = createShuffledHiloDeck()
+    expect(deck).toHaveLength(52)
+    expect(new Set(deck.map((c) => `${c.label}${c.suite}`)).size).toBe(52)
+
+    const drawn = drawHiloCard(deck)
+    expect(formatHiloCard(drawn)).toBe(`${drawn.label}${drawn.suite}`)
+    expect(deck).toHaveLength(51)
+  })
+
+  it('drawHiloCard throws when the deck is empty', () => {
+    expect(() => drawHiloCard([])).toThrow(/Hi-Lo deck is empty/)
+  })
+
+  it('creates an 8-deck baccarat shoe and deals a valid round', () => {
+    mockRandomInt(0)
+    const shoe = createShuffledBaccaratShoe()
+    expect(shoe).toHaveLength(416)
+
+    const round = dealBaccarat()
+    expect(round.playerCards.length).toBeGreaterThanOrEqual(2)
+    expect(round.bankerCards.length).toBeGreaterThanOrEqual(2)
+    expect(['player', 'banker', 'tie']).toContain(round.outcome)
+    expect(formatBaccaratCard(round.playerCards[0]!)).toBe(
+      `${round.playerCards[0]!.label}${round.playerCards[0]!.suite}`
+    )
+  })
+
+  it('drawBaccaratCard throws when the shoe is empty', () => {
+    expect(() => drawBaccaratCard([])).toThrow(/Baccarat shoe is empty/)
+  })
+
+  it('rollHiloCard and rollHiloRanks use deck draws', () => {
+    mockRandomInt(999_999)
+    const card = rollHiloCard()
+    expect(card.rank).toBeGreaterThanOrEqual(2)
+    expect(card.rank).toBeLessThanOrEqual(14)
+    expect(rollHiloRank()).toBeGreaterThanOrEqual(2)
+
+    const ranks = rollHiloRanks()
+    expect(ranks.first).toBeGreaterThanOrEqual(2)
+    expect(ranks.second).toBeGreaterThanOrEqual(2)
   })
 
   it('spinSlot builds a 3-symbol result from weights', () => {

@@ -5,6 +5,7 @@ import {
   getAllOldBlackjackGames,
   getBlackjackGameByBetId,
   getBlackjackGameByUserAndGuild,
+  getStaleDealerBlackjackGames,
   updateBlackjackGame,
   upsertBlackjackGame
 } from '@/services/db/blackjackGame.db'
@@ -89,6 +90,21 @@ describe('blackjackGame.db', () => {
 
     const old = await getAllOldBlackjackGames(1)
     expect(old.some((g) => g.betId === 'bet-recent')).toBe(false)
+  })
+
+  it('finds stale dealer games by grace window', async () => {
+    const game = await upsertBlackjackGame(baseGame)
+    expect(game).toBeTruthy()
+
+    game!.phase = 'DEALER'
+    await updateBlackjackGame(game!)
+    await BlackjackGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date(Date.now() - 61_000) } }
+    )
+
+    const stale = await getStaleDealerBlackjackGames(60_000)
+    expect(stale.some((g) => g.betId === 'bet-bj-1')).toBe(true)
   })
 
   it('deletes game by user and guild', async () => {
