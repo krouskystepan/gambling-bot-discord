@@ -48,6 +48,7 @@ export const getRouletteGamesNeedingIdleNudge = async () => {
   const now = Date.now()
 
   return RouletteGame.find({
+    phase: 'betting',
     updatedAt: {
       $lte: new Date(now - rouletteIdleNudgeThresholdMs()),
       $gt: new Date(now - rouletteIdleCloseMs())
@@ -86,6 +87,7 @@ export const upsertRouletteGame = async ({
   bets = [],
   lastBets = [],
   lastSpinResult = null,
+  pendingSpinResult = null,
   lastNetResult = null,
   activeBetId = null,
   lockedAmount = null
@@ -103,6 +105,7 @@ export const upsertRouletteGame = async ({
         bets,
         lastBets,
         lastSpinResult,
+        pendingSpinResult,
         lastNetResult,
         activeBetId,
         lockedAmount,
@@ -141,4 +144,13 @@ export const deleteRouletteGame = async ({
   guildId: string
 }) => {
   await RouletteGame.findOneAndDelete({ userId, guildId })
+}
+
+export const getStaleSpinningRouletteGames = async (graceMs: number) => {
+  const cutoff = new Date(Date.now() - graceMs)
+
+  return RouletteGame.find({
+    updatedAt: { $lte: cutoff },
+    $or: [{ phase: 'spinning' }, { activeBetId: { $ne: null } }]
+  })
 }

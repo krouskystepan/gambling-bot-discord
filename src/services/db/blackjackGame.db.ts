@@ -126,3 +126,12 @@ export const deleteBlackjackGame = async ({
 }) => {
   await BlackjackGame.findOneAndDelete({ userId, guildId })
 }
+
+export const getStaleDealerBlackjackGames = async (graceMs: number) => {
+  const cutoff = new Date(Date.now() - graceMs)
+
+  return BlackjackGame.find({
+    phase: 'DEALER',
+    updatedAt: { $lte: cutoff }
+  })
+}
