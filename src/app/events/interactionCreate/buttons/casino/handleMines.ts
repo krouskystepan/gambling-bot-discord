@@ -1,8 +1,5 @@
-import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
-import { formatMoney } from 'gambling-bot-shared/common'
 import {
   cashOutPayout,
-  currentMinesMultiplier,
   docToMinesEngine,
   revealCell
 } from 'gambling-bot-shared/mines'
@@ -11,22 +8,17 @@ import { Interaction, MessageFlags } from 'discord.js'
 
 import { handleUnexpectedButtonError } from '@/errors'
 import {
-  deleteMinesGame,
   getGuildConfigByGuildId,
   getMinesGameByBetId,
-  getUser,
-  settleCasinoWinnings,
   updateMinesGame
 } from '@/services'
 import {
   decodeId,
-  formatMinesBoard,
+  finishMinesAndSettle,
   renderMinesButtons,
   renderMinesEmbed
 } from '@/utils/casino/mines'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
-import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
-import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export default async (interaction: Interaction) => {
   if (!interaction.isButton()) return
@@ -79,80 +71,15 @@ export default async (interaction: Interaction) => {
 
     const engine = docToMinesEngine(game)
 
-    const finishGame = async ({
-      payout,
-      multiplier,
-      resultKind
-    }: {
-      payout: number
-      multiplier: number
-      resultKind: 'BUST' | 'CASH_OUT'
-    }) => {
-      await settleCasinoWinnings({
-        userId: game.userId,
-        guildId,
-        totalBet: game.betAmount,
-        winnings: payout,
-        betId,
-        game: 'mines'
+    const finishGame = async () => {
+      await finishMinesAndSettle({
+        game,
+        guildConfig,
+        guild: interaction.guild,
+        sourceChannelId: interaction.channelId,
+        showBalance,
+        message: interaction.message
       })
-
-      if (
-        guildConfig &&
-        resultKind === 'CASH_OUT' &&
-        shouldAnnounceByMultiplier(
-          multiplier,
-          guildConfig.casinoSettings.winAnnouncements.minesMinMultiplier
-        )
-      ) {
-        tryAnnounceBigWin({
-          guild: interaction.guild,
-          guildConfig,
-          game: 'mines',
-          lines: [
-            formatBigWinLine({
-              label: '💣 Mines',
-              multiplier: multiplier.toFixed(2),
-              payout: formatMoney(payout, globalSettings),
-              bet: formatMoney(game.betAmount, globalSettings)
-            })
-          ],
-          betId,
-          sourceChannelId: interaction.channelId
-        })
-      }
-
-      let userBalance: number | undefined
-      if (showBalance) {
-        const user = await getUser({ userId: game.userId, guildId })
-        if (user) userBalance = user.balance
-      }
-
-      await interaction.message.edit({
-        embeds: [
-          renderMinesEmbed({
-            betId,
-            betAmount: game.betAmount,
-            mineCount: game.mineCount,
-            revealedCount: engine.revealedIndices.length,
-            multiplier:
-              resultKind === 'BUST'
-                ? 0
-                : multiplier || currentMinesMultiplier(engine),
-            result:
-              resultKind === 'BUST'
-                ? { kind: 'BUST' }
-                : { kind: 'CASH_OUT', multiplier, payout },
-            board: formatMinesBoard(engine),
-            showBalance,
-            userBalance,
-            globalSettings
-          })
-        ],
-        components: []
-      })
-
-      await deleteMinesGame({ userId: game.userId, guildId })
     }
 
     if (action.kind === 'cashout') {
@@ -175,11 +102,7 @@ export default async (interaction: Interaction) => {
       game.revealedIndices = engine.revealedIndices
       await updateMinesGame(game)
 
-      await finishGame({
-        payout: cash.payout,
-        multiplier: cash.multiplier,
-        resultKind: 'CASH_OUT'
-      })
+      await finishGame()
       return
     }
 
@@ -204,24 +127,17 @@ export default async (interaction: Interaction) => {
 
     if (reveal.kind === 'MINE') {
       await updateMinesGame(game)
-      await finishGame({
-        payout: 0,
-        multiplier: 0,
-        resultKind: 'BUST'
-      })
+      await finishGame()
       return
     }
 
     if (reveal.boardCleared) {
       const cash = cashOutPayout(engine)
       game.status = 'FINISHED'
+      game.revealedIndices = engine.revealedIndices
       await updateMinesGame(game)
       if (cash.kind === 'OK') {
-        await finishGame({
-          payout: cash.payout,
-          multiplier: cash.multiplier,
-          resultKind: 'CASH_OUT'
-        })
+        await finishGame()
       }
       return
     }

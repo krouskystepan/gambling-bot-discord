@@ -1,6 +1,7 @@
 import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
 import { formatMoney, generateId } from 'gambling-bot-shared/common'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
+import type { SlotsSessionPhase } from 'gambling-bot-shared/slots'
 
 import type { Guild, Message } from 'discord.js'
 
@@ -27,6 +28,10 @@ const SPIN_FRAME_MS = 1000
 /** Hold resolved reels so each spin result is readable mid-batch. */
 const RESULT_HOLD_MS = 1300
 
+type EditableMessage = { edit: (...args: never[]) => Promise<unknown> }
+type AnnounceGuild = Parameters<typeof tryAnnounceBigWin>[0]['guild']
+type ResumePhase = Exclude<SlotsSessionPhase, 'spinning'>
+
 const mapReels = (spinResult: string) =>
   spinResult.replace(/🍒|🫐|🍉|🔔|7️⃣/g, (match) => slotEmojis[match])
 
@@ -51,6 +56,181 @@ const formatBatchFrame = ({
     `💰 Running: ${netEmoji(liveNet)} **${formatMoney(liveNet, globalSettings)}**`
   ].join('\n')
 
+const summarizeBatch = ({
+  spinResults,
+  unitBet,
+  winMultipliers,
+  announceMinMultiplier,
+  globalSettings
+}: {
+  spinResults: string[]
+  unitBet: number
+  winMultipliers: TGuildConfiguration['casinoSettings']['slots']['winMultipliers']
+  announceMinMultiplier: number
+  globalSettings: TGuildConfiguration['globalSettings']
+}) => {
+  let totalWinnings = 0
+  let liveNet = 0
+  let winsCount = 0
+  let lastReels = ''
+  const announcementSpins: string[] = []
+  const resultLines: string[] = []
+
+  for (let i = 0; i < spinResults.length; i++) {
+    const spinResult = spinResults[i]!
+    const resultString = mapReels(spinResult)
+    lastReels = resultString
+
+    const spinMultiplier =
+      (winMultipliers as Record<string, number>)[spinResult] || 0
+    const winnings = spinMultiplier * unitBet
+    const isWin = winnings > 0
+
+    if (isWin) winsCount++
+
+    if (shouldAnnounceByMultiplier(spinMultiplier, announceMinMultiplier)) {
+      announcementSpins.push(
+        formatBigWinLine({
+          label: `Spin **${i + 1}**`,
+          middle: [`**${resultString}**`],
+          multiplier: String(spinMultiplier),
+          payout: formatMoney(winnings, globalSettings),
+          bet: formatMoney(unitBet, globalSettings)
+        })
+      )
+    }
+
+    totalWinnings += winnings
+    liveNet += winnings - unitBet
+
+    resultLines.push(
+      `**${resultString}** | ${isWin ? '🎉' : '❌'} | ${
+        isWin
+          ? `**+${formatMoney(winnings, globalSettings)}**`
+          : `**-${formatMoney(unitBet, globalSettings)}**`
+      }`
+    )
+  }
+
+  return {
+    totalWinnings,
+    liveNet,
+    winsCount,
+    lastReels,
+    announcementSpins,
+    resultLines
+  }
+}
+
+export const settleSlotsFromBatch = async ({
+  message,
+  userId,
+  guildId,
+  gameId,
+  unitBet,
+  spinsCount,
+  spinResults,
+  showBalance,
+  guild,
+  guildConfig,
+  sourceChannelId,
+  betId
+}: {
+  message?: EditableMessage | null
+  userId: string
+  guildId: string
+  gameId: string
+  unitBet: number
+  spinsCount: number
+  spinResults: string[]
+  showBalance: boolean
+  guild: AnnounceGuild
+  guildConfig: TGuildConfiguration
+  sourceChannelId: string
+  betId: string
+}) => {
+  const totalBet = slotsBatchTotal(unitBet, spinsCount)
+  const { totalWinnings, liveNet, winsCount, lastReels, announcementSpins } =
+    summarizeBatch({
+      spinResults,
+      unitBet,
+      winMultipliers: guildConfig.casinoSettings.slots.winMultipliers,
+      announceMinMultiplier:
+        guildConfig.casinoSettings.winAnnouncements.slotsMinMultiplier,
+      globalSettings: guildConfig.globalSettings
+    })
+
+  const finalBalance = await settleCasinoWinnings({
+    userId,
+    guildId,
+    totalBet,
+    winnings: totalWinnings,
+    betId,
+    game: 'slots'
+  })
+
+  await updateSlotsGame({
+    userId,
+    guildId,
+    phase: 'result',
+    lastReels,
+    lastNetResult: liveNet,
+    lastSpinsCount: spinsCount,
+    lastTotalBet: totalBet,
+    lastWinsCount: winsCount,
+    pendingBatchResults: null,
+    activeBetId: null,
+    lockedAmount: null
+  })
+
+  if (message) {
+    await message.edit({
+      embeds: [
+        renderSlotsMachineEmbed({
+          gameId,
+          phase: 'result',
+          unitBet,
+          spinsCount,
+          lastNetResult: liveNet,
+          lastSpinsCount: spinsCount,
+          lastTotalBet: totalBet,
+          lastWinsCount: winsCount,
+          showBalance,
+          finalBalance,
+          globalSettings: guildConfig.globalSettings
+        })
+      ],
+      components: renderSlotsComponents({
+        gameId,
+        phase: 'result',
+        hasUnitBet: true,
+        spinsCount
+      })
+    } as never)
+  }
+
+  if (announcementSpins.length > 0 && guild) {
+    tryAnnounceBigWin({
+      guild,
+      guildConfig,
+      game: 'slots',
+      lines: announcementSpins,
+      betId,
+      sourceChannelId
+    })
+  }
+
+  return {
+    betId,
+    lastReels,
+    net: liveNet,
+    winsCount,
+    finalBalance
+  }
+}
+
+export const recoverSlotsBatch = settleSlotsFromBatch
+
 export const playSlotsRound = async ({
   message,
   userId,
@@ -60,6 +240,7 @@ export const playSlotsRound = async ({
   spinsCount,
   showBalance,
   skipAnimations,
+  previousPhase,
   guild,
   guildConfig,
   sourceChannelId
@@ -72,16 +253,24 @@ export const playSlotsRound = async ({
   spinsCount: number
   showBalance: boolean
   skipAnimations: boolean
+  previousPhase: ResumePhase
   guild: Guild | null
   guildConfig: TGuildConfiguration
   sourceChannelId: string
 }) => {
   const totalBet = slotsBatchTotal(unitBet, spinsCount)
   const betId = generateId()
+  const spinResults = Array.from({ length: spinsCount }, () =>
+    spinSlot({
+      symbolWeights: guildConfig.casinoSettings.slots.symbolWeights
+    })
+  )
 
   await updateSlotsGame({
     userId,
     guildId,
+    phase: 'spinning',
+    pendingBatchResults: spinResults,
     activeBetId: betId,
     lockedAmount: totalBet
   })
@@ -98,20 +287,28 @@ export const playSlotsRound = async ({
     await updateSlotsGame({
       userId,
       guildId,
+      phase: previousPhase,
+      pendingBatchResults: null,
       activeBetId: null,
       lockedAmount: null
     })
     throw new Error('INSUFFICIENT_FUNDS')
   }
 
-  let totalWinnings = 0
   let liveNet = 0
-  let winsCount = 0
-  let lastReels = ''
-  const announcementSpins: string[] = []
-  const resultLines: string[] = []
 
-  for (let i = 0; i < spinsCount; i++) {
+  for (let i = 0; i < spinResults.length; i++) {
+    const spinResult = spinResults[i]!
+    const resultString = mapReels(spinResult)
+    const spinMultiplier =
+      (
+        guildConfig.casinoSettings.slots.winMultipliers as Record<
+          string,
+          number
+        >
+      )[spinResult] || 0
+    const winnings = spinMultiplier * unitBet
+
     if (!skipAnimations) {
       await message.edit({
         embeds: [
@@ -132,49 +329,10 @@ export const playSlotsRound = async ({
       await sleep(SPIN_FRAME_MS)
     }
 
-    const spinResult = spinSlot({
-      symbolWeights: guildConfig.casinoSettings.slots.symbolWeights
-    })
-    const resultString = mapReels(spinResult)
-    lastReels = resultString
-
-    const spinMultiplier =
-      guildConfig.casinoSettings.slots.winMultipliers[spinResult] || 0
-    const winnings = spinMultiplier * unitBet
-    const isWin = winnings > 0
-
-    if (isWin) winsCount++
-
-    if (
-      shouldAnnounceByMultiplier(
-        spinMultiplier,
-        guildConfig.casinoSettings.winAnnouncements.slotsMinMultiplier
-      )
-    ) {
-      announcementSpins.push(
-        formatBigWinLine({
-          label: `Spin **${i + 1}**`,
-          middle: [`**${resultString}**`],
-          multiplier: String(spinMultiplier),
-          payout: formatMoney(winnings, guildConfig.globalSettings),
-          bet: formatMoney(unitBet, guildConfig.globalSettings)
-        })
-      )
-    }
-
-    totalWinnings += winnings
     liveNet += winnings - unitBet
 
-    resultLines.push(
-      `**${resultString}** | ${isWin ? '🎉' : '❌'} | ${
-        isWin
-          ? `**+${formatMoney(winnings, guildConfig.globalSettings)}**`
-          : `**-${formatMoney(unitBet, guildConfig.globalSettings)}**`
-      }`
-    )
-
     if (!skipAnimations) {
-      const isLast = i === spinsCount - 1
+      const isLast = i === spinResults.length - 1
       await message.edit({
         embeds: [
           createBetEmbed(
@@ -198,6 +356,15 @@ export const playSlotsRound = async ({
   }
 
   if (skipAnimations) {
+    const { resultLines, liveNet: summaryNet } = summarizeBatch({
+      spinResults,
+      unitBet,
+      winMultipliers: guildConfig.casinoSettings.slots.winMultipliers,
+      announceMinMultiplier:
+        guildConfig.casinoSettings.winAnnouncements.slotsMinMultiplier,
+      globalSettings: guildConfig.globalSettings
+    })
+
     await message.edit({
       embeds: [
         createBetEmbed(
@@ -209,7 +376,7 @@ export const playSlotsRound = async ({
             `🕹 **Spin Results:**`,
             resultLines.join('\n'),
             '',
-            `💰 Total: ${netEmoji(liveNet)} **${formatMoney(liveNet, guildConfig.globalSettings)}**`
+            `💰 Total: ${netEmoji(summaryNet)} **${formatMoney(summaryNet, guildConfig.globalSettings)}**`
           ].join('\n'),
           betId
         )
@@ -219,68 +386,18 @@ export const playSlotsRound = async ({
     await sleep(RESULT_HOLD_MS * 1.5)
   }
 
-  const finalBalance = await settleCasinoWinnings({
+  return settleSlotsFromBatch({
+    message,
     userId,
     guildId,
-    totalBet,
-    winnings: totalWinnings,
-    betId,
-    game: 'slots'
+    gameId,
+    unitBet,
+    spinsCount,
+    spinResults,
+    showBalance,
+    guild,
+    guildConfig,
+    sourceChannelId,
+    betId
   })
-
-  await updateSlotsGame({
-    userId,
-    guildId,
-    phase: 'result',
-    lastReels,
-    lastNetResult: liveNet,
-    lastSpinsCount: spinsCount,
-    lastTotalBet: totalBet,
-    lastWinsCount: winsCount,
-    activeBetId: null,
-    lockedAmount: null
-  })
-
-  await message.edit({
-    embeds: [
-      renderSlotsMachineEmbed({
-        gameId,
-        phase: 'result',
-        unitBet,
-        spinsCount,
-        lastNetResult: liveNet,
-        lastSpinsCount: spinsCount,
-        lastTotalBet: totalBet,
-        lastWinsCount: winsCount,
-        showBalance,
-        finalBalance,
-        globalSettings: guildConfig.globalSettings
-      })
-    ],
-    components: renderSlotsComponents({
-      gameId,
-      phase: 'result',
-      hasUnitBet: true,
-      spinsCount
-    })
-  })
-
-  if (announcementSpins.length > 0 && guild) {
-    tryAnnounceBigWin({
-      guild,
-      guildConfig,
-      game: 'slots',
-      lines: announcementSpins,
-      betId,
-      sourceChannelId
-    })
-  }
-
-  return {
-    betId,
-    lastReels,
-    net: liveNet,
-    winsCount,
-    finalBalance
-  }
 }

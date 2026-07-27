@@ -158,6 +158,18 @@ export default async (interaction: Interaction) => {
         })
       }
 
+      if (game.phase === 'spinning' || game.activeBetId) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Machine Busy',
+              'This slots batch is still being finished. Please wait a moment.'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
       const guildConfig = await getGuildConfigByGuildId({ guildId })
       if (!guildConfig) {
         return interaction.reply({
@@ -275,6 +287,18 @@ export default async (interaction: Interaction) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed('Invalid Input', 'This is not your machine.')
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+
+    if (game.phase === 'spinning' || game.activeBetId) {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Machine Busy',
+            'This slots batch is still being finished. Please wait a moment.'
+          )
         ],
         flags: MessageFlags.Ephemeral
       })
@@ -415,6 +439,7 @@ export default async (interaction: Interaction) => {
           spinsCount: game.spinsCount,
           showBalance: game.showBalance,
           skipAnimations: game.skipAnimations,
+          previousPhase: game.phase === 'result' ? 'result' : 'ready',
           guild: interaction.guild,
           guildConfig,
           sourceChannelId: interaction.channelId

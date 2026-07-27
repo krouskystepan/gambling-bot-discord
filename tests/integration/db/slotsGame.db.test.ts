@@ -11,6 +11,7 @@ import {
   getSlotsGameByUserAndGuild,
   getSlotsGamesByGuildId,
   getSlotsGamesNeedingIdleNudge,
+  getStaleSpinningSlotsGames,
   markSlotsIdleNudgeSent,
   updateSlotsGame,
   upsertSlotsGame
@@ -76,6 +77,30 @@ describe('slotsGame.db', () => {
     expect(updated?.unitBet).toBe(50)
     expect(updated?.spinsCount).toBe(5)
     expect(updated?.idleNudgeSentAt).toBeNull()
+  })
+
+  it('finds stale spinning games by grace window', async () => {
+    await upsertSlotsGame({
+      ...baseGame,
+      unitBet: 50,
+      spinsCount: 3,
+      phase: 'spinning',
+      pendingBatchResults: ['🍒🍒🍒', '🍒🫐🍉', '🍉🍉🍉'],
+      activeBetId: 'bet-slots-1',
+      lockedAmount: 150
+    })
+    await SlotsGame.collection.updateOne(
+      { gameId: 'sl-game-1' },
+      { $set: { updatedAt: new Date(Date.now() - 61_000) } }
+    )
+
+    const stale = await getStaleSpinningSlotsGames(60_000)
+    expect(stale.some((game) => game.gameId === 'sl-game-1')).toBe(true)
+    expect(stale[0]?.pendingBatchResults).toEqual([
+      '🍒🍒🍒',
+      '🍒🫐🍉',
+      '🍉🍉🍉'
+    ])
   })
 
   it('finds games older than N days', async () => {

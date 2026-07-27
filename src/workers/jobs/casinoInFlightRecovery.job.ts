@@ -10,9 +10,12 @@ import {
   getGuildConfigByGuildId,
   getStaleDealerBlackjackGames,
   getStaleDealingBaccaratGames,
+  getStaleFinishedMinesGames,
   getStaleSpinningRouletteGames,
+  getStaleSpinningSlotsGames,
   refundLockedBet,
-  updateRouletteGame
+  updateRouletteGame,
+  updateSlotsGame
 } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { recoverBaccaratDeal } from '@/utils/casino/baccarat/playRound'
@@ -21,12 +24,18 @@ import {
   docToEngine,
   finishBlackjackDealerAndSettle
 } from '@/utils/casino/blackjack'
+import { finishMinesAndSettle } from '@/utils/casino/mines'
 import {
   renderRouletteComponents,
   renderRouletteTableEmbed,
   renderRouletteTimeoutEmbed
 } from '@/utils/casino/roulette'
 import { recoverRouletteSpin } from '@/utils/casino/roulette/playRound'
+import {
+  recoverSlotsBatch,
+  renderSlotsComponents,
+  renderSlotsMachineEmbed
+} from '@/utils/casino/slots'
 import { logger } from '@/utils/logger'
 import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
@@ -51,11 +60,14 @@ const fetchGameMessage = async (
 }
 
 export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
-  const [rouletteGames, blackjackGames, baccaratGames] = await Promise.all([
-    getStaleSpinningRouletteGames(CASINO_IN_FLIGHT_GRACE_MS),
-    getStaleDealerBlackjackGames(CASINO_IN_FLIGHT_GRACE_MS),
-    getStaleDealingBaccaratGames(CASINO_IN_FLIGHT_GRACE_MS)
-  ])
+  const [rouletteGames, blackjackGames, baccaratGames, slotsGames, minesGames] =
+    await Promise.all([
+      getStaleSpinningRouletteGames(CASINO_IN_FLIGHT_GRACE_MS),
+      getStaleDealerBlackjackGames(CASINO_IN_FLIGHT_GRACE_MS),
+      getStaleDealingBaccaratGames(CASINO_IN_FLIGHT_GRACE_MS),
+      getStaleSpinningSlotsGames(CASINO_IN_FLIGHT_GRACE_MS),
+      getStaleFinishedMinesGames(CASINO_IN_FLIGHT_GRACE_MS)
+    ])
 
   const guildProcessed = new Map<string, number>()
   let processed = 0
@@ -244,6 +256,121 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
     }
   }
 
+  for (const game of slotsGames) {
+    try {
+      const { guild, message } = await fetchGameMessage(client, game)
+      const guildConfig = await getGuildConfigByGuildId({
+        guildId: game.guildId
+      })
+      if (!guildConfig) continue
+
+      if (
+        game.pendingBatchResults &&
+        game.pendingBatchResults.length > 0 &&
+        game.activeBetId &&
+        game.unitBet != null
+      ) {
+        await recoverSlotsBatch({
+          message,
+          userId: game.userId,
+          guildId: game.guildId,
+          gameId: game.gameId,
+          unitBet: game.unitBet,
+          spinsCount: game.pendingBatchResults.length,
+          spinResults: game.pendingBatchResults,
+          showBalance: game.showBalance,
+          guild,
+          guildConfig,
+          sourceChannelId: game.channelId,
+          betId: game.activeBetId
+        })
+      } else if (
+        game.activeBetId &&
+        game.lockedAmount &&
+        game.lockedAmount > 0
+      ) {
+        await refundLockedBet({
+          userId: game.userId,
+          guildId: game.guildId,
+          amount: game.lockedAmount,
+          betId: game.activeBetId,
+          game: 'slots'
+        })
+
+        const resumePhase =
+          game.lastNetResult != null ? ('result' as const) : ('ready' as const)
+
+        await updateSlotsGame({
+          userId: game.userId,
+          guildId: game.guildId,
+          phase: resumePhase,
+          pendingBatchResults: null,
+          activeBetId: null,
+          lockedAmount: null
+        })
+
+        if (message) {
+          await message.edit({
+            embeds: [
+              renderSlotsMachineEmbed({
+                gameId: game.gameId,
+                phase: resumePhase,
+                unitBet: game.unitBet,
+                spinsCount: game.spinsCount,
+                lastNetResult: game.lastNetResult,
+                lastSpinsCount: game.lastSpinsCount,
+                lastTotalBet: game.lastTotalBet,
+                lastWinsCount: game.lastWinsCount,
+                showBalance: game.showBalance,
+                globalSettings: guildConfig.globalSettings
+              })
+            ],
+            components: renderSlotsComponents({
+              gameId: game.gameId,
+              phase: resumePhase,
+              hasUnitBet: game.unitBet != null,
+              spinsCount: game.spinsCount
+            })
+          })
+        }
+      }
+
+      processed++
+      guildProcessed.set(
+        game.guildId,
+        (guildProcessed.get(game.guildId) ?? 0) + 1
+      )
+    } catch (error) {
+      logger.error(`Slots in-flight recovery failed for ${game.gameId}`, error)
+    }
+  }
+
+  for (const game of minesGames) {
+    try {
+      const { guild, message } = await fetchGameMessage(client, game)
+      const guildConfig = await getGuildConfigByGuildId({
+        guildId: game.guildId
+      })
+
+      await finishMinesAndSettle({
+        game,
+        guildConfig,
+        guild,
+        sourceChannelId: game.channelId,
+        showBalance: false,
+        message
+      })
+
+      processed++
+      guildProcessed.set(
+        game.guildId,
+        (guildProcessed.get(game.guildId) ?? 0) + 1
+      )
+    } catch (error) {
+      logger.error(`Mines in-flight recovery failed for ${game.betId}`, error)
+    }
+  }
+
   if (processed > 0) {
     logMultiGuildCountSummary({
       client,
@@ -260,7 +387,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
         worker: 'Casino in-flight recovery',
         title: `Recovered ${count} in-flight game(s)`,
         description:
-          'Stale casino games left mid-spin or mid-deal were settled or cleaned up after restart.',
+          'Stale casino games left mid-spin, mid-batch, mid-deal, or mid-reveal were settled or cleaned up after restart.',
         level: 'info'
       })
     }

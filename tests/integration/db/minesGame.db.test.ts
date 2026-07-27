@@ -11,6 +11,7 @@ import {
   getMinesGameByUserAndGuild,
   getMinesGamesByGuildId,
   getMinesGamesNeedingIdleNudge,
+  getStaleFinishedMinesGames,
   markMinesIdleNudgeSent,
   updateMinesGame,
   upsertMinesGame
@@ -73,6 +74,22 @@ describe('minesGame.db', () => {
     })
     expect(updated?.revealedIndices).toEqual([5])
     expect(updated?.idleNudgeSentAt).toBeNull()
+  })
+
+  it('finds stale finished games by grace window', async () => {
+    await upsertMinesGame({
+      ...baseGame,
+      status: 'FINISHED',
+      revealedIndices: [0]
+    })
+    await MinesGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date(Date.now() - 61_000) } }
+    )
+
+    const stale = await getStaleFinishedMinesGames(60_000)
+    expect(stale.some((g) => g.betId === 'bet-mines-1')).toBe(true)
+    expect(stale[0]?.status).toBe('FINISHED')
   })
 
   it('finds games older than N days', async () => {

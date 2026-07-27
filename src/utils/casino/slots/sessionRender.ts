@@ -94,6 +94,8 @@ export const renderSlotsMachineEmbed = ({
         ? '_Set your chip with Change bet, pick spins, then Spin._'
         : '_Adjust chip or spins, then Spin._'
     )
+  } else if (phase === 'spinning') {
+    lines.push('_This batch is being finalized. Buttons will return shortly._')
   } else {
     lines.push('_Tweak chip or spins, then Spin again._')
   }
@@ -133,6 +135,10 @@ export const renderSlotsComponents = ({
   hasUnitBet: boolean
   spinsCount: number
 }) => {
+  if (phase === 'spinning') {
+    return []
+  }
+
   const controlsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(

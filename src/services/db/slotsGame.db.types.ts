@@ -17,6 +17,7 @@ export type TUpsertSlotsGame = Pick<TUser, 'userId' | 'guildId'> & {
   lastSpinsCount?: number | null
   lastTotalBet?: number | null
   lastWinsCount?: number | null
+  pendingBatchResults?: string[] | null
   activeBetId?: string | null
   lockedAmount?: number | null
 }
@@ -34,6 +35,7 @@ export type TUpdateSlotsGame = Pick<TUser, 'userId' | 'guildId'> & {
   lastSpinsCount?: number | null
   lastTotalBet?: number | null
   lastWinsCount?: number | null
+  pendingBatchResults?: string[] | null
   activeBetId?: string | null
   lockedAmount?: number | null
 }

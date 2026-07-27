@@ -90,6 +90,7 @@ export const upsertSlotsGame = async ({
   lastSpinsCount = null,
   lastTotalBet = null,
   lastWinsCount = null,
+  pendingBatchResults = null,
   activeBetId = null,
   lockedAmount = null
 }: TUpsertSlotsGame) => {
@@ -110,6 +111,7 @@ export const upsertSlotsGame = async ({
         lastSpinsCount,
         lastTotalBet,
         lastWinsCount,
+        pendingBatchResults,
         activeBetId,
         lockedAmount,
         idleNudgeSentAt: null
@@ -147,4 +149,13 @@ export const deleteSlotsGame = async ({
   guildId: string
 }) => {
   await SlotsGame.findOneAndDelete({ userId, guildId })
+}
+
+export const getStaleSpinningSlotsGames = async (graceMs: number) => {
+  const cutoff = new Date(Date.now() - graceMs)
+
+  return SlotsGame.find({
+    updatedAt: { $lte: cutoff },
+    $or: [{ phase: 'spinning' }, { activeBetId: { $ne: null } }]
+  })
 }

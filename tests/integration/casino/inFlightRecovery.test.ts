@@ -7,15 +7,21 @@ import {
   deleteBaccaratGame,
   getBaccaratGameByBetId,
   getBlackjackGameByBetId,
+  getMinesGameByBetId,
   getRouletteGameByGameId,
+  getSlotsGameByGameId,
   reserveCasinoBet,
   upsertBaccaratGame,
   upsertBlackjackGame,
-  upsertRouletteGame
+  upsertMinesGame,
+  upsertRouletteGame,
+  upsertSlotsGame
 } from '@/services'
 import { finishBlackjackDealerAndSettle } from '@/utils/casino/blackjack'
 import { recoverBaccaratDeal } from '@/utils/casino/baccarat/playRound'
+import { finishMinesAndSettle } from '@/utils/casino/mines'
 import { recoverRouletteSpin } from '@/utils/casino/roulette/playRound'
+import { recoverSlotsBatch } from '@/utils/casino/slots'
 
 import { card } from '../../helpers/cards'
 import { User, createTestUser, setupMongoTests } from '../../helpers/mongo'
@@ -226,6 +232,204 @@ describe('in-flight casino recovery helpers', () => {
 
     expect(message.edit).toHaveBeenCalled()
     expect(settled.resolution.won).toBe(true)
+    expect(remaining).toBeNull()
+    expect(user?.lockedBalance).toBe(0)
+    expect(user?.balance).toBeGreaterThan(1000)
+  })
+
+  it('settles a stale slots batch from pending results', async () => {
+    await createTestUser({ balance: 1000 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 200,
+      betId: 'slots-stale-1',
+      game: 'slots'
+    })
+    await upsertSlotsGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'slots-game-1',
+      showBalance: false,
+      skipAnimations: true,
+      unitBet: 100,
+      spinsCount: 2,
+      phase: 'spinning',
+      pendingBatchResults: ['🍒🍒🍒', '🍒🫐🍉'],
+      activeBetId: 'slots-stale-1',
+      lockedAmount: 200
+    })
+
+    const message = {
+      edit: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const settled = await recoverSlotsBatch({
+      message: message as never,
+      userId: 'user-1',
+      guildId: 'guild-1',
+      gameId: 'slots-game-1',
+      unitBet: 100,
+      spinsCount: 2,
+      spinResults: ['🍒🍒🍒', '🍒🫐🍉'],
+      showBalance: false,
+      guild: null,
+      guildConfig,
+      sourceChannelId: 'channel-1',
+      betId: 'slots-stale-1'
+    })
+
+    const game = await getSlotsGameByGameId({
+      gameId: 'slots-game-1',
+      guildId: 'guild-1'
+    })
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+
+    expect(message.edit).toHaveBeenCalled()
+    expect(settled.net).toBe(300)
+    expect(game?.phase).toBe('result')
+    expect(game?.pendingBatchResults).toBeNull()
+    expect(game?.activeBetId).toBeNull()
+    expect(game?.lastWinsCount).toBe(1)
+    expect(user?.lockedBalance).toBe(0)
+    expect(user?.balance).toBe(1300)
+  })
+
+  it('settles and deletes a finished mines game stuck mid-reveal', async () => {
+    await createTestUser({ balance: 1000 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      betId: 'mines-stale-1',
+      game: 'mines'
+    })
+    await upsertMinesGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      betId: 'mines-stale-1',
+      betAmount: 100,
+      mineCount: 3,
+      mineIndices: [0, 1, 2],
+      revealedIndices: [0],
+      houseEdgeSnapshot: 0.03,
+      status: 'FINISHED'
+    })
+
+    const message = {
+      edit: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const resolved = await finishMinesAndSettle({
+      game: {
+        userId: 'user-1',
+        guildId: 'guild-1',
+        channelId: 'channel-1',
+        messageId: 'msg-1',
+        betId: 'mines-stale-1',
+        betAmount: 100,
+        mineCount: 3,
+        mineIndices: [0, 1, 2],
+        revealedIndices: [0],
+        houseEdgeSnapshot: 0.03,
+        status: 'FINISHED',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      showBalance: false,
+      message: message as never
+    })
+
+    const remaining = await getMinesGameByBetId({
+      betId: 'mines-stale-1',
+      guildId: 'guild-1'
+    })
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+
+    expect(message.edit).toHaveBeenCalled()
+    expect(resolved.resultKind).toBe('BUST')
+    expect(remaining).toBeNull()
+    expect(user?.lockedBalance).toBe(0)
+    expect(user?.balance).toBe(900)
+  })
+
+  it('settles a finished mines cash-out with balance display', async () => {
+    await createTestUser({ balance: 1000 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      betId: 'mines-stale-cashout',
+      game: 'mines'
+    })
+    await upsertMinesGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      betId: 'mines-stale-cashout',
+      betAmount: 100,
+      mineCount: 3,
+      mineIndices: [0, 1, 2],
+      revealedIndices: [5, 6],
+      houseEdgeSnapshot: 0.03,
+      status: 'FINISHED'
+    })
+
+    const message = {
+      edit: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const announceConfig = {
+      ...guildConfig,
+      casinoSettings: {
+        ...guildConfig.casinoSettings,
+        winAnnouncements: {
+          ...guildConfig.casinoSettings.winAnnouncements,
+          minesMinMultiplier: 1
+        }
+      }
+    } as TGuildConfiguration
+
+    const resolved = await finishMinesAndSettle({
+      game: {
+        userId: 'user-1',
+        guildId: 'guild-1',
+        channelId: 'channel-1',
+        messageId: 'msg-1',
+        betId: 'mines-stale-cashout',
+        betAmount: 100,
+        mineCount: 3,
+        mineIndices: [0, 1, 2],
+        revealedIndices: [5, 6],
+        houseEdgeSnapshot: 0.03,
+        status: 'FINISHED',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      guildConfig: announceConfig,
+      guild: { id: 'guild-1', channels: { fetch: vi.fn() } } as never,
+      sourceChannelId: 'channel-1',
+      showBalance: true,
+      message: message as never
+    })
+
+    const remaining = await getMinesGameByBetId({
+      betId: 'mines-stale-cashout',
+      guildId: 'guild-1'
+    })
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+
+    expect(message.edit).toHaveBeenCalled()
+    expect(resolved.resultKind).toBe('CASH_OUT')
+    expect(resolved.payout).toBeGreaterThan(100)
     expect(remaining).toBeNull()
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBeGreaterThan(1000)

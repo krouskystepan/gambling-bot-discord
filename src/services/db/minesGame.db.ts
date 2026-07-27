@@ -123,3 +123,12 @@ export const deleteMinesGame = async ({
 }) => {
   await MinesGame.findOneAndDelete({ userId, guildId })
 }
+
+export const getStaleFinishedMinesGames = async (graceMs: number) => {
+  const cutoff = new Date(Date.now() - graceMs)
+
+  return MinesGame.find({
+    status: 'FINISHED',
+    updatedAt: { $lte: cutoff }
+  })
+}
