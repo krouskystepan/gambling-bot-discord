@@ -14,7 +14,9 @@ import { logger } from '@/utils/logger'
 import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
 export const baccaratIdleRefundJob = async (client: Client<true>) => {
-  const oldGames = await getAllOldBaccaratGames(1) // older than 1 day
+  const oldGames = (await getAllOldBaccaratGames(1)).filter(
+    (game) => game.phase === 'waiting'
+  )
 
   let processed = 0
   const guildProcessed = new Map<string, number>()

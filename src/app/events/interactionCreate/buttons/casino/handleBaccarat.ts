@@ -8,13 +8,14 @@ import { Interaction, MessageFlags } from 'discord.js'
 
 import { handleUnexpectedButtonError } from '@/errors'
 import {
-  deleteBaccaratGame,
   getBaccaratGameByBetId,
   getGuildConfigByGuildId,
-  getUser
+  getUser,
+  updateBaccaratGame
 } from '@/services'
 import { decodeId } from '@/utils/casino/baccarat/customId'
 import { playBaccaratSide } from '@/utils/casino/baccarat/playRound'
+import { dealBaccarat } from '@/utils/casino/rng'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export default async (interaction: Interaction) => {
@@ -62,6 +63,18 @@ export default async (interaction: Interaction) => {
       })
     }
 
+    if (game.phase === 'dealing') {
+      return interaction.reply({
+        embeds: [
+          createErrorEmbed(
+            'Game Busy',
+            'This baccarat hand is still being finished. Please wait a moment.'
+          )
+        ],
+        flags: MessageFlags.Ephemeral
+      })
+    }
+
     const user = await getUser({
       userId: game.userId,
       guildId
@@ -87,11 +100,16 @@ export default async (interaction: Interaction) => {
     }
 
     await interaction.deferUpdate()
-
-    // Remove session first so a double-click cannot settle twice.
-    await deleteBaccaratGame({
+    const round = dealBaccarat()
+    await updateBaccaratGame({
       userId: game.userId,
-      guildId: game.guildId
+      guildId: game.guildId,
+      phase: 'dealing',
+      pendingDeal: {
+        side,
+        playerCards: round.playerCards,
+        bankerCards: round.bankerCards
+      }
     })
 
     await playBaccaratSide({
@@ -107,7 +125,8 @@ export default async (interaction: Interaction) => {
       globalSettings: guildConfig.globalSettings,
       guild: interaction.guild,
       guildConfig,
-      sourceChannelId: interaction.channelId
+      sourceChannelId: interaction.channelId,
+      round
     })
   } catch (error) {
     await handleUnexpectedButtonError(interaction, error, {
