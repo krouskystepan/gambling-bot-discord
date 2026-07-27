@@ -11,6 +11,7 @@ import {
   getRouletteGameByUserAndGuild,
   getRouletteGamesByGuildId,
   getRouletteGamesNeedingIdleNudge,
+  getStaleSpinningRouletteGames,
   markRouletteIdleNudgeSent,
   updateRouletteGame,
   upsertRouletteGame
@@ -80,6 +81,32 @@ describe('rouletteGame.db', () => {
 
     expect(updated?.bets).toHaveLength(1)
     expect(updated?.idleNudgeSentAt).toBeNull()
+  })
+
+  it('finds stale spinning games by grace window', async () => {
+    await upsertRouletteGame({
+      ...baseGame,
+      phase: 'spinning',
+      bets: [
+        {
+          amount: 100,
+          type: 'color',
+          value: 'red',
+          displayValue: 'red'
+        }
+      ],
+      activeBetId: 'bet-1',
+      lockedAmount: 100,
+      pendingSpinResult: '18'
+    })
+    await RouletteGame.collection.updateOne(
+      { gameId: 'rl-game-1' },
+      { $set: { updatedAt: new Date(Date.now() - 61_000) } }
+    )
+
+    const stale = await getStaleSpinningRouletteGames(60_000)
+    expect(stale.some((game) => game.gameId === 'rl-game-1')).toBe(true)
+    expect(stale[0]?.pendingSpinResult).toBe('18')
   })
 
   it('finds games older than N days', async () => {
