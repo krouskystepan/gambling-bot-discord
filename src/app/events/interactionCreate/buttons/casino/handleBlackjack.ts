@@ -7,12 +7,9 @@ import { Interaction, MessageFlags } from 'discord.js'
 
 import { handleUnexpectedButtonError } from '@/errors'
 import {
-  deleteBlackjackGame,
   getBlackjackGameByBetId,
   getGuildConfigByGuildId,
-  getUser,
   reserveCasinoBet,
-  settleCasinoWinnings,
   updateBlackjackGame
 } from '@/services'
 import {
@@ -24,13 +21,11 @@ import {
   decodeId,
   docToEngine,
   engineToDoc,
+  finishBlackjackDealerAndSettle,
   renderBlackjackButtons,
-  renderBlackjackEmbed,
-  resolveResult
+  renderBlackjackEmbed
 } from '@/utils/casino/blackjack'
-import { collectBlackjackBigWinLines } from '@/utils/casino/blackjackBigWin'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
-import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -48,7 +43,6 @@ export default async (interaction: Interaction) => {
   try {
     const guildConfig = await getGuildConfigByGuildId({ guildId })
     const globalSettings = guildConfig?.globalSettings
-    const winMultipliers = guildConfig?.casinoSettings.blackjack.winMultipliers
 
     const game = await getBlackjackGameByBetId({ betId, guildId })
 
@@ -190,38 +184,15 @@ export default async (interaction: Interaction) => {
       )
 
       if (allPlayerHandsBusted) {
-        let totalPayout = 0
-        for (let i = 0; i < engine.hands.length; i++) {
-          const r = resolveResult(engine, i, winMultipliers)
-          if (r.finished) totalPayout += r.payout
-        }
-
-        const totalBet = engine.hands.reduce((s, h) => s + h.betAmount, 0)
-        const net = totalPayout - totalBet
-        const finalResultId = net > 0 ? 'WIN' : net < 0 ? 'LOSS' : 'EVEN'
-
-        const finalUser = await getUser({ userId: game.userId, guildId })
-        if (!finalUser) return
-
-        await interaction.message.edit({
-          embeds: [
-            renderBlackjackEmbed({
-              userId: game.userId,
-              guildId,
-              betId,
-              hands: engine.hands,
-              activeHandIndex: -1,
-              dealerCards: engine.dealerCards,
-              showBalance,
-              userBalance: finalUser.balance,
-              result: { kind: 'FINAL', finalResultId, netProfit: net },
-              globalSettings
-            })
-          ],
-          components: []
+        await finishBlackjackDealerAndSettle({
+          game,
+          engine,
+          guildConfig,
+          guild: interaction.guild,
+          sourceChannelId: interaction.channelId,
+          showBalance,
+          message: interaction.message
         })
-
-        await deleteBlackjackGame({ userId: game.userId, guildId })
         return
       }
 
@@ -248,6 +219,8 @@ export default async (interaction: Interaction) => {
       while (dealerShouldDraw(engine)) {
         await sleep(700)
         dealerDrawOne(engine)
+        engineToDoc(engine, game)
+        await updateBlackjackGame(game)
 
         await interaction.message.edit({
           embeds: [
@@ -267,71 +240,14 @@ export default async (interaction: Interaction) => {
         })
       }
 
-      let totalPayout = 0
-      for (let i = 0; i < engine.hands.length; i++) {
-        const r = resolveResult(engine, i, winMultipliers)
-        if (r.finished) totalPayout += r.payout
-      }
-
-      const totalBet = engine.hands.reduce((s, h) => s + h.betAmount, 0)
-      const net = totalPayout - totalBet
-
-      const finalResultId = net > 0 ? 'WIN' : net < 0 ? 'LOSS' : 'EVEN'
-
-      await settleCasinoWinnings({
-        userId: game.userId,
-        guildId,
-        totalBet,
-        winnings: totalPayout,
-        betId,
-        game: 'blackjack'
-      })
-
-      if (guildConfig) {
-        tryAnnounceBigWin({
-          guild: interaction.guild,
-          guildConfig,
-          game: 'blackjack',
-          lines: collectBlackjackBigWinLines({
-            engine,
-            globalSettings,
-            winMultipliers,
-            minMultiplier:
-              guildConfig.casinoSettings.winAnnouncements.blackjackMinMultiplier
-          }),
-          betId,
-          sourceChannelId: interaction.channelId
-        })
-      }
-
-      let userBalance: number | undefined
-
-      if (showBalance) {
-        const user = await getUser({ userId: game.userId, guildId })
-        if (user) userBalance = user.balance
-      }
-
-      await interaction.message.edit({
-        embeds: [
-          renderBlackjackEmbed({
-            userId: game.userId,
-            guildId,
-            betId,
-            hands: engine.hands,
-            activeHandIndex: -1,
-            dealerCards: engine.dealerCards,
-            showBalance,
-            userBalance,
-            result: { kind: 'FINAL', finalResultId, netProfit: net },
-            globalSettings
-          })
-        ],
-        components: []
-      })
-
-      await deleteBlackjackGame({
-        userId: game.userId,
-        guildId
+      await finishBlackjackDealerAndSettle({
+        game,
+        engine,
+        guildConfig,
+        guild: interaction.guild,
+        sourceChannelId: interaction.channelId,
+        showBalance,
+        message: interaction.message
       })
 
       return
