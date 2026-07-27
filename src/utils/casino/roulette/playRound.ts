@@ -7,8 +7,6 @@ import { formatMoney, generateId } from 'gambling-bot-shared/common'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import type { TRouletteSlipBet } from 'gambling-bot-shared/roulette'
 
-import type { Guild, Message } from 'discord.js'
-
 import {
   reserveCasinoBet,
   settleCasinoWinnings,
@@ -86,6 +84,8 @@ const randomInt = (minInclusive: number, maxExclusive: number) =>
 const randomSpinPockets = () => randomInt(6, 11)
 
 const FRAME_DELAY_MS = 550
+type EditableMessage = { edit: (...args: never[]) => Promise<unknown> }
+type AnnounceGuild = Parameters<typeof tryAnnounceBigWin>[0]['guild']
 
 const wrapIndex = (index: number) => {
   const len = WHEEL_ORDER.length
@@ -127,7 +127,7 @@ export const formatSpinningWheelRow = (centerIndex: number) => {
 /**
  * Random length path on the single-zero strip that lands on a playable mini pocket.
  */
-const planSpin = () => {
+export const planSpin = () => {
   const endIndex = PLAYABLE_INDEXES[randomInt(0, PLAYABLE_INDEXES.length)]!
   const spinPockets = randomSpinPockets()
   const startIndex = wrapIndex(endIndex - (spinPockets - 1))
@@ -150,80 +150,32 @@ const formatSpinFrame = (
     formatSpinningWheelRow(centerIndex)
   ].join('\n')
 
-export const playRouletteSpin = async ({
+const settleRouletteFromResult = async ({
   message,
   userId,
   guildId,
   gameId,
   bets,
+  spinResult,
   showBalance,
-  skipAnimations,
   guild,
   guildConfig,
-  sourceChannelId
+  sourceChannelId,
+  betId
 }: {
-  message: Message
+  message?: EditableMessage | null
   userId: string
   guildId: string
   gameId: string
   bets: TRouletteSlipBet[]
+  spinResult: string
   showBalance: boolean
-  skipAnimations: boolean
-  guild: Guild | null
+  guild: AnnounceGuild
   guildConfig: TGuildConfiguration
   sourceChannelId: string
+  betId: string
 }) => {
   const totalBet = slipTotal(bets)
-  const betId = generateId()
-
-  await updateRouletteGame({
-    userId,
-    guildId,
-    activeBetId: betId,
-    lockedAmount: totalBet
-  })
-
-  try {
-    await reserveCasinoBet({
-      userId,
-      guildId,
-      totalBet,
-      betId,
-      game: 'roulette'
-    })
-  } catch {
-    await updateRouletteGame({
-      userId,
-      guildId,
-      activeBetId: null,
-      lockedAmount: null
-    })
-    throw new Error('INSUFFICIENT_FUNDS')
-  }
-
-  const { centers, result: spinResult } = planSpin()
-
-  if (!skipAnimations) {
-    for (let step = 0; step < centers.length; step++) {
-      await message.edit({
-        embeds: [
-          createBetEmbed(
-            '🌀 Spinning...',
-            'Blue',
-            formatSpinFrame(
-              centers[step]!,
-              totalBet,
-              guildConfig.globalSettings
-            ),
-            betId
-          )
-        ],
-        components: []
-      })
-      await sleep(FRAME_DELAY_MS)
-    }
-  }
-
   const color = getRouletteColor(spinResult)
   const rouletteBets = toRouletteBets(bets)
   let winnings = 0
@@ -287,31 +239,34 @@ export const playRouletteSpin = async ({
     bets: [],
     lastBets: bets,
     lastSpinResult: spinResult,
+    pendingSpinResult: null,
     lastNetResult: net,
     activeBetId: null,
     lockedAmount: null
   })
 
-  await message.edit({
-    embeds: [
-      renderRouletteTableEmbed({
+  if (message) {
+    await message.edit({
+      embeds: [
+        renderRouletteTableEmbed({
+          gameId,
+          bets,
+          phase: 'result',
+          lastSpinResult: spinResult,
+          lastNetResult: net,
+          showBalance,
+          finalBalance,
+          globalSettings: guildConfig.globalSettings
+        })
+      ],
+      components: renderRouletteComponents({
         gameId,
-        bets,
         phase: 'result',
-        lastSpinResult: spinResult,
-        lastNetResult: net,
-        showBalance,
-        finalBalance,
-        globalSettings: guildConfig.globalSettings
+        hasBets: false,
+        hasLastBets: bets.length > 0
       })
-    ],
-    components: renderRouletteComponents({
-      gameId,
-      phase: 'result',
-      hasBets: false,
-      hasLastBets: bets.length > 0
-    })
-  })
+    } as never)
+  }
 
   if (announcementHits.length > 0 && guild) {
     tryAnnounceBigWin({
@@ -325,4 +280,136 @@ export const playRouletteSpin = async ({
   }
 
   return { betId, spinResult, net, finalBalance, betLines }
+}
+
+export const recoverRouletteSpin = async ({
+  message,
+  userId,
+  guildId,
+  gameId,
+  bets,
+  spinResult,
+  showBalance,
+  guild,
+  guildConfig,
+  sourceChannelId,
+  betId
+}: {
+  message?: EditableMessage | null
+  userId: string
+  guildId: string
+  gameId: string
+  bets: TRouletteSlipBet[]
+  spinResult: string
+  showBalance: boolean
+  guild: AnnounceGuild
+  guildConfig: TGuildConfiguration
+  sourceChannelId: string
+  betId: string
+}) =>
+  settleRouletteFromResult({
+    message,
+    userId,
+    guildId,
+    gameId,
+    bets,
+    spinResult,
+    showBalance,
+    guild,
+    guildConfig,
+    sourceChannelId,
+    betId
+  })
+
+export const playRouletteSpin = async ({
+  message,
+  userId,
+  guildId,
+  gameId,
+  bets,
+  showBalance,
+  skipAnimations,
+  guild,
+  guildConfig,
+  sourceChannelId
+}: {
+  message: EditableMessage
+  userId: string
+  guildId: string
+  gameId: string
+  bets: TRouletteSlipBet[]
+  showBalance: boolean
+  skipAnimations: boolean
+  guild: AnnounceGuild
+  guildConfig: TGuildConfiguration
+  sourceChannelId: string
+}) => {
+  const totalBet = slipTotal(bets)
+  const betId = generateId()
+
+  const { centers, result: spinResult } = planSpin()
+
+  await updateRouletteGame({
+    userId,
+    guildId,
+    phase: 'spinning',
+    pendingSpinResult: spinResult,
+    activeBetId: betId,
+    lockedAmount: totalBet
+  })
+
+  try {
+    await reserveCasinoBet({
+      userId,
+      guildId,
+      totalBet,
+      betId,
+      game: 'roulette'
+    })
+  } catch {
+    await updateRouletteGame({
+      userId,
+      guildId,
+      phase: 'betting',
+      pendingSpinResult: null,
+      activeBetId: null,
+      lockedAmount: null
+    })
+    throw new Error('INSUFFICIENT_FUNDS')
+  }
+
+  if (!skipAnimations) {
+    for (let step = 0; step < centers.length; step++) {
+      await message.edit({
+        embeds: [
+          createBetEmbed(
+            '🌀 Spinning...',
+            'Blue',
+            formatSpinFrame(
+              centers[step]!,
+              totalBet,
+              guildConfig.globalSettings
+            ),
+            betId
+          )
+        ],
+        components: []
+      } as never)
+      await sleep(FRAME_DELAY_MS)
+    }
+  }
+
+  return settleRouletteFromResult({
+    message,
+    userId,
+    guildId,
+    gameId,
+    bets,
+    spinResult,
+    showBalance,
+    guild,
+    guildConfig,
+    sourceChannelId,
+    betId
+  })
 }

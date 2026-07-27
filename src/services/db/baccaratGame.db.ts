@@ -5,7 +5,11 @@ import {
 
 import BaccaratGame from '@/models/BaccaratGame'
 
-import { TGetBaccaratGame, TUpsertBaccaratGame } from './baccaratGame.db.types'
+import {
+  TGetBaccaratGame,
+  TUpdateBaccaratGame,
+  TUpsertBaccaratGame
+} from './baccaratGame.db.types'
 
 export const getBaccaratGameByUserAndGuild = async ({
   userId,
@@ -44,6 +48,7 @@ export const getBaccaratGamesNeedingIdleNudge = async () => {
   const now = Date.now()
 
   return BaccaratGame.find({
+    phase: 'waiting',
     updatedAt: {
       $lte: new Date(now - baccaratIdleNudgeThresholdMs()),
       $gt: new Date(now - baccaratIdleRefundMs())
@@ -78,7 +83,9 @@ export const upsertBaccaratGame = async ({
   betId,
   betAmount,
   showBalance,
-  skipAnimations
+  skipAnimations,
+  phase = 'waiting',
+  pendingDeal = null
 }: TUpsertBaccaratGame) => {
   return BaccaratGame.findOneAndUpdate(
     { userId, guildId },
@@ -90,6 +97,8 @@ export const upsertBaccaratGame = async ({
         betAmount,
         showBalance,
         skipAnimations,
+        phase,
+        pendingDeal,
         idleNudgeSentAt: null
       }
     },
@@ -108,4 +117,30 @@ export const deleteBaccaratGame = async ({
   guildId: string
 }) => {
   await BaccaratGame.findOneAndDelete({ userId, guildId })
+}
+
+export const updateBaccaratGame = async ({
+  userId,
+  guildId,
+  ...patch
+}: TUpdateBaccaratGame) => {
+  return BaccaratGame.findOneAndUpdate(
+    { userId, guildId },
+    {
+      $set: {
+        ...patch,
+        idleNudgeSentAt: null
+      }
+    },
+    { returnDocument: 'after' }
+  )
+}
+
+export const getStaleDealingBaccaratGames = async (graceMs: number) => {
+  const cutoff = new Date(Date.now() - graceMs)
+
+  return BaccaratGame.find({
+    phase: 'dealing',
+    updatedAt: { $lte: cutoff }
+  })
 }

@@ -16,6 +16,7 @@ export type TUpsertRouletteGame = Pick<TUser, 'userId' | 'guildId'> & {
   bets?: TRouletteSlipBet[]
   lastBets?: TRouletteSlipBet[]
   lastSpinResult?: string | null
+  pendingSpinResult?: string | null
   lastNetResult?: number | null
   activeBetId?: string | null
   lockedAmount?: number | null
@@ -30,6 +31,7 @@ export type TUpdateRouletteGame = Pick<TUser, 'userId' | 'guildId'> & {
   bets?: TRouletteSlipBet[]
   lastBets?: TRouletteSlipBet[]
   lastSpinResult?: string | null
+  pendingSpinResult?: string | null
   lastNetResult?: number | null
   activeBetId?: string | null
   lockedAmount?: number | null

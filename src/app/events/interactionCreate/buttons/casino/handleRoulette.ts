@@ -456,6 +456,18 @@ export default async (interaction: Interaction) => {
     }
 
     if (data.action === 'change') {
+      if (game.phase === 'spinning') {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Table Busy',
+              'This roulette spin is still being finished. Please wait a moment.'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
       await interaction.deferUpdate()
       const updated = await updateRouletteGame({
         userId: game.userId,
@@ -531,6 +543,18 @@ export default async (interaction: Interaction) => {
     }
 
     if (data.action === 'spin' || data.action === 'rebet') {
+      if (game.phase === 'spinning') {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Table Busy',
+              'This roulette spin is still being finished. Please wait a moment.'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
+
       const slip =
         data.action === 'rebet'
           ? game.lastBets

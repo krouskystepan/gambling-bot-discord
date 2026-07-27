@@ -11,7 +11,9 @@ import {
   getBaccaratGameByUserAndGuild,
   getBaccaratGamesByGuildId,
   getBaccaratGamesNeedingIdleNudge,
+  getStaleDealingBaccaratGames,
   markBaccaratIdleNudgeSent,
+  updateBaccaratGame,
   upsertBaccaratGame
 } from '@/services/db/baccaratGame.db'
 
@@ -41,6 +43,7 @@ describe('baccaratGame.db', () => {
 
     expect(game?.betId).toBe('bet-bc-1')
     expect(game?.betAmount).toBe(100)
+    expect(game?.phase).toBe('waiting')
   })
 
   it('fetches by bet id and guild id list', async () => {
@@ -99,6 +102,34 @@ describe('baccaratGame.db', () => {
     )
     const pastRefund = await getBaccaratGamesNeedingIdleNudge()
     expect(pastRefund.some((g) => g.betId === 'bet-bc-1')).toBe(false)
+  })
+
+  it('finds stale dealing games by grace window', async () => {
+    await upsertBaccaratGame(baseGame)
+    await updateBaccaratGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      phase: 'dealing',
+      pendingDeal: {
+        side: 'player',
+        playerCards: [
+          { label: 'A', suite: '♠️' },
+          { label: '9', suite: '♥️' }
+        ],
+        bankerCards: [
+          { label: '2', suite: '♣️' },
+          { label: '7', suite: '♦️' }
+        ]
+      }
+    })
+    await BaccaratGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date(Date.now() - 61_000) } }
+    )
+
+    const stale = await getStaleDealingBaccaratGames(60_000)
+    expect(stale.some((g) => g.betId === 'bet-bc-1')).toBe(true)
+    expect(stale[0]?.pendingDeal?.side).toBe('player')
   })
 
   it('deletes game by user and guild', async () => {

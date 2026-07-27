@@ -1,7 +1,10 @@
 import { MINI_NUMBERS } from 'gambling-bot-shared/casino'
 import { formatMoney } from 'gambling-bot-shared/common'
 import type { GlobalSettings } from 'gambling-bot-shared/guild'
-import type { TRouletteSlipBet } from 'gambling-bot-shared/roulette'
+import type {
+  RouletteSessionPhase,
+  TRouletteSlipBet
+} from 'gambling-bot-shared/roulette'
 
 import {
   ActionRowBuilder,
@@ -79,7 +82,7 @@ export const renderRouletteTableEmbed = ({
 }: {
   gameId: string
   bets: TRouletteSlipBet[]
-  phase: 'betting' | 'result'
+  phase: RouletteSessionPhase
   lastSpinResult?: string | null
   lastNetResult?: number | null
   showBalance: boolean
@@ -106,7 +109,9 @@ export const renderRouletteTableEmbed = ({
     lines.push(`🏦 Balance: **${formatMoney(finalBalance, globalSettings)}**`)
   }
 
-  if (phase === 'betting') {
+  if (phase === 'spinning') {
+    lines.push('_This spin is being finalized. Buttons will return shortly._')
+  } else if (phase === 'betting') {
     lines.push('_Tap an outcome, enter the amount, then press Spin._')
   } else {
     lines.push('_Rebet repeats your last slip, or Change bets to edit._')
@@ -153,10 +158,14 @@ export const renderRouletteComponents = ({
   hasLastBets
 }: {
   gameId: string
-  phase: 'betting' | 'result'
+  phase: RouletteSessionPhase
   hasBets: boolean
   hasLastBets: boolean
 }) => {
+  if (phase === 'spinning') {
+    return []
+  }
+
   if (phase === 'result') {
     return [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
