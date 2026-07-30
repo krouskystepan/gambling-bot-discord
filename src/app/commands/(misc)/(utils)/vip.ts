@@ -26,7 +26,8 @@ import {
   getUser,
   refundVipPurchase,
   removeVipMemberAtomic,
-  reserveVipPurchase
+  reserveVipPurchase,
+  tryEvaluateQuests
 } from '@/services'
 import {
   createErrorEmbed,
@@ -284,6 +285,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           channelId: channel.id,
           expiresAt,
           purchaseId
+        })
+
+        tryEvaluateQuests({
+          guildId: user.guildId,
+          userId: user.userId,
+          guildConfig: guildConfiguration,
+          interaction
         })
       } catch (discordError) {
         await refundVipPurchase({

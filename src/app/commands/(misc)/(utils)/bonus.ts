@@ -23,7 +23,8 @@ import {
   assertNotMaintenance,
   checkUserRegistration,
   claimDailyBonusAtomic,
-  getGuildConfigByGuildId
+  getGuildConfigByGuildId,
+  tryEvaluateQuests
 } from '@/services'
 import { createErrorEmbed, createInfoEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
@@ -253,10 +254,19 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         .setFooter({ text: 'Come back tomorrow to keep your streak alive!' })
         .setTimestamp()
 
-      return interaction.reply({
-        embeds: [embed],
-        flags: MessageFlags.Ephemeral
-      })
+      return interaction
+        .reply({
+          embeds: [embed],
+          flags: MessageFlags.Ephemeral
+        })
+        .then(() => {
+          tryEvaluateQuests({
+            guildId: user.guildId,
+            userId: user.userId,
+            guildConfig,
+            interaction
+          })
+        })
     }
   } catch (error) {
     await handleUnexpectedInteractionError(interaction, error)

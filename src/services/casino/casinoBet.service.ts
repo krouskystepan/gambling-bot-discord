@@ -5,18 +5,63 @@ import mongoose from 'mongoose'
 
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
+import { getGuildConfigByGuildId } from '@/services/guild/guildConfiguration.db'
+import { getQuestNotifyInteraction, tryEvaluateQuests } from '@/services/quests'
 
 const sharedCasinoBet = createCasinoBetService({
   userModel: User,
   transactionModel: Transaction
 })
 
-export const {
-  refundLockedBet,
-  settleCasinoWinnings,
-  refundRafflePurchase,
-  payRaffleWinner
-} = sharedCasinoBet
+const { settleCasinoWinnings: sharedSettleCasinoWinnings } = sharedCasinoBet
+
+export const { refundLockedBet, refundRafflePurchase, payRaffleWinner } =
+  sharedCasinoBet
+
+/** Load guild config (best-effort) and fire quest evaluation after casino activity. */
+export const evaluateQuestsAfterCasinoActivity = ({
+  guildId,
+  userId
+}: {
+  guildId: string
+  userId: string
+}): void => {
+  const interaction = getQuestNotifyInteraction()
+  void getGuildConfigByGuildId({ guildId })
+    .catch(() => null)
+    .then((guildConfig) => {
+      tryEvaluateQuests({ guildId, userId, guildConfig, interaction })
+    })
+}
+
+export async function settleCasinoWinnings({
+  userId,
+  guildId,
+  totalBet,
+  winnings,
+  betId,
+  game
+}: {
+  userId: string
+  guildId: string
+  totalBet: number
+  winnings: number
+  betId: string
+  game: CasinoGameId
+}) {
+  const result = await sharedSettleCasinoWinnings({
+    userId,
+    guildId,
+    totalBet,
+    winnings,
+    betId,
+    game
+  })
+
+  evaluateQuestsAfterCasinoActivity({ guildId, userId })
+
+  return result
+}
 
 export async function reserveCasinoBet({
   userId,
@@ -164,6 +209,15 @@ export async function settleRpsGameAtomic({
   } finally {
     session.endSession()
   }
+
+  evaluateQuestsAfterCasinoActivity({
+    userId: p1UserId,
+    guildId: p1GuildId
+  })
+  evaluateQuestsAfterCasinoActivity({
+    userId: p2UserId,
+    guildId: p2GuildId
+  })
 }
 
 export async function releaseExcessLockedBalance({
@@ -286,4 +340,6 @@ export async function spendCasinoBalance({
   } finally {
     session.endSession()
   }
+
+  evaluateQuestsAfterCasinoActivity({ guildId, userId })
 }

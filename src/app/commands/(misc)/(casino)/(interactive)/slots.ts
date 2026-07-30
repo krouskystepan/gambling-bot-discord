@@ -13,6 +13,7 @@ import {
   skipAnimationsOption,
   upsertSlotsGame
 } from '@/services'
+import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
   renderSlotsComponents,
   renderSlotsMachineEmbed
@@ -27,67 +28,70 @@ export const command: CommandData = {
 }
 
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
-  try {
-    const user = await checkUserRegistration({ interaction })
-    if (!user) return
+  return runWithQuestNotifyInteraction(interaction, async () => {
+    try {
+      const user = await checkUserRegistration({ interaction })
+      if (!user) return
 
-    const guildConfig = await checkCasinoChannels(interaction)
-    if (!guildConfig) return
+      const guildConfig = await checkCasinoChannels(interaction)
+      if (!guildConfig) return
 
-    const existingGame = await getSlotsGameByUserAndGuild({
-      userId: interaction.user.id,
-      guildId: interaction.guildId!
-    })
-
-    if (existingGame) {
-      return interaction.reply({
-        embeds: [
-          createErrorEmbed(
-            'Slots Already Active',
-            'You already have an open slots machine! Close it or finish that game first. 🎰'
-          )
-        ],
-        flags: MessageFlags.Ephemeral
+      const existingGame = await getSlotsGameByUserAndGuild({
+        userId: interaction.user.id,
+        guildId: interaction.guildId!
       })
-    }
 
-    const showBalance = interaction.options.getBoolean('show-balance') || false
-    const skipAnimations =
-      interaction.options.getBoolean('skip-animations') || false
+      if (existingGame) {
+        return interaction.reply({
+          embeds: [
+            createErrorEmbed(
+              'Slots Already Active',
+              'You already have an open slots machine! Close it or finish that game first. 🎰'
+            )
+          ],
+          flags: MessageFlags.Ephemeral
+        })
+      }
 
-    await interaction.deferReply()
+      const showBalance =
+        interaction.options.getBoolean('show-balance') || false
+      const skipAnimations =
+        interaction.options.getBoolean('skip-animations') || false
 
-    const gameId = generateId()
+      await interaction.deferReply()
 
-    const message = await interaction.editReply({
-      embeds: [
-        renderSlotsMachineEmbed({
+      const gameId = generateId()
+
+      const message = await interaction.editReply({
+        embeds: [
+          renderSlotsMachineEmbed({
+            gameId,
+            phase: 'ready',
+            unitBet: null,
+            spinsCount: 1,
+            showBalance,
+            globalSettings: guildConfig.globalSettings
+          })
+        ],
+        components: renderSlotsComponents({
           gameId,
           phase: 'ready',
-          unitBet: null,
-          spinsCount: 1,
-          showBalance,
-          globalSettings: guildConfig.globalSettings
+          hasUnitBet: false,
+          spinsCount: 1
         })
-      ],
-      components: renderSlotsComponents({
-        gameId,
-        phase: 'ready',
-        hasUnitBet: false,
-        spinsCount: 1
       })
-    })
 
-    await upsertSlotsGame({
-      userId: user.userId,
-      guildId: user.guildId,
-      channelId: interaction.channelId,
-      messageId: message.id,
-      gameId,
-      showBalance,
-      skipAnimations
-    })
-  } catch (error) {
-    await handleUnexpectedInteractionError(interaction, error)
-  }
+      await upsertSlotsGame({
+        userId: user.userId,
+        guildId: user.guildId,
+        channelId: interaction.channelId,
+        messageId: message.id,
+        gameId,
+        showBalance,
+        skipAnimations
+      })
+    } catch (error) {
+      await handleUnexpectedInteractionError(interaction, error)
+    }
+  })
 }
