@@ -18,8 +18,8 @@ importers:
         specifier: ^17.4.2
         version: 17.4.2
       gambling-bot-shared:
-        specifier: ^1.1.0
-        version: 1.1.0(mongoose@9.7.0)
+        specifier: ^1.1.1
+        version: 1.1.1(mongoose@9.7.0)
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
@@ -1488,8 +1488,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  gambling-bot-shared@1.1.0:
-    resolution: {integrity: sha512-O9ccDj/OHMr6Za30pma4hMZDU95PcVjRquXbY16wTdBiFfJmXkHPxgSV+vKBY0fpb+QQhVfywLa7+KL76v3ptQ==}
+  gambling-bot-shared@1.1.1:
+    resolution: {integrity: sha512-OxqBY8Zpv6rhWMrw0Edy9RaHsSD8uUjyFkPnIx5tPrUze1C2R5jQSQSFV23g2Cepi3p6iOoigAruXwQXCYTkDg==}
     peerDependencies:
       mongoose: ^9.0.0
 
@@ -3613,7 +3613,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  gambling-bot-shared@1.1.0(mongoose@9.7.0):
+  gambling-bot-shared@1.1.1(mongoose@9.7.0):
     dependencies:
       luxon: 3.7.2
       mongoose: 9.7.0
