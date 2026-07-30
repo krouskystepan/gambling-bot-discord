@@ -144,5 +144,12 @@ describe('isGlobalFeatureDisabled', () => {
     expect(isGlobalFeatureDisabled(config, 'casinoGamesForMods')).toBe(true)
     expect(isGlobalFeatureDisabled(config, 'maintenance')).toBe(true)
     expect(isGlobalFeatureDisabled(config, 'registration')).toBe(false)
+    expect(isGlobalFeatureDisabled(config, 'quests')).toBe(false)
+
+    const questsDisabled = baseConfig({
+      ...defaultGlobalSettings,
+      disableQuests: true
+    })
+    expect(isGlobalFeatureDisabled(questsDisabled, 'quests')).toBe(true)
   })
 })

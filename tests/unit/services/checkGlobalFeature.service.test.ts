@@ -234,6 +234,11 @@ const featureCases: {
     title: 'Error - Feature Disabled'
   },
   {
+    feature: 'quests',
+    settings: { disableQuests: true },
+    title: 'Error - Feature Disabled'
+  },
+  {
     feature: 'maintenance',
     settings: { maintenanceMode: true },
     title: 'Error - Maintenance'
