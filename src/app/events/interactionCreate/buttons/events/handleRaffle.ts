@@ -12,6 +12,7 @@ import {
   getRaffleById,
   spendCasinoBalance
 } from '@/services'
+import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
   createErrorEmbed,
   createInfoEmbed,
@@ -21,173 +22,180 @@ import {
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
-  const [type, raffleId, ticketAmountString] = interaction.customId.split('.')
-  if (type !== 'raffle' || !raffleId) return
+  return runWithQuestNotifyInteraction(interaction, async () => {
+    const [type, raffleId, ticketAmountString] = interaction.customId.split('.')
+    if (type !== 'raffle' || !raffleId) return
 
-  const ticketAmount = Number(ticketAmountString || 1)
-
-  try {
-    const guildConfigEarly = await getGuildConfigByGuildId({
-      guildId: interaction.guildId!
-    })
-    if (!guildConfigEarly) return
-    if (!(await assertNotMaintenance(interaction, guildConfigEarly))) return
-    if (
-      !(await assertGlobalFeature(interaction, guildConfigEarly, 'raffles'))
-    ) {
-      return
-    }
-
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral })
-
-    const raffle = await getRaffleById({
-      raffleId,
-      guildId: interaction.guildId!
-    })
-    if (!raffle || !interaction.channel) return
-
-    if (raffle.status === 'canceled') {
-      return interaction.editReply({
-        embeds: [
-          createInfoEmbed('Raffle Canceled', 'This raffle is no longer active.')
-        ]
-      })
-    }
-
-    if (new Date() >= new Date(raffle.nextDrawAt)) {
-      return interaction.editReply({
-        embeds: [
-          createInfoEmbed(
-            'Raffle Closed',
-            'Ticket sales are closed for this raffle.'
-          )
-        ]
-      })
-    }
-
-    const casinoSettings = guildConfigEarly.casinoSettings
-    if (!casinoSettings) return
-
-    const existingEntry = raffle.participants.find(
-      (p) => p.userId === interaction.user.id
-    )
-
-    const currentTickets = existingEntry ? existingEntry.tickets : 0
-
-    if (
-      raffle.maxTicketsPerUser > 0 &&
-      currentTickets + ticketAmount > raffle.maxTicketsPerUser
-    ) {
-      return interaction.editReply({
-        embeds: [
-          createErrorEmbed(
-            'Ticket Limit Exceeded',
-            `Maximum tickets per user is **${raffle.maxTicketsPerUser}**.`
-          )
-        ]
-      })
-    }
-
-    const totalCost = raffle.ticketPrice * ticketAmount
+    const ticketAmount = Number(ticketAmountString || 1)
 
     try {
-      await spendCasinoBalance({
-        userId: interaction.user.id,
-        guildId: interaction.guildId!,
-        amount: totalCost,
-        betId: raffle.drawId,
-        game: 'raffle'
+      const guildConfigEarly = await getGuildConfigByGuildId({
+        guildId: interaction.guildId!
       })
-    } catch (error) {
-      if (error instanceof Error && error.message === 'USER_BANNED') {
+      if (!guildConfigEarly) return
+      if (!(await assertNotMaintenance(interaction, guildConfigEarly))) return
+      if (
+        !(await assertGlobalFeature(interaction, guildConfigEarly, 'raffles'))
+      ) {
+        return
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+
+      const raffle = await getRaffleById({
+        raffleId,
+        guildId: interaction.guildId!
+      })
+      if (!raffle || !interaction.channel) return
+
+      if (raffle.status === 'canceled') {
         return interaction.editReply({
-          embeds: [createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)]
+          embeds: [
+            createInfoEmbed(
+              'Raffle Canceled',
+              'This raffle is no longer active.'
+            )
+          ]
         })
       }
 
-      return interaction.editReply({
+      if (new Date() >= new Date(raffle.nextDrawAt)) {
+        return interaction.editReply({
+          embeds: [
+            createInfoEmbed(
+              'Raffle Closed',
+              'Ticket sales are closed for this raffle.'
+            )
+          ]
+        })
+      }
+
+      const casinoSettings = guildConfigEarly.casinoSettings
+      if (!casinoSettings) return
+
+      const existingEntry = raffle.participants.find(
+        (p) => p.userId === interaction.user.id
+      )
+
+      const currentTickets = existingEntry ? existingEntry.tickets : 0
+
+      if (
+        raffle.maxTicketsPerUser > 0 &&
+        currentTickets + ticketAmount > raffle.maxTicketsPerUser
+      ) {
+        return interaction.editReply({
+          embeds: [
+            createErrorEmbed(
+              'Ticket Limit Exceeded',
+              `Maximum tickets per user is **${raffle.maxTicketsPerUser}**.`
+            )
+          ]
+        })
+      }
+
+      const totalCost = raffle.ticketPrice * ticketAmount
+
+      try {
+        await spendCasinoBalance({
+          userId: interaction.user.id,
+          guildId: interaction.guildId!,
+          amount: totalCost,
+          betId: raffle.drawId,
+          game: 'raffle'
+        })
+      } catch (error) {
+        if (error instanceof Error && error.message === 'USER_BANNED') {
+          return interaction.editReply({
+            embeds: [
+              createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)
+            ]
+          })
+        }
+
+        return interaction.editReply({
+          embeds: [
+            createErrorEmbed(
+              'Insufficient Funds',
+              `You need **${formatMoney(totalCost, guildConfigEarly.globalSettings)}** to buy tickets.`
+            )
+          ]
+        })
+      }
+
+      const added = await addRaffleTickets({
+        raffleId,
+        guildId: interaction.guildId!,
+        userId: interaction.user.id,
+        tickets: ticketAmount,
+        maxTicketsPerUser: raffle.maxTicketsPerUser
+      })
+
+      if (!added) {
+        // This should NEVER happen after validation
+        throw new Error('RAFFLE_STATE_CHANGED_AFTER_VALIDATION')
+      }
+
+      const updatedRaffle = await getRaffleById({
+        raffleId,
+        guildId: interaction.guildId!
+      })
+
+      if (updatedRaffle) {
+        const totalTickets = updatedRaffle.participants.reduce(
+          (sum, p) => sum + p.tickets,
+          0
+        )
+        const rawPot = totalTickets * raffle.ticketPrice
+
+        const houseCut = guildConfigEarly.casinoSettings.raffle.houseEdge
+        const pot = rawPot * (1 - houseCut)
+
+        const drawUnix = Math.floor(
+          new Date(updatedRaffle.nextDrawAt).getTime() / 1000
+        )
+
+        const updatedEmbed = new EmbedBuilder()
+          .setColor(Colors.Gold)
+          .setTitle('🎫 Global Raffle')
+          .setDescription(
+            [
+              `💰 Ticket Price: **${formatMoney(
+                updatedRaffle.ticketPrice,
+                guildConfigEarly.globalSettings
+              )}**`,
+              `🎟️ Ticket Limit: **${updatedRaffle.maxTicketsPerUser}**`,
+              '',
+              `🗓️ Drawing Date: **<t:${drawUnix}:F>**`,
+              '',
+              `💸 Current Pot: **${formatMoney(pot, guildConfigEarly.globalSettings)}**`
+            ].join('\n')
+          )
+          .setFooter({ text: `ID: ${raffle.drawId}` })
+
+        const raffleMessage = await interaction.channel.messages
+          .fetch(updatedRaffle.raffleId)
+          .catch(() => null)
+
+        if (raffleMessage) {
+          await raffleMessage.edit({ embeds: [updatedEmbed] })
+        }
+      }
+
+      await interaction.editReply({
         embeds: [
-          createErrorEmbed(
-            'Insufficient Funds',
-            `You need **${formatMoney(totalCost, guildConfigEarly.globalSettings)}** to buy tickets.`
+          createSuccessEmbed(
+            'Ticket/s Purchased',
+            `You bought **${ticketAmount}** ticket/s for **${formatMoney(
+              totalCost,
+              guildConfigEarly.globalSettings
+            )}**`
           )
         ]
       })
+    } catch (error) {
+      await handleUnexpectedButtonError(interaction, error, {
+        handler: 'handleRaffle'
+      })
     }
-
-    const added = await addRaffleTickets({
-      raffleId,
-      guildId: interaction.guildId!,
-      userId: interaction.user.id,
-      tickets: ticketAmount,
-      maxTicketsPerUser: raffle.maxTicketsPerUser
-    })
-
-    if (!added) {
-      // This should NEVER happen after validation
-      throw new Error('RAFFLE_STATE_CHANGED_AFTER_VALIDATION')
-    }
-
-    const updatedRaffle = await getRaffleById({
-      raffleId,
-      guildId: interaction.guildId!
-    })
-
-    if (updatedRaffle) {
-      const totalTickets = updatedRaffle.participants.reduce(
-        (sum, p) => sum + p.tickets,
-        0
-      )
-      const rawPot = totalTickets * raffle.ticketPrice
-
-      const houseCut = guildConfigEarly.casinoSettings.raffle.houseEdge
-      const pot = rawPot * (1 - houseCut)
-
-      const drawUnix = Math.floor(
-        new Date(updatedRaffle.nextDrawAt).getTime() / 1000
-      )
-
-      const updatedEmbed = new EmbedBuilder()
-        .setColor(Colors.Gold)
-        .setTitle('🎫 Global Raffle')
-        .setDescription(
-          [
-            `💰 Ticket Price: **${formatMoney(
-              updatedRaffle.ticketPrice,
-              guildConfigEarly.globalSettings
-            )}**`,
-            `🎟️ Ticket Limit: **${updatedRaffle.maxTicketsPerUser}**`,
-            '',
-            `🗓️ Drawing Date: **<t:${drawUnix}:F>**`,
-            '',
-            `💸 Current Pot: **${formatMoney(pot, guildConfigEarly.globalSettings)}**`
-          ].join('\n')
-        )
-        .setFooter({ text: `ID: ${raffle.drawId}` })
-
-      const raffleMessage = await interaction.channel.messages
-        .fetch(updatedRaffle.raffleId)
-        .catch(() => null)
-
-      if (raffleMessage) {
-        await raffleMessage.edit({ embeds: [updatedEmbed] })
-      }
-    }
-
-    await interaction.editReply({
-      embeds: [
-        createSuccessEmbed(
-          'Ticket/s Purchased',
-          `You bought **${ticketAmount}** ticket/s for **${formatMoney(
-            totalCost,
-            guildConfigEarly.globalSettings
-          )}**`
-        )
-      ]
-    })
-  } catch (error) {
-    await handleUnexpectedButtonError(interaction, error, {
-      handler: 'handleRaffle'
-    })
-  }
+  })
 }
