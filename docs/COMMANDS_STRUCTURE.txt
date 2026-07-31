@@ -8,6 +8,10 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │   │      ├─ request – Request a deposit to your account.
 │   │   │      ├─ status – Check the status of your deposit requests.
 │   │   │      ├─ cancel – Cancel one of your pending deposit requests.
+│   │   ├── pay.ts
+│   │   │   └─ /pay – Send money to another registered user.
+│   │   │      ├─ user – The user to pay.
+│   │   │      ├─ amount – Amount to send (e.g. 1000, 2k, 4.5k).
 │   │   ├── register.ts
 │   │   │   └─ /register – Register yourself in the system.
 │   │   └── withdraw.ts
@@ -16,7 +20,7 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │          ├─ status – Check the status of your withdrawal requests.
 │   │          ├─ cancel – Cancel one of your pending withdrawal requests.
 │   ├── (casino)
-│   │   ├── (instant)  - slash → resolve (no persistent session)
+│   │   ├── (instant)
 │   │   │   ├── coin-flip.ts
 │   │   │   │   └─ /coin-flip – Flip a coin!
 │   │   │   │      ├─ side – Choose the coin side.
@@ -27,32 +31,35 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │   │   │   └─ /goldenjackpot – Try your luck at the Golden Jackpot HUGEx!
 │   │   │   │      ├─ entries – Number of entries (max is ${GOLDEN_JACKPOT_MAX_ENTRIES}).
 │   │   │   ├── limbo.ts
-│   │   │   │   └─ /limbo – Aim for a target multiplier.
+│   │   │   │   └─ /limbo – Aim for a target multiplier!
+│   │   │   │      ├─ target – Target multiplier (${LIMBO_MIN_TARGET}–${LIMBO_MAX_TARGET}).
 │   │   │   ├── lottery.ts
 │   │   │   │   └─ /lottery – Play the lottery! Pick 4 numbers and see if you win.
 │   │   │   │      ├─ numbers – Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).
 │   │   │   └── plinko.ts
 │   │   │       └─ /plinko – Drop balls down the Plinko board!
-│   │   └── (interactive)  - buttons / live sessions / PvP
+│   │   └── (interactive)
 │   │       ├── baccarat.ts
-│   │       │   └─ /baccarat – Play punto banco baccarat.
+│   │       │   └─ /baccarat – Play punto banco Baccarat - pick a side, then watch the deal!
 │   │       ├── blackjack.ts
 │   │       │   └─ /blackjack – Start a game of blackjack. You can hit, stand, or double down.
 │   │       │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
 │   │       │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
 │   │       ├── hilo.ts
-│   │       │   └─ /hilo – Higher or lower card game.
+│   │       │   └─ /hilo – See a card, then guess if the next one is higher or lower!
 │   │       ├── mines.ts
-│   │       │   └─ /mines – Reveal tiles and cash out before hitting a mine.
+│   │       │   └─ /mines – Play Mines. Reveal safe tiles, then cash out.
+│   │       │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
+│   │       │      ├─ mines – Number of mines on the board.
+│   │       │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
 │   │       ├── roulette.ts
-│   │       │   └─ /roulette – Play Mini Roulette with multiple bets!
-│   │       │      ├─ bets – Your bets (e.g., 100 red, 50 17, 200 d2, 75 c1)
+│   │       │   └─ /roulette – Open a Mini Roulette table - place bets, then spin!
 │   │       ├── rps.ts
 │   │       │   └─ /rps – Play rock, paper, scissors with another user.
 │   │       │      ├─ player – The user you want to play against.
 │   │       │      ├─ bet – Enter a bet (e.g. 1000, 2k, 4.5k).
 │   │       └── slots.ts
-│   │           └─ /slots – Spin the slot machine!
+│   │           └─ /slots – Open a live slots machine - set your chip, then spin!
 │   └── (utils)
 │       ├── balance.ts
 │       │   └─ /balance – Check your current balance (only you can see this).
@@ -62,6 +69,8 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │       │      ├─ check – Check your streak and next bonus
 │       ├── ping.ts
 │       │   └─ /ping – Check the bot latency.
+│       ├── quests.ts
+│       │   └─ /quests – View your daily and normal quest progress.
 │       └── vip.ts
 │           └─ /vip – VIP management commands.
 │              ├─ info – Show VIP info.
@@ -125,7 +134,7 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
     ├── (dev)
     │   ├── clear-mock-db.ts
     │   │   └─ /clear-mock-db – Remove mock / operational guild data from the DB (keeps guild config). Dev only.
-    │   │      ├─ all – Clear users, transactions, ATM, raffles, predictions, VIP, and blackjack games.
+    │   │      ├─ all – Clear users, transactions, ATM, raffles, predictions, VIP, blackjack, and mines games.
     │   │      ├─ entity – Clear a single collection.
     │   ├── mock-db.ts
     │   │   └─ /mock-db – Seed the database with realistic mock data for Admin testing (dev only).
