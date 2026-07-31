@@ -39,6 +39,7 @@ const FEATURE_MESSAGES: Record<GlobalFeature, string> = {
   dailyBonus: 'The daily bonus is disabled on this server.',
   vip: 'VIP features are disabled on this server.',
   quests: 'Quests are disabled on this server.',
+  peerTransfers: 'Peer transfers (/pay) are disabled on this server.',
   maintenance: 'This server is in maintenance mode.'
 }
 

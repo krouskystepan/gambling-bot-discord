@@ -4,6 +4,7 @@ import {
   type TGuildConfiguration,
   normalizeGlobalSettings
 } from 'gambling-bot-shared/guild'
+import { normalizePaySettings } from 'gambling-bot-shared/pay'
 import type { HydratedDocument } from 'mongoose'
 
 import { isDeepStrictEqual } from 'node:util'
@@ -15,7 +16,11 @@ import { createGuildConfiguration } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import { logger } from '@/utils/logger'
 
-type SettingsSectionKey = 'casinoSettings' | 'globalSettings' | 'bonusSettings'
+type SettingsSectionKey =
+  | 'casinoSettings'
+  | 'globalSettings'
+  | 'bonusSettings'
+  | 'paySettings'
 
 const toComparable = (value: unknown): unknown => {
   if (
@@ -54,6 +59,11 @@ const SETTINGS_SECTIONS: Array<{
       normalizeBonusSettings(
         value as Parameters<typeof normalizeBonusSettings>[0]
       )
+  },
+  {
+    key: 'paySettings',
+    normalize: (value) =>
+      normalizePaySettings(value as Parameters<typeof normalizePaySettings>[0])
   }
 ]
 
@@ -74,6 +84,9 @@ const applyNormalizedSection = (
         break
       case 'bonusSettings':
         doc.bonusSettings = merged as TGuildConfiguration['bonusSettings']
+        break
+      case 'paySettings':
+        doc.paySettings = merged as TGuildConfiguration['paySettings']
         break
     }
     return true

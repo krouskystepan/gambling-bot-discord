@@ -3,6 +3,10 @@ import {
   defaultGlobalSettings,
   normalizeGlobalSettings
 } from 'gambling-bot-shared/guild'
+import {
+  defaultPaySettings,
+  normalizePaySettings
+} from 'gambling-bot-shared/pay'
 
 import GuildConfiguration from '@/models/GuildConfiguration'
 
@@ -15,6 +19,7 @@ export const getGuildConfigByGuildId = async ({
   if (!doc) return null
 
   doc.globalSettings = normalizeGlobalSettings(doc.globalSettings)
+  doc.paySettings = normalizePaySettings(doc.paySettings)
   return doc
 }
 
@@ -26,6 +31,7 @@ export const createGuildConfiguration = async ({
   const guildConfiguration = await GuildConfiguration.create({
     guildId,
     casinoSettings: defaultCasinoSettings,
+    paySettings: defaultPaySettings,
     globalSettings: defaultGlobalSettings
   })
 

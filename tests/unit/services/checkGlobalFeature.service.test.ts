@@ -194,6 +194,11 @@ const featureCases: {
     title: 'Error - Feature Disabled'
   },
   {
+    feature: 'peerTransfers',
+    settings: { disablePeerTransfers: true },
+    title: 'Error - Feature Disabled'
+  },
+  {
     feature: 'casinoGames',
     settings: { disableCasinoGames: true },
     title: 'Error - Feature Disabled'

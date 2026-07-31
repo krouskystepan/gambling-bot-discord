@@ -19,6 +19,7 @@ const baseConfig = (globalSettings?: TGuildConfiguration['globalSettings']) =>
     managerRoleId: '',
     bannedRoleId: '',
     casinoSettings: {} as TGuildConfiguration['casinoSettings'],
+    paySettings: {} as TGuildConfiguration['paySettings'],
     vipSettings: {
       roleOwnerId: '',
       roleMemberId: '',
