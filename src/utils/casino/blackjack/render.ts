@@ -265,6 +265,6 @@ export const renderBlackjackResultComponents = ({
     new ButtonBuilder()
       .setCustomId(encodeId({ gameId, action: 'CLOSE', showBalance }))
       .setLabel('Close')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Danger)
   )
 ]

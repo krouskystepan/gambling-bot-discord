@@ -106,7 +106,7 @@ export const renderBaccaratButtons = ({ gameId }: { gameId: string }) => [
     new ButtonBuilder()
       .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'close' }))
       .setLabel('Close')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Danger)
   )
 ]
 
@@ -131,7 +131,7 @@ export const renderBaccaratResultComponents = ({
     new ButtonBuilder()
       .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'close' }))
       .setLabel('Close')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Danger)
   )
 ]
 

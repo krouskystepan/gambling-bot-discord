@@ -209,6 +209,6 @@ export const renderMinesResultComponents = ({
         })
       )
       .setLabel('Close')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Danger)
   )
 ]

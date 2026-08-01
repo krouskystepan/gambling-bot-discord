@@ -209,7 +209,7 @@ export const renderRouletteComponents = ({
             encodeActionId({ kind: 'action', gameId, action: 'close' })
           )
           .setLabel('Close')
-          .setStyle(ButtonStyle.Secondary)
+          .setStyle(ButtonStyle.Danger)
       )
     ]
   }
