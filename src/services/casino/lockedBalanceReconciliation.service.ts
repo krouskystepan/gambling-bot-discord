@@ -5,6 +5,7 @@ import Prediction from '@/models/Prediction'
 import Transaction from '@/models/Transaction'
 import { getBaccaratGameByUserAndGuild } from '@/services/db/baccaratGame.db'
 import { getBlackjackGameByUserAndGuild } from '@/services/db/blackjackGame.db'
+import { getHiloGameByUserAndGuild } from '@/services/db/hiloGame.db'
 import { getMinesGameByUserAndGuild } from '@/services/db/minesGame.db'
 import { getRouletteGameByUserAndGuild } from '@/services/db/rouletteGame.db'
 import { getSlotsGameByUserAndGuild } from '@/services/db/slotsGame.db'
@@ -16,7 +17,8 @@ import {
 } from './casinoBet.service'
 
 export const LOCK_EPSILON = 0.0001
-export const RECONCILIATION_GRACE_MS = 10 * 60 * 1000
+/** Long enough for live Hi-Lo (45s) / in-flight settles; short enough after restarts. */
+export const RECONCILIATION_GRACE_MS = 2 * 60 * 1000
 
 const PREDICTION_LOCKED_STATUSES: TPrediction['status'][] = [
   'active',
@@ -37,6 +39,7 @@ type JustifiedBreakdown = {
   mines: number
   roulette: number
   slots: number
+  hilo: number
   predictions: number
   graceBets: number
   pendingRps: number
@@ -179,6 +182,7 @@ export async function computeJustifiedLockedAmount({
     mines: 0,
     roulette: 0,
     slots: 0,
+    hilo: 0,
     predictions: 0,
     graceBets: 0,
     pendingRps: 0
@@ -188,7 +192,7 @@ export async function computeJustifiedLockedAmount({
     userId,
     guildId
   })
-  if (blackjackGame) {
+  if (blackjackGame?.activeBetId) {
     breakdown.blackjack = blackjackGame.hands.reduce(
       (sum, hand) => sum + hand.betAmount,
       0
@@ -199,12 +203,12 @@ export async function computeJustifiedLockedAmount({
     userId,
     guildId
   })
-  if (baccaratGame) {
+  if (baccaratGame?.activeBetId && baccaratGame.betAmount != null) {
     breakdown.baccarat = baccaratGame.betAmount
   }
 
   const minesGame = await getMinesGameByUserAndGuild({ userId, guildId })
-  if (minesGame) {
+  if (minesGame?.activeBetId && minesGame.betAmount != null) {
     breakdown.mines = minesGame.betAmount
   }
 
@@ -218,24 +222,32 @@ export async function computeJustifiedLockedAmount({
     breakdown.slots = slotsGame.lockedAmount
   }
 
+  const hiloGame = await getHiloGameByUserAndGuild({ userId, guildId })
+  if (hiloGame?.activeBetId && hiloGame.betAmount != null) {
+    breakdown.hilo = hiloGame.betAmount
+  }
+
   const predictionContext = await getPredictionLockContext({ userId, guildId })
   breakdown.predictions = predictionContext.total
 
   const excludedFromCasinoBets = new Set(predictionContext.betIds)
-  if (blackjackGame?.betId) {
-    excludedFromCasinoBets.add(blackjackGame.betId)
+  if (blackjackGame?.activeBetId) {
+    excludedFromCasinoBets.add(blackjackGame.activeBetId)
   }
-  if (baccaratGame?.betId) {
-    excludedFromCasinoBets.add(baccaratGame.betId)
+  if (baccaratGame?.activeBetId) {
+    excludedFromCasinoBets.add(baccaratGame.activeBetId)
   }
-  if (minesGame?.betId) {
-    excludedFromCasinoBets.add(minesGame.betId)
+  if (minesGame?.activeBetId) {
+    excludedFromCasinoBets.add(minesGame.activeBetId)
   }
   if (rouletteGame?.activeBetId) {
     excludedFromCasinoBets.add(rouletteGame.activeBetId)
   }
   if (slotsGame?.activeBetId) {
     excludedFromCasinoBets.add(slotsGame.activeBetId)
+  }
+  if (hiloGame?.activeBetId) {
+    excludedFromCasinoBets.add(hiloGame.activeBetId)
   }
 
   const cutoff = graceCutoff()
@@ -272,6 +284,7 @@ export async function computeJustifiedLockedAmount({
     breakdown.mines +
     breakdown.roulette +
     breakdown.slots +
+    breakdown.hilo +
     breakdown.predictions +
     breakdown.graceBets +
     breakdown.pendingRps
@@ -296,6 +309,7 @@ export async function findOrphanBetRefunds({
     minesGame,
     rouletteGame,
     slotsGame,
+    hiloGame,
     predictionContext,
     pendingRpsRefs,
     oldBets
@@ -305,6 +319,7 @@ export async function findOrphanBetRefunds({
     getMinesGameByUserAndGuild({ userId, guildId }),
     getRouletteGameByUserAndGuild({ userId, guildId }),
     getSlotsGameByUserAndGuild({ userId, guildId }),
+    getHiloGameByUserAndGuild({ userId, guildId }),
     getPredictionLockContext({ userId, guildId }),
     getPendingRpsReferenceIds(guildId),
     getUnsettledCasinoBetTxs({
@@ -315,20 +330,23 @@ export async function findOrphanBetRefunds({
   ])
 
   const excludedRefs = new Set(predictionContext.betIds)
-  if (blackjackGame?.betId) {
-    excludedRefs.add(blackjackGame.betId)
+  if (blackjackGame?.activeBetId) {
+    excludedRefs.add(blackjackGame.activeBetId)
   }
-  if (baccaratGame?.betId) {
-    excludedRefs.add(baccaratGame.betId)
+  if (baccaratGame?.activeBetId) {
+    excludedRefs.add(baccaratGame.activeBetId)
   }
-  if (minesGame?.betId) {
-    excludedRefs.add(minesGame.betId)
+  if (minesGame?.activeBetId) {
+    excludedRefs.add(minesGame.activeBetId)
   }
   if (rouletteGame?.activeBetId) {
     excludedRefs.add(rouletteGame.activeBetId)
   }
   if (slotsGame?.activeBetId) {
     excludedRefs.add(slotsGame.activeBetId)
+  }
+  if (hiloGame?.activeBetId) {
+    excludedRefs.add(hiloGame.activeBetId)
   }
 
   const eligible = oldBets

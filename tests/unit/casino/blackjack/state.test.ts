@@ -1,4 +1,5 @@
 import { TBlackjackGame } from 'gambling-bot-shared/blackjack'
+import { emptySessionStats } from 'gambling-bot-shared/casino'
 import { describe, expect, it } from 'vitest'
 
 import { docToEngine, engineToDoc } from '@/utils/casino/blackjack/state'
@@ -10,7 +11,12 @@ const sampleGame = (): TBlackjackGame => ({
   guildId: 'guild-1',
   channelId: 'ch-1',
   messageId: 'msg-1',
-  betId: 'bet-1',
+  gameId: 'game-1',
+  activeBetId: 'bet-1',
+  baseBetAmount: 50,
+  showBalance: false,
+  skipAnimations: false,
+  sessionStats: emptySessionStats(),
   deck: [card('5', 5)],
   deckIndex: 2,
   hands: [

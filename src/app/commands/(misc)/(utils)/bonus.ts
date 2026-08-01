@@ -184,7 +184,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createInfoEmbed(
-              'Daily Bonus Already Claimed',
+              'Info - Daily Bonus Already Claimed',
               `Come back at **<t:${Math.floor(
                 nextClaim.getTime() / 1000
               )}:f> / <t:${Math.floor(nextClaim.getTime() / 1000)}:R>**`
@@ -205,7 +205,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createInfoEmbed(
-              'Daily Bonus Already Claimed',
+              'Info - Daily Bonus Already Claimed',
               'You already claimed your daily bonus.'
             )
           ],

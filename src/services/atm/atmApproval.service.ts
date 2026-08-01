@@ -116,7 +116,7 @@ export const rejectAtmRequest = async ({
       guildId: request.guildId,
       userId: request.userId,
       embed: createErrorEmbed(
-        'ATM Transaction Rejected',
+        'Error - ATM Transaction Rejected',
         `${actionWord} of **${readableAmount}** rejected.`
       )
     })
@@ -192,7 +192,7 @@ export const approveAtmRequest = async ({
         guildId,
         userId,
         embed: createSuccessEmbed(
-          'ATM Transaction Approved',
+          'Success - ATM Transaction Approved',
           `Deposit of **${readableAmount}** approved.`
         )
       })
@@ -219,7 +219,7 @@ export const approveAtmRequest = async ({
         guildId,
         userId,
         embed: createErrorEmbed(
-          'Withdrawal Failed',
+          'Error - Withdrawal Failed',
           `Your withdrawal of **${readableAmount}** could not be completed because your available balance changed before approval.`
         )
       })
@@ -258,7 +258,7 @@ export const approveAtmRequest = async ({
         guildId,
         userId,
         embed: createErrorEmbed(
-          'Withdrawal Failed',
+          'Error - Withdrawal Failed',
           `Your withdrawal of **${readableAmount}** could not be completed because your available balance changed before approval.`
         )
       })
@@ -314,7 +314,7 @@ export const approveAtmRequest = async ({
       guildId,
       userId,
       embed: createSuccessEmbed(
-        'ATM Transaction Approved',
+        'Success - ATM Transaction Approved',
         `Withdrawal of **${readableAmount}** approved.`
       )
     })

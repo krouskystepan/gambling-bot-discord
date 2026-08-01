@@ -88,7 +88,7 @@ export const vipExpirationJob = async (client: Client<true>) => {
             content: room.ownerId ? `<@${room.ownerId}>` : undefined,
             embeds: [
               createWarningEmbed(
-                'VIP Channel Expired',
+                'Warning - VIP Channel Expired',
                 '⏰ Your VIP time has expired. You no longer have access to this channel.'
               )
             ]

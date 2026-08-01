@@ -24,13 +24,13 @@ const createWarningMessage = (
 
   if (tier === '24h') {
     return {
-      title: 'VIP Expiring Soon',
+      title: 'Warning - VIP Expiring Soon',
       description: `Your VIP channel expires ${relativeExpiry}. Renew it with \`/vip extend\` if you want to keep access.`
     }
   }
 
   return {
-    title: 'VIP Expiring Very Soon',
+    title: 'Warning - VIP Expiring Very Soon',
     description: `Your VIP channel expires ${relativeExpiry}. Renew it with \`/vip extend\` soon if you want to keep access.`
   }
 }

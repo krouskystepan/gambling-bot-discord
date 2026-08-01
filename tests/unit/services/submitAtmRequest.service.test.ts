@@ -169,7 +169,7 @@ describe('submitAtmRequest', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.requestId).toBe('REQ123')
-    expect(result.playerEmbed.data.title).toBe('ATM - Deposit')
+    expect(result.playerEmbed.data.title).toBe('Success - ATM - Deposit')
   })
 
   it('posts a withdraw staff log without a manager ping when no role is configured', async () => {
@@ -202,7 +202,7 @@ describe('submitAtmRequest', () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.playerEmbed.data.title).toBe('ATM - Withdraw')
+    expect(result.playerEmbed.data.title).toBe('Success - ATM - Withdraw')
   })
 
   it('deletes the request and rethrows when the staff log send fails', async () => {

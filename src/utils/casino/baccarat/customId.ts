@@ -3,29 +3,71 @@ import {
   isValidBaccaratBetSide
 } from 'gambling-bot-shared/casino'
 
-export type BaccaratButtonId = {
-  betId: string
+export type BaccaratTableAction = 'rebet' | 'change' | 'close' | 'amount'
+
+export type BaccaratSideButtonId = {
+  kind: 'side'
+  gameId: string
   side: BaccaratBetSide
-  showBalance: boolean
-  skipAnimations: boolean
 }
 
-export const encodeId = (d: BaccaratButtonId): string =>
-  `bc:${d.betId}:${d.side}:${d.showBalance ? 1 : 0}:${d.skipAnimations ? 1 : 0}`
+export type BaccaratActionButtonId = {
+  kind: 'action'
+  gameId: string
+  action: BaccaratTableAction
+}
+
+export type BaccaratButtonId = BaccaratSideButtonId | BaccaratActionButtonId
+
+export type BaccaratModalId = {
+  gameId: string
+}
+
+const ACTIONS = new Set<BaccaratTableAction>([
+  'rebet',
+  'change',
+  'close',
+  'amount'
+])
+
+export const encodeSideId = (d: BaccaratSideButtonId): string =>
+  `bc:${d.gameId}:s:${d.side}`
+
+export const encodeActionId = (d: BaccaratActionButtonId): string =>
+  `bc:${d.gameId}:a:${d.action}`
+
+export const encodeModalId = (d: BaccaratModalId): string => `bcm:${d.gameId}`
 
 export const decodeId = (id: string): BaccaratButtonId | null => {
   if (!id.startsWith('bc:')) return null
 
   const parts = id.split(':')
-  if (parts.length !== 5) return null
+  if (parts.length !== 4) return null
 
-  const [, betId, sideRaw, showRaw, skipRaw] = parts
-  if (!betId || !sideRaw || !isValidBaccaratBetSide(sideRaw)) return null
+  const [, gameId, kind, value] = parts
+  if (!gameId || !kind || !value) return null
 
-  return {
-    betId,
-    side: sideRaw,
-    showBalance: showRaw === '1',
-    skipAnimations: skipRaw === '1'
+  if (kind === 's') {
+    if (!isValidBaccaratBetSide(value)) return null
+    return { kind: 'side', gameId, side: value }
   }
+
+  if (kind === 'a') {
+    if (!ACTIONS.has(value as BaccaratTableAction)) return null
+    return { kind: 'action', gameId, action: value as BaccaratTableAction }
+  }
+
+  return null
+}
+
+export const decodeModalId = (id: string): BaccaratModalId | null => {
+  if (!id.startsWith('bcm:')) return null
+
+  const parts = id.split(':')
+  if (parts.length !== 2) return null
+
+  const [, gameId] = parts
+  if (!gameId) return null
+
+  return { gameId }
 }

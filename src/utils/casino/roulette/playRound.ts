@@ -1,13 +1,15 @@
 import crypto from 'crypto'
 import {
   MINI_NUMBERS,
+  bumpSessionStats,
   shouldAnnounceByMultiplier
 } from 'gambling-bot-shared/casino'
-import { formatMoney, generateId } from 'gambling-bot-shared/common'
+import { formatMoney, sessionBetId } from 'gambling-bot-shared/common'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import type { TRouletteSlipBet } from 'gambling-bot-shared/roulette'
 
 import {
+  getRouletteGameByUserAndGuild,
   reserveCasinoBet,
   settleCasinoWinnings,
   updateRouletteGame
@@ -229,7 +231,17 @@ const settleRouletteFromResult = async ({
     totalBet,
     winnings,
     betId,
-    game: 'roulette'
+    game: 'roulette',
+    rounds: 1
+  })
+
+  const existing = await getRouletteGameByUserAndGuild({ userId, guildId })
+  if (!existing) {
+    throw new Error('ROULETTE_SESSION_MISSING')
+  }
+  const sessionStats = bumpSessionStats(existing.sessionStats, {
+    totalBet,
+    totalPayout: winnings
   })
 
   await updateRouletteGame({
@@ -242,7 +254,8 @@ const settleRouletteFromResult = async ({
     pendingSpinResult: null,
     lastNetResult: net,
     activeBetId: null,
-    lockedAmount: null
+    lockedAmount: null,
+    sessionStats
   })
 
   if (message) {
@@ -274,7 +287,7 @@ const settleRouletteFromResult = async ({
       guildConfig,
       game: 'roulette',
       lines: announcementHits,
-      betId,
+      betId: gameId,
       sourceChannelId
     })
   }
@@ -345,7 +358,11 @@ export const playRouletteSpin = async ({
   sourceChannelId: string
 }) => {
   const totalBet = slipTotal(bets)
-  const betId = generateId()
+  const existing = await getRouletteGameByUserAndGuild({ userId, guildId })
+  const betId = sessionBetId(
+    gameId,
+    (existing?.sessionStats?.roundsPlayed ?? 0) + 1
+  )
 
   const { centers, result: spinResult } = planSpin()
 
@@ -364,7 +381,8 @@ export const playRouletteSpin = async ({
       guildId,
       totalBet,
       betId,
-      game: 'roulette'
+      game: 'roulette',
+      rounds: 1
     })
   } catch {
     await updateRouletteGame({
@@ -390,7 +408,7 @@ export const playRouletteSpin = async ({
               totalBet,
               guildConfig.globalSettings
             ),
-            betId
+            gameId
           )
         ],
         components: []

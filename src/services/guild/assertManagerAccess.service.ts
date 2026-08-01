@@ -23,7 +23,7 @@ export async function assertManagerOrAdmin(
     await interaction.reply({
       embeds: [
         createErrorEmbed(
-          'Permission Denied',
+          'Error - Permission Denied',
           `You need to be an **Administrator** or have the ${
             managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
           } to use this command.`

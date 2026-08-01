@@ -145,7 +145,7 @@ describe('handleAtmStatusSubcommand', () => {
       expect.objectContaining({
         embeds: [
           expect.objectContaining({
-            title: 'Request Not Found'
+            title: 'Error - Request Not Found'
           })
         ]
       })
@@ -176,7 +176,7 @@ describe('handleAtmStatusSubcommand', () => {
       expect.objectContaining({
         embeds: [
           expect.objectContaining({
-            title: 'No Withdrawals'
+            title: 'Info - No Withdrawals'
           })
         ]
       })
@@ -192,7 +192,7 @@ describe('handleAtmStatusSubcommand', () => {
       expect.objectContaining({
         embeds: [
           expect.objectContaining({
-            title: 'Request Not Found'
+            title: 'Error - Request Not Found'
           })
         ]
       })

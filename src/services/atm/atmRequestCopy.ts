@@ -4,16 +4,18 @@ import { ColorResolvable } from 'discord.js'
 
 type AtmRequestType = TAtmRequest['type']
 
-export const ATM_AMOUNT_NOT_A_NUMBER_TITLE = 'Invalid Input - Not a number'
+export const ATM_AMOUNT_NOT_A_NUMBER_TITLE =
+  'Error - Invalid Input - Not a number'
 export const ATM_AMOUNT_NOT_A_NUMBER_DESCRIPTION =
   'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
 
 export const ATM_AMOUNT_NON_POSITIVE_TITLE =
-  'Invalid Input - Non-positive number'
+  'Error - Invalid Input - Non-positive number'
 export const ATM_AMOUNT_NON_POSITIVE_DESCRIPTION =
   'The number you provided must be greater than 0.\nPlease enter a positive value.'
 
-export const ATM_LOG_CHANNEL_MISCONFIGURED_TITLE = 'Wrong Discord Configuration'
+export const ATM_LOG_CHANNEL_MISCONFIGURED_TITLE =
+  'Error - Wrong Discord Configuration'
 export const ATM_LOG_CHANNEL_MISCONFIGURED_DESCRIPTION =
   'Log channel misconfigured or inaccessible.'
 
@@ -28,7 +30,7 @@ const ATM_REQUEST_COPY = {
       account: string
     ) =>
       `<@${userId}> requested a deposit of **${readableAmount}** from account **${account}**.`,
-    playerTitle: 'ATM - Deposit',
+    playerTitle: 'Success - ATM - Deposit',
     playerDescription: (readableAmount: string) =>
       `You have successfully deposited **${readableAmount}** to your account.\nPlease wait for the transaction to be processed.\n\nCheck status with \`/deposit status\` or cancel a pending request with \`/deposit cancel\`.`,
     loggerAction: 'atm_deposit_requested' as const,
@@ -44,7 +46,7 @@ const ATM_REQUEST_COPY = {
       account: string
     ) =>
       `<@${userId}> requested a withdrawal of **${readableAmount}** to account **${account}**.`,
-    playerTitle: 'ATM - Withdraw',
+    playerTitle: 'Success - ATM - Withdraw',
     playerDescription: (readableAmount: string) =>
       `You have requested to withdraw **${readableAmount}**.\nPlease wait for the transaction to be processed.\n\nCheck status with \`/withdraw status\` or cancel a pending request with \`/withdraw cancel\`.`,
     loggerAction: 'atm_withdraw_requested' as const,

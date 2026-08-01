@@ -171,7 +171,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Permission Denied',
+            'Error - Permission Denied',
             `You need to be an **Administrator** or have the ${
               managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
             } to use this command.`
@@ -200,8 +200,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               choicesResult.error === 'INVALID_COUNT'
-                ? 'Invalid Input - Wrong Number of Choices'
-                : 'Invalid Input - Invalid Format',
+                ? 'Error - Invalid Input - Wrong Number of Choices'
+                : 'Error - Invalid Input - Invalid Format',
               messages[choicesResult.error]
             )
           ],
@@ -227,7 +227,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           return interaction.reply({
             embeds: [
               createErrorEmbed(
-                'Invalid Input - Invalid Autolock Date/Time',
+                'Error - Invalid Input - Invalid Autolock Date/Time',
                 messages[autolockResult.error]
               )
             ],
@@ -309,7 +309,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Not Active or Not Found',
+              'Error - Prediction Not Active or Not Found',
               `Prediction **${predictionId}** is either already ended/canceled or does not exist.`
             )
           ],
@@ -324,7 +324,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Channel Not Found',
+              'Error - Channel Not Found',
               'Could not fetch the channel for this prediction.'
             )
           ],
@@ -362,7 +362,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Prediction Ended',
+            'Success - Prediction Ended',
             `Prediction **${updatedPrediction.title}** has ended.\n` +
               `No more bets can be placed.`
           )
@@ -405,7 +405,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Payout Failed',
+              'Error - Prediction Payout Failed',
               messages[payoutResult.code]
             )
           ],
@@ -419,7 +419,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createSuccessEmbed(
-              'Prediction Refunded',
+              'Success - Prediction Refunded',
               'No one bet on the winning option. All bets were refunded.'
             )
           ],
@@ -439,7 +439,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Wrong Discord Configuration',
+              'Error - Wrong Discord Configuration',
               'Log channel misconfigured or inaccessible.'
             )
           ],
@@ -468,7 +468,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           return interaction.reply({
             embeds: [
               createErrorEmbed(
-                'Prediction Payout Failed',
+                'Error - Prediction Payout Failed',
                 `The winner "${winnerChoice}" does not exist in this prediction.`
               )
             ],
@@ -570,7 +570,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Winners Paid',
+            'Success - Winners Paid',
             `All users who bet on **${winnerChoice}** have been paid.`
           )
         ],
@@ -590,7 +590,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Not Active or Not Found',
+              'Error - Prediction Not Active or Not Found',
               `Prediction **${predictionId}** is either already canceled or does not exist.`
             )
           ],
@@ -640,7 +640,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Prediction Canceled',
+            'Success - Prediction Canceled',
             `All bets for **${updatedPrediction.title}** have been refunded.`
           )
         ],
@@ -659,7 +659,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Prediction Not Found',
+              'Error - Prediction Not Found',
               `No prediction found with ID: ${predictionId}`
             )
           ],

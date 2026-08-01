@@ -1,3 +1,4 @@
+import { emptySessionStats } from 'gambling-bot-shared/casino'
 import { DAY_MS } from 'gambling-bot-shared/common'
 import {
   minesAutoResolveIdleMs,
@@ -6,7 +7,11 @@ import {
 
 import MinesGame from '@/models/MinesGame'
 
-import { TGetMinesGame, TUpsertMinesGame } from './minesGame.db.types'
+import {
+  TGetMinesGame,
+  TUpdateMinesGame,
+  TUpsertMinesGame
+} from './minesGame.db.types'
 
 export const getMinesGameByUserAndGuild = async ({
   userId,
@@ -15,14 +20,14 @@ export const getMinesGameByUserAndGuild = async ({
   return MinesGame.findOne({ userId, guildId })
 }
 
-export const getMinesGameByBetId = async ({
-  betId,
+export const getMinesGameByGameId = async ({
+  gameId,
   guildId
 }: {
-  betId: string
+  gameId: string
   guildId: string
 }) => {
-  return MinesGame.findOne({ betId, guildId })
+  return MinesGame.findOne({ gameId, guildId })
 }
 
 export const getMinesGamesByGuildId = async ({
@@ -33,9 +38,20 @@ export const getMinesGamesByGuildId = async ({
   return MinesGame.find({ guildId })
 }
 
+/** Live boards idle long enough for the auto-resolve worker. */
 export const getAllOldMinesGames = async (days: number) => {
   return MinesGame.find({
     status: 'ACTIVE',
+    updatedAt: {
+      $lte: new Date(Date.now() - days * DAY_MS)
+    }
+  })
+}
+
+/** Settled or empty tables idle long enough for the idle-close worker. */
+export const getOldResultMinesGames = async (days: number) => {
+  return MinesGame.find({
+    status: { $in: ['RESULT', 'SETUP'] },
     updatedAt: {
       $lte: new Date(Date.now() - days * DAY_MS)
     }
@@ -73,9 +89,26 @@ export const markMinesIdleNudgeSent = async ({
   )
 }
 
-export const updateMinesGame = async (game: typeof MinesGame.prototype) => {
+export const saveMinesGame = async (game: typeof MinesGame.prototype) => {
   game.idleNudgeSentAt = null
   await game.save()
+}
+
+export const updateMinesGame = async ({
+  userId,
+  guildId,
+  ...patch
+}: TUpdateMinesGame) => {
+  return MinesGame.findOneAndUpdate(
+    { userId, guildId },
+    {
+      $set: {
+        ...patch,
+        idleNudgeSentAt: null
+      }
+    },
+    { returnDocument: 'after' }
+  )
 }
 
 export const upsertMinesGame = async ({
@@ -83,13 +116,16 @@ export const upsertMinesGame = async ({
   guildId,
   channelId,
   messageId,
-  betId,
+  gameId,
+  activeBetId = null,
   betAmount,
   mineCount,
   mineIndices,
   revealedIndices,
   houseEdgeSnapshot,
-  status
+  status,
+  showBalance = false,
+  sessionStats
 }: TUpsertMinesGame) => {
   return MinesGame.findOneAndUpdate(
     { userId, guildId },
@@ -97,13 +133,16 @@ export const upsertMinesGame = async ({
       $set: {
         channelId,
         messageId,
-        betId,
+        gameId,
+        activeBetId,
         betAmount,
         mineCount,
         mineIndices,
         revealedIndices,
         houseEdgeSnapshot,
         status,
+        showBalance,
+        sessionStats: sessionStats ?? emptySessionStats(),
         idleNudgeSentAt: null
       }
     },
@@ -124,11 +163,13 @@ export const deleteMinesGame = async ({
   await MinesGame.findOneAndDelete({ userId, guildId })
 }
 
-export const getStaleFinishedMinesGames = async (graceMs: number) => {
+/** Boards marked RESULT whose settlement never completed (crash mid-finish). */
+export const getStaleSettlingMinesGames = async (graceMs: number) => {
   const cutoff = new Date(Date.now() - graceMs)
 
   return MinesGame.find({
-    status: 'FINISHED',
+    status: 'RESULT',
+    activeBetId: { $ne: null },
     updatedAt: { $lte: cutoff }
   })
 }

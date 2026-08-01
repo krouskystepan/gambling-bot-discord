@@ -161,7 +161,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Input - Bot user',
+            'Error - Invalid Input - Bot user',
             'This command cannot target a bot.'
           )
         ],
@@ -182,7 +182,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid Input', 'Enter a positive number.')
+            createErrorEmbed(
+              'Error - Invalid Input',
+              'Enter a positive number.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -197,7 +200,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Balance Update Failed',
+              'Error - Balance Update Failed',
               'Could not update balance.'
             )
           ],
@@ -229,7 +232,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         content: `<@${user.id}>`,
         embeds: [
           createSuccessEmbed(
-            'ATM - Admin Deposit',
+            'Success - ATM - Admin Deposit',
             `An administrator has added **${formatMoney(parsedAmount, configReply.globalSettings)}** to <@${user.id}>'s balance.\n` +
               `**New Balance:** ${formatMoney(updatedUser!.balance, configReply.globalSettings)}`
           )
@@ -241,7 +244,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid Input', 'Enter a positive number.')
+            createErrorEmbed(
+              'Error - Invalid Input',
+              'Enter a positive number.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -257,7 +263,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Insufficient Withdrawable Funds',
+              'Error - Insufficient Withdrawable Funds',
               `You cannot withdraw **${formatMoney(parsedAmount, configReply.globalSettings)}** because **${formatMoney(
                 targetUser.lockedBalance,
                 configReply.globalSettings
@@ -279,7 +285,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Insufficient Withdrawable Funds',
+              'Error - Insufficient Withdrawable Funds',
               `User does not have **${formatMoney(parsedAmount, configReply.globalSettings)}** available to withdraw.`
             )
           ],
@@ -311,7 +317,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         content: `<@${user.id}>`,
         embeds: [
           createSuccessEmbed(
-            'ATM - Admin Withdraw',
+            'Success - ATM - Admin Withdraw',
             `An administrator has removed **${formatMoney(parsedAmount, configReply.globalSettings)}** from <@${user.id}>'s balance.\n` +
               `**New Balance:** ${formatMoney(updatedUser!.balance, configReply.globalSettings)}`
           )
@@ -344,7 +350,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         content: `<@${user.id}>`,
         embeds: [
           createSuccessEmbed(
-            'ATM - Admin Reset',
+            'Success - ATM - Admin Reset',
             `An administrator has reset <@${user.id}>'s balance and cleared transaction history.\n` +
               `**New Balance:** ${formatMoney(0, configReply.globalSettings)}`
           )
@@ -356,7 +362,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid Input', 'Enter a positive number.')
+            createErrorEmbed(
+              'Error - Invalid Input',
+              'Enter a positive number.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -370,7 +379,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       if (!updatedUser) {
         return interaction.reply({
-          embeds: [createErrorEmbed('Bonus Failed', 'Could not apply bonus.')],
+          embeds: [
+            createErrorEmbed('Error - Bonus Failed', 'Could not apply bonus.')
+          ],
           flags: MessageFlags.Ephemeral
         })
       }
@@ -399,7 +410,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         content: `<@${user.id}>`,
         embeds: [
           createSuccessEmbed(
-            'ATM - Bonus Given',
+            'Success - ATM - Bonus Given',
             `Granted **${formatMoney(parsedAmount, configReply.globalSettings)}** bonus to <@${user.id}>.\n` +
               `Bonus balance: **${formatMoney(
                 updatedUser.bonusBalance ?? 0,
@@ -418,7 +429,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'ATM - Balance',
+            'Success - ATM - Balance',
             [
               `💰 Available Balance: **${formatMoney(roundedBalance, configReply.globalSettings)}** (${formatMoneyExact(roundedBalance, configReply.globalSettings)})`,
               `🔒 Locked Balance: **${formatMoney(roundedLockedBalance, configReply.globalSettings)}** (${formatMoneyExact(roundedLockedBalance, configReply.globalSettings)})`,

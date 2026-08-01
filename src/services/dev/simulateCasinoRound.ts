@@ -169,12 +169,11 @@ function simulateRngGame(
     case 'hilo': {
       const { first, second } = rollHiloRanks()
       const houseEdge = ctx.casinoSettings.hilo.houseEdge
-      const options = (['higher', 'lower'] as const).filter(
+      const options = (['higher', 'lower', 'same'] as const).filter(
         (guess) => getHiloWinMultiplier(first, guess, houseEdge) != null
       )
       const guess = randomChoice(options) as HiloGuess
       const outcome = resolveHiloRound(first, second, guess)
-      if (outcome === 'push') return betAmount
       if (outcome === 'lose') return 0
       const mult = getHiloWinMultiplier(first, guess, houseEdge) ?? 0
       return betAmount * mult
@@ -400,7 +399,7 @@ export function simulateCasinoRound({
     fallbackMaxBet,
     userId,
     userIds,
-    referenceId: generateId()
+    referenceId: generateId('bet')
   }
 
   return simulateByGame(ctx, game)

@@ -86,8 +86,8 @@ export async function mockRaffles({
         : new Date(createdAt.getTime() + drawIntervalMs)
 
     docs.push({
-      drawId: generateId(),
-      raffleId: generateId(),
+      drawId: generateId('raffle'),
+      raffleId: generateId('raffle'),
       guildId,
       channelId: fakeChannelId(),
       creatorId: pools.pickAdmin(),

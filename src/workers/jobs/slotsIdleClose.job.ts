@@ -37,7 +37,9 @@ export const slotsIdleCloseJob = async (client: Client<true>) => {
         await message.edit({
           embeds: [
             renderSlotsTimeoutEmbed({
-              autoClosed: true
+              autoClosed: true,
+              stats: game.sessionStats,
+              gameId: game.gameId
             })
           ],
           components: []

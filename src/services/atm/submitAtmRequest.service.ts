@@ -81,7 +81,7 @@ export const submitAtmRequest = async ({
     interaction.user.username
 
   const managerRole = guildConfiguration.managerRoleId
-  const requestId = generateId()
+  const requestId = generateId('atm')
 
   await createAtmRequest({
     requestId,

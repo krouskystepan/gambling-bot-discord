@@ -45,7 +45,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Roulette Already Active',
+              'Error - Roulette Already Active',
               'You already have an open roulette table! Close it or finish that game first. 🌀'
             )
           ],
@@ -60,7 +60,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       await interaction.deferReply()
 
-      const gameId = generateId()
+      const gameId = generateId('roulette')
 
       const message = await interaction.editReply({
         embeds: [

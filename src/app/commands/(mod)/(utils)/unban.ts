@@ -55,7 +55,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Input - Bot user',
+            'Error - Invalid Input - Bot user',
             'This command cannot target a bot.'
           )
         ],
@@ -93,7 +93,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     if (!result.ok) {
       return interaction.reply({
-        embeds: [createErrorEmbed('Unban Failed', result.message)],
+        embeds: [createErrorEmbed('Error - Unban Failed', result.message)],
         flags: MessageFlags.Ephemeral
       })
     }
@@ -115,7 +115,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     return interaction.reply({
       embeds: [
         createSuccessEmbed(
-          'User Unbanned',
+          'Success - User Unbanned',
           `<@${target.id}> has been unbanned and can use economy actions again.${reasonLine}`
         )
       ],

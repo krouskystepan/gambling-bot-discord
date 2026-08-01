@@ -81,7 +81,9 @@ export const tryEvaluateQuests = ({
 
       void notifyInteraction
         .followUp({
-          embeds: [createSuccessEmbed('Quest Complete', lines.join('\n'))],
+          embeds: [
+            createSuccessEmbed('Success - Quest Complete', lines.join('\n'))
+          ],
           flags: MessageFlags.Ephemeral
         })
         .catch((error) => {

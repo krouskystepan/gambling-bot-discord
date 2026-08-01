@@ -42,7 +42,7 @@ export const chatInput: ChatInputCommand = async ({ interaction, client }) => {
     await interaction.editReply({
       embeds: [
         createInfoEmbed(
-          '🏓 Pong!',
+          'Info - 🏓 Pong!',
           [
             `**Client latency:** \`${clientPing}ms\``,
             `**WebSocket latency:** \`${wsPing}ms\``,

@@ -1,5 +1,6 @@
-import { formatMinesBoard } from '@/utils/casino/mines/render'
 import { describe, expect, it } from 'vitest'
+
+import { formatMinesBoard } from '@/utils/casino/mines/render'
 
 describe('formatMinesBoard', () => {
   it('renders mines, reveals, and hidden cells', () => {
@@ -9,7 +10,7 @@ describe('formatMinesBoard', () => {
       mineIndices: [0, 1],
       revealedIndices: [2],
       houseEdgeSnapshot: 0.03,
-      status: 'FINISHED'
+      status: 'RESULT'
     })
 
     const lines = board.split('\n')

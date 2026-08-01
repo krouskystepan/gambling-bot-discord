@@ -14,6 +14,14 @@ export type {
 
 export type PlayerAction = 'HIT' | 'STAND' | 'DOUBLE' | 'SPLIT'
 
+/** Actions offered between hands while the session sits in `RESULT`. */
+export type ResultAction = 'REBET' | 'CHANGE' | 'CLOSE'
+
+/** Actions offered while the table waits for a stake in `BETTING`. */
+export type BettingAction = 'DEAL' | 'CHANGE' | 'CLOSE'
+
+export type BlackjackAction = PlayerAction | ResultAction | BettingAction
+
 export type HandResultId = 'PB' | 'DB' | 'PW' | 'DW' | 'PUSH'
 
 export type EngineResult =
@@ -38,9 +46,13 @@ export type EngineState = {
 }
 
 export type BlackjackButtonId = {
-  betId: string
-  action: PlayerAction
+  gameId: string
+  action: BlackjackAction
   showBalance: boolean
+}
+
+export type BlackjackModalId = {
+  gameId: string
 }
 
 export type StartBlackjackResultId = 'PBJ' | 'DBJ' | 'BBJ'
@@ -61,7 +73,7 @@ export type RenderResult =
 export type RenderParams = {
   userId: string
   guildId: string
-  betId: string
+  gameId: string
   hands: TBlackjackHand[]
   activeHandIndex: number
   dealerCards: Card[]

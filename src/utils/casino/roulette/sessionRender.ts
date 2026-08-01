@@ -1,4 +1,7 @@
-import { MINI_NUMBERS } from 'gambling-bot-shared/casino'
+import {
+  type CasinoSessionStats,
+  MINI_NUMBERS
+} from 'gambling-bot-shared/casino'
 import { formatMoney } from 'gambling-bot-shared/common'
 import type { GlobalSettings } from 'gambling-bot-shared/guild'
 import type {
@@ -14,6 +17,7 @@ import {
   StringSelectMenuOptionBuilder
 } from 'discord.js'
 
+import { formatSessionSummaryEmbed } from '@/utils/casino/sessionSummary'
 import { createBetEmbed } from '@/utils/discord/createEmbed'
 
 import {
@@ -131,25 +135,43 @@ export const renderRouletteTableEmbed = ({
   )
 }
 
-export const renderRouletteClosedEmbed = () =>
-  createBetEmbed(
-    '🌀 Roulette Closed',
-    'Grey',
-    'This roulette table was closed.'
-  )
+export const renderRouletteClosedEmbed = ({
+  stats,
+  gameId,
+  globalSettings
+}: {
+  stats: CasinoSessionStats
+  gameId?: string
+  globalSettings?: MoneySettings
+}) =>
+  formatSessionSummaryEmbed({
+    gameLabel: 'Roulette',
+    emoji: '🌀',
+    stats,
+    reason: 'closed',
+    gameId,
+    globalSettings
+  })
 
 export const renderRouletteTimeoutEmbed = ({
+  stats,
+  gameId,
+  globalSettings,
   autoClosed
 }: {
+  stats: CasinoSessionStats
+  gameId?: string
+  globalSettings?: MoneySettings
   autoClosed?: boolean
-} = {}) =>
-  createBetEmbed(
-    autoClosed ? '🌀 Roulette Timed Out' : '🌀 Roulette Closed',
-    'Grey',
-    autoClosed
-      ? 'This table was closed after being idle too long.'
-      : 'This roulette table was closed.'
-  )
+}) =>
+  formatSessionSummaryEmbed({
+    gameLabel: 'Roulette',
+    emoji: '🌀',
+    stats,
+    reason: autoClosed ? 'timeout' : 'closed',
+    gameId,
+    globalSettings
+  })
 
 export const renderRouletteComponents = ({
   gameId,
@@ -187,7 +209,7 @@ export const renderRouletteComponents = ({
             encodeActionId({ kind: 'action', gameId, action: 'close' })
           )
           .setLabel('Close')
-          .setStyle(ButtonStyle.Secondary)
+          .setStyle(ButtonStyle.Danger)
       )
     ]
   }

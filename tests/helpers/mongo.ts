@@ -10,6 +10,8 @@ import '@/models/BlackjackGame'
 import BlackjackGame from '@/models/BlackjackGame'
 import '@/models/GuildConfiguration'
 import GuildConfiguration from '@/models/GuildConfiguration'
+import '@/models/HiloGame'
+import HiloGame from '@/models/HiloGame'
 import '@/models/MinesGame'
 import MinesGame from '@/models/MinesGame'
 import '@/models/Prediction'
@@ -88,6 +90,7 @@ export {
   BaccaratGame,
   BlackjackGame,
   GuildConfiguration,
+  HiloGame,
   MinesGame,
   RouletteGame,
   SlotsGame,

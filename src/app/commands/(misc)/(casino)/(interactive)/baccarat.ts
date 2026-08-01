@@ -1,7 +1,5 @@
-import {
-  generateId,
-  parseReadableStringToNumber
-} from 'gambling-bot-shared/common'
+import { emptySessionStats } from 'gambling-bot-shared/casino'
+import { generateId } from 'gambling-bot-shared/common'
 
 import { MessageFlags } from 'discord.js'
 
@@ -9,11 +7,9 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  betOption,
   checkCasinoChannels,
   checkUserRegistration,
   getBaccaratGameByUserAndGuild,
-  reserveCasinoBet,
   showBalanceOption,
   skipAnimationsOption,
   upsertBaccaratGame
@@ -22,14 +18,13 @@ import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
   renderBaccaratButtons,
   renderBaccaratPromptEmbed
-} from '@/utils/casino/baccarat/render'
-import { checkValidBet } from '@/utils/common/utils'
+} from '@/utils/casino/baccarat'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'baccarat',
-  description: 'Play punto banco Baccarat - pick a side, then watch the deal!',
-  options: [betOption, showBalanceOption, skipAnimationsOption],
+  description: 'Open a Baccarat table - set your bet, then pick a side!',
+  options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }
 
@@ -51,7 +46,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Baccarat Already Active',
+              'Error - Baccarat Already Active',
               'You already have an active Baccarat game running! 🃏'
             )
           ],
@@ -59,60 +54,27 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      const betAmount = parseReadableStringToNumber(
-        interaction.options.getString('bet', true)
-      )
       const showBalance =
         interaction.options.getBoolean('show-balance') || false
       const skipAnimations =
         interaction.options.getBoolean('skip-animations') || false
 
-      const isBetValid = checkValidBet(
-        interaction,
-        betAmount,
-        guildConfig.casinoSettings.baccarat.maxBet,
-        guildConfig.casinoSettings.baccarat.minBet,
-        guildConfig.globalSettings
-      )
-      if (!isBetValid) return
-
       await interaction.deferReply()
 
-      const betId = generateId()
+      const gameId = generateId('baccarat')
 
-      try {
-        await reserveCasinoBet({
-          userId: user.userId,
-          guildId: user.guildId,
-          totalBet: betAmount,
-          betId,
-          game: 'baccarat'
-        })
-      } catch {
-        return interaction.editReply({
-          embeds: [
-            createErrorEmbed(
-              'Bet Failed',
-              'Not enough balance to place this bet.'
-            )
-          ]
-        })
-      }
-
+      // Nothing is reserved until a side is picked, so an idle table can be
+      // closed without a refund.
       const message = await interaction.editReply({
         embeds: [
           renderBaccaratPromptEmbed({
-            bet: betAmount,
+            bet: null,
             winMultipliers: guildConfig.casinoSettings.baccarat.winMultipliers,
-            betId,
+            gameId,
             globalSettings: guildConfig.globalSettings
           })
         ],
-        components: renderBaccaratButtons({
-          betId,
-          showBalance,
-          skipAnimations
-        })
+        components: renderBaccaratButtons({ gameId, hasBet: false })
       })
 
       await upsertBaccaratGame({
@@ -120,10 +82,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         guildId: user.guildId,
         channelId: interaction.channelId,
         messageId: message.id,
-        betId,
-        betAmount,
+        gameId,
+        betAmount: null,
         showBalance,
-        skipAnimations
+        skipAnimations,
+        phase: 'waiting',
+        sessionStats: emptySessionStats()
       })
     } catch (error) {
       await handleUnexpectedInteractionError(interaction, error)

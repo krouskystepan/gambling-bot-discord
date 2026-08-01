@@ -5,7 +5,7 @@ import { Client } from 'commandkit'
 import {
   getAllOldBlackjackGames,
   getGuildConfigByGuildId,
-  updateBlackjackGame
+  saveBlackjackGame
 } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import {
@@ -59,7 +59,7 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
       if (nextHandIndex !== -1) {
         engine.activeHandIndex = nextHandIndex
         engineToDoc(engine, game)
-        await updateBlackjackGame(game)
+        await saveBlackjackGame(game)
         continue
       }
 
@@ -87,7 +87,7 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
 
       await sleep(300)
     } catch (err) {
-      logger.error(`Auto-stand failed for game ${game.betId}`, err)
+      logger.error(`Auto-stand failed for game ${game.gameId}`, err)
     }
   }
 

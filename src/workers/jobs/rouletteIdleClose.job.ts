@@ -37,7 +37,9 @@ export const rouletteIdleCloseJob = async (client: Client<true>) => {
         await message.edit({
           embeds: [
             renderRouletteTimeoutEmbed({
-              autoClosed: true
+              autoClosed: true,
+              stats: game.sessionStats,
+              gameId: game.gameId
             })
           ],
           components: []

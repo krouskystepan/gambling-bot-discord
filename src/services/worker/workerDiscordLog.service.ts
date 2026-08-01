@@ -33,17 +33,26 @@ const buildWorkerEmbed = ({
   description,
   level = 'info'
 }: Omit<WorkerLogPayload, 'guildId'>): EmbedBuilder => {
-  const embedTitle = `${worker} — ${title}`
+  const baseTitle = `${worker} — ${title}`
 
   switch (level) {
     case 'success':
-      return createSuccessEmbed(embedTitle, description).setTimestamp()
+      return createSuccessEmbed(
+        `Success - ${baseTitle}`,
+        description
+      ).setTimestamp()
     case 'warning':
-      return createWarningEmbed(embedTitle, description).setTimestamp()
+      return createWarningEmbed(
+        `Warning - ${baseTitle}`,
+        description
+      ).setTimestamp()
     case 'error':
-      return createErrorEmbed(embedTitle, description).setTimestamp()
+      return createErrorEmbed(
+        `Error - ${baseTitle}`,
+        description
+      ).setTimestamp()
     default:
-      return createInfoEmbed(embedTitle, description).setTimestamp()
+      return createInfoEmbed(`Info - ${baseTitle}`, description).setTimestamp()
   }
 }
 

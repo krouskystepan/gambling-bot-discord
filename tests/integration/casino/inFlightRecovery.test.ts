@@ -1,13 +1,15 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
+import {
+  defaultCasinoSettings,
+  emptySessionStats
+} from 'gambling-bot-shared/casino'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
-  deleteBaccaratGame,
-  getBaccaratGameByBetId,
-  getBlackjackGameByBetId,
-  getMinesGameByBetId,
+  getBaccaratGameByGameId,
+  getBlackjackGameByGameId,
+  getMinesGameByGameId,
   getRouletteGameByGameId,
   getSlotsGameByGameId,
   reserveCasinoBet,
@@ -17,8 +19,8 @@ import {
   upsertRouletteGame,
   upsertSlotsGame
 } from '@/services'
-import { finishBlackjackDealerAndSettle } from '@/utils/casino/blackjack'
 import { recoverBaccaratDeal } from '@/utils/casino/baccarat/playRound'
+import { finishBlackjackDealerAndSettle } from '@/utils/casino/blackjack'
 import { finishMinesAndSettle } from '@/utils/casino/mines'
 import { recoverRouletteSpin } from '@/utils/casino/roulette/playRound'
 import { recoverSlotsBatch } from '@/utils/casino/slots'
@@ -105,7 +107,7 @@ describe('in-flight casino recovery helpers', () => {
     expect(user?.balance).toBeGreaterThan(900)
   })
 
-  it('settles and deletes an all-bust blackjack dealer phase', async () => {
+  it('settles an all-bust blackjack dealer phase into RESULT', async () => {
     await createTestUser({ balance: 1000 })
     await reserveCasinoBet({
       userId: 'user-1',
@@ -119,7 +121,10 @@ describe('in-flight casino recovery helpers', () => {
       guildId: 'guild-1',
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'blackjack-stale-1',
+      gameId: 'blackjack-game-1',
+      activeBetId: 'blackjack-stale-1',
+      baseBetAmount: 100,
+      showBalance: false,
       deck: [],
       deckIndex: 0,
       hands: [
@@ -151,14 +156,16 @@ describe('in-flight casino recovery helpers', () => {
       showBalance: false
     })
 
-    const remaining = await getBlackjackGameByBetId({
-      betId: 'blackjack-stale-1',
+    const settled = await getBlackjackGameByGameId({
+      gameId: 'blackjack-game-1',
       guildId: 'guild-1'
     })
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
 
     expect(result.finalResultId).toBe('LOSS')
-    expect(remaining).toBeNull()
+    expect(settled?.phase).toBe('RESULT')
+    expect(settled?.activeBetId).toBeNull()
+    expect(settled?.sessionStats.roundsPlayed).toBe(1)
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBe(900)
   })
@@ -177,7 +184,8 @@ describe('in-flight casino recovery helpers', () => {
       guildId: 'guild-1',
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'baccarat-stale-1',
+      gameId: 'baccarat-game-1',
+      activeBetId: 'baccarat-stale-1',
       betAmount: 100,
       showBalance: false,
       skipAnimations: false,
@@ -212,6 +220,7 @@ describe('in-flight casino recovery helpers', () => {
       ],
       userId: 'user-1',
       guildId: 'guild-1',
+      gameId: 'baccarat-game-1',
       betId: 'baccarat-stale-1',
       betAmount: 100,
       showBalance: false,
@@ -222,17 +231,18 @@ describe('in-flight casino recovery helpers', () => {
       sourceChannelId: 'channel-1'
     })
 
-    await deleteBaccaratGame({ userId: 'user-1', guildId: 'guild-1' })
-
-    const remaining = await getBaccaratGameByBetId({
-      betId: 'baccarat-stale-1',
+    const game = await getBaccaratGameByGameId({
+      gameId: 'baccarat-game-1',
       guildId: 'guild-1'
     })
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
 
     expect(message.edit).toHaveBeenCalled()
     expect(settled.resolution.won).toBe(true)
-    expect(remaining).toBeNull()
+    expect(game?.phase).toBe('result')
+    expect(game?.activeBetId).toBeNull()
+    expect(game?.lastSide).toBe('player')
+    expect(game?.pendingDeal).toBeNull()
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBeGreaterThan(1000)
   })
@@ -297,7 +307,7 @@ describe('in-flight casino recovery helpers', () => {
     expect(user?.balance).toBe(1300)
   })
 
-  it('settles and deletes a finished mines game stuck mid-reveal', async () => {
+  it('settles a mines board stuck mid-settlement', async () => {
     await createTestUser({ balance: 1000 })
     await reserveCasinoBet({
       userId: 'user-1',
@@ -311,13 +321,14 @@ describe('in-flight casino recovery helpers', () => {
       guildId: 'guild-1',
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'mines-stale-1',
+      gameId: 'mines-game-1',
+      activeBetId: 'mines-stale-1',
       betAmount: 100,
       mineCount: 3,
       mineIndices: [0, 1, 2],
       revealedIndices: [0],
       houseEdgeSnapshot: 0.03,
-      status: 'FINISHED'
+      status: 'RESULT'
     })
 
     const message = {
@@ -330,13 +341,16 @@ describe('in-flight casino recovery helpers', () => {
         guildId: 'guild-1',
         channelId: 'channel-1',
         messageId: 'msg-1',
-        betId: 'mines-stale-1',
+        gameId: 'mines-game-1',
+        activeBetId: 'mines-stale-1',
         betAmount: 100,
         mineCount: 3,
         mineIndices: [0, 1, 2],
         revealedIndices: [0],
         houseEdgeSnapshot: 0.03,
-        status: 'FINISHED',
+        status: 'RESULT',
+        showBalance: false,
+        sessionStats: emptySessionStats(),
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -347,15 +361,17 @@ describe('in-flight casino recovery helpers', () => {
       message: message as never
     })
 
-    const remaining = await getMinesGameByBetId({
-      betId: 'mines-stale-1',
+    const settled = await getMinesGameByGameId({
+      gameId: 'mines-game-1',
       guildId: 'guild-1'
     })
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
 
     expect(message.edit).toHaveBeenCalled()
     expect(resolved.resultKind).toBe('BUST')
-    expect(remaining).toBeNull()
+    expect(settled?.status).toBe('RESULT')
+    expect(settled?.activeBetId).toBeNull()
+    expect(settled?.sessionStats.roundsPlayed).toBe(1)
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBe(900)
   })
@@ -374,13 +390,14 @@ describe('in-flight casino recovery helpers', () => {
       guildId: 'guild-1',
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'mines-stale-cashout',
+      gameId: 'mines-game-cashout',
+      activeBetId: 'mines-stale-cashout',
       betAmount: 100,
       mineCount: 3,
       mineIndices: [0, 1, 2],
       revealedIndices: [5, 6],
       houseEdgeSnapshot: 0.03,
-      status: 'FINISHED'
+      status: 'RESULT'
     })
 
     const message = {
@@ -404,13 +421,16 @@ describe('in-flight casino recovery helpers', () => {
         guildId: 'guild-1',
         channelId: 'channel-1',
         messageId: 'msg-1',
-        betId: 'mines-stale-cashout',
+        gameId: 'mines-game-cashout',
+        activeBetId: 'mines-stale-cashout',
         betAmount: 100,
         mineCount: 3,
         mineIndices: [0, 1, 2],
         revealedIndices: [5, 6],
         houseEdgeSnapshot: 0.03,
-        status: 'FINISHED',
+        status: 'RESULT',
+        showBalance: false,
+        sessionStats: emptySessionStats(),
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -421,8 +441,8 @@ describe('in-flight casino recovery helpers', () => {
       message: message as never
     })
 
-    const remaining = await getMinesGameByBetId({
-      betId: 'mines-stale-cashout',
+    const settled = await getMinesGameByGameId({
+      gameId: 'mines-game-cashout',
       guildId: 'guild-1'
     })
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
@@ -430,7 +450,8 @@ describe('in-flight casino recovery helpers', () => {
     expect(message.edit).toHaveBeenCalled()
     expect(resolved.resultKind).toBe('CASH_OUT')
     expect(resolved.payout).toBeGreaterThan(100)
-    expect(remaining).toBeNull()
+    expect(settled?.status).toBe('RESULT')
+    expect(settled?.activeBetId).toBeNull()
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBeGreaterThan(1000)
   })

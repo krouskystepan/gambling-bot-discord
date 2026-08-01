@@ -1,3 +1,4 @@
+import { type CasinoSessionStats } from 'gambling-bot-shared/casino'
 import { formatMoney } from 'gambling-bot-shared/common'
 import type { GlobalSettings } from 'gambling-bot-shared/guild'
 import type { SlotsSessionPhase } from 'gambling-bot-shared/slots'
@@ -10,6 +11,7 @@ import {
   StringSelectMenuOptionBuilder
 } from 'discord.js'
 
+import { formatSessionSummaryEmbed } from '@/utils/casino/sessionSummary'
 import { createBetEmbed } from '@/utils/discord/createEmbed'
 
 import {
@@ -66,7 +68,7 @@ export const renderSlotsMachineEmbed = ({
   const total = slotsBatchTotal(unitBet, spinsCount)
 
   const lines = [
-    `💵 Chip: **${formatMoney(unitBet ?? 0, globalSettings)}**`,
+    `💵 Bet / spin: **${formatMoney(unitBet ?? 0, globalSettings)}**`,
     `🔄 Spins: **${spinsCount}**`,
     `💰 Total: **${formatMoney(total, globalSettings)}**`
   ]
@@ -91,13 +93,13 @@ export const renderSlotsMachineEmbed = ({
   if (phase === 'ready') {
     lines.push(
       unitBet == null
-        ? '_Set your chip with Change bet, pick spins, then Spin._'
-        : '_Adjust chip or spins, then Spin._'
+        ? '_Set your bet with Change bet, pick spins, then Spin._'
+        : '_Adjust bet or spins, then Spin._'
     )
   } else if (phase === 'spinning') {
     lines.push('_This batch is being finalized. Buttons will return shortly._')
   } else {
-    lines.push('_Tweak chip or spins, then Spin again._')
+    lines.push('_Tweak bet or spins, then Spin again._')
   }
 
   return createBetEmbed(
@@ -108,21 +110,45 @@ export const renderSlotsMachineEmbed = ({
   )
 }
 
-export const renderSlotsClosedEmbed = () =>
-  createBetEmbed('🎰 Slots Closed', 'Grey', 'This slots machine was closed.')
+export const renderSlotsClosedEmbed = ({
+  stats,
+  gameId,
+  globalSettings
+}: {
+  stats: CasinoSessionStats
+  gameId?: string
+  globalSettings?: MoneySettings
+}) =>
+  formatSessionSummaryEmbed({
+    gameLabel: 'Slots',
+    emoji: '🎰',
+    stats,
+    reason: 'closed',
+    gameId,
+    globalSettings,
+    roundsLabel: 'Spins'
+  })
 
 export const renderSlotsTimeoutEmbed = ({
+  stats,
+  gameId,
+  globalSettings,
   autoClosed
 }: {
+  stats: CasinoSessionStats
+  gameId?: string
+  globalSettings?: MoneySettings
   autoClosed?: boolean
-} = {}) =>
-  createBetEmbed(
-    autoClosed ? '🎰 Slots Timed Out' : '🎰 Slots Closed',
-    'Grey',
-    autoClosed
-      ? 'This machine was closed after being idle too long.'
-      : 'This slots machine was closed.'
-  )
+}) =>
+  formatSessionSummaryEmbed({
+    gameLabel: 'Slots',
+    emoji: '🎰',
+    stats,
+    reason: autoClosed ? 'timeout' : 'closed',
+    gameId,
+    globalSettings,
+    roundsLabel: 'Spins'
+  })
 
 export const renderSlotsComponents = ({
   gameId,

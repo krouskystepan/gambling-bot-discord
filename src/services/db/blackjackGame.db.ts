@@ -2,14 +2,19 @@ import {
   blackjackAutostandIdleMs,
   blackjackIdleNudgeThresholdMs
 } from 'gambling-bot-shared/blackjack'
+import { emptySessionStats } from 'gambling-bot-shared/casino'
 import { DAY_MS } from 'gambling-bot-shared/common'
 
 import BlackjackGame from '@/models/BlackjackGame'
 
 import {
   TGetBlackjackGame,
+  TUpdateBlackjackGame,
   TUpsertBlackjackGame
 } from './blackjackGame.db.types'
+
+/** Phases where a hand is live and can still be auto-finished. */
+const MID_HAND_PHASES = ['PLAYER', 'DEALER'] as const
 
 export const getBlackjackGameByUserAndGuild = async ({
   userId,
@@ -18,14 +23,14 @@ export const getBlackjackGameByUserAndGuild = async ({
   return BlackjackGame.findOne({ userId, guildId })
 }
 
-export const getBlackjackGameByBetId = async ({
-  betId,
+export const getBlackjackGameByGameId = async ({
+  gameId,
   guildId
 }: {
-  betId: string
+  gameId: string
   guildId: string
 }) => {
-  return BlackjackGame.findOne({ betId, guildId })
+  return BlackjackGame.findOne({ gameId, guildId })
 }
 
 export const getBlackjackGamesByGuildId = async ({
@@ -36,8 +41,20 @@ export const getBlackjackGamesByGuildId = async ({
   return BlackjackGame.find({ guildId })
 }
 
+/** Mid-hand games idle long enough for the auto-stand worker. */
 export const getAllOldBlackjackGames = async (days: number) => {
   return BlackjackGame.find({
+    phase: { $in: MID_HAND_PHASES },
+    updatedAt: {
+      $lte: new Date(Date.now() - days * DAY_MS)
+    }
+  })
+}
+
+/** Settled or empty tables idle long enough for the idle-close worker. */
+export const getOldResultBlackjackGames = async (days: number) => {
+  return BlackjackGame.find({
+    phase: { $in: ['RESULT', 'BETTING'] },
     updatedAt: {
       $lte: new Date(Date.now() - days * DAY_MS)
     }
@@ -74,11 +91,28 @@ export const markBlackjackIdleNudgeSent = async ({
   )
 }
 
-export const updateBlackjackGame = async (
+export const saveBlackjackGame = async (
   game: typeof BlackjackGame.prototype
 ) => {
   game.idleNudgeSentAt = null
   await game.save()
+}
+
+export const updateBlackjackGame = async ({
+  userId,
+  guildId,
+  ...patch
+}: TUpdateBlackjackGame) => {
+  return BlackjackGame.findOneAndUpdate(
+    { userId, guildId },
+    {
+      $set: {
+        ...patch,
+        idleNudgeSentAt: null
+      }
+    },
+    { returnDocument: 'after' }
+  )
 }
 
 export const upsertBlackjackGame = async ({
@@ -86,7 +120,12 @@ export const upsertBlackjackGame = async ({
   guildId,
   channelId,
   messageId,
-  betId,
+  gameId,
+  activeBetId = null,
+  baseBetAmount,
+  showBalance,
+  skipAnimations = false,
+  sessionStats,
   deck,
   deckIndex,
   hands,
@@ -100,7 +139,12 @@ export const upsertBlackjackGame = async ({
       $set: {
         channelId,
         messageId,
-        betId,
+        gameId,
+        activeBetId,
+        baseBetAmount,
+        showBalance,
+        skipAnimations,
+        sessionStats: sessionStats ?? emptySessionStats(),
         deck,
         deckIndex,
         hands,

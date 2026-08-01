@@ -65,7 +65,7 @@ export async function mockPredictions({
           return {
             userId,
             amount: pickChipAmount(maxBet),
-            betId: generateId()
+            betId: generateId('prediction')
           }
         })
 
@@ -79,7 +79,7 @@ export async function mockPredictions({
     statusCount[status] = (statusCount[status] ?? 0) + 1
 
     docs.push({
-      predictionId: generateId(),
+      predictionId: generateId('prediction'),
       guildId,
       channelId: fakeChannelId(),
       creatorId: pools.pickAdmin(),

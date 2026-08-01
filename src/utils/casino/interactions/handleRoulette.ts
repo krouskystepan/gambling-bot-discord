@@ -1,14 +1,6 @@
 import { validateBetAmount } from 'gambling-bot-shared/casino'
-import {
-  formatMoney,
-  parseReadableStringToNumber
-} from 'gambling-bot-shared/common'
-import type { GlobalSettings } from 'gambling-bot-shared/guild'
-import {
-  USER_BANNED_ERROR,
-  USER_BANNED_MESSAGE,
-  isUserBanned
-} from 'gambling-bot-shared/user'
+import { parseReadableStringToNumber } from 'gambling-bot-shared/common'
+import { USER_BANNED_MESSAGE, isUserBanned } from 'gambling-bot-shared/user'
 
 import {
   ActionRowBuilder,
@@ -29,6 +21,10 @@ import {
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
+  replyBetValidationError,
+  replyEphemeralError
+} from '@/utils/casino/betValidationReply'
+import {
   ROULETTE_MAX_SLIP_BETS,
   buildSlipBet,
   decodeId,
@@ -42,63 +38,9 @@ import {
   slipTotal
 } from '@/utils/casino/roulette'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
+import { deferComponentUpdate } from '@/utils/discord/deferComponentUpdate'
 
 const AMOUNT_INPUT_ID = 'amount'
-
-type MoneySettings = Partial<GlobalSettings> | null | undefined
-
-const replyBetValidationError = async (
-  interaction: Interaction,
-  error: string,
-  maxBet: number,
-  minBet: number,
-  globalSettings: MoneySettings
-) => {
-  if (!interaction.isRepliable()) return
-
-  const embeds = (() => {
-    switch (error) {
-      case 'INVALID_NUMBER':
-        return [
-          createErrorEmbed('Invalid Input', 'Bet must be a valid number.')
-        ]
-      case 'TOO_MANY_DECIMALS':
-        return [
-          createErrorEmbed(
-            'Invalid Bet Amount',
-            'Bet must have at most 2 decimal places.'
-          )
-        ]
-      case 'BELOW_MINIMUM':
-        return [
-          createErrorEmbed(
-            'Invalid Bet Amount',
-            'Minimum possible bet is **$1**.'
-          )
-        ]
-      case 'ABOVE_MAXIMUM':
-        return [
-          createErrorEmbed(
-            'Invalid Bet Amount',
-            `Maximum bet is **${formatMoney(maxBet, globalSettings)}**.`
-          )
-        ]
-      case 'BELOW_MIN_BET':
-        return [
-          createErrorEmbed(
-            'Invalid Bet Amount',
-            `Minimum bet is **${formatMoney(minBet, globalSettings)}**.`
-          )
-        ]
-      default:
-        return [
-          createErrorEmbed('Invalid Bet Amount', 'Bet amount is invalid.')
-        ]
-    }
-  })()
-
-  await interaction.reply({ embeds, flags: MessageFlags.Ephemeral })
-}
 
 const showAmountModal = async (
   interaction: Interaction,
@@ -126,12 +68,15 @@ const showAmountModal = async (
   await interaction.showModal(modal)
 }
 
-export default async (interaction: Interaction) => {
+export const handleRouletteInteraction = async (interaction: Interaction) => {
   const isButton = interaction.isButton()
   const isSelect = interaction.isStringSelectMenu()
   const isModal = interaction.isModalSubmit()
 
   if (!isButton && !isSelect && !isModal) return
+
+  const customId = interaction.customId
+  if (!customId.startsWith('rl:') && !customId.startsWith('rlm:')) return
 
   return runWithQuestNotifyInteraction(interaction, async () => {
     const guildId = interaction.guildId
@@ -142,70 +87,62 @@ export default async (interaction: Interaction) => {
         const modalData = decodeModalId(interaction.customId)
         if (!modalData) return
 
+        if (!(await deferComponentUpdate(interaction))) return
+
         const game = await getRouletteGameByGameId({
           gameId: modalData.gameId,
           guildId
         })
 
         if (!game) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Error - Invalid Game',
-                'This roulette table no longer exists.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Invalid Game',
+              'This roulette table no longer exists.'
+            )
+          ])
+          return
         }
 
         if (interaction.user.id !== game.userId) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed('Invalid Input', 'This is not your table.')
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed('Error - Invalid Input', 'This is not your table.')
+          ])
+          return
         }
 
         if (game.phase !== 'betting') {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Table Busy',
-                'Finish or change bets from the result buttons first.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Table Busy',
+              'Finish or change bets from the result buttons first.'
+            )
+          ])
+          return
         }
 
         const guildConfig = await getGuildConfigByGuildId({ guildId })
         if (!guildConfig) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Error - Missing Config',
-                'Guild casino configuration was not found.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Missing Config',
+              'Guild casino configuration was not found.'
+            )
+          ])
+          return
         }
 
         const amountRaw = interaction.fields.getTextInputValue(AMOUNT_INPUT_ID)
         const amount = parseReadableStringToNumber(amountRaw)
 
         if (!Number.isFinite(amount) || amount <= 0) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Invalid Input - Amount',
-                'Please enter a valid positive amount.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Invalid Input - Amount',
+              'Please enter a valid positive amount.'
+            )
+          ])
+          return
         }
 
         let nextBet
@@ -213,10 +150,10 @@ export default async (interaction: Interaction) => {
           nextBet = buildSlipBet(modalData.target, amount)
         } catch (e) {
           const message = e instanceof Error ? e.message : 'Invalid bet target.'
-          return interaction.reply({
-            embeds: [createErrorEmbed('Invalid Input - Bet', message)],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed('Error - Invalid Input - Bet', message)
+          ])
+          return
         }
 
         const merged = mergeSlipBet(game.bets, nextBet)
@@ -224,15 +161,13 @@ export default async (interaction: Interaction) => {
           merged.length > ROULETTE_MAX_SLIP_BETS &&
           merged.length > game.bets.length
         ) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Slip Full',
-                `You can place at most **${ROULETTE_MAX_SLIP_BETS}** different bets on one spin.`
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Slip Full',
+              `You can place at most **${ROULETTE_MAX_SLIP_BETS}** different bets on one spin.`
+            )
+          ])
+          return
         }
 
         const total = slipTotal(merged)
@@ -251,8 +186,6 @@ export default async (interaction: Interaction) => {
           )
           return
         }
-
-        await interaction.deferUpdate()
 
         const updated = await updateRouletteGame({
           userId: game.userId,
@@ -286,106 +219,19 @@ export default async (interaction: Interaction) => {
       const data = decodeId(interaction.customId)
       if (!data) return
 
-      const guildConfig = await getGuildConfigByGuildId({ guildId })
-      if (!guildConfig) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Error - Missing Config',
-              'Guild casino configuration was not found.'
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      const game = await getRouletteGameByGameId({
-        gameId: data.gameId,
-        guildId
-      })
-
-      if (!game) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Error - Invalid Game',
-              'This roulette table no longer exists.'
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      if (interaction.user.id !== game.userId) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed('Invalid Input', 'This is not your table.')
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      const user = await getUser({
-        userId: game.userId,
-        guildId
-      })
-
-      if (!user) {
-        return interaction.reply({
-          embeds: [
-            createErrorEmbed(
-              'Error - Missing User',
-              'Your casino profile was not found.'
-            )
-          ],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      if (isUserBanned(user)) {
-        return interaction.reply({
-          embeds: [createErrorEmbed(USER_BANNED_ERROR, USER_BANNED_MESSAGE)],
-          flags: MessageFlags.Ephemeral
-        })
-      }
-
-      if (data.kind === 'place') {
-        if (game.phase !== 'betting') {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Table Busy',
-                'Use Change bets before placing a new slip.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+      // place / select open a modal - showModal must be the first response.
+      if (data.kind === 'place' || data.kind === 'select') {
+        if (data.kind === 'place') {
+          await showAmountModal(
+            interaction,
+            data.gameId,
+            data.target,
+            data.target.toUpperCase()
+          )
+          return
         }
 
-        await showAmountModal(
-          interaction,
-          game.gameId,
-          data.target,
-          data.target.toUpperCase()
-        )
-        return
-      }
-
-      if (data.kind === 'select') {
         if (!isSelect) return
-
-        if (game.phase !== 'betting') {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Table Busy',
-                'Use Change bets before placing a new slip.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
-        }
-
         const value = interaction.values[0]
         if (!value) return
 
@@ -400,10 +246,68 @@ export default async (interaction: Interaction) => {
 
         await showAmountModal(
           interaction,
-          game.gameId,
+          data.gameId,
           value,
           labels[value] ?? `Number ${value}`
         )
+        return
+      }
+
+      // Acknowledge spin / close / slip edits immediately before any DB work.
+      if (!(await deferComponentUpdate(interaction))) return
+
+      const guildConfig = await getGuildConfigByGuildId({ guildId })
+      if (!guildConfig) {
+        await replyEphemeralError(interaction, [
+          createErrorEmbed(
+            'Error - Missing Config',
+            'Guild casino configuration was not found.'
+          )
+        ])
+        return
+      }
+
+      const game = await getRouletteGameByGameId({
+        gameId: data.gameId,
+        guildId
+      })
+
+      if (!game) {
+        await replyEphemeralError(interaction, [
+          createErrorEmbed(
+            'Error - Invalid Game',
+            'This roulette table no longer exists.'
+          )
+        ])
+        return
+      }
+
+      if (interaction.user.id !== game.userId) {
+        await replyEphemeralError(interaction, [
+          createErrorEmbed('Error - Invalid Input', 'This is not your table.')
+        ])
+        return
+      }
+
+      const user = await getUser({
+        userId: game.userId,
+        guildId
+      })
+
+      if (!user) {
+        await replyEphemeralError(interaction, [
+          createErrorEmbed(
+            'Error - Missing User',
+            'Your casino profile was not found.'
+          )
+        ])
+        return
+      }
+
+      if (isUserBanned(user)) {
+        await replyEphemeralError(interaction, [
+          createErrorEmbed('Error - Account Restricted', USER_BANNED_MESSAGE)
+        ])
         return
       }
 
@@ -447,13 +351,17 @@ export default async (interaction: Interaction) => {
       }
 
       if (data.action === 'close') {
-        await interaction.deferUpdate()
         await deleteRouletteGame({
           userId: game.userId,
           guildId: game.guildId
         })
         await interaction.message.edit({
-          embeds: [renderRouletteClosedEmbed()],
+          embeds: [
+            renderRouletteClosedEmbed({
+              stats: game.sessionStats,
+              gameId: game.gameId
+            })
+          ],
           components: []
         })
         return
@@ -461,18 +369,15 @@ export default async (interaction: Interaction) => {
 
       if (data.action === 'change') {
         if (game.phase === 'spinning') {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Table Busy',
-                'This roulette spin is still being finished. Please wait a moment.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Table Busy',
+              'This roulette spin is still being finished. Please wait a moment.'
+            )
+          ])
+          return
         }
 
-        await interaction.deferUpdate()
         const updated = await updateRouletteGame({
           userId: game.userId,
           guildId: game.guildId,
@@ -493,15 +398,15 @@ export default async (interaction: Interaction) => {
 
       if (data.action === 'undo') {
         if (game.phase !== 'betting' || game.bets.length === 0) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed('Nothing to Undo', 'Your slip is already empty.')
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Nothing to Undo',
+              'Your slip is already empty.'
+            )
+          ])
+          return
         }
 
-        await interaction.deferUpdate()
         const updated = await updateRouletteGame({
           userId: game.userId,
           guildId: game.guildId,
@@ -519,18 +424,15 @@ export default async (interaction: Interaction) => {
 
       if (data.action === 'clear') {
         if (game.phase !== 'betting') {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Table Busy',
-                'Use Change bets from the result view first.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Table Busy',
+              'Use Change bets from the result view first.'
+            )
+          ])
+          return
         }
 
-        await interaction.deferUpdate()
         const updated = await updateRouletteGame({
           userId: game.userId,
           guildId: game.guildId,
@@ -548,15 +450,13 @@ export default async (interaction: Interaction) => {
 
       if (data.action === 'spin' || data.action === 'rebet') {
         if (game.phase === 'spinning') {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                'Table Busy',
-                'This roulette spin is still being finished. Please wait a moment.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Table Busy',
+              'This roulette spin is still being finished. Please wait a moment.'
+            )
+          ])
+          return
         }
 
         const slip =
@@ -567,17 +467,17 @@ export default async (interaction: Interaction) => {
               : []
 
         if (slip.length === 0) {
-          return interaction.reply({
-            embeds: [
-              createErrorEmbed(
-                data.action === 'rebet' ? 'Nothing to Rebet' : 'Empty Slip',
-                data.action === 'rebet'
-                  ? 'There is no previous slip to rebet.'
-                  : 'Add at least one bet before spinning.'
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              data.action === 'rebet'
+                ? 'Error - Nothing to Rebet'
+                : 'Error - Empty Slip',
+              data.action === 'rebet'
+                ? 'There is no previous slip to rebet.'
+                : 'Add at least one bet before spinning.'
+            )
+          ])
+          return
         }
 
         const total = slipTotal(slip)
@@ -596,8 +496,6 @@ export default async (interaction: Interaction) => {
           )
           return
         }
-
-        await interaction.deferUpdate()
 
         try {
           await playRouletteSpin({
@@ -620,7 +518,7 @@ export default async (interaction: Interaction) => {
             await interaction.followUp({
               embeds: [
                 createErrorEmbed(
-                  'Bet Failed',
+                  'Error - Bet Failed',
                   'Not enough balance to place this bet.'
                 )
               ],

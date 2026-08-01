@@ -26,36 +26,36 @@ type CancelAutocompleteInteraction =
 
 const ATM_CANCEL_COPY = {
   withdraw: {
-    notFoundTitle: 'Request Not Found',
+    notFoundTitle: 'Error - Request Not Found',
     notFoundDescription:
       'That withdrawal request was not found or does not belong to you.',
-    emptyTitle: 'No Pending Withdrawals',
+    emptyTitle: 'Info - No Pending Withdrawals',
     emptyDescription: 'You have no pending withdrawal requests to cancel.',
-    notPendingTitle: 'Request Not Pending',
+    notPendingTitle: 'Error - Request Not Pending',
     notPendingDescription:
       'That withdrawal request is no longer pending and cannot be cancelled.',
-    raceTitle: 'Already Handled',
+    raceTitle: 'Error - Already Handled',
     raceDescription:
       'That withdrawal request was already handled by staff or cancelled.',
     autocompleteEmpty: 'No pending withdrawal requests found',
-    successTitle: 'ATM - Withdrawal Cancelled',
+    successTitle: 'Success - ATM - Withdrawal Cancelled',
     successDescription: (amount: string) =>
       `Your pending withdrawal of **${amount}** has been cancelled.`
   },
   deposit: {
-    notFoundTitle: 'Request Not Found',
+    notFoundTitle: 'Error - Request Not Found',
     notFoundDescription:
       'That deposit request was not found or does not belong to you.',
-    emptyTitle: 'No Pending Deposits',
+    emptyTitle: 'Info - No Pending Deposits',
     emptyDescription: 'You have no pending deposit requests to cancel.',
-    notPendingTitle: 'Request Not Pending',
+    notPendingTitle: 'Error - Request Not Pending',
     notPendingDescription:
       'That deposit request is no longer pending and cannot be cancelled.',
-    raceTitle: 'Already Handled',
+    raceTitle: 'Error - Already Handled',
     raceDescription:
       'That deposit request was already handled by staff or cancelled.',
     autocompleteEmpty: 'No pending deposit requests found',
-    successTitle: 'ATM - Deposit Cancelled',
+    successTitle: 'Success - ATM - Deposit Cancelled',
     successDescription: (amount: string) =>
       `Your pending deposit of **${amount}** has been cancelled.`
   }

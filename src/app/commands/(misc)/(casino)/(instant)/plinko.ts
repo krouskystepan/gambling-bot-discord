@@ -51,6 +51,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         validateBetAmount: unitBet,
         minBet: guildConfig.casinoSettings.plinko.minBet,
         maxBet: guildConfig.casinoSettings.plinko.maxBet,
+        rounds: balls,
         input: { unitBet, balls }
       }
     },

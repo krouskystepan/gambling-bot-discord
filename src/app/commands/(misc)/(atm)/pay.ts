@@ -56,7 +56,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Slow Down',
+            'Error - Slow Down',
             'Wait a moment before sending another payment.'
           )
         ],
@@ -74,7 +74,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     if (interaction.user.id === targetDiscordUser.id || targetDiscordUser.bot) {
       return interaction.reply({
         embeds: [
-          createErrorEmbed('Invalid Input', 'You cannot pay this user.')
+          createErrorEmbed('Error - Invalid Input', 'You cannot pay this user.')
         ],
         flags: MessageFlags.Ephemeral
       })
@@ -129,7 +129,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Insufficient Funds',
+              'Error - Insufficient Funds',
               `You don't have enough funds to send **${formatMoney(amount, globalSettings)}**.`
             )
           ],
@@ -141,7 +141,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Insufficient Available Funds',
+              'Error - Insufficient Available Funds',
               `You don't have enough available (unlocked) balance to send **${formatMoney(amount, globalSettings)}**.`
             )
           ],
@@ -153,7 +153,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Daily Limit Reached',
+              'Error - Daily Limit Reached',
               `Sending **${formatMoney(amount, globalSettings)}** would exceed your daily transfer limit of **${formatMoney(paySettings.maxDailyAmount, globalSettings)}**.`
             )
           ],
@@ -163,7 +163,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       if (code === 'USER_BANNED') {
         return interaction.reply({
-          embeds: [createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)],
+          embeds: [
+            createErrorEmbed('Error - Account Restricted', USER_BANNED_MESSAGE)
+          ],
           flags: MessageFlags.Ephemeral
         })
       }
@@ -171,7 +173,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (code === 'SELF_TRANSFER') {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid Input', 'You cannot pay yourself.')
+            createErrorEmbed(
+              'Error - Invalid Input',
+              'You cannot pay yourself.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -181,7 +186,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'User Not Found',
+              'Error - User Not Found',
               'One of the users is no longer registered.'
             )
           ],
@@ -198,7 +203,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         : ''
 
     const successEmbed = createSuccessEmbed(
-      'Payment Sent',
+      'Success - Payment Sent',
       `You sent **${formatMoney(result.gross, globalSettings)}** to <@${targetDiscordUser.id}>.${feeLabel}\nThey received **${formatMoney(result.net, globalSettings)}**.\n\nYour balance: **${formatMoney(result.senderBalance, globalSettings)}**`,
       result.referenceId
     )
@@ -212,7 +217,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       await targetDiscordUser.send({
         embeds: [
           createSuccessEmbed(
-            'Payment Received',
+            'Success - Payment Received',
             `You received **${formatMoney(result.net, globalSettings)}** from <@${interaction.user.id}>.${
               result.fee > 0
                 ? `\n(Gross sent: **${formatMoney(result.gross, globalSettings)}**, fee: **${formatMoney(result.fee, globalSettings)}**)`

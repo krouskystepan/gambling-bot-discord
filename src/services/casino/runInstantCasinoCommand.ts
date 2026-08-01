@@ -36,6 +36,8 @@ export type InstantCasinoPrepareSuccess<TInput> = {
   validateBetAmount: number
   minBet: number
   maxBet: number
+  /** How many plays this bet covers (flips, rolls, balls, entries). */
+  rounds?: number
   input: TInput
 }
 
@@ -91,6 +93,7 @@ export const runInstantCasinoCommand = async <TInput>({
     let totalBet = 0
     let totalWinnings = 0
     let betId: string | null = null
+    let rounds: number | undefined
 
     try {
       const user = await checkUserRegistration({ interaction })
@@ -102,7 +105,7 @@ export const runInstantCasinoCommand = async <TInput>({
         await interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Slow Down',
+              'Error - Slow Down',
               'Wait a moment before starting another game.'
             )
           ],
@@ -137,7 +140,8 @@ export const runInstantCasinoCommand = async <TInput>({
       if (!isBetValid) return
 
       totalBet = prepared.totalBet
-      betId = generateId()
+      rounds = prepared.rounds
+      betId = generateId(game)
 
       try {
         await reserveCasinoBet({
@@ -145,7 +149,8 @@ export const runInstantCasinoCommand = async <TInput>({
           guildId,
           totalBet,
           betId,
-          game
+          game,
+          rounds
         })
       } catch (err) {
         if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
@@ -153,7 +158,7 @@ export const runInstantCasinoCommand = async <TInput>({
           await interaction.reply({
             embeds: [
               createErrorEmbed(
-                'Insufficient Funds',
+                'Error - Insufficient Funds',
                 `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, guildConfig.globalSettings)}**.`
               )
             ],
@@ -186,7 +191,8 @@ export const runInstantCasinoCommand = async <TInput>({
         totalBet,
         winnings: totalWinnings,
         betId,
-        game
+        game,
+        rounds
       })
       betSettled = true
 
@@ -213,7 +219,8 @@ export const runInstantCasinoCommand = async <TInput>({
             totalBet,
             winnings: totalWinnings,
             betId,
-            game
+            game,
+            rounds
           })
         } catch {
           // best-effort refund path

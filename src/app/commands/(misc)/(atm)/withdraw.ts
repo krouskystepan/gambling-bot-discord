@@ -83,7 +83,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Insufficient Funds',
+              'Error - Insufficient Funds',
               `You don't have enough funds to withdraw **${formatMoney(parsed.amount, guildConfiguration.globalSettings)}**.\nYour current balance is **${formatMoney(preview.balance, guildConfiguration.globalSettings)}**.`
             )
           ],
@@ -95,7 +95,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Insufficient Withdrawable Funds',
+              'Error - Insufficient Withdrawable Funds',
               `You requested **${formatMoney(parsed.amount, guildConfiguration.globalSettings)}**, but you can only withdraw **${formatMoney(preview.withdrawable, guildConfiguration.globalSettings)}**.\n` +
                 `**${formatMoney(preview.locked, guildConfiguration.globalSettings)}** is currently locked.`
             )
@@ -105,7 +105,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       }
 
       return interaction.reply({
-        embeds: [createErrorEmbed('Error', 'Unable to process withdrawal.')],
+        embeds: [
+          createErrorEmbed(
+            'Error - Withdrawal Failed',
+            'Unable to process withdrawal.'
+          )
+        ],
         flags: MessageFlags.Ephemeral
       })
     }

@@ -109,7 +109,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Guild Not Configured',
+            'Error - Guild Not Configured',
             'This guild has not been configured yet. Please contact an administrator.'
           )
         ],
@@ -130,7 +130,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'VIP Not Configured',
+            'Error - VIP Not Configured',
             'VIP category, price or VIP roles are not set yet. Please contact administrator.'
           )
         ],
@@ -159,7 +159,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
     if (subcommand !== 'info' && isUserBanned(user)) {
       return interaction.reply({
-        embeds: [createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)],
+        embeds: [
+          createErrorEmbed('Error - Account Restricted', USER_BANNED_MESSAGE)
+        ],
         flags: MessageFlags.Ephemeral
       })
     }
@@ -177,7 +179,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Invalid Format',
+              'Error - Invalid Input - Invalid Format',
               'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'
             )
           ],
@@ -191,7 +193,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Duration Too Short',
+              'Error - Invalid Input - Duration Too Short',
               'The duration must be at least 1 day (1d).'
             )
           ],
@@ -207,7 +209,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         flags: MessageFlags.Ephemeral
       })
 
-      const purchaseId = generateId()
+      const purchaseId = generateId('vip')
       const expiresAt = new Date(Date.now() + durationSeconds * 1000)
 
       try {
@@ -220,7 +222,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
           return interaction.editReply({
             embeds: [
-              createErrorEmbed('Insufficient Funds', 'Not enough balance.')
+              createErrorEmbed(
+                'Error - Insufficient Funds',
+                'Not enough balance.'
+              )
             ]
           })
         }
@@ -229,7 +234,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           return interaction.editReply({
             embeds: [
               createErrorEmbed(
-                'VIP Already Active',
+                'Error - VIP Already Active',
                 'You already have an active VIP room. Extend it instead of buying a new one.'
               )
             ]
@@ -272,7 +277,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         const msg = await channel.send({
           embeds: [
             createSuccessEmbed(
-              'VIP Channel Ready',
+              'Success - VIP Channel Ready',
               `Valid until <t:${Math.floor(expiresAt.getTime() / 1000)}:f>`
             )
           ]
@@ -323,7 +328,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.editReply({
         embeds: [
           createSuccessEmbed(
-            'VIP Purchased',
+            'Success - VIP Purchased',
             `Channel: <#${channel.id}>\nDuration: **${durationDays} day(s)**\nCost: **${formatMoney(totalPrice, guildConfiguration.globalSettings)}**`
           )
         ]
@@ -340,7 +345,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Not Active',
+              'Error - VIP Not Active',
               'You do not currently have an active VIP to extend.'
             )
           ],
@@ -354,7 +359,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Invalid Format',
+              'Error - Invalid Input - Invalid Format',
               'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'
             )
           ],
@@ -368,7 +373,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Duration Too Short',
+              'Error - Invalid Input - Duration Too Short',
               'The duration must be at least 1 day (1d).'
             )
           ],
@@ -396,14 +401,19 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
           return interaction.editReply({
             embeds: [
-              createErrorEmbed('Insufficient Funds', 'Not enough balance.')
+              createErrorEmbed(
+                'Error - Insufficient Funds',
+                'Not enough balance.'
+              )
             ]
           })
         }
 
         if (err instanceof Error && err.message === 'VIP_NOT_FOUND') {
           return interaction.editReply({
-            embeds: [createErrorEmbed('VIP Missing', 'VIP no longer exists.')]
+            embeds: [
+              createErrorEmbed('Error - VIP Missing', 'VIP no longer exists.')
+            ]
           })
         }
 
@@ -421,7 +431,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           content: `Your VIP has been extended, ${interaction.user}!`,
           embeds: [
             createSuccessEmbed(
-              'VIP Channel Extended',
+              'Success - VIP Channel Extended',
               `New expiry: <t:${newExpiryUnix}:f>`
             )
           ]
@@ -445,7 +455,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.editReply({
         embeds: [
           createSuccessEmbed(
-            'VIP Extended',
+            'Success - VIP Extended',
             `Your VIP has been extended by **${durationDays} day(s)**.\n` +
               `New expiry: <t:${Math.floor(newExpiry.getTime() / 1000)}:f>\n` +
               `You have been charged **${formatMoney(totalPrice, guildConfiguration.globalSettings)}**.`
@@ -461,7 +471,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid User',
+              'Error - Invalid User',
               'Bot accounts cannot be added to VIP rooms.'
             )
           ],
@@ -472,7 +482,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (userToAdd.id === interaction.user.id) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid User', 'You cannot add yourself.')
+            createErrorEmbed('Error - Invalid User', 'You cannot add yourself.')
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -487,7 +497,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'No Active VIP',
+              'Error - No Active VIP',
               'You must own an active VIP room to add members.'
             )
           ],
@@ -508,7 +518,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       } catch (err) {
         if (err instanceof Error && err.message === 'VIP_NOT_FOUND') {
           return interaction.editReply({
-            embeds: [createErrorEmbed('VIP Missing', 'VIP no longer exists.')]
+            embeds: [
+              createErrorEmbed('Error - VIP Missing', 'VIP no longer exists.')
+            ]
           })
         }
 
@@ -516,7 +528,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           return interaction.editReply({
             embeds: [
               createErrorEmbed(
-                'Already a Member',
+                'Error - Already a Member',
                 'That user is already a member of your VIP room.'
               )
             ]
@@ -527,7 +539,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           return interaction.editReply({
             embeds: [
               createErrorEmbed(
-                'VIP Room Full',
+                'Error - VIP Room Full',
                 'Your VIP room has reached the maximum number of allowed members. Remove someone before adding a new member.'
               )
             ]
@@ -536,7 +548,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
         if (err instanceof Error) {
           return interaction.editReply({
-            embeds: [createErrorEmbed('Cannot Add Member', err.message)]
+            embeds: [createErrorEmbed('Error - Cannot Add Member', err.message)]
           })
         }
         throw err
@@ -571,7 +583,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.editReply({
         embeds: [
           createSuccessEmbed(
-            'Member Added',
+            'Success - Member Added',
             `${userToAdd} added to VIP.\nCharge: **${formatMoney(chargedAmount, guildConfiguration.globalSettings)}**`
           )
         ]
@@ -585,7 +597,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid User',
+              'Error - Invalid User',
               'Bot accounts cannot be added to VIP rooms.'
             )
           ],
@@ -602,7 +614,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'No Active VIP',
+              'Error - No Active VIP',
               'You must own an active VIP room to remove members.'
             )
           ],
@@ -613,7 +625,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (userToRemove.id === interaction.user.id) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid User', 'You cannot remove yourself.')
+            createErrorEmbed(
+              'Error - Invalid User',
+              'You cannot remove yourself.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -630,7 +645,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       } catch (err) {
         if (err instanceof Error && err.message === 'VIP_NOT_FOUND') {
           return interaction.editReply({
-            embeds: [createErrorEmbed('VIP Missing', 'VIP no longer exists.')]
+            embeds: [
+              createErrorEmbed('Error - VIP Missing', 'VIP no longer exists.')
+            ]
           })
         }
 
@@ -638,7 +655,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           return interaction.editReply({
             embeds: [
               createErrorEmbed(
-                'User Not in VIP',
+                'Error - User Not in VIP',
                 'That user is not a member of your VIP room.'
               )
             ]
@@ -647,7 +664,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
         if (err instanceof Error) {
           return interaction.editReply({
-            embeds: [createErrorEmbed('Cannot Remove Member', err.message)]
+            embeds: [
+              createErrorEmbed('Error - Cannot Remove Member', err.message)
+            ]
           })
         }
         throw err
@@ -681,7 +700,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.editReply({
         embeds: [
           createSuccessEmbed(
-            'Member Removed',
+            'Success - Member Removed',
             `${userToRemove} has been removed from your VIP room.`
           )
         ]
@@ -723,7 +742,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Info',
+            'Success - VIP Info',
             vipInfoSection +
               (pricePerCreate > 0
                 ? `Price per create: **${formatMoney(pricePerCreate, guildConfiguration.globalSettings)}**\n`

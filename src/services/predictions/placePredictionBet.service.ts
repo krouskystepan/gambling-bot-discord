@@ -79,7 +79,7 @@ export const placePredictionBet = async ({
     throw new PlacePredictionBetError('User is banned', 'USER_BANNED')
   }
 
-  const betId = generateId()
+  const betId = generateId('prediction')
 
   await reserveCasinoBet({
     userId,

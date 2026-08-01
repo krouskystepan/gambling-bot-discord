@@ -10,5 +10,5 @@ export function isUserBannedError(error: unknown): boolean {
 }
 
 export function createUserBannedEmbed() {
-  return createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)
+  return createErrorEmbed('Error - Account Restricted', USER_BANNED_MESSAGE)
 }

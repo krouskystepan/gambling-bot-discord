@@ -7,13 +7,14 @@ import { describe, expect, it } from 'vitest'
 import {
   deleteMinesGame,
   getAllOldMinesGames,
-  getMinesGameByBetId,
+  getMinesGameByGameId,
   getMinesGameByUserAndGuild,
   getMinesGamesByGuildId,
   getMinesGamesNeedingIdleNudge,
-  getStaleFinishedMinesGames,
+  getOldResultMinesGames,
+  getStaleSettlingMinesGames,
   markMinesIdleNudgeSent,
-  updateMinesGame,
+  saveMinesGame,
   upsertMinesGame
 } from '@/services/db/minesGame.db'
 
@@ -26,7 +27,8 @@ const baseGame = {
   guildId: 'guild-1',
   channelId: 'channel-1',
   messageId: 'msg-1',
-  betId: 'bet-mines-1',
+  gameId: 'game-mines-1',
+  activeBetId: 'bet-mines-1',
   betAmount: 100,
   mineCount: 3,
   mineIndices: [0, 1, 2],
@@ -44,29 +46,31 @@ describe('minesGame.db', () => {
       guildId: 'guild-1'
     })
 
-    expect(game?.betId).toBe('bet-mines-1')
+    expect(game?.gameId).toBe('game-mines-1')
+    expect(game?.activeBetId).toBe('bet-mines-1')
     expect(game?.mineCount).toBe(3)
+    expect(game?.sessionStats.roundsPlayed).toBe(0)
   })
 
-  it('fetches by bet id and guild list', async () => {
+  it('fetches by game id and guild list', async () => {
     await upsertMinesGame(baseGame)
 
-    const byBet = await getMinesGameByBetId({
-      betId: 'bet-mines-1',
+    const byGame = await getMinesGameByGameId({
+      gameId: 'game-mines-1',
       guildId: 'guild-1'
     })
-    expect(byBet?.userId).toBe('user-1')
+    expect(byGame?.userId).toBe('user-1')
 
     const byGuild = await getMinesGamesByGuildId({ guildId: 'guild-1' })
     expect(byGuild).toHaveLength(1)
   })
 
-  it('updates an existing game document', async () => {
+  it('saves an existing game document', async () => {
     const game = await upsertMinesGame(baseGame)
     expect(game).toBeTruthy()
 
     game!.revealedIndices = [5]
-    await updateMinesGame(game!)
+    await saveMinesGame(game!)
 
     const updated = await getMinesGameByUserAndGuild({
       userId: 'user-1',
@@ -76,10 +80,10 @@ describe('minesGame.db', () => {
     expect(updated?.idleNudgeSentAt).toBeNull()
   })
 
-  it('finds stale finished games by grace window', async () => {
+  it('finds boards whose settlement never completed', async () => {
     await upsertMinesGame({
       ...baseGame,
-      status: 'FINISHED',
+      status: 'RESULT',
       revealedIndices: [0]
     })
     await MinesGame.collection.updateOne(
@@ -87,12 +91,28 @@ describe('minesGame.db', () => {
       { $set: { updatedAt: new Date(Date.now() - 61_000) } }
     )
 
-    const stale = await getStaleFinishedMinesGames(60_000)
-    expect(stale.some((g) => g.betId === 'bet-mines-1')).toBe(true)
-    expect(stale[0]?.status).toBe('FINISHED')
+    const stale = await getStaleSettlingMinesGames(60_000)
+    expect(stale.some((g) => g.gameId === 'game-mines-1')).toBe(true)
+    expect(stale[0]?.status).toBe('RESULT')
   })
 
-  it('finds games older than N days', async () => {
+  it('ignores settled boards without an active bet', async () => {
+    await upsertMinesGame({
+      ...baseGame,
+      status: 'RESULT',
+      activeBetId: null,
+      revealedIndices: [0]
+    })
+    await MinesGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date(Date.now() - 61_000) } }
+    )
+
+    const stale = await getStaleSettlingMinesGames(60_000)
+    expect(stale).toHaveLength(0)
+  })
+
+  it('finds active games older than N days', async () => {
     await upsertMinesGame(baseGame)
     await MinesGame.collection.updateOne(
       { userId: 'user-1', guildId: 'guild-1' },
@@ -100,14 +120,33 @@ describe('minesGame.db', () => {
     )
 
     const old = await getAllOldMinesGames(1)
-    expect(old.some((g) => g.betId === 'bet-mines-1')).toBe(true)
+    expect(old.some((g) => g.gameId === 'game-mines-1')).toBe(true)
+  })
+
+  it('routes settled games to the idle close query', async () => {
+    await upsertMinesGame({
+      ...baseGame,
+      status: 'RESULT',
+      activeBetId: null
+    })
+    await MinesGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date('2020-01-01T00:00:00Z') } }
+    )
+
+    expect(
+      (await getAllOldMinesGames(1)).some((g) => g.gameId === 'game-mines-1')
+    ).toBe(false)
+    expect(
+      (await getOldResultMinesGames(1)).some((g) => g.gameId === 'game-mines-1')
+    ).toBe(true)
   })
 
   it('does not return recent games in old query', async () => {
-    await upsertMinesGame({ ...baseGame, betId: 'bet-recent' })
+    await upsertMinesGame({ ...baseGame, gameId: 'game-recent' })
 
     const old = await getAllOldMinesGames(1)
-    expect(old.some((g) => g.betId === 'bet-recent')).toBe(false)
+    expect(old.some((g) => g.gameId === 'game-recent')).toBe(false)
   })
 
   it('finds and marks idle nudge candidates', async () => {
@@ -124,11 +163,11 @@ describe('minesGame.db', () => {
     )
 
     const needing = await getMinesGamesNeedingIdleNudge()
-    expect(needing.some((g) => g.betId === 'bet-mines-1')).toBe(true)
+    expect(needing.some((g) => g.gameId === 'game-mines-1')).toBe(true)
 
     await markMinesIdleNudgeSent({ userId: 'user-1', guildId: 'guild-1' })
     const after = await getMinesGamesNeedingIdleNudge()
-    expect(after.some((g) => g.betId === 'bet-mines-1')).toBe(false)
+    expect(after.some((g) => g.gameId === 'game-mines-1')).toBe(false)
 
     // Past auto-resolve window should not be nudged
     await MinesGame.collection.updateOne(
@@ -141,7 +180,7 @@ describe('minesGame.db', () => {
       }
     )
     const tooOld = await getMinesGamesNeedingIdleNudge()
-    expect(tooOld.some((g) => g.betId === 'bet-mines-1')).toBe(false)
+    expect(tooOld.some((g) => g.gameId === 'game-mines-1')).toBe(false)
   })
 
   it('deletes game by user and guild', async () => {

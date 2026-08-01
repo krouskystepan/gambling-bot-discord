@@ -30,6 +30,9 @@ import {
   createWarningEmbed
 } from '@/utils/discord/createEmbed'
 
+/** Avoid blocking other interactionCreate handlers on the 3s Discord ack window. */
+export const parallel = true
+
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
@@ -57,7 +60,7 @@ export default async (interaction: Interaction) => {
       return await interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Input - Not Active',
+            'Error - Invalid Input - Not Active',
             'This prediction is not active.'
           )
         ],
@@ -69,7 +72,7 @@ export default async (interaction: Interaction) => {
       return await interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Input - No Choices',
+            'Error - Invalid Input - No Choices',
             'This prediction has no choices available.'
           )
         ],
@@ -122,7 +125,7 @@ export default async (interaction: Interaction) => {
       return modalInteraction.editReply({
         embeds: [
           createErrorEmbed(
-            'Invalid Input - Non-positive number',
+            'Error - Invalid Input - Non-positive number',
             'Please enter a valid positive number.'
           )
         ]
@@ -152,7 +155,7 @@ export default async (interaction: Interaction) => {
             return modalInteraction.editReply({
               embeds: [
                 createErrorEmbed(
-                  'Invalid Input - Above Maximum Bet',
+                  'Error - Invalid Input - Above Maximum Bet',
                   `The maximum bet per choice is **${formatMoney(
                     casinoSettings.prediction.maxBet,
                     guildConfig.globalSettings
@@ -167,7 +170,7 @@ export default async (interaction: Interaction) => {
           return modalInteraction.editReply({
             embeds: [
               createErrorEmbed(
-                'Invalid Input - Below Minimum Bet',
+                'Error - Invalid Input - Below Minimum Bet',
                 `The minimum bet is **${formatMoney(
                   casinoSettings.prediction.minBet,
                   guildConfig.globalSettings
@@ -179,7 +182,10 @@ export default async (interaction: Interaction) => {
         if (err.code === 'USER_BANNED') {
           return modalInteraction.editReply({
             embeds: [
-              createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)
+              createErrorEmbed(
+                'Error - Account Restricted',
+                USER_BANNED_MESSAGE
+              )
             ]
           })
         }
@@ -187,7 +193,7 @@ export default async (interaction: Interaction) => {
           return modalInteraction.editReply({
             embeds: [
               createWarningEmbed(
-                'Bet Failed',
+                'Warning - Bet Failed',
                 'This prediction changed while placing your bet. Your funds were refunded.'
               )
             ]
@@ -200,7 +206,7 @@ export default async (interaction: Interaction) => {
     await modalInteraction.editReply({
       embeds: [
         createSuccessEmbed(
-          'Bet Placed Successfully',
+          'Success - Bet Placed Successfully',
           `You placed **${formatMoney(parsedBetAmount, guildConfig.globalSettings)}** on **${choiceName}**`
         )
       ]

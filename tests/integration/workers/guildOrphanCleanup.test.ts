@@ -11,9 +11,22 @@ import {
   upsertBaccaratGame
 } from '@/services/db/baccaratGame.db'
 import {
+  getBlackjackGameByUserAndGuild,
+  upsertBlackjackGame
+} from '@/services/db/blackjackGame.db'
+import {
+  getHiloGameByUserAndGuild,
+  upsertHiloGame
+} from '@/services/db/hiloGame.db'
+import {
   getMinesGameByUserAndGuild,
   upsertMinesGame
 } from '@/services/db/minesGame.db'
+import {
+  createPrediction,
+  updatePredictionStatus
+} from '@/services/db/prediction.db'
+import { upsertRaffle } from '@/services/db/raffle.db'
 import {
   getRouletteGameByUserAndGuild,
   upsertRouletteGame
@@ -22,15 +35,6 @@ import {
   getSlotsGameByUserAndGuild,
   upsertSlotsGame
 } from '@/services/db/slotsGame.db'
-import {
-  getBlackjackGameByUserAndGuild,
-  upsertBlackjackGame
-} from '@/services/db/blackjackGame.db'
-import {
-  createPrediction,
-  updatePredictionStatus
-} from '@/services/db/prediction.db'
-import { upsertRaffle } from '@/services/db/raffle.db'
 import { createTransaction } from '@/services/db/transaction.db'
 import { deleteVipByOwnerId } from '@/services/db/vip.db'
 import { createVip } from '@/services/db/vip.db'
@@ -250,7 +254,10 @@ describe('runGuildOrphanCleanup', () => {
       guildId: GUILD_ID,
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'bet-orphan-bj',
+      gameId: 'game-orphan-bj',
+      activeBetId: 'bet-orphan-bj',
+      baseBetAmount: 100,
+      showBalance: false,
       deck: [card('2', 2)],
       deckIndex: 1,
       hands: [
@@ -281,6 +288,88 @@ describe('runGuildOrphanCleanup', () => {
     expect(user?.lockedBalance).toBe(0)
   })
 
+  it('deletes settled casino sessions without refunding', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await upsertBlackjackGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'game-settled-bj',
+      activeBetId: null,
+      baseBetAmount: 100,
+      showBalance: false,
+      deck: [card('2', 2)],
+      deckIndex: 1,
+      hands: [
+        {
+          cards: [card('10', 10), card('8', 8)],
+          betAmount: 100,
+          finished: true,
+          isSplitHand: false
+        }
+      ],
+      activeHandIndex: -1,
+      phase: 'RESULT',
+      dealerCards: [card('10', 10), card('7', 7)]
+    })
+
+    await upsertBaccaratGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'ch-1',
+      messageId: 'msg-bc-1',
+      gameId: 'game-settled-bc',
+      activeBetId: null,
+      betAmount: 100,
+      showBalance: false,
+      skipAnimations: false,
+      phase: 'result'
+    })
+
+    await upsertMinesGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'game-settled-mines',
+      activeBetId: null,
+      betAmount: 100,
+      mineCount: 3,
+      mineIndices: [0, 1, 2],
+      revealedIndices: [5],
+      houseEdgeSnapshot: 0.03,
+      status: 'RESULT'
+    })
+
+    const refundsBefore = vi.mocked(refundLockedBet).mock.calls.length
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.blackjack).toBe(1)
+    expect(summary.baccarat).toBe(1)
+    expect(summary.mines).toBe(1)
+    expect(vi.mocked(refundLockedBet).mock.calls.length).toBe(refundsBefore)
+
+    expect(
+      await getBlackjackGameByUserAndGuild({
+        userId: 'user-1',
+        guildId: GUILD_ID
+      })
+    ).toBeNull()
+    expect(
+      await getBaccaratGameByUserAndGuild({
+        userId: 'user-1',
+        guildId: GUILD_ID
+      })
+    ).toBeNull()
+    expect(
+      await getMinesGameByUserAndGuild({ userId: 'user-1', guildId: GUILD_ID })
+    ).toBeNull()
+  })
+
   it('refunds and deletes active baccarat games', async () => {
     await seedGuild()
     await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
@@ -298,7 +387,8 @@ describe('runGuildOrphanCleanup', () => {
       guildId: GUILD_ID,
       channelId: 'ch-1',
       messageId: 'msg-bc-1',
-      betId: 'bet-bc-orphan',
+      gameId: 'game-bc-orphan',
+      activeBetId: 'bet-bc-orphan',
       betAmount: 100,
       showBalance: false,
       skipAnimations: false
@@ -319,7 +409,6 @@ describe('runGuildOrphanCleanup', () => {
     expect(user?.lockedBalance).toBe(0)
   })
 
-
   it('refunds mines games and deletes them', async () => {
     await seedGuild()
     await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
@@ -337,7 +426,8 @@ describe('runGuildOrphanCleanup', () => {
       guildId: GUILD_ID,
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'bet-orphan-mines',
+      gameId: 'game-orphan-mines',
+      activeBetId: 'bet-orphan-mines',
       betAmount: 100,
       mineCount: 3,
       mineIndices: [0, 1, 2],
@@ -466,6 +556,123 @@ describe('runGuildOrphanCleanup', () => {
     expect(user?.lockedBalance).toBe(0)
   })
 
+  it('refunds locked hi-lo rounds and deletes games', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 75,
+      betId: 'bet-orphan-hilo',
+      game: 'hilo'
+    })
+
+    await upsertHiloGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'hilo-orphan-1',
+      activeBetId: 'bet-orphan-hilo',
+      betAmount: 75,
+      firstCard: { label: '7', suite: '♥️', rank: 7 },
+      remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
+      houseEdgeSnapshot: 0.01,
+      showBalance: false
+    })
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.hilo).toBe(1)
+    expect(
+      await getHiloGameByUserAndGuild({
+        userId: 'user-1',
+        guildId: GUILD_ID
+      })
+    ).toBeNull()
+
+    const user = await User.findOne({ userId: 'user-1', guildId: GUILD_ID })
+    expect(user?.balance).toBe(1000)
+    expect(user?.lockedBalance).toBe(0)
+  })
+
+  it('deletes empty hi-lo tables without refunding', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await upsertHiloGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'hilo-empty-1',
+      activeBetId: null,
+      betAmount: null,
+      firstCard: null,
+      remainingDeck: [],
+      houseEdgeSnapshot: 0.01,
+      showBalance: false,
+      status: 'BETTING'
+    })
+
+    const refundCallsBefore = vi.mocked(refundLockedBet).mock.calls.length
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.hilo).toBe(1)
+    expect(
+      await getHiloGameByUserAndGuild({
+        userId: 'user-1',
+        guildId: GUILD_ID
+      })
+    ).toBeNull()
+    expect(vi.mocked(refundLockedBet).mock.calls.length).toBe(refundCallsBefore)
+  })
+
+  it('records hi-lo refund failures without deleting the game', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 50,
+      betId: 'bet-fail-hilo',
+      game: 'hilo'
+    })
+
+    await upsertHiloGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'hilo-fail-1',
+      activeBetId: 'bet-fail-hilo',
+      betAmount: 50,
+      firstCard: { label: '7', suite: '♥️', rank: 7 },
+      remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
+      houseEdgeSnapshot: 0.01,
+      showBalance: false
+    })
+
+    vi.mocked(refundLockedBet).mockRejectedValueOnce(
+      new Error('hilo refund failed')
+    )
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.hilo).toBe(0)
+    expect(summary.errors).toEqual([
+      'hilo hilo-fail-1: Error: hilo refund failed'
+    ])
+    expect(
+      await getHiloGameByUserAndGuild({
+        userId: 'user-1',
+        guildId: GUILD_ID
+      })
+    ).not.toBeNull()
+  })
+
   it('deletes unlocked slots machines without refunding', async () => {
     await seedGuild()
     await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
@@ -566,6 +773,7 @@ describe('runGuildOrphanCleanup', () => {
       mines: 0,
       roulette: 0,
       slots: 0,
+      hilo: 0,
       vipRooms: 0,
       atmRejected: 0,
       errors: []
@@ -675,7 +883,10 @@ describe('runGuildOrphanCleanup', () => {
       guildId: GUILD_ID,
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'bet-fail-bj',
+      gameId: 'game-fail-bj',
+      activeBetId: 'bet-fail-bj',
+      baseBetAmount: 100,
+      showBalance: false,
       deck: [card('2', 2)],
       deckIndex: 1,
       hands: [
@@ -699,7 +910,7 @@ describe('runGuildOrphanCleanup', () => {
 
     expect(summary.blackjack).toBe(0)
     expect(summary.errors).toEqual([
-      'blackjack bet-fail-bj: Error: blackjack refund failed'
+      'blackjack game-fail-bj: Error: blackjack refund failed'
     ])
   })
 
@@ -720,7 +931,8 @@ describe('runGuildOrphanCleanup', () => {
       guildId: GUILD_ID,
       channelId: 'channel-1',
       messageId: 'msg-bc-fail',
-      betId: 'bet-fail-bc',
+      gameId: 'game-fail-bc',
+      activeBetId: 'bet-fail-bc',
       betAmount: 100,
       showBalance: false,
       skipAnimations: false
@@ -734,10 +946,9 @@ describe('runGuildOrphanCleanup', () => {
 
     expect(summary.baccarat).toBe(0)
     expect(summary.errors).toEqual([
-      'baccarat bet-fail-bc: Error: baccarat refund failed'
+      'baccarat game-fail-bc: Error: baccarat refund failed'
     ])
   })
-
 
   it('records mines refund failures without deleting the game', async () => {
     await seedGuild()
@@ -756,7 +967,8 @@ describe('runGuildOrphanCleanup', () => {
       guildId: GUILD_ID,
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'bet-fail-mines',
+      gameId: 'game-fail-mines',
+      activeBetId: 'bet-fail-mines',
       betAmount: 50,
       mineCount: 2,
       mineIndices: [0, 1],
@@ -773,7 +985,7 @@ describe('runGuildOrphanCleanup', () => {
 
     expect(summary.mines).toBe(0)
     expect(summary.errors).toEqual([
-      'mines bet-fail-mines: Error: mines refund failed'
+      'mines game-fail-mines: Error: mines refund failed'
     ])
   })
 

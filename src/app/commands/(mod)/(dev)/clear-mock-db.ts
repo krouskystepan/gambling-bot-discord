@@ -37,7 +37,8 @@ export const command: CommandData = {
             { name: 'ATM requests only', value: 'atm' },
             { name: 'Raffles only', value: 'raffles' },
             { name: 'Predictions only', value: 'predictions' },
-            { name: 'VIP rooms only', value: 'vip' }
+            { name: 'VIP rooms only', value: 'vip' },
+            { name: 'Quest progress only', value: 'quests' }
           ]
         }
       ]

@@ -1,6 +1,7 @@
-import { hoursUntilBlackjackAutostand } from 'gambling-bot-shared/blackjack'
-
-import { ChannelType } from 'discord.js'
+import {
+  hoursUntilBlackjackAutostand,
+  hoursUntilBlackjackIdleClose
+} from 'gambling-bot-shared/blackjack'
 
 import { Client } from 'commandkit'
 
@@ -9,8 +10,11 @@ import {
   markBlackjackIdleNudgeSent
 } from '@/services/db/blackjackGame.db'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
+import {
+  casinoGameMessageLink,
+  sendCasinoIdleNudgeDm
+} from '@/utils/casino/idleNudgeDm'
 import { sleep } from '@/utils/common/utils'
-import { createWarningEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
@@ -23,42 +27,45 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
 
   for (const game of games) {
     try {
-      const guild = await client.guilds.fetch(game.guildId).catch(() => null)
-      if (!guild) continue
+      const isIdleClosePhase =
+        game.phase === 'RESULT' || game.phase === 'BETTING'
+      const hoursLeft = isIdleClosePhase
+        ? hoursUntilBlackjackIdleClose(game.updatedAt)
+        : hoursUntilBlackjackAutostand(game.updatedAt)
+      const jumpLink = casinoGameMessageLink(game)
 
-      const channel = await guild.channels
-        .fetch(game.channelId)
-        .catch(() => null)
-      if (!channel || channel.type !== ChannelType.GuildText) continue
-
-      const hoursLeft = hoursUntilBlackjackAutostand(game.updatedAt)
-      const gameMessageLink = `https://discord.com/channels/${game.guildId}/${game.channelId}/${game.messageId}`
-
-      await channel.send({
-        content: `<@${game.userId}>`,
-        embeds: [
-          createWarningEmbed(
-            'Blackjack Game Idle',
-            [
-              `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**.`,
-              '',
-              `[Jump to your game message](${gameMessageLink})`
-            ].join('\n'),
-            game.betId
-          )
-        ]
+      const delivered = await sendCasinoIdleNudgeDm({
+        client,
+        userId: game.userId,
+        title: isIdleClosePhase
+          ? 'Warning - Blackjack Table Idle'
+          : 'Warning - Blackjack Game Idle',
+        body: [
+          isIdleClosePhase
+            ? `Still playing? If you stay inactive, this table will close in about **${hoursLeft} hour(s)**.`
+            : `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**.`,
+          '',
+          `[Jump to your game message](${jumpLink})`
+        ].join('\n'),
+        gameId: game.gameId
       })
 
+      // Mark either way so we do not retry endlessly when DMs are closed.
       await markBlackjackIdleNudgeSent({
         userId: game.userId,
         guildId: game.guildId
       })
 
+      if (!delivered) {
+        await sleep(500)
+        continue
+      }
+
       sent++
       guildSent.set(game.guildId, (guildSent.get(game.guildId) ?? 0) + 1)
       await sleep(500)
     } catch (err) {
-      logger.error(`Blackjack idle nudge failed for game ${game.betId}`, err)
+      logger.error(`Blackjack idle nudge failed for game ${game.gameId}`, err)
     }
   }
 
@@ -78,7 +85,7 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
         worker: 'Blackjack reminders',
         title: `Reminded ${count} idle player(s)`,
         description:
-          'Players with inactive blackjack games were pinged before auto-stand.',
+          'Players with inactive blackjack games were DMed before auto-stand / close.',
         level: 'info'
       })
     }

@@ -34,9 +34,8 @@ const { evaluateAndGrantQuests } = await import('gambling-bot-shared/quests')
 const { isGlobalFeatureDisabled } = await import('gambling-bot-shared/guild')
 const { createSuccessEmbed } = await import('@/utils/discord/createEmbed')
 const { logger } = await import('@/utils/logger')
-const { runQuestEvaluation, tryEvaluateQuests } = await import(
-  '@/services/quests/evaluateQuests.service'
-)
+const { runQuestEvaluation, tryEvaluateQuests } =
+  await import('@/services/quests/evaluateQuests.service')
 
 describe('runQuestEvaluation', () => {
   beforeEach(() => {
@@ -110,7 +109,7 @@ describe('tryEvaluateQuests', () => {
 
     await vi.waitFor(() => expect(followUp).toHaveBeenCalled())
     expect(createSuccessEmbed).toHaveBeenCalledWith(
-      'Quest Complete',
+      'Success - Quest Complete',
       expect.stringContaining('Win 3')
     )
   })

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSlipBet, mergeSlipBet, toRouletteBets } from '@/utils/casino/roulette/slip'
+import {
+  buildSlipBet,
+  mergeSlipBet,
+  toRouletteBets
+} from '@/utils/casino/roulette/slip'
 
 describe('roulette slip helpers', () => {
   it('builds outside and dozen bets', () => {
@@ -24,9 +28,7 @@ describe('roulette slip helpers', () => {
     const second = buildSlipBet('red', 50)
     const third = buildSlipBet('black', 25)
 
-    expect(mergeSlipBet([first], second)).toEqual([
-      { ...first, amount: 150 }
-    ])
+    expect(mergeSlipBet([first], second)).toEqual([{ ...first, amount: 150 }])
     expect(mergeSlipBet([first], third)).toEqual([first, third])
   })
 

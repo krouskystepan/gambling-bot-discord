@@ -1,4 +1,7 @@
-import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
+import {
+  bumpSessionStats,
+  shouldAnnounceByMultiplier
+} from 'gambling-bot-shared/casino'
 import { formatMoney } from 'gambling-bot-shared/common'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import type { TMinesGame } from 'gambling-bot-shared/mines'
@@ -8,22 +11,31 @@ import {
   resolveFinishedMines
 } from 'gambling-bot-shared/mines'
 
-import { deleteMinesGame, getUser, settleCasinoWinnings } from '@/services'
+import { getUser, settleCasinoWinnings, updateMinesGame } from '@/services'
 import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
-import { formatMinesBoard, renderMinesEmbed } from './render'
+import {
+  formatMinesBoard,
+  renderMinesEmbed,
+  renderMinesResultComponents
+} from './render'
 
 type EditableMessage = { edit: (...args: never[]) => Promise<unknown> }
 type AnnounceGuild = Parameters<typeof tryAnnounceBigWin>[0]['guild']
 
+/**
+ * Settles the finished board and parks the session in `RESULT` so the player
+ * can rebet, change the setup, or close it.
+ */
 export const finishMinesAndSettle = async ({
   game,
   guildConfig,
   guild,
   sourceChannelId,
   showBalance,
-  message
+  message,
+  finalMessageContent
 }: {
   game: TMinesGame
   guildConfig?: TGuildConfiguration | null
@@ -31,22 +43,36 @@ export const finishMinesAndSettle = async ({
   sourceChannelId: string
   showBalance: boolean
   message?: EditableMessage | null
+  finalMessageContent?: string
 }) => {
   const engine = docToMinesEngine(game)
   const resolved = resolveFinishedMines(engine)
   const globalSettings = guildConfig?.globalSettings
+  const stake = engine.betAmount
 
-  await settleCasinoWinnings({
-    userId: game.userId,
-    guildId: game.guildId,
-    totalBet: game.betAmount,
-    winnings: resolved.payout,
-    betId: game.betId,
-    game: 'mines'
-  })
+  const betId = game.activeBetId
+  const sessionStats = betId
+    ? bumpSessionStats(game.sessionStats, {
+        totalBet: stake,
+        totalPayout: resolved.payout
+      })
+    : game.sessionStats
+
+  if (betId) {
+    await settleCasinoWinnings({
+      userId: game.userId,
+      guildId: game.guildId,
+      totalBet: stake,
+      winnings: resolved.payout,
+      betId,
+      game: 'mines',
+      rounds: 1
+    })
+  }
 
   if (
     guildConfig &&
+    betId &&
     resolved.resultKind === 'CASH_OUT' &&
     shouldAnnounceByMultiplier(
       resolved.multiplier,
@@ -62,13 +88,22 @@ export const finishMinesAndSettle = async ({
           label: '💣 Mines',
           multiplier: resolved.multiplier.toFixed(2),
           payout: formatMoney(resolved.payout, globalSettings),
-          bet: formatMoney(game.betAmount, globalSettings)
+          bet: formatMoney(stake, globalSettings)
         })
       ],
-      betId: game.betId,
+      betId: game.gameId,
       sourceChannelId
     })
   }
+
+  await updateMinesGame({
+    userId: game.userId,
+    guildId: game.guildId,
+    status: 'RESULT',
+    activeBetId: null,
+    revealedIndices: engine.revealedIndices,
+    sessionStats
+  })
 
   let userBalance: number | undefined
   if (showBalance) {
@@ -81,11 +116,12 @@ export const finishMinesAndSettle = async ({
 
   if (message) {
     await message.edit({
+      content: finalMessageContent,
       embeds: [
         renderMinesEmbed({
-          betId: game.betId,
-          betAmount: game.betAmount,
-          mineCount: game.mineCount,
+          gameId: game.gameId,
+          betAmount: stake,
+          mineCount: engine.mineCount,
           revealedCount: engine.revealedIndices.length,
           multiplier:
             resolved.resultKind === 'BUST'
@@ -107,14 +143,12 @@ export const finishMinesAndSettle = async ({
           globalSettings
         })
       ],
-      components: []
+      components: renderMinesResultComponents({
+        gameId: game.gameId,
+        showBalance
+      })
     } as never)
   }
 
-  await deleteMinesGame({
-    userId: game.userId,
-    guildId: game.guildId
-  })
-
-  return resolved
+  return { ...resolved, sessionStats }
 }

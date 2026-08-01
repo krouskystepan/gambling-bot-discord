@@ -23,6 +23,9 @@ import { logger } from '@/utils/logger'
 
 //! DB TRANSACTIONS
 //! Rare condition - no .save()
+/** Avoid blocking other interactionCreate handlers on the 3s Discord ack window. */
+export const parallel = true
+
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton() || !interaction.customId) return
 
@@ -73,7 +76,7 @@ export default async (interaction: Interaction, client: Client) => {
         return interaction.reply({
           embeds: [
             createWarningEmbed(
-              'Balance too high',
+              'Warning - Balance too high',
               `You can only receive money if your balance is below **${formatMoney(parsedAmount * 5, guildConfiguration.globalSettings)}**.`
             )
           ],
