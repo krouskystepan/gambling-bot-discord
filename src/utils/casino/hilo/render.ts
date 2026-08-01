@@ -44,7 +44,7 @@ export const renderHiloPromptEmbed = ({
       betLine(bet, globalSettings),
       `**Card**\n${firstCard}`,
       `**Odds**\n⬆ Higher · **${formatMult(higherMult)}**\n⬇ Lower · **${formatMult(lowerMult)}**`,
-      `_No guess in time takes a ${(timeoutFee * 100).toFixed(0)}% timeout fee._`
+      `_You have **1 hour** to guess. After **30 minutes** idle you'll get a DM reminder. No guess in time takes a ${(timeoutFee * 100).toFixed(0)}% timeout fee._`
     ].join('\n\n'),
     betId
   )
