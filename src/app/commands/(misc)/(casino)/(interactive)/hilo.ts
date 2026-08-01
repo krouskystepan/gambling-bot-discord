@@ -1,12 +1,5 @@
+import { getHiloWinMultiplier } from 'gambling-bot-shared/casino'
 import {
-  type HiloGuess,
-  getHiloTimeoutRefund,
-  getHiloWinMultiplier,
-  resolveHiloRound,
-  shouldAnnounceByMultiplier
-} from 'gambling-bot-shared/casino'
-import {
-  formatMoney,
   generateId,
   parseReadableStringToNumber
 } from 'gambling-bot-shared/common'
@@ -20,29 +13,21 @@ import {
   betOption,
   checkCasinoChannels,
   checkUserRegistration,
+  deleteHiloGame,
   refundLockedBet,
   reserveCasinoBet,
-  settleCasinoWinnings,
-  showBalanceOption
+  showBalanceOption,
+  upsertHiloGame
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
-import {
-  renderHiloPromptEmbed,
-  renderHiloResultEmbed,
-  renderHiloRevealEmbed,
-  renderHiloTimeoutEmbed
-} from '@/utils/casino/hilo/render'
+import { encodeHiloId, renderHiloPromptEmbed } from '@/utils/casino/hilo'
 import {
   createShuffledHiloDeck,
   drawHiloCard,
   formatHiloCard
 } from '@/utils/casino/rng'
-import { checkValidBet, sleep } from '@/utils/common/utils'
+import { checkValidBet } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
-import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
-import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
-
-const HILO_TIMEOUT_MS = 45_000
 
 export const command: CommandData = {
   name: 'hilo',
@@ -54,14 +39,13 @@ export const command: CommandData = {
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   return runWithQuestNotifyInteraction(interaction, async () => {
     let reserved = false
-    let settled = false
     let userId: string | null = null
     let guildId: string | null = null
     let totalBet = 0
     let betId: string | null = null
 
     const refundIfNeeded = async () => {
-      if (!reserved || settled || !userId || !guildId || !betId) return
+      if (!reserved || !userId || !guildId || !betId) return
       await refundLockedBet({
         userId,
         guildId,
@@ -70,6 +54,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         game: 'hilo'
       })
       reserved = false
+      await deleteHiloGame({ userId, guildId }).catch(() => undefined)
     }
 
     try {
@@ -96,7 +81,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (!isBetValid) return
 
       totalBet = betAmount
-      betId = generateId()
+      const gameId = generateId('hilo')
+      betId = gameId
 
       await interaction.deferReply()
 
@@ -106,14 +92,15 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           guildId,
           totalBet,
           betId,
-          game: 'hilo'
+          game: 'hilo',
+          rounds: 1
         })
         reserved = true
       } catch {
         return interaction.editReply({
           embeds: [
             createErrorEmbed(
-              'Bet Failed',
+              'Error - Bet Failed',
               'Not enough balance to place this bet.'
             )
           ]
@@ -124,6 +111,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const first = drawHiloCard(deck)
       const firstCard = formatHiloCard(first)
       const houseEdge = guildConfig.casinoSettings.hilo.houseEdge
+      const timeoutFee = guildConfig.casinoSettings.hilo.timeoutFee
       const higherMult = getHiloWinMultiplier(first.rank, 'higher', houseEdge)
       const lowerMult = getHiloWinMultiplier(first.rank, 'lower', houseEdge)
       const globalSettings = guildConfig.globalSettings
@@ -135,21 +123,21 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             higherMult,
             lowerMult,
             bet: totalBet,
-            timeoutFee: guildConfig.casinoSettings.hilo.timeoutFee,
-            betId,
+            timeoutFee,
+            betId: gameId,
             globalSettings
           })
         ],
         components: [
           new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
-              .setCustomId('higher')
+              .setCustomId(encodeHiloId({ gameId, guess: 'higher' }))
               .setLabel('Higher')
               .setEmoji('⬆')
               .setStyle(ButtonStyle.Success)
               .setDisabled(higherMult == null),
             new ButtonBuilder()
-              .setCustomId('lower')
+              .setCustomId(encodeHiloId({ gameId, guess: 'lower' }))
               .setLabel('Lower')
               .setEmoji('⬇')
               .setStyle(ButtonStyle.Danger)
@@ -158,147 +146,24 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         ]
       })
 
-      const button = await reply
-        .awaitMessageComponent({
-          filter: (i) => i.user.id === interaction.user.id,
-          time: HILO_TIMEOUT_MS
-        })
-        .catch(async () => {
-          const timeoutFee = guildConfig.casinoSettings.hilo.timeoutFee
-          const refunded = getHiloTimeoutRefund(totalBet, timeoutFee)
-          const feeKept = totalBet - refunded
-
-          await settleCasinoWinnings({
-            userId: userId!,
-            guildId: guildId!,
-            totalBet,
-            winnings: refunded,
-            betId: betId!,
-            game: 'hilo'
-          })
-          settled = true
-          reserved = false
-
-          await reply.edit({
-            embeds: [
-              renderHiloTimeoutEmbed({
-                firstCard,
-                bet: totalBet,
-                timeoutFee,
-                feeKept,
-                refunded,
-                betId: betId!,
-                globalSettings
-              })
-            ],
-            components: []
-          })
-          return null
-        })
-
-      if (!button) return
-
-      await button.deferUpdate()
-
-      const guess = button.customId as HiloGuess
-      const winMultiplier = getHiloWinMultiplier(first.rank, guess, houseEdge)
-      if (winMultiplier == null) {
-        await refundIfNeeded()
-        await reply.edit({
-          embeds: [
-            createErrorEmbed(
-              'Invalid Guess',
-              'That side cannot win on this card.'
-            )
-          ],
-          components: []
-        })
-        return
-      }
-
-      await reply.edit({
-        embeds: [
-          renderHiloRevealEmbed({
-            firstCard,
-            guess,
-            winMultiplier,
-            bet: totalBet,
-            betId,
-            globalSettings
-          })
-        ],
-        components: []
-      })
-
-      await sleep(700)
-
-      const second = drawHiloCard(deck)
-      const secondCard = formatHiloCard(second)
-      const outcome = resolveHiloRound(first.rank, second.rank, guess)
-
-      const totalWinnings =
-        outcome === 'win'
-          ? totalBet * winMultiplier
-          : outcome === 'push'
-            ? totalBet
-            : 0
-
-      const finalBalance = await settleCasinoWinnings({
+      await upsertHiloGame({
         userId,
         guildId,
-        totalBet,
-        winnings: totalWinnings,
-        betId,
-        game: 'hilo'
+        channelId: interaction.channelId,
+        messageId: reply.id,
+        gameId,
+        activeBetId: betId,
+        betAmount: totalBet,
+        firstCard: first,
+        remainingDeck: deck,
+        houseEdgeSnapshot: houseEdge,
+        timeoutFeeSnapshot: timeoutFee,
+        showBalance: Boolean(showBalance),
+        status: 'WAITING'
       })
-      settled = true
+
+      // Stake is owned by the persisted round + timeout worker from here.
       reserved = false
-
-      const liveResult = totalWinnings - totalBet
-
-      await reply.edit({
-        embeds: [
-          renderHiloResultEmbed({
-            outcome,
-            firstCard,
-            secondCard,
-            guess,
-            winMultiplier,
-            bet: totalBet,
-            liveResult,
-            showBalance,
-            finalBalance,
-            betId,
-            globalSettings
-          })
-        ],
-        components: []
-      })
-
-      if (
-        outcome === 'win' &&
-        shouldAnnounceByMultiplier(
-          winMultiplier,
-          guildConfig.casinoSettings.winAnnouncements.hiloMinMultiplier
-        )
-      ) {
-        tryAnnounceBigWin({
-          guild: interaction.guild,
-          guildConfig,
-          game: 'hilo',
-          lines: [
-            formatBigWinLine({
-              label: 'Hi-Lo',
-              middle: [`**${firstCard}** → **${secondCard}** (${guess})`],
-              multiplier: winMultiplier.toFixed(2),
-              payout: formatMoney(totalWinnings, globalSettings),
-              bet: formatMoney(totalBet, globalSettings)
-            })
-          ],
-          betId,
-          sourceChannelId: interaction.channelId
-        })
-      }
     } catch (error) {
       await refundIfNeeded()
       await handleUnexpectedInteractionError(interaction, error)

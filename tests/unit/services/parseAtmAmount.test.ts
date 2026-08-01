@@ -10,7 +10,7 @@ describe('parseAtmAmount', () => {
       ok: false,
       embed: {
         data: expect.objectContaining({
-          title: 'Invalid Input - Not a number',
+          title: 'Error - Invalid Input - Not a number',
           description:
             'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
         })
@@ -24,7 +24,7 @@ describe('parseAtmAmount', () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
 
-    expect(result.embed.data.title).toBe('Invalid Input - Non-positive number')
+    expect(result.embed.data.title).toBe('Error - Invalid Input - Non-positive number')
     expect(result.embed.data.description).toBe(
       'The number you provided must be greater than 0.\nPlease enter a positive value.'
     )

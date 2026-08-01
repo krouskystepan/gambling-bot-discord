@@ -81,7 +81,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Manager Role Setup - Set',
+              'Error - Manager Role Setup - Set',
               `The manager role is already set to ${role}.`
             )
           ],
@@ -95,7 +95,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Manager Role Setup - Set',
+            'Success - Manager Role Setup - Set',
             `Manager role has been set to ${role}.`
           )
         ]
@@ -109,7 +109,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Manager Role Setup - Remove',
+              'Error - Manager Role Setup - Remove',
               `Role with ID ${roleId} is not set as manager role.`
             )
           ],
@@ -123,7 +123,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Manager Role Setup - Remove',
+            'Success - Manager Role Setup - Remove',
             `Manager role with ID ${roleId} has been successfully removed.`
           )
         ]

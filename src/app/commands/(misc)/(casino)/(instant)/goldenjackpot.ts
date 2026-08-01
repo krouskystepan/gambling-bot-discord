@@ -50,7 +50,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         await interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Entries',
+              'Error - Invalid Input - Entries',
               `The number of entries must be between 1 and ${GOLDEN_JACKPOT_MAX_ENTRIES}.`
             )
           ],
@@ -65,6 +65,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         validateBetAmount: unitBet,
         minBet: guildConfig.casinoSettings.goldenJackpot.minBet,
         maxBet: guildConfig.casinoSettings.goldenJackpot.maxBet,
+        rounds: entries,
         input: { unitBet, entries }
       }
     },

@@ -63,6 +63,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         validateBetAmount: unitBet,
         minBet: guildConfig.casinoSettings.dice.minBet,
         maxBet: guildConfig.casinoSettings.dice.maxBet,
+        rounds: rolls,
         input: { side, unitBet, rolls }
       }
     },

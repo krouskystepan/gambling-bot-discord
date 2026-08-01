@@ -1,8 +1,4 @@
 import {
-  getBlackjackPayout,
-  shouldAnnounceByMultiplier
-} from 'gambling-bot-shared/casino'
-import {
   formatMoney,
   generateId,
   parseReadableStringToNumber
@@ -17,23 +13,12 @@ import {
   checkCasinoChannels,
   checkUserRegistration,
   getBlackjackGameByUserAndGuild,
-  getUser,
-  reserveCasinoBet,
-  settleCasinoWinnings,
-  upsertBlackjackGame
+  getUser
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
-import {
-  DECK,
-  StartBlackjackResultId,
-  calculateHandValue,
-  renderBlackjackButtons,
-  renderBlackjackEmbed,
-  shuffleDeck
-} from '@/utils/casino/blackjack'
+import { startBlackjackHand } from '@/utils/casino/blackjack'
 import { checkValidBet } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
-import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 export const command: CommandData = {
   name: 'blackjack',
@@ -74,7 +59,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Blackjack Already Active',
+              'Error - Blackjack Already Active',
               `You already have an active Blackjack game running! 🃏`
             )
           ],
@@ -99,15 +84,25 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       await interaction.deferReply()
 
-      const betId = generateId()
+      const message = await interaction.fetchReply()
 
       try {
-        await reserveCasinoBet({
+        const hand = await startBlackjackHand({
           userId: user.userId,
           guildId: user.guildId,
-          totalBet: parsedBetAmount,
-          betId,
-          game: 'blackjack'
+          gameId: generateId('blackjack'),
+          channelId: interaction.channelId,
+          messageId: message.id,
+          betAmount: parsedBetAmount,
+          showBalance,
+          guildConfig: configReply,
+          guild: interaction.guild,
+          sourceChannelId: interaction.channelId
+        })
+
+        await interaction.editReply({
+          embeds: hand.embeds,
+          components: hand.components
         })
       } catch (err) {
         if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
@@ -116,160 +111,17 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             guildId: user.guildId
           })
 
-          return await interaction.reply({
+          return await interaction.editReply({
             embeds: [
               createErrorEmbed(
-                'Insufficient Funds',
+                'Error - Insufficient Funds',
                 `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
               )
-            ],
-            flags: MessageFlags.Ephemeral
+            ]
           })
         }
         throw err
       }
-
-      const shuffledDeck = shuffleDeck(DECK)
-      const playerCards = [shuffledDeck[0], shuffledDeck[1]]
-      const dealerCards = [shuffledDeck[2], shuffledDeck[3]]
-
-      const playerHasBlackjack =
-        playerCards.length === 2 && calculateHandValue(playerCards) === 21
-
-      const dealerHasBlackjack =
-        dealerCards.length === 2 && calculateHandValue(dealerCards) === 21
-
-      const { winMultipliers } = configReply.casinoSettings.blackjack
-
-      if (playerHasBlackjack || dealerHasBlackjack) {
-        let startResultId: StartBlackjackResultId
-        let payout = 0
-
-        if (playerHasBlackjack && dealerHasBlackjack) {
-          startResultId = 'BBJ'
-          payout = getBlackjackPayout(parsedBetAmount, 'push', winMultipliers)
-        } else if (playerHasBlackjack) {
-          startResultId = 'PBJ'
-          payout = getBlackjackPayout(
-            parsedBetAmount,
-            'blackjack',
-            winMultipliers
-          )
-        } else {
-          startResultId = 'DBJ'
-          payout = 0
-        }
-
-        const finalBalance = await settleCasinoWinnings({
-          userId: user.userId,
-          guildId: user.guildId,
-          totalBet: parsedBetAmount,
-          winnings: payout,
-          betId,
-          game: 'blackjack'
-        })
-
-        if (startResultId === 'PBJ') {
-          const blackjackMultiplier = payout / parsedBetAmount
-          if (
-            shouldAnnounceByMultiplier(
-              blackjackMultiplier,
-              configReply.casinoSettings.winAnnouncements.blackjackMinMultiplier
-            )
-          ) {
-            tryAnnounceBigWin({
-              guild: interaction.guild,
-              guildConfig: configReply,
-              game: 'blackjack',
-              lines: [
-                `**x${blackjackMultiplier.toFixed(2)}** → **${formatMoney(payout, configReply.globalSettings)}** (bet **${formatMoney(parsedBetAmount, configReply.globalSettings)}**)`
-              ],
-              betId,
-              sourceChannelId: interaction.channelId
-            })
-          }
-        }
-
-        const hands = [
-          {
-            cards: playerCards,
-            betAmount: parsedBetAmount,
-            finished: true,
-            isSplitHand: false
-          }
-        ]
-
-        return interaction.editReply({
-          embeds: [
-            renderBlackjackEmbed({
-              userId: interaction.user.id,
-              guildId: interaction.guildId!,
-              betId,
-              hands,
-              activeHandIndex: -1,
-              dealerCards,
-              showBalance,
-              userBalance: finalBalance,
-              result: { kind: 'START', startResultId, payout },
-              globalSettings: configReply.globalSettings
-            })
-          ]
-        })
-      }
-
-      const message = await interaction.fetchReply()
-
-      const hands = [
-        {
-          cards: playerCards,
-          betAmount: parsedBetAmount,
-          finished: false,
-          isSplitHand: false
-        }
-      ]
-
-      await upsertBlackjackGame({
-        userId: interaction.user.id,
-        guildId: interaction.guildId!,
-        channelId: interaction.channelId,
-        messageId: message.id,
-        betId,
-        deck: shuffledDeck,
-        deckIndex: 4,
-        hands,
-        activeHandIndex: 0,
-        phase: 'PLAYER',
-        dealerCards
-      })
-
-      const canSplit =
-        playerCards.length === 2 &&
-        playerCards[0].label === playerCards[1].label
-
-      const row = renderBlackjackButtons({
-        betId,
-        showBalance,
-        canDouble: true,
-        canSplit
-      })
-
-      await interaction.editReply({
-        embeds: [
-          renderBlackjackEmbed({
-            userId: interaction.user.id,
-            guildId: interaction.guildId!,
-            betId,
-            hands,
-            activeHandIndex: 0,
-            result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
-            dealerCards,
-            showBalance,
-            dealerHideSecondCard: true,
-            globalSettings: configReply.globalSettings
-          })
-        ],
-        components: [row]
-      })
     } catch (error) {
       await handleUnexpectedInteractionError(interaction, error)
     }

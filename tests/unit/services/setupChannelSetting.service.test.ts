@@ -140,7 +140,7 @@ describe('handleChannelSetup', () => {
     expect(already.save).not.toHaveBeenCalled()
     expect(addInteraction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [{ title: 'Setup - Add', description: 'already <#ch-1>' }]
+        embeds: [{ title: 'Error - Setup - Add', description: 'already <#ch-1>' }]
       })
     )
 
@@ -155,7 +155,7 @@ describe('handleChannelSetup', () => {
     })
     expect(removeInteraction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [{ title: 'Setup - Remove', description: 'missing ch-1' }]
+        embeds: [{ title: 'Error - Setup - Remove', description: 'missing ch-1' }]
       })
     )
   })
@@ -223,7 +223,7 @@ describe('handleChannelSetup', () => {
     })
     expect(removeInteraction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [{ title: 'Setup - Remove', description: 'missing ch-1' }]
+        embeds: [{ title: 'Error - Setup - Remove', description: 'missing ch-1' }]
       })
     )
   })

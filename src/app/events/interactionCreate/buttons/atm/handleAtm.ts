@@ -18,6 +18,9 @@ import {
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 import { logger } from '@/utils/logger'
 
+/** Avoid blocking other interactionCreate handlers on the 3s Discord ack window. */
+export const parallel = true
+
 export default async (interaction: Interaction, client: Client) => {
   if (!interaction.isButton()) return
 
@@ -37,7 +40,9 @@ export default async (interaction: Interaction, client: Client) => {
       !member?.permissions.has(PermissionsBitField.Flags.Administrator)
     ) {
       return interaction.reply({
-        embeds: [createErrorEmbed('Permission Denied', 'Not authorized.')],
+        embeds: [
+          createErrorEmbed('Error - Permission Denied', 'Not authorized.')
+        ],
         flags: MessageFlags.Ephemeral
       })
     }
@@ -77,7 +82,7 @@ export default async (interaction: Interaction, client: Client) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Already Handled',
+            'Error - Already Handled',
             'This request is no longer pending.'
           )
         ],

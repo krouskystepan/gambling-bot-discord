@@ -124,7 +124,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Guild Not Configured',
+            'Error - Guild Not Configured',
             'This guild has not been configured yet. Please set it up first.'
           )
         ],
@@ -141,7 +141,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Permission Denied',
+            'Error - Permission Denied',
             `You need to be an **Administrator** or have the ${
               managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
             } to use this command.`
@@ -164,7 +164,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Bot user',
+              'Error - Invalid Input - Bot user',
               'You cannot create a VIP room for bots.'
             )
           ],
@@ -187,7 +187,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Already Active',
+              'Error - VIP Already Active',
               `User <@${targetedUser.id}> already has a VIP channel: <#${existingVip.channelId}>.`
             )
           ],
@@ -199,7 +199,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Invalid Duration',
+              'Error - Invalid Input - Invalid Duration',
               'Format is invalid. Use whole numbers only, e.g., 1d, 2w.'
             )
           ],
@@ -212,7 +212,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Duration Too Short',
+              'Error - Invalid Input - Duration Too Short',
               'The duration must be at least 1 day (1d).'
             )
           ],
@@ -277,7 +277,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         content: `Welcome to your VIP channel, <@${targetedUser.id}>! 🎉`,
         embeds: [
           createSuccessEmbed(
-            'VIP Channel Ready',
+            'Success - VIP Channel Ready',
             `Your channel <#${channel.id}> is valid until <t:${Math.floor(
               expiresAt.getTime() / 1000
             )}:f>`
@@ -307,7 +307,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Room Created',
+            'Success - VIP Room Created',
             `VIP room <#${channel.id}> has been created for <@${targetedUser.id}>.\n` +
               `It will expire <t:${Math.floor(expiresAt.getTime() / 1000)}:R>.`
           )
@@ -323,7 +323,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Bot user',
+              'Error - Invalid Input - Bot user',
               'You cannot remove a VIP room for bot.'
             )
           ],
@@ -340,7 +340,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Not Active',
+              'Error - VIP Not Active',
               `User <@${targetedUser.id}> does not currently have an active VIP room.`
             )
           ],
@@ -356,7 +356,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Wrong Discord Configuration',
+              'Error - Wrong Discord Configuration',
               'Channel misconfigured or inaccessible.'
             )
           ],
@@ -377,7 +377,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           content: `<@${targetedUser.id}>`,
           embeds: [
             createErrorEmbed(
-              'VIP Channel Removed',
+              'Error - VIP Channel Removed',
               '⏰ Your VIP access has been removed. You no longer have permission to send messages in this channel. You will keep **read-only access**'
             )
           ]
@@ -443,7 +443,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Removed',
+            'Success - VIP Removed',
             `The VIP of <@${targetedUser.id}> has been removed.\n` +
               `Channel is no longer accessible for them. They will keep read-only access.`
           )
@@ -460,7 +460,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Bot user',
+              'Error - Invalid Input - Bot user',
               'You cannot extend VIP for bots.'
             )
           ],
@@ -472,7 +472,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Invalid Format',
+              'Error - Invalid Input - Invalid Format',
               'Duration format is invalid. Use whole numbers only, e.g., 1d, 2w.'
             )
           ],
@@ -485,7 +485,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Duration Too Short',
+              'Error - Invalid Input - Duration Too Short',
               'The duration must be at least 1 day (1d).'
             )
           ],
@@ -502,7 +502,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Not Found',
+              'Error - VIP Not Found',
               `User <@${targetedUser.id}> does not currently have an active VIP room.`
             )
           ],
@@ -522,7 +522,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Not Found',
+              'Error - VIP Not Found',
               `User <@${targetedUser.id}> does not currently have an active VIP room.`
             )
           ],
@@ -552,7 +552,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           content: `<@${targetedUser.id}>`,
           embeds: [
             createSuccessEmbed(
-              'VIP Channel Extended',
+              'Success - VIP Channel Extended',
               `Your VIP now expires on <t:${Math.floor(updatedVip.expiresAt.getTime() / 1000)}:f>.`
             )
           ]
@@ -575,7 +575,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Extended',
+            'Success - VIP Extended',
             `The VIP of <@${targetedUser.id}> has been extended by **${
               durationSeconds / 86400
             } day(s)**.\nNow expires on: <t:${Math.floor(updatedVip.expiresAt.getTime() / 1000)}:f>`
@@ -595,7 +595,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Bot User',
+              'Error - Invalid Input - Bot User',
               'You cannot add bot users to VIP rooms.'
             )
           ],
@@ -612,7 +612,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Not Found',
+              'Error - VIP Not Found',
               `<@${ownerUser.id}> does not have an active VIP room.`
             )
           ],
@@ -624,7 +624,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Not Allowed',
+              'Error - Not Allowed',
               'The owner is already part of the VIP room.'
             )
           ],
@@ -636,7 +636,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Already Added',
+              'Error - Already Added',
               `${userToAdd} is already a member of this VIP room.`
             )
           ],
@@ -651,7 +651,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Full',
+              'Error - VIP Full',
               `This VIP room is full. Max members allowed: **${guildConfiguration.vipSettings.maxMembers}**`
             )
           ],
@@ -713,7 +713,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Member Added',
+            'Success - Member Added',
             `${userToAdd} has been added to <@${ownerUser.id}>'s VIP room.` +
               (bypass
                 ? `\n\nBypass mode was used - max member limit ignored.`

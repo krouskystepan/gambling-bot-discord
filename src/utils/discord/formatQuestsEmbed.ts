@@ -46,7 +46,7 @@ export const formatQuestOverview = ({
   view: 'overview',
   pageIndex: 0,
   pageCount: 1,
-  title: 'Your Quests',
+  title: 'Info - Your Quests',
   description: [
     `📅 **Today** · \`${dateKey}\``,
     `Daily **${dailyDone}/${dailyTotal}** · Normal **${normalDone}/${normalTotal}**`,
@@ -125,8 +125,8 @@ export const buildQuestEmbedPages = ({
       pageCount: descriptions.length,
       title:
         descriptions.length > 1
-          ? `${kindLabel(kind)} Quests (${pageIndex + 1}/${descriptions.length})`
-          : `${kindLabel(kind)} Quests`,
+          ? `Info - ${kindLabel(kind)} Quests (${pageIndex + 1}/${descriptions.length})`
+          : `Info - ${kindLabel(kind)} Quests`,
       description
     }))
   }

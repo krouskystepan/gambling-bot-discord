@@ -148,7 +148,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             { name: 'show-balance', example: 'true' },
             { name: 'skip-animations', example: 'true' }
           ]),
-          'Open a live machine, set your chip (Change bet), pick spins (1-10), then Spin.'
+          'Open a live machine, set your bet (Change bet), pick spins (1-10), then Spin.'
         ].join('\n')
       ),
 

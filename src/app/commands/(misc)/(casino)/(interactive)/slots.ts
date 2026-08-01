@@ -22,7 +22,7 @@ import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'slots',
-  description: 'Open a live slots machine - set your chip, then spin!',
+  description: 'Open a live slots machine - set your bet, then spin!',
   options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }
@@ -45,7 +45,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Slots Already Active',
+              'Error - Slots Already Active',
               'You already have an open slots machine! Close it or finish that game first. 🎰'
             )
           ],
@@ -60,7 +60,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       await interaction.deferReply()
 
-      const gameId = generateId()
+      const gameId = generateId('slots')
 
       const message = await interaction.editReply({
         embeds: [

@@ -130,7 +130,7 @@ describe('runInstantCasinoCommand', () => {
     })
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'Slow Down' })]
+        embeds: [expect.objectContaining({ title: 'Error - Slow Down' })]
       })
     )
 
@@ -178,7 +178,7 @@ describe('runInstantCasinoCommand', () => {
       expect.objectContaining({
         embeds: [
           expect.objectContaining({
-            title: 'Insufficient Funds',
+            title: 'Error - Insufficient Funds',
             description: expect.stringContaining('$0')
           })
         ]
@@ -232,10 +232,15 @@ describe('runInstantCasinoCommand', () => {
       guildId: 'guild-1',
       totalBet: 200,
       betId: 'BET123',
-      game: 'dice'
+      game: 'dice',
+      rounds: undefined
     })
     expect(mockSettleCasinoWinnings).toHaveBeenCalledWith(
-      expect.objectContaining({ winnings: 300, betId: 'BET123' })
+      expect.objectContaining({
+        winnings: 300,
+        betId: 'BET123',
+        rounds: undefined
+      })
     )
     expect(mockTryAnnounceBigWin).toHaveBeenCalledWith(
       expect.objectContaining({ game: 'dice', lines: ['line-1'] })
@@ -243,6 +248,32 @@ describe('runInstantCasinoCommand', () => {
     expect(interaction.editReply).toHaveBeenCalledWith({
       embeds: [finalEmbed]
     })
+  })
+
+  it('passes rounds from prepare into reserve and settle', async () => {
+    const interaction = createInteraction()
+
+    await runInstantCasinoCommand({
+      interaction: interaction as never,
+      game: 'dice',
+      prepareInput: async () => ({
+        ...prepared,
+        totalBet: 500,
+        rounds: 5,
+        input: { rolls: 5 }
+      }),
+      executeGame: async () => ({
+        totalWinnings: 0,
+        buildFinalEmbed: () => new EmbedBuilder().setTitle('Done')
+      })
+    })
+
+    expect(mockReserveCasinoBet).toHaveBeenCalledWith(
+      expect.objectContaining({ rounds: 5, totalBet: 500 })
+    )
+    expect(mockSettleCasinoWinnings).toHaveBeenCalledWith(
+      expect.objectContaining({ rounds: 5 })
+    )
   })
 
   it('skips announcements when executeGame omits announce', async () => {

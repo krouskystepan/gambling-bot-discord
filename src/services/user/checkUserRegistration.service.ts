@@ -24,7 +24,9 @@ export async function assertNotBanned({
   if (!isUserBanned(user)) return true
 
   await interaction.reply({
-    embeds: [createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)],
+    embeds: [
+      createErrorEmbed('Error - Account Restricted', USER_BANNED_MESSAGE)
+    ],
     flags: MessageFlags.Ephemeral
   })
 

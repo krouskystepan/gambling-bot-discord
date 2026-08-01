@@ -125,7 +125,11 @@ const buildWinEmbed = (
 ): EmbedBuilder => {
   const description = `Draw \`${summary.drawId}\` completed with a winner.`
 
-  return createSuccessEmbed('Raffle draw — winner', description, summary.drawId)
+  return createSuccessEmbed(
+    'Success - Raffle draw — winner',
+    description,
+    summary.drawId
+  )
     .addFields(
       {
         name: 'Participants',
@@ -183,7 +187,7 @@ const buildRefundEmbed = (
   const description = `Draw \`${summary.drawId}\` refunded — not enough participants.`
 
   return createWarningEmbed(
-    'Raffle draw — refunded',
+    'Warning - Raffle draw — refunded',
     description,
     summary.drawId
   )
@@ -211,7 +215,7 @@ const buildRefundEmbed = (
 
 const buildNoParticipantsEmbed = (summary: RaffleDrawSummary): EmbedBuilder => {
   return createInfoEmbed(
-    'Raffle draw — no sales',
+    'Info - Raffle draw — no sales',
     `Draw \`${summary.drawId}\` finished with zero ticket sales this round.`
   )
     .setFooter({ text: `ID: ${summary.drawId}` })

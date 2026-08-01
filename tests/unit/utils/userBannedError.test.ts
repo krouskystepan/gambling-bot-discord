@@ -31,7 +31,7 @@ describe('isUserBannedError', () => {
 describe('createUserBannedEmbed', () => {
   it('builds the restricted account embed', () => {
     expect(createUserBannedEmbed()).toEqual({
-      title: 'Account Restricted',
+      title: 'Error - Account Restricted',
       description: USER_BANNED_MESSAGE
     })
   })

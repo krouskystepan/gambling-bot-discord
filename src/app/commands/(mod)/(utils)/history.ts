@@ -57,7 +57,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Input - Bot user',
+            'Error - Invalid Input - Bot user',
             'This command cannot target a bot.'
           )
         ],
@@ -85,7 +85,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
-            `History — ${target.username}`,
+            `Info - History — ${target.username}`,
             'No transactions found.'
           )
         ],
@@ -100,7 +100,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       .join('\n')
 
     return interaction.reply({
-      embeds: [createInfoEmbed(`History — ${target.username}`, description)],
+      embeds: [
+        createInfoEmbed(`Info - History — ${target.username}`, description)
+      ],
       flags: MessageFlags.Ephemeral
     })
   } catch (error) {

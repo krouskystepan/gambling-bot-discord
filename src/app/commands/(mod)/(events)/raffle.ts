@@ -130,7 +130,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Permission Denied',
+            'Error - Permission Denied',
             `You need to be an **Administrator** or have the ${
               managerRoleId ? `<@&${managerRoleId}>` : '**Manager role**'
             }.`
@@ -150,7 +150,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (!parsedTicketPrice || parsedTicketPrice <= 0) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid Ticket Price', 'Enter a valid number.')
+            createErrorEmbed(
+              'Error - Invalid Ticket Price',
+              'Enter a valid number.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -164,7 +167,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Ticket Limit Exceeded',
+              'Error - Ticket Limit Exceeded',
               'Maximum allowed tickets is 100.'
             )
           ],
@@ -177,7 +180,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Interval',
+              'Error - Invalid Interval',
               'Use formats like **10m, 2h, 1d, 1w**.'
             )
           ],
@@ -189,7 +192,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Interval Too Short',
+              'Error - Interval Too Short',
               'Minimum interval is 1 minute.'
             )
           ],
@@ -206,7 +209,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Draw Date/Time',
+              'Error - Invalid Draw Date/Time',
               'Use **DD.MM.YYYY HH:mm** (24h). Example: `09.02.2026 20:00`'
             )
           ],
@@ -224,7 +227,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (!dt.isValid || dt.toMillis() <= Date.now()) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid Draw Time', 'Draw must be in the future.')
+            createErrorEmbed(
+              'Error - Invalid Draw Time',
+              'Draw must be in the future.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -233,7 +239,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       await interaction.deferReply()
       const messageReply = await interaction.fetchReply()
 
-      const betId = generateId()
+      const betId = generateId('raffle')
 
       await upsertRaffle({
         drawId: betId,
@@ -322,7 +328,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Already Canceled',
+              'Error - Already Canceled',
               'This raffle was already canceled.'
             )
           ],
@@ -374,7 +380,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Raffle Canceled With Refund Errors',
+              'Error - Raffle Canceled With Refund Errors',
               `Raffle canceled but ${refundErrors.length} refund(s) failed. Check logs.`
             )
           ],
@@ -385,7 +391,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Raffle Refunded',
+            'Success - Raffle Refunded',
             'Raffle canceled and all tickets refunded.'
           )
         ],
@@ -403,7 +409,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       if (!raffle) {
         return interaction.reply({
-          embeds: [createErrorEmbed('Not Found', 'Raffle does not exist.')],
+          embeds: [
+            createErrorEmbed('Error - Not Found', 'Raffle does not exist.')
+          ],
           flags: MessageFlags.Ephemeral
         })
       }
@@ -411,7 +419,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       if (!raffle.participants.length) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('No Tickets', 'No one has bought tickets yet.')
+            createErrorEmbed(
+              'Error - No Tickets',
+              'No one has bought tickets yet.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })

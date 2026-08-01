@@ -27,9 +27,8 @@ vi.mock('gambling-bot-shared/casino', () => ({
 vi.mock('@/models/Transaction', () => ({ default: {} }))
 vi.mock('@/models/User', () => ({ default: {} }))
 
-const { evaluateQuestsAfterCasinoActivity } = await import(
-  '@/services/casino/casinoBet.service'
-)
+const { evaluateQuestsAfterCasinoActivity } =
+  await import('@/services/casino/casinoBet.service')
 
 describe('evaluateQuestsAfterCasinoActivity', () => {
   beforeEach(() => {

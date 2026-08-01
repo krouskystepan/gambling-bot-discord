@@ -88,7 +88,7 @@ export async function banUserDiscord({
   const now = new Date()
 
   await UserBan.create({
-    banId: generateId(),
+    banId: generateId('ban'),
     guildId,
     userId: targetUserId,
     bannedAt: now,

@@ -70,7 +70,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         await interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Invalid Target',
+              'Error - Invalid Input - Invalid Target',
               `Pick a target between **${LIMBO_MIN_TARGET}** and **${LIMBO_MAX_TARGET.toLocaleString('en-US')}**.`
             )
           ],
@@ -85,6 +85,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         validateBetAmount: unitBet,
         minBet: guildConfig.casinoSettings.limbo.minBet,
         maxBet: guildConfig.casinoSettings.limbo.maxBet,
+        rounds: rolls,
         input: { target, unitBet, rolls }
       }
     },

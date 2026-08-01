@@ -11,9 +11,8 @@ vi.mock('@/models/UserQuestProgress', () => ({
   default: { find: (...args: unknown[]) => progressFind(...args) }
 }))
 
-const { getEnabledQuestsForGuild, getUserQuestProgressForDay } = await import(
-  '@/services/db/quest.db'
-)
+const { getEnabledQuestsForGuild, getUserQuestProgressForDay } =
+  await import('@/services/db/quest.db')
 
 describe('quest.db', () => {
   beforeEach(() => {

@@ -75,7 +75,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       ) {
         return interaction.reply({
           embeds: [
-            createErrorEmbed('Invalid Input', 'Cannot play against this user.')
+            createErrorEmbed(
+              'Error - Invalid Input',
+              'Cannot play against this user.'
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -101,7 +104,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       await interaction.deferReply()
 
-      const betId = generateId()
+      const betId = generateId('rps')
 
       refundBoth = async () => {
         if (!p1Reserved && !p2Reserved) return
@@ -128,7 +131,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           guildId: user.guildId,
           totalBet: betAmount,
           betId,
-          game: 'rps'
+          game: 'rps',
+          rounds: 1
         })
         p1Reserved = true
 
@@ -137,7 +141,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           guildId: targetUser.guildId,
           totalBet: betAmount,
           betId,
-          game: 'rps'
+          game: 'rps',
+          rounds: 1
         })
         p2Reserved = true
       } catch {
@@ -146,7 +151,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.editReply({
           embeds: [
             createErrorEmbed(
-              'Bet Failed',
+              'Error - Bet Failed',
               'One of the players no longer has enough balance to place this bet.'
             )
           ]

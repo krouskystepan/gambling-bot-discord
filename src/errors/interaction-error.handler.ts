@@ -24,7 +24,7 @@ export const handleUnexpectedInteractionError = async (
   await interaction.reply({
     embeds: [
       createErrorEmbed(
-        'Unexpected error',
+        'Error - Unexpected error',
         'Something went wrong. Please try again later.'
       )
     ],

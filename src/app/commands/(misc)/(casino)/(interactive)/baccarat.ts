@@ -13,7 +13,6 @@ import {
   checkCasinoChannels,
   checkUserRegistration,
   getBaccaratGameByUserAndGuild,
-  reserveCasinoBet,
   showBalanceOption,
   skipAnimationsOption,
   upsertBaccaratGame
@@ -22,7 +21,7 @@ import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
   renderBaccaratButtons,
   renderBaccaratPromptEmbed
-} from '@/utils/casino/baccarat/render'
+} from '@/utils/casino/baccarat'
 import { checkValidBet } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
@@ -51,7 +50,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Baccarat Already Active',
+              'Error - Baccarat Already Active',
               'You already have an active Baccarat game running! 🃏'
             )
           ],
@@ -78,41 +77,20 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       await interaction.deferReply()
 
-      const betId = generateId()
+      const gameId = generateId('baccarat')
 
-      try {
-        await reserveCasinoBet({
-          userId: user.userId,
-          guildId: user.guildId,
-          totalBet: betAmount,
-          betId,
-          game: 'baccarat'
-        })
-      } catch {
-        return interaction.editReply({
-          embeds: [
-            createErrorEmbed(
-              'Bet Failed',
-              'Not enough balance to place this bet.'
-            )
-          ]
-        })
-      }
-
+      // Nothing is reserved until a side is picked, so an idle table can be
+      // closed without a refund.
       const message = await interaction.editReply({
         embeds: [
           renderBaccaratPromptEmbed({
             bet: betAmount,
             winMultipliers: guildConfig.casinoSettings.baccarat.winMultipliers,
-            betId,
+            gameId,
             globalSettings: guildConfig.globalSettings
           })
         ],
-        components: renderBaccaratButtons({
-          betId,
-          showBalance,
-          skipAnimations
-        })
+        components: renderBaccaratButtons({ gameId })
       })
 
       await upsertBaccaratGame({
@@ -120,7 +98,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         guildId: user.guildId,
         channelId: interaction.channelId,
         messageId: message.id,
-        betId,
+        gameId,
         betAmount,
         showBalance,
         skipAnimations

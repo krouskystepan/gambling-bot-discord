@@ -19,6 +19,9 @@ import {
   createSuccessEmbed
 } from '@/utils/discord/createEmbed'
 
+/** Avoid blocking other interactionCreate handlers on the 3s Discord ack window. */
+export const parallel = true
+
 export default async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.customId) return
 
@@ -52,7 +55,7 @@ export default async (interaction: Interaction) => {
         return interaction.editReply({
           embeds: [
             createInfoEmbed(
-              'Raffle Canceled',
+              'Info - Raffle Canceled',
               'This raffle is no longer active.'
             )
           ]
@@ -63,7 +66,7 @@ export default async (interaction: Interaction) => {
         return interaction.editReply({
           embeds: [
             createInfoEmbed(
-              'Raffle Closed',
+              'Info - Raffle Closed',
               'Ticket sales are closed for this raffle.'
             )
           ]
@@ -86,7 +89,7 @@ export default async (interaction: Interaction) => {
         return interaction.editReply({
           embeds: [
             createErrorEmbed(
-              'Ticket Limit Exceeded',
+              'Error - Ticket Limit Exceeded',
               `Maximum tickets per user is **${raffle.maxTicketsPerUser}**.`
             )
           ]
@@ -107,7 +110,10 @@ export default async (interaction: Interaction) => {
         if (error instanceof Error && error.message === 'USER_BANNED') {
           return interaction.editReply({
             embeds: [
-              createErrorEmbed('Account Restricted', USER_BANNED_MESSAGE)
+              createErrorEmbed(
+                'Error - Account Restricted',
+                USER_BANNED_MESSAGE
+              )
             ]
           })
         }
@@ -115,7 +121,7 @@ export default async (interaction: Interaction) => {
         return interaction.editReply({
           embeds: [
             createErrorEmbed(
-              'Insufficient Funds',
+              'Error - Insufficient Funds',
               `You need **${formatMoney(totalCost, guildConfigEarly.globalSettings)}** to buy tickets.`
             )
           ]
@@ -184,7 +190,7 @@ export default async (interaction: Interaction) => {
       await interaction.editReply({
         embeds: [
           createSuccessEmbed(
-            'Ticket/s Purchased',
+            'Success - Ticket/s Purchased',
             `You bought **${ticketAmount}** ticket/s for **${formatMoney(
               totalCost,
               guildConfigEarly.globalSettings

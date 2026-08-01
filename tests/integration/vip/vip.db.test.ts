@@ -152,10 +152,10 @@ describe('vip.db money flows', () => {
       ownerId: 'user-1',
       guildId: 'guild-1',
       channelId: 'vip-ch-1',
-      expiresAt: new Date('2026-08-01T00:00:00Z')
+      expiresAt: new Date('2099-08-01T00:00:00Z')
     })
 
-    const newExpiry = new Date('2027-01-01T00:00:00Z')
+    const newExpiry = new Date('2099-09-01T00:00:00Z')
     await extendVipAtomic({
       userId: 'user-1',
       guildId: 'guild-1',

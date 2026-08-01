@@ -73,7 +73,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         await interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Invalid Numbers',
+              'Error - Invalid Input - Invalid Numbers',
               'Pick 5 unique whole numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).'
             )
           ],
@@ -88,6 +88,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         validateBetAmount: unitBet,
         minBet: guildConfig.casinoSettings.lottery.minBet,
         maxBet: guildConfig.casinoSettings.lottery.maxBet,
+        rounds: entries,
         input: { unitBet, entries, userNumbers }
       }
     },

@@ -134,7 +134,7 @@ describe('handleAtmCancelSubcommand', () => {
       expect.objectContaining({
         embeds: [
           expect.objectContaining({
-            title: 'ATM - Withdrawal Cancelled'
+            title: 'Success - ATM - Withdrawal Cancelled'
           })
         ]
       })
@@ -149,7 +149,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'Request Not Found' })]
+        embeds: [expect.objectContaining({ title: 'Error - Request Not Found' })]
       })
     )
   })
@@ -165,7 +165,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'Request Not Pending' })]
+        embeds: [expect.objectContaining({ title: 'Error - Request Not Pending' })]
       })
     )
     expect(mockCancelUserAtmRequest).not.toHaveBeenCalled()
@@ -193,7 +193,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'No Pending Withdrawals' })]
+        embeds: [expect.objectContaining({ title: 'Info - No Pending Withdrawals' })]
       })
     )
   })
@@ -205,7 +205,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'No Pending Withdrawals' })]
+        embeds: [expect.objectContaining({ title: 'Info - No Pending Withdrawals' })]
       })
     )
   })
@@ -222,7 +222,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'Already Handled' })]
+        embeds: [expect.objectContaining({ title: 'Error - Already Handled' })]
       })
     )
   })
@@ -239,7 +239,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'Request Not Pending' })]
+        embeds: [expect.objectContaining({ title: 'Error - Request Not Pending' })]
       })
     )
   })
@@ -256,7 +256,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'Request Not Pending' })]
+        embeds: [expect.objectContaining({ title: 'Error - Request Not Pending' })]
       })
     )
   })
@@ -272,7 +272,7 @@ describe('handleAtmCancelSubcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        embeds: [expect.objectContaining({ title: 'ATM - Deposit Cancelled' })]
+        embeds: [expect.objectContaining({ title: 'Success - ATM - Deposit Cancelled' })]
       })
     )
   })

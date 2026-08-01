@@ -290,7 +290,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Selection',
+            'Error - Invalid Selection',
             'Select at least one option: `games` or `config`.'
           )
         ],

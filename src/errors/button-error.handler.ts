@@ -34,7 +34,7 @@ export const handleUnexpectedButtonError = async (
 
   const embeds = [
     createErrorEmbed(
-      'Unexpected error',
+      'Error - Unexpected error',
       'Something went wrong. Please try again later.'
     )
   ]

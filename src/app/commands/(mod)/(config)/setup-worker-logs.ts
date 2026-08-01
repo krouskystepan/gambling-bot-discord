@@ -94,7 +94,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Worker Logs Channel Setup - Add',
+            'Success - Worker Logs Channel Setup - Add',
             `Channel ${channel} has been successfully set for background worker logs.`
           )
         ]
@@ -108,7 +108,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Worker Logs Channel Setup - Remove',
+              'Error - Worker Logs Channel Setup - Remove',
               `Channel with ID ${channelId} is not set for worker logs.`
             )
           ],
@@ -122,7 +122,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'Worker Logs Channel Setup - Remove',
+            'Success - Worker Logs Channel Setup - Remove',
             `Channel with ID ${channelId} has been successfully removed from worker logs.`
           )
         ]
@@ -136,7 +136,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createInfoEmbed(
-              'Worker Logs Channel Setup - Status',
+              'Info - Worker Logs Channel Setup - Status',
               'Worker logs are **not configured**. Background worker activity is not sent to Discord.'
             )
           ],
@@ -151,7 +151,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createInfoEmbed(
-            'Worker Logs Channel Setup - Status',
+            'Info - Worker Logs Channel Setup - Status',
             channel
               ? `Worker logs are configured in ${channel}.`
               : `Worker logs are configured for channel ID \`${channelId}\` (channel not found in cache).`

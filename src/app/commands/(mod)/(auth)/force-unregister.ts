@@ -89,7 +89,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'ATM Error - Not Registered',
+            'Error - Not Registered',
             'User is not registered in the system.'
           )
         ],
@@ -105,7 +105,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Wrong Discord Configuration',
+            'Error - Wrong Discord Configuration',
             'Log channel misconfigured or inaccessible.'
           )
         ],
@@ -139,7 +139,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     return interaction.reply({
       embeds: [
         createSuccessEmbed(
-          'ATM Success - Unregistered',
+          'Success - Unregistered',
           `The user <@${userId}> has been successfully unregistered.`
         )
       ],

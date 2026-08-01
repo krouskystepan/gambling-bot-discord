@@ -43,7 +43,7 @@ describe('formatQuestOverview', () => {
     })
 
     expect(page.view).toBe('overview')
-    expect(page.title).toBe('Your Quests')
+    expect(page.title).toBe('Info - Your Quests')
     expect(page.description).toContain('📅 **Today** · `2026-07-30`')
     expect(page.description).toContain('Daily **1/3** · Normal **0/5**')
     expect(page.description).toContain('Open Daily or Normal')
@@ -66,10 +66,10 @@ describe('buildQuestEmbedPages', () => {
       normalLines: []
     })
 
-    expect(pages.overview.title).toBe('Your Quests')
+    expect(pages.overview.title).toBe('Info - Your Quests')
     expect(pages.daily).toHaveLength(1)
     expect(pages.normal).toHaveLength(1)
-    expect(pages.daily[0]?.title).toBe('Daily Quests')
+    expect(pages.daily[0]?.title).toBe('Info - Daily Quests')
     expect(pages.daily[0]?.description).toContain(
       '_No daily quests configured._'
     )
@@ -107,9 +107,11 @@ describe('buildQuestEmbedPages', () => {
 
     expect(pages.daily.length).toBeGreaterThan(1)
     expect(pages.daily[0]?.pageCount).toBe(pages.daily.length)
-    expect(pages.daily[0]?.title).toBe(`Daily Quests (1/${pages.daily.length})`)
+    expect(pages.daily[0]?.title).toBe(
+      `Info - Daily Quests (1/${pages.daily.length})`
+    )
     expect(pages.daily.at(-1)?.title).toBe(
-      `Daily Quests (${pages.daily.length}/${pages.daily.length})`
+      `Info - Daily Quests (${pages.daily.length}/${pages.daily.length})`
     )
 
     for (const page of pages.daily) {

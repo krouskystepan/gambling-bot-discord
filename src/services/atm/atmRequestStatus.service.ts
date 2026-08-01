@@ -23,20 +23,20 @@ type StatusAutocompleteInteraction =
 
 const ATM_STATUS_COPY = {
   withdraw: {
-    notFoundTitle: 'Request Not Found',
+    notFoundTitle: 'Error - Request Not Found',
     notFoundDescription:
       'That withdrawal request was not found or does not belong to you.',
-    emptyTitle: 'No Withdrawals',
+    emptyTitle: 'Info - No Withdrawals',
     emptyDescription: 'You have no withdrawal requests yet.',
     autocompleteEmpty: 'No withdrawal requests found',
     eventAction: 'atm_withdraw_status_checked',
     logMessage: 'ATM withdrawal status checked'
   },
   deposit: {
-    notFoundTitle: 'Request Not Found',
+    notFoundTitle: 'Error - Request Not Found',
     notFoundDescription:
       'That deposit request was not found or does not belong to you.',
-    emptyTitle: 'No Deposits',
+    emptyTitle: 'Info - No Deposits',
     emptyDescription: 'You have no deposit requests yet.',
     autocompleteEmpty: 'No deposit requests found',
     eventAction: 'atm_deposit_status_checked',

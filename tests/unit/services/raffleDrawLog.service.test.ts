@@ -170,7 +170,7 @@ describe('buildRaffleDrawLogEmbed', () => {
   it('builds win embed fields with staff detail', () => {
     const embed = buildRaffleDrawLogEmbed(winSummary, globalSettings)
 
-    expect(embed.data.title).toBe('Raffle draw — winner')
+    expect(embed.data.title).toBe('Success - Raffle draw — winner')
     expect(embed.data.color).toBe(Colors.Green)
     expect(getFieldValue(embed, 'Participants')).toBe('2 unique user(s)')
     expect(getFieldValue(embed, 'Total tickets')).toBe('8')
@@ -187,7 +187,7 @@ describe('buildRaffleDrawLogEmbed', () => {
   it('builds refund embed fields', () => {
     const embed = buildRaffleDrawLogEmbed(refundSummary, globalSettings)
 
-    expect(embed.data.title).toBe('Raffle draw — refunded')
+    expect(embed.data.title).toBe('Warning - Raffle draw — refunded')
     expect(embed.data.color).toBe(Colors.Yellow)
     expect(getFieldValue(embed, 'Participants')).toBe('1')
     expect(getFieldValue(embed, 'Total refunded')).toBe('$40')
@@ -219,7 +219,7 @@ describe('buildRaffleDrawLogEmbed', () => {
   it('builds a minimal no-participants embed', () => {
     const embed = buildRaffleDrawLogEmbed(noParticipantsSummary, globalSettings)
 
-    expect(embed.data.title).toBe('Raffle draw — no sales')
+    expect(embed.data.title).toBe('Info - Raffle draw — no sales')
     expect(embed.data.color).toBe(Colors.Blue)
     expect(embed.data.footer?.text).toBe('ID: draw-3')
     expect(embed.data.fields ?? []).toHaveLength(0)
@@ -357,7 +357,7 @@ describe('postRaffleDrawLog', () => {
     expect(send).toHaveBeenCalledTimes(1)
     expect(send.mock.calls[0][0].embeds).toHaveLength(1)
     expect(send.mock.calls[0][0].embeds[0].data.title).toBe(
-      'Raffle draw — winner'
+      'Success - Raffle draw — winner'
     )
   })
 

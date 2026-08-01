@@ -31,7 +31,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     return interaction.reply({
       embeds: [
         createInfoEmbed(
-          'ATM - Balance',
+          'Info - ATM - Balance',
           [
             `💰 Available Balance: **${formatMoney(roundedBalance, globalSettings)}** (${formatMoneyExact(roundedBalance, globalSettings)})`,
             `🔒 Locked Balance: **${formatMoney(roundedLockedBalance, globalSettings)}** (${formatMoneyExact(roundedLockedBalance, globalSettings)})`,

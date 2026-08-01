@@ -156,7 +156,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Setup - Add Category',
+              'Error - VIP Setup - Add Category',
               `Category <#${category.id}> is already set for VIP rooms.`
             )
           ],
@@ -170,7 +170,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Add Category',
+            'Success - VIP Setup - Add Category',
             `Category <#${category.id}> has been successfully set for VIP rooms.`
           )
         ]
@@ -182,7 +182,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Setup - Remove Category',
+              'Error - VIP Setup - Remove Category',
               'No VIP category is currently set.'
             )
           ],
@@ -196,7 +196,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Remove Category',
+            'Success - VIP Setup - Remove Category',
             `Category <#${oldCategory}> has been removed from VIP settings.`
           )
         ]
@@ -211,7 +211,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Setup - Add Role',
+              'Error - VIP Setup - Add Role',
               `Role <@&${role.id}> is already set as VIP Owner role.`
             )
           ],
@@ -225,7 +225,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Add Role',
+            'Success - VIP Setup - Add Role',
             `Owner role <@&${role.id}> has been successfully set as VIP role.`
           )
         ]
@@ -237,7 +237,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Setup - Remove Role',
+              'Error - VIP Setup - Remove Role',
               'No Owner VIP role is currently set.'
             )
           ],
@@ -251,7 +251,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Remove Role',
+            'Success - VIP Setup - Remove Role',
             `Owner role <@&${oldRole}> has been removed from VIP settings.`
           )
         ]
@@ -266,7 +266,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Setup - Add Role',
+              'Error - VIP Setup - Add Role',
               `Role <@&${role.id}> is already set as VIP Member role.`
             )
           ],
@@ -280,7 +280,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Add Role',
+            'Success - VIP Setup - Add Role',
             `Member role <@&${role.id}> has been successfully set as VIP role.`
           )
         ]
@@ -292,7 +292,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'VIP Setup - Remove Role',
+              'Error - VIP Setup - Remove Role',
               'No Member VIP role is currently set.'
             )
           ],
@@ -306,7 +306,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Remove Role',
+            'Success - VIP Setup - Remove Role',
             `Member role <@&${oldRole}> has been removed from VIP settings.`
           )
         ]
@@ -321,7 +321,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Not a number',
+              'Error - Invalid Input - Not a number',
               'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
             )
           ],
@@ -333,7 +333,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Non-positive number',
+              'Error - Invalid Input - Non-positive number',
               'The number you provided must be greater than 0.\nPlease enter a positive value.'
             )
           ],
@@ -347,7 +347,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Set Price Per Day',
+            'Success - VIP Setup - Set Price Per Day',
             `Price per day for VIP access has been set to **${price}**.`
           )
         ]
@@ -362,7 +362,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Not a number',
+              'Error - Invalid Input - Not a number',
               'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
             )
           ],
@@ -374,7 +374,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Negative number',
+              'Error - Invalid Input - Negative number',
               'The number you provided cannot be negative.\nPlease enter 0 or a positive value.'
             )
           ],
@@ -388,7 +388,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Set Create Price',
+            'Success - VIP Setup - Set Create Price',
             `Creation fee for VIP rooms has been set to **${price}**.`
           )
         ]
@@ -403,7 +403,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Not a number',
+              'Error - Invalid Input - Not a number',
               'The value you entered is not a valid number.\nPlease make sure you enter a numerical value.'
             )
           ],
@@ -415,7 +415,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Input - Negative number',
+              'Error - Invalid Input - Negative number',
               'The number you provided cannot be negative.\nPlease enter 0 or a positive value.'
             )
           ],
@@ -429,7 +429,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       return interaction.reply({
         embeds: [
           createSuccessEmbed(
-            'VIP Setup - Set Member Price',
+            'Success - VIP Setup - Set Member Price',
             `Member fee for VIP rooms has been set to **${price}**.`
           )
         ]

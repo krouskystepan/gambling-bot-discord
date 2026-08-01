@@ -3,11 +3,7 @@ import {
   generateId,
   parseReadableStringToNumber
 } from 'gambling-bot-shared/common'
-import {
-  createMinesEngine,
-  currentMinesMultiplier,
-  isValidMineCount
-} from 'gambling-bot-shared/mines'
+import { isValidMineCount } from 'gambling-bot-shared/mines'
 
 import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
 
@@ -18,12 +14,10 @@ import {
   checkCasinoChannels,
   checkUserRegistration,
   getMinesGameByUserAndGuild,
-  getUser,
-  reserveCasinoBet,
-  upsertMinesGame
+  getUser
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
-import { renderMinesButtons, renderMinesEmbed } from '@/utils/casino/mines'
+import { startMinesBoard } from '@/utils/casino/mines'
 import { checkValidBet } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
@@ -74,7 +68,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Mines Already Active',
+              'Error - Mines Already Active',
               'You already have an active Mines game running! 💣'
             )
           ],
@@ -100,7 +94,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Invalid Mines Count',
+              'Error - Invalid Mines Count',
               `Choose between **${minesSettings.minMines}** and **${minesSettings.maxMines}** mines.`
             )
           ],
@@ -120,15 +114,25 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       await interaction.deferReply()
 
-      const betId = generateId()
+      const message = await interaction.fetchReply()
 
       try {
-        await reserveCasinoBet({
+        const board = await startMinesBoard({
           userId: user.userId,
           guildId: user.guildId,
-          totalBet: parsedBetAmount,
-          betId,
-          game: 'mines'
+          gameId: generateId('mines'),
+          channelId: interaction.channelId,
+          messageId: message.id,
+          betAmount: parsedBetAmount,
+          mineCount,
+          houseEdge: minesSettings.houseEdge,
+          showBalance,
+          globalSettings: configReply.globalSettings
+        })
+
+        await interaction.editReply({
+          embeds: board.embeds,
+          components: board.components
         })
       } catch (err) {
         if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
@@ -140,7 +144,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           return await interaction.editReply({
             embeds: [
               createErrorEmbed(
-                'Insufficient Funds',
+                'Error - Insufficient Funds',
                 `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
               )
             ]
@@ -148,48 +152,6 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         }
         throw err
       }
-
-      const engine = createMinesEngine({
-        betAmount: parsedBetAmount,
-        mineCount,
-        houseEdgeSnapshot: minesSettings.houseEdge
-      })
-
-      const message = await interaction.fetchReply()
-
-      await upsertMinesGame({
-        userId: interaction.user.id,
-        guildId: interaction.guildId!,
-        channelId: interaction.channelId,
-        messageId: message.id,
-        betId,
-        betAmount: engine.betAmount,
-        mineCount: engine.mineCount,
-        mineIndices: engine.mineIndices,
-        revealedIndices: engine.revealedIndices,
-        houseEdgeSnapshot: engine.houseEdgeSnapshot,
-        status: engine.status
-      })
-
-      await interaction.editReply({
-        embeds: [
-          renderMinesEmbed({
-            betId,
-            betAmount: engine.betAmount,
-            mineCount: engine.mineCount,
-            revealedCount: 0,
-            multiplier: currentMinesMultiplier(engine),
-            result: { kind: 'ACTIVE' },
-            showBalance,
-            globalSettings: configReply.globalSettings
-          })
-        ],
-        components: renderMinesButtons({
-          betId,
-          state: engine,
-          showBalance
-        })
-      })
     } catch (error) {
       await handleUnexpectedInteractionError(interaction, error)
     }

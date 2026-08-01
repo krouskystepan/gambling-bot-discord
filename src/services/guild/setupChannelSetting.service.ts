@@ -82,7 +82,10 @@ export const handleChannelSetup = async ({
       if (mode.get(guildConfiguration) === channel.id) {
         await interaction.reply({
           embeds: [
-            createErrorEmbed(messages.titleAdd, messages.alreadySet(channel))
+            createErrorEmbed(
+              `Error - ${messages.titleAdd}`,
+              messages.alreadySet(channel)
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -93,7 +96,10 @@ export const handleChannelSetup = async ({
       if (mode.get(guildConfiguration).includes(channel.id)) {
         await interaction.reply({
           embeds: [
-            createErrorEmbed(messages.titleAdd, messages.alreadySet(channel))
+            createErrorEmbed(
+              `Error - ${messages.titleAdd}`,
+              messages.alreadySet(channel)
+            )
           ],
           flags: MessageFlags.Ephemeral
         })
@@ -109,7 +115,10 @@ export const handleChannelSetup = async ({
 
     await interaction.reply({
       embeds: [
-        createSuccessEmbed(messages.titleAdd, messages.addSuccess(channel))
+        createSuccessEmbed(
+          `Success - ${messages.titleAdd}`,
+          messages.addSuccess(channel)
+        )
       ]
     })
     return
@@ -121,7 +130,10 @@ export const handleChannelSetup = async ({
     if (mode.get(guildConfiguration) !== channelId) {
       await interaction.reply({
         embeds: [
-          createErrorEmbed(messages.titleRemove, messages.notSet(channelId))
+          createErrorEmbed(
+            `Error - ${messages.titleRemove}`,
+            messages.notSet(channelId)
+          )
         ],
         flags: MessageFlags.Ephemeral
       })
@@ -132,7 +144,10 @@ export const handleChannelSetup = async ({
     if (!mode.get(guildConfiguration).includes(channelId)) {
       await interaction.reply({
         embeds: [
-          createErrorEmbed(messages.titleRemove, messages.notSet(channelId))
+          createErrorEmbed(
+            `Error - ${messages.titleRemove}`,
+            messages.notSet(channelId)
+          )
         ],
         flags: MessageFlags.Ephemeral
       })
@@ -149,7 +164,7 @@ export const handleChannelSetup = async ({
   await interaction.reply({
     embeds: [
       createSuccessEmbed(
-        messages.titleRemove,
+        `Success - ${messages.titleRemove}`,
         messages.removeSuccess(channelId)
       )
     ]
