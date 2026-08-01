@@ -216,6 +216,97 @@ describe('hilo finish', () => {
     expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
   })
 
+  it('formats second card when deck entries only expose fields via prototype', async () => {
+    const stored = Object.create({
+      label: 'K',
+      suite: '♦️',
+      rank: 13
+    }) as THiloGame['firstCard']
+
+    vi.mocked(rng.drawHiloCard).mockImplementationOnce((deck) => {
+      const card = deck.pop()
+      if (!card) throw new Error('Hi-Lo deck is empty')
+      return card
+    })
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        remainingDeck: [stored]
+      }) as never
+    )
+
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
+
+    const result = await settleHiloGuess({
+      game: baseGame({ remainingDeck: [stored] }),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      message: message as never
+    })
+
+    expect(result?.outcome).toBe('win')
+    expect(message.edit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        embeds: [
+          expect.objectContaining({
+            data: expect.objectContaining({
+              description: expect.stringContaining('7♥️ → K♦️')
+            })
+          })
+        ]
+      })
+    )
+  })
+
+  it('settles a same-rank draw win', async () => {
+    vi.mocked(rng.drawHiloCard).mockReturnValueOnce({
+      label: '7',
+      suite: '♣️',
+      rank: 7
+    })
+
+    const result = await settleHiloGuess({
+      game: baseGame(),
+      guess: 'same',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result?.outcome).toBe('win')
+    expect(services.settleCasinoWinnings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        winnings: expect.any(Number)
+      })
+    )
+    const winnings = vi.mocked(services.settleCasinoWinnings).mock.calls[0]?.[0]
+      .winnings as number
+    expect(winnings).toBeGreaterThan(100)
+  })
+
+  it('settles a same-rank draw loss', async () => {
+    vi.mocked(rng.drawHiloCard).mockReturnValueOnce({
+      label: 'A',
+      suite: '♠️',
+      rank: 14
+    })
+
+    const result = await settleHiloGuess({
+      game: baseGame(),
+      guess: 'same',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result?.outcome).toBe('lose')
+    expect(services.settleCasinoWinnings).toHaveBeenCalledWith(
+      expect.objectContaining({ winnings: 0 })
+    )
+  })
+
   it('applies timeout fee settlement', async () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 

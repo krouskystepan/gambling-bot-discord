@@ -30,10 +30,18 @@ import {
 type EditableMessage = { edit: (...args: never[]) => Promise<unknown> }
 type AnnounceGuild = Parameters<typeof tryAnnounceBigWin>[0]['guild']
 
-const toMutableDeck = (game: THiloGame): HiloCard[] =>
-  game.remainingDeck.map((card) => ({ ...card }))
+/** Copy card fields explicitly - mongoose subdocs do not spread via `{...card}`. */
+const toHiloCard = (card: THiloGame['firstCard']): HiloCard => ({
+  label: card.label,
+  suite: card.suite,
+  rank: card.rank
+})
 
-const formatStoredCard = (card: THiloGame['firstCard']) => formatHiloCard(card)
+const toMutableDeck = (game: THiloGame): HiloCard[] =>
+  game.remainingDeck.map(toHiloCard)
+
+const formatStoredCard = (card: THiloGame['firstCard']) =>
+  formatHiloCard(toHiloCard(card))
 
 export const settleHiloGuess = async ({
   game,
@@ -140,7 +148,6 @@ export const settleHiloGuess = async ({
     await message.edit({
       embeds: [
         renderHiloResultEmbed({
-          outcome,
           firstCard,
           secondCard,
           guess,

@@ -12,7 +12,7 @@ const formatMult = (mult: number | null) =>
   mult == null ? '—' : `${mult.toFixed(2)}x`
 
 const guessLabel = (guess: HiloGuess) =>
-  guess === 'higher' ? '⬆ Higher' : '⬇ Lower'
+  guess === 'higher' ? '⬆ Higher' : guess === 'lower' ? '⬇ Lower' : '↔ Draw'
 
 /** Blackjack-style card string, e.g. `K♠️`. */
 const cardsLine = (first: string, second: string) => `${first} → ${second}`
@@ -24,16 +24,16 @@ export const renderHiloPromptEmbed = ({
   firstCard,
   higherMult,
   lowerMult,
+  sameMult,
   bet,
-  timeoutFee,
   betId,
   globalSettings
 }: {
   firstCard: string
   higherMult: number | null
   lowerMult: number | null
+  sameMult: number | null
   bet: number
-  timeoutFee: number
   betId: string
   globalSettings: MoneySettings
 }) =>
@@ -43,8 +43,7 @@ export const renderHiloPromptEmbed = ({
     [
       betLine(bet, globalSettings),
       `**Card**\n${firstCard}`,
-      `**Odds**\n⬆ Higher · **${formatMult(higherMult)}**\n⬇ Lower · **${formatMult(lowerMult)}**`,
-      `_You have **1 hour** to guess. After **30 minutes** idle you'll get a DM reminder. No guess in time takes a ${(timeoutFee * 100).toFixed(0)}% timeout fee._`
+      `**Odds**\n⬆ Higher · **${formatMult(higherMult)}**\n↔ Draw · **${formatMult(sameMult)}**\n⬇ Lower · **${formatMult(lowerMult)}**`
     ].join('\n\n'),
     betId
   )
@@ -105,7 +104,6 @@ export const renderHiloTimeoutEmbed = ({
   )
 
 export const renderHiloResultEmbed = ({
-  outcome,
   firstCard,
   secondCard,
   guess,
@@ -117,7 +115,6 @@ export const renderHiloResultEmbed = ({
   betId,
   globalSettings
 }: {
-  outcome: 'win' | 'lose' | 'push'
   firstCard: string
   secondCard: string
   guess: HiloGuess
@@ -129,20 +126,26 @@ export const renderHiloResultEmbed = ({
   betId: string
   globalSettings: MoneySettings
 }) => {
-  const isWin = outcome === 'win'
-  const isLoss = outcome === 'lose'
+  // Title follows money, not card correctness - a correct guess under 1x is still a loss.
+  const isProfit = liveResult > 0
+  const isBreakEven = liveResult === 0
 
-  const title = isWin
+  const title = isProfit
     ? '🃏 **Win!** 🎉'
-    : isLoss
-      ? '🃏 **Better Luck Next Time...** ❌'
-      : '🃏 **Push!** 🤝'
+    : isBreakEven
+      ? '🃏 **Push!** 🤝'
+      : '🃏 **Better Luck Next Time...** ❌'
 
-  const color: ColorResolvable = isWin ? 'Green' : isLoss ? 'Red' : 'Yellow'
-  const totalIcon = isWin ? '🟢' : isLoss ? '🔴' : '🟡'
-  const totalAmount = isLoss
-    ? `-${formatMoney(Math.abs(liveResult), globalSettings)}`
-    : formatMoney(liveResult, globalSettings)
+  const color: ColorResolvable = isProfit
+    ? 'Green'
+    : isBreakEven
+      ? 'Yellow'
+      : 'Red'
+  const totalIcon = isProfit ? '🟢' : isBreakEven ? '🟡' : '🔴'
+  const totalAmount =
+    liveResult < 0
+      ? `-${formatMoney(Math.abs(liveResult), globalSettings)}`
+      : formatMoney(liveResult, globalSettings)
 
   const sections = [
     betLine(bet, globalSettings),

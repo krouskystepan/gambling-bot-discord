@@ -34,7 +34,7 @@ export const hiloIdleNudgeJob = async (client: Client<true>) => {
         body: [
           `Still playing? You have about **${minutesLeft} minute(s)** left to guess.`,
           '',
-          'If you stay inactive, a timeout fee will be taken and the rest of your bet will be refunded.',
+          `No guess in time takes a **${(game.timeoutFeeSnapshot * 100).toFixed(0)}%** timeout fee and the rest of your bet will be refunded.`,
           '',
           `[Jump to your Hi-Lo message](${jumpLink})`
         ].join('\n'),

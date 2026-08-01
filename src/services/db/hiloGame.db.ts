@@ -107,7 +107,7 @@ export const upsertHiloGame = async ({
         idleNudgeSentAt: null
       }
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   )
 }
 
@@ -122,7 +122,7 @@ export const claimHiloGameForSettle = async ({
   return HiloGame.findOneAndUpdate(
     { gameId, guildId, status: 'WAITING' },
     { $set: { status: 'SETTLING' } },
-    { new: true }
+    { returnDocument: 'after' }
   )
 }
 

@@ -31,7 +31,7 @@ import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'hilo',
-  description: 'See a card, then guess if the next one is higher or lower!',
+  description: 'See a card, then guess higher, lower, or draw (same rank)!',
   options: [betOption, showBalanceOption],
   dm_permission: false
 }
@@ -114,6 +114,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const timeoutFee = guildConfig.casinoSettings.hilo.timeoutFee
       const higherMult = getHiloWinMultiplier(first.rank, 'higher', houseEdge)
       const lowerMult = getHiloWinMultiplier(first.rank, 'lower', houseEdge)
+      const sameMult = getHiloWinMultiplier(first.rank, 'same', houseEdge)
       const globalSettings = guildConfig.globalSettings
 
       const reply = await interaction.editReply({
@@ -122,8 +123,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
             firstCard,
             higherMult,
             lowerMult,
+            sameMult,
             bet: totalBet,
-            timeoutFee,
             betId: gameId,
             globalSettings
           })
@@ -136,6 +137,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
               .setEmoji('⬆')
               .setStyle(ButtonStyle.Success)
               .setDisabled(higherMult == null),
+            new ButtonBuilder()
+              .setCustomId(encodeHiloId({ gameId, guess: 'same' }))
+              .setLabel('Draw')
+              .setEmoji('↔')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(sameMult == null),
             new ButtonBuilder()
               .setCustomId(encodeHiloId({ gameId, guess: 'lower' }))
               .setLabel('Lower')
