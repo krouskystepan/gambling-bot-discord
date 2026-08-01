@@ -16,18 +16,21 @@ const MS_PER_HOUR = 60 * 60 * 1000
 const seedBlackjackGame = async ({
   userId = 'user-1',
   guildId = 'guild-1',
-  betId = 'bet-nudge-1'
+  gameId = 'game-nudge-1'
 }: {
   userId?: string
   guildId?: string
-  betId?: string
+  gameId?: string
 } = {}) => {
   await upsertBlackjackGame({
     userId,
     guildId,
     channelId: 'channel-1',
     messageId: 'msg-1',
-    betId,
+    gameId,
+    activeBetId: 'bet-nudge-1',
+    baseBetAmount: 100,
+    showBalance: false,
     deck: [],
     deckIndex: 0,
     hands: [
@@ -65,11 +68,11 @@ describe('blackjack idle nudge data flow', () => {
     )
 
     const games = await getBlackjackGamesNeedingIdleNudge()
-    expect(games.some((g) => g.betId === 'bet-nudge-1')).toBe(true)
+    expect(games.some((g) => g.gameId === 'game-nudge-1')).toBe(true)
   })
 
   it('excludes games updated less than 3h ago', async () => {
-    await seedBlackjackGame({ betId: 'bet-recent' })
+    await seedBlackjackGame({ gameId: 'game-recent' })
     await setGameUpdatedAt(
       'user-1',
       'guild-1',
@@ -77,11 +80,11 @@ describe('blackjack idle nudge data flow', () => {
     )
 
     const games = await getBlackjackGamesNeedingIdleNudge()
-    expect(games.some((g) => g.betId === 'bet-recent')).toBe(false)
+    expect(games.some((g) => g.gameId === 'game-recent')).toBe(false)
   })
 
   it('excludes games past the 24h autostand window', async () => {
-    await seedBlackjackGame({ betId: 'bet-stale' })
+    await seedBlackjackGame({ gameId: 'game-stale' })
     await setGameUpdatedAt(
       'user-1',
       'guild-1',
@@ -89,11 +92,11 @@ describe('blackjack idle nudge data flow', () => {
     )
 
     const games = await getBlackjackGamesNeedingIdleNudge()
-    expect(games.some((g) => g.betId === 'bet-stale')).toBe(false)
+    expect(games.some((g) => g.gameId === 'game-stale')).toBe(false)
   })
 
   it('excludes games after markBlackjackIdleNudgeSent', async () => {
-    await seedBlackjackGame({ betId: 'bet-marked' })
+    await seedBlackjackGame({ gameId: 'game-marked' })
     await setGameUpdatedAt(
       'user-1',
       'guild-1',
@@ -103,11 +106,11 @@ describe('blackjack idle nudge data flow', () => {
     await markBlackjackIdleNudgeSent({ userId: 'user-1', guildId: 'guild-1' })
 
     const games = await getBlackjackGamesNeedingIdleNudge()
-    expect(games.some((g) => g.betId === 'bet-marked')).toBe(false)
+    expect(games.some((g) => g.gameId === 'game-marked')).toBe(false)
   })
 
   it('clears idleNudgeSentAt on upsertBlackjackGame', async () => {
-    await seedBlackjackGame({ betId: 'bet-cleared' })
+    await seedBlackjackGame({ gameId: 'game-cleared' })
     await setGameUpdatedAt(
       'user-1',
       'guild-1',
@@ -117,14 +120,17 @@ describe('blackjack idle nudge data flow', () => {
     await markBlackjackIdleNudgeSent({ userId: 'user-1', guildId: 'guild-1' })
 
     let games = await getBlackjackGamesNeedingIdleNudge()
-    expect(games.some((g) => g.betId === 'bet-cleared')).toBe(false)
+    expect(games.some((g) => g.gameId === 'game-cleared')).toBe(false)
 
     await upsertBlackjackGame({
       userId: 'user-1',
       guildId: 'guild-1',
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'bet-cleared',
+      gameId: 'game-cleared',
+      activeBetId: 'bet-cleared',
+      baseBetAmount: 100,
+      showBalance: false,
       deck: [],
       deckIndex: 0,
       hands: [
@@ -153,6 +159,6 @@ describe('blackjack idle nudge data flow', () => {
     )
 
     games = await getBlackjackGamesNeedingIdleNudge()
-    expect(games.some((g) => g.betId === 'bet-cleared')).toBe(true)
+    expect(games.some((g) => g.gameId === 'game-cleared')).toBe(true)
   })
 })

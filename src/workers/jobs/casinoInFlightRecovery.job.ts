@@ -5,21 +5,24 @@ import { ChannelType } from 'discord.js'
 import { Client } from 'commandkit'
 
 import {
-  deleteBaccaratGame,
   deleteRouletteGame,
   getGuildConfigByGuildId,
   getStaleDealerBlackjackGames,
   getStaleDealingBaccaratGames,
-  getStaleFinishedMinesGames,
+  getStaleSettlingMinesGames,
   getStaleSpinningRouletteGames,
   getStaleSpinningSlotsGames,
   refundLockedBet,
+  updateBaccaratGame,
   updateRouletteGame,
   updateSlotsGame
 } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
-import { recoverBaccaratDeal } from '@/utils/casino/baccarat/playRound'
-import { renderBaccaratTimeoutEmbed } from '@/utils/casino/baccarat/render'
+import {
+  recoverBaccaratDeal,
+  renderBaccaratButtons,
+  renderBaccaratPromptEmbed
+} from '@/utils/casino/baccarat'
 import {
   docToEngine,
   finishBlackjackDealerAndSettle
@@ -66,7 +69,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
       getStaleDealerBlackjackGames(CASINO_IN_FLIGHT_GRACE_MS),
       getStaleDealingBaccaratGames(CASINO_IN_FLIGHT_GRACE_MS),
       getStaleSpinningSlotsGames(CASINO_IN_FLIGHT_GRACE_MS),
-      getStaleFinishedMinesGames(CASINO_IN_FLIGHT_GRACE_MS)
+      getStaleSettlingMinesGames(CASINO_IN_FLIGHT_GRACE_MS)
     ])
 
   const guildProcessed = new Map<string, number>()
@@ -143,7 +146,13 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
           })
           if (message) {
             await message.edit({
-              embeds: [renderRouletteTimeoutEmbed({ autoClosed: true })],
+              embeds: [
+                renderRouletteTimeoutEmbed({
+                  autoClosed: true,
+                  stats: game.sessionStats,
+                  gameId: game.gameId
+                })
+              ],
               components: []
             })
           }
@@ -186,7 +195,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
       )
     } catch (error) {
       logger.error(
-        `Blackjack in-flight recovery failed for ${game.betId}`,
+        `Blackjack in-flight recovery failed for ${game.gameId}`,
         error
       )
     }
@@ -200,7 +209,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
       })
       if (!guildConfig) continue
 
-      if (game.pendingDeal) {
+      if (game.pendingDeal && game.activeBetId) {
         await recoverBaccaratDeal({
           message,
           side: game.pendingDeal.side,
@@ -208,8 +217,10 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
           bankerCards: game.pendingDeal.bankerCards,
           userId: game.userId,
           guildId: game.guildId,
-          betId: game.betId,
+          gameId: game.gameId,
+          betId: game.activeBetId,
           betAmount: game.betAmount,
+          sessionStats: game.sessionStats,
           showBalance: game.showBalance,
           winMultipliers: guildConfig.casinoSettings.baccarat.winMultipliers,
           globalSettings: guildConfig.globalSettings,
@@ -218,30 +229,40 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
           sourceChannelId: game.channelId
         })
       } else {
-        await refundLockedBet({
+        if (game.activeBetId) {
+          await refundLockedBet({
+            userId: game.userId,
+            guildId: game.guildId,
+            amount: game.betAmount,
+            betId: game.activeBetId,
+            game: 'baccarat'
+          })
+        }
+
+        // Hand the table back to the player instead of dropping the session.
+        await updateBaccaratGame({
           userId: game.userId,
           guildId: game.guildId,
-          amount: game.betAmount,
-          betId: game.betId,
-          game: 'baccarat'
+          phase: 'waiting',
+          activeBetId: null,
+          pendingDeal: null
         })
+
         if (message) {
           await message.edit({
             embeds: [
-              renderBaccaratTimeoutEmbed({
-                betId: game.betId,
-                autoRefund: true
+              renderBaccaratPromptEmbed({
+                bet: game.betAmount,
+                winMultipliers:
+                  guildConfig.casinoSettings.baccarat.winMultipliers,
+                gameId: game.gameId,
+                globalSettings: guildConfig.globalSettings
               })
             ],
-            components: []
+            components: renderBaccaratButtons({ gameId: game.gameId })
           })
         }
       }
-
-      await deleteBaccaratGame({
-        userId: game.userId,
-        guildId: game.guildId
-      })
 
       processed++
       guildProcessed.set(
@@ -250,7 +271,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
       )
     } catch (error) {
       logger.error(
-        `Baccarat in-flight recovery failed for ${game.betId}`,
+        `Baccarat in-flight recovery failed for ${game.gameId}`,
         error
       )
     }
@@ -367,7 +388,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
         (guildProcessed.get(game.guildId) ?? 0) + 1
       )
     } catch (error) {
-      logger.error(`Mines in-flight recovery failed for ${game.betId}`, error)
+      logger.error(`Mines in-flight recovery failed for ${game.gameId}`, error)
     }
   }
 

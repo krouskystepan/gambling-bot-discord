@@ -2,27 +2,32 @@ import { ChannelType } from 'discord.js'
 
 import { Client } from 'commandkit'
 
-import { refundLockedBet } from '@/services'
+import { getGuildConfigByGuildId, refundLockedBet } from '@/services'
 import {
-  deleteRouletteGame,
-  getAllOldRouletteGames
-} from '@/services/db/rouletteGame.db'
+  deleteBaccaratGame,
+  getAllOldBaccaratGames
+} from '@/services/db/baccaratGame.db'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
-import { renderRouletteTimeoutEmbed } from '@/utils/casino/roulette'
+import { formatSessionSummaryEmbed } from '@/utils/casino/sessionSummary'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
-export const rouletteIdleCloseJob = async (client: Client<true>) => {
-  const oldGames = await getAllOldRouletteGames(1)
+export const baccaratIdleCloseJob = async (client: Client<true>) => {
+  const oldGames = await getAllOldBaccaratGames(1)
 
   let processed = 0
+  let refunded = 0
   const guildProcessed = new Map<string, number>()
 
   for (const game of oldGames) {
     try {
       const guild = await client.guilds.fetch(game.guildId).catch(() => null)
       if (!guild) continue
+
+      const guildConfig = await getGuildConfigByGuildId({
+        guildId: game.guildId
+      })
 
       const channel = await guild.channels
         .fetch(game.channelId)
@@ -36,27 +41,32 @@ export const rouletteIdleCloseJob = async (client: Client<true>) => {
       if (message) {
         await message.edit({
           embeds: [
-            renderRouletteTimeoutEmbed({
-              autoClosed: true,
+            formatSessionSummaryEmbed({
+              gameLabel: 'Baccarat',
+              emoji: '🃏',
               stats: game.sessionStats,
-              gameId: game.gameId
+              reason: 'timeout',
+              gameId: game.gameId,
+              globalSettings: guildConfig?.globalSettings
             })
           ],
           components: []
         })
       }
 
-      if (game.activeBetId && game.lockedAmount && game.lockedAmount > 0) {
+      // Only a round that never settled still holds a lock.
+      if (game.activeBetId) {
         await refundLockedBet({
           userId: game.userId,
           guildId: game.guildId,
-          amount: game.lockedAmount,
+          amount: game.betAmount,
           betId: game.activeBetId,
-          game: 'roulette'
+          game: 'baccarat'
         })
+        refunded++
       }
 
-      await deleteRouletteGame({
+      await deleteBaccaratGame({
         userId: game.userId,
         guildId: game.guildId
       })
@@ -68,14 +78,14 @@ export const rouletteIdleCloseJob = async (client: Client<true>) => {
       )
       await sleep(500)
     } catch (err) {
-      logger.error(`Roulette idle close failed for game ${game.gameId}`, err)
+      logger.error(`Baccarat idle close failed for game ${game.gameId}`, err)
     }
   }
 
   if (processed > 0) {
     logMultiGuildCountSummary({
       client,
-      job: 'Roulette idle close',
+      job: 'Baccarat idle close',
       verb: 'closed',
       total: processed,
       unit: 'table(s)',
@@ -85,10 +95,14 @@ export const rouletteIdleCloseJob = async (client: Client<true>) => {
     for (const [guildId, count] of guildProcessed) {
       await postWorkerLog(client, {
         guildId,
-        worker: 'Roulette idle close',
+        worker: 'Baccarat idle close',
         title: `Auto-closed ${count} idle table(s)`,
-        description:
-          'Inactive roulette tables were closed after 24 hours. Any mid-spin lock was refunded.',
+        description: [
+          'Inactive baccarat tables were closed after 24 hours.',
+          refunded > 0 ? 'Any bet still in flight was refunded.' : null
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
         level: 'info'
       })
     }

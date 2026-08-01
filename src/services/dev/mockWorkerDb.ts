@@ -164,8 +164,8 @@ async function seedLockedBalanceOrphans({
   for (let i = 0; i < count; i++) {
     await ensureFundedUser(invokingUserId, guildId)
 
-    const betId = generateId()
     const useBlackjackOrphan = i % 2 === 1
+    const betId = generateId(useBlackjackOrphan ? 'blackjack' : 'dice')
 
     if (useBlackjackOrphan) {
       await reserveCasinoBet({
@@ -210,7 +210,8 @@ async function seedBlackjackGame({
 }): Promise<string> {
   await ensureFundedUser(userId, guildId)
 
-  const betId = generateId()
+  const gameId = generateId('blackjack')
+  const betId = generateId('blackjack')
   const channelId = fakeChannelId()
   const messageId = fakeDiscordSnowflake()
 
@@ -227,7 +228,10 @@ async function seedBlackjackGame({
     guildId,
     channelId,
     messageId,
-    betId,
+    gameId,
+    activeBetId: betId,
+    baseBetAmount: 100,
+    showBalance: false,
     deck: [],
     deckIndex: 0,
     hands: [
@@ -245,7 +249,7 @@ async function seedBlackjackGame({
 
   await setBlackjackUpdatedAt(userId, guildId, updatedAt)
 
-  return `🃏 Blackjack game for ${formatUserRef(userId, invokingUserId)} (\`${betId}\`, updated ${updatedAt.toISOString()})`
+  return `🃏 Blackjack game for ${formatUserRef(userId, invokingUserId)} (\`${gameId}\`, updated ${updatedAt.toISOString()})`
 }
 
 async function seedBlackjackIdleNudges({
@@ -363,7 +367,8 @@ async function seedMinesGame({
 }): Promise<string> {
   await ensureFundedUser(userId, guildId)
 
-  const betId = generateId()
+  const gameId = generateId('mines')
+  const betId = generateId('mines')
   const channelId = fakeChannelId()
   const messageId = fakeDiscordSnowflake()
   const engine = createMinesEngine({
@@ -390,7 +395,8 @@ async function seedMinesGame({
     guildId,
     channelId,
     messageId,
-    betId,
+    gameId,
+    activeBetId: betId,
     betAmount: engine.betAmount,
     mineCount: engine.mineCount,
     mineIndices: engine.mineIndices,
@@ -401,7 +407,7 @@ async function seedMinesGame({
 
   await setMinesUpdatedAt(userId, guildId, updatedAt)
 
-  return `💣 Mines game for ${formatUserRef(userId, invokingUserId)} (\`${betId}\`, updated ${updatedAt.toISOString()})`
+  return `💣 Mines game for ${formatUserRef(userId, invokingUserId)} (\`${gameId}\`, updated ${updatedAt.toISOString()})`
 }
 
 async function seedMinesIdleNudges({
@@ -611,7 +617,7 @@ async function seedRaffleDraws({
   const secondParticipant = fakeDiscordSnowflake()
 
   for (let i = 0; i < count; i++) {
-    const drawId = generateId()
+    const drawId = generateId('raffle')
     const raffleId = fakeDiscordSnowflake()
 
     await upsertRaffle({

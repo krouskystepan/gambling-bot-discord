@@ -1,4 +1,7 @@
-import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
+import {
+  bumpSessionStats,
+  shouldAnnounceByMultiplier
+} from 'gambling-bot-shared/casino'
 import { formatMoney } from 'gambling-bot-shared/common'
 import {
   currentMinesMultiplier,
@@ -11,13 +14,17 @@ import { ChannelType } from 'discord.js'
 import { Client } from 'commandkit'
 
 import {
-  deleteMinesGame,
   getAllOldMinesGames,
   getGuildConfigByGuildId,
-  settleCasinoWinnings
+  settleCasinoWinnings,
+  updateMinesGame
 } from '@/services'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
-import { formatMinesBoard, renderMinesEmbed } from '@/utils/casino/mines'
+import {
+  formatMinesBoard,
+  renderMinesEmbed,
+  renderMinesResultComponents
+} from '@/utils/casino/mines'
 import { sleep } from '@/utils/common/utils'
 import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
@@ -58,18 +65,23 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
 
       const engine = docToMinesEngine(game)
       const resolved = resolveIdleMines(engine)
+      const betId = game.activeBetId
 
-      await settleCasinoWinnings({
-        userId: game.userId,
-        guildId: game.guildId,
-        totalBet: game.betAmount,
-        winnings: resolved.payout,
-        betId: game.betId,
-        game: 'mines'
-      })
+      if (betId) {
+        await settleCasinoWinnings({
+          userId: game.userId,
+          guildId: game.guildId,
+          totalBet: game.betAmount,
+          winnings: resolved.payout,
+          betId,
+          game: 'mines',
+          rounds: 1
+        })
+      }
 
       if (
         guildConfig &&
+        betId &&
         !resolved.forfeited &&
         shouldAnnounceByMultiplier(
           resolved.multiplier,
@@ -88,10 +100,24 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
               bet: formatMoney(game.betAmount, globalSettings)
             })
           ],
-          betId: game.betId,
+          betId,
           sourceChannelId: game.channelId
         })
       }
+
+      await updateMinesGame({
+        userId: game.userId,
+        guildId: game.guildId,
+        status: 'RESULT',
+        activeBetId: null,
+        revealedIndices: engine.revealedIndices,
+        sessionStats: betId
+          ? bumpSessionStats(game.sessionStats, {
+              totalBet: game.betAmount,
+              totalPayout: resolved.payout
+            })
+          : game.sessionStats
+      })
 
       if (message) {
         const content = resolved.forfeited
@@ -102,7 +128,7 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
           content,
           embeds: [
             renderMinesEmbed({
-              betId: game.betId,
+              gameId: game.gameId,
               betAmount: game.betAmount,
               mineCount: game.mineCount,
               revealedCount: engine.revealedIndices.length,
@@ -121,14 +147,12 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
               globalSettings
             })
           ],
-          components: []
+          components: renderMinesResultComponents({
+            gameId: game.gameId,
+            showBalance: game.showBalance
+          })
         })
       }
-
-      await deleteMinesGame({
-        userId: game.userId,
-        guildId: game.guildId
-      })
 
       processed++
       const stats = guildProcessed.get(game.guildId) ?? {
@@ -141,7 +165,7 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
 
       await sleep(300)
     } catch (err) {
-      logger.error(`Mines auto-resolve failed for game ${game.betId}`, err)
+      logger.error(`Mines auto-resolve failed for game ${game.gameId}`, err)
     }
   }
 

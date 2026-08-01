@@ -1,4 +1,5 @@
 import { TBlackjackGame } from 'gambling-bot-shared/blackjack'
+import { bumpSessionStats } from 'gambling-bot-shared/casino'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -6,8 +7,10 @@ import {
   settleCasinoWinnings
 } from '@/services/casino/casinoBet.service'
 import {
-  deleteBlackjackGame,
   getAllOldBlackjackGames,
+  getBlackjackGameByUserAndGuild,
+  getOldResultBlackjackGames,
+  updateBlackjackGame,
   upsertBlackjackGame
 } from '@/services/db/blackjackGame.db'
 import {
@@ -58,17 +61,26 @@ const settleStaleBlackjackGame = async (game: TBlackjackGame) => {
     guildId: game.guildId,
     totalBet,
     winnings: totalPayout,
-    betId: game.betId,
+    betId: game.activeBetId!,
     game: 'blackjack'
   })
 
-  await deleteBlackjackGame({ userId: game.userId, guildId: game.guildId })
+  await updateBlackjackGame({
+    userId: game.userId,
+    guildId: game.guildId,
+    phase: 'RESULT',
+    activeBetId: null,
+    hands: engine.hands,
+    activeHandIndex: -1,
+    dealerCards: engine.dealerCards,
+    sessionStats: bumpSessionStats(game.sessionStats, { totalBet, totalPayout })
+  })
 
   return { continued: false as const, totalPayout, totalBet }
 }
 
 describe('blackjack autostand data flow', () => {
-  it('finds stale games, auto-stands, settles winnings, and deletes game', async () => {
+  it('finds stale games, auto-stands, settles winnings, and parks in RESULT', async () => {
     await createTestUser({ balance: 1000 })
     await reserveCasinoBet({
       userId: 'user-1',
@@ -83,7 +95,10 @@ describe('blackjack autostand data flow', () => {
       guildId: 'guild-1',
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'bet-autostand-1',
+      gameId: 'game-autostand-1',
+      activeBetId: 'bet-autostand-1',
+      baseBetAmount: 100,
+      showBalance: false,
       deck: [],
       deckIndex: 0,
       hands: [
@@ -105,7 +120,7 @@ describe('blackjack autostand data flow', () => {
     )
 
     const stale = await getAllOldBlackjackGames(1)
-    const game = stale.find((g) => g.betId === 'bet-autostand-1')
+    const game = stale.find((g) => g.gameId === 'game-autostand-1')
     expect(game).toBeTruthy()
 
     const result = await settleStaleBlackjackGame(game!)
@@ -118,6 +133,25 @@ describe('blackjack autostand data flow', () => {
     expect(user?.lockedBalance).toBe(0)
 
     const remaining = await getAllOldBlackjackGames(1)
-    expect(remaining.some((g) => g.betId === 'bet-autostand-1')).toBe(false)
+    expect(remaining.some((g) => g.gameId === 'game-autostand-1')).toBe(false)
+
+    const settled = await getBlackjackGameByUserAndGuild({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(settled?.phase).toBe('RESULT')
+    expect(settled?.activeBetId).toBeNull()
+    expect(settled?.sessionStats).toMatchObject({
+      roundsPlayed: 1,
+      totalWagered: 100,
+      totalPayout: 200
+    })
+
+    await BlackjackGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date('2020-01-01T00:00:00Z') } }
+    )
+    const closable = await getOldResultBlackjackGames(1)
+    expect(closable.some((g) => g.gameId === 'game-autostand-1')).toBe(true)
   })
 })
