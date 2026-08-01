@@ -32,7 +32,10 @@ export const checkValidBet = (
     case 'INVALID_NUMBER':
       interaction.reply({
         embeds: [
-          createErrorEmbed('Invalid Input', 'Bet must be a valid number.')
+          createErrorEmbed(
+            'Error - Invalid Input',
+            'Bet must be a valid number.'
+          )
         ],
         flags: MessageFlags.Ephemeral
       })
@@ -41,7 +44,7 @@ export const checkValidBet = (
       interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Bet Amount',
+            'Error - Invalid Bet Amount',
             'Bet must have at most 2 decimal places.'
           )
         ],
@@ -52,7 +55,7 @@ export const checkValidBet = (
       interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Bet Amount',
+            'Error - Invalid Bet Amount',
             `Minimum possible bet is **$1**.`
           )
         ],
@@ -63,7 +66,7 @@ export const checkValidBet = (
       interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Input - Above Maximum Bet',
+            'Error - Invalid Input - Above Maximum Bet',
             `The maximum bet is **${formatMoney(maxBet, globalSettings)}**.`
           )
         ],
@@ -74,7 +77,7 @@ export const checkValidBet = (
       interaction.reply({
         embeds: [
           createErrorEmbed(
-            'Invalid Input - Below Minimum Bet',
+            'Error - Invalid Input - Below Minimum Bet',
             `The minimum bet is **${formatMoney(minBet, globalSettings)}**.`
           )
         ],

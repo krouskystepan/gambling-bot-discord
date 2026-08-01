@@ -94,8 +94,11 @@ describe('formatDate', () => {
 describe('generateId', () => {
   it('returns uppercase alphanumeric id', () => {
     const id = generateId()
-    expect(id).toMatch(/^[0-9A-Z]+$/)
-    expect(id.length).toBeGreaterThan(5)
+    expect(id).toMatch(/^[0-9A-Z]{8}$/)
+  })
+
+  it('returns prefixed ids', () => {
+    expect(generateId('slots')).toMatch(/^slots-[0-9A-Z]{8}$/)
   })
 })
 
