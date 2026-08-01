@@ -12,6 +12,10 @@ import { ChatInputCommand, CommandData, CommandMetadata } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { getAllActiveVipsByGuildId, getGuildConfigByGuildId } from '@/services'
+import {
+  casinoGameGuides,
+  formatGameGuideBody
+} from '@/utils/casino/gameGuides'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
@@ -102,40 +106,53 @@ const rtpLine = <G extends Parameters<typeof calculateRTP>[0]>(
   )
 }
 
+const gameSection = (
+  guideKey: keyof typeof casinoGameGuides,
+  settingLines: string[]
+) => {
+  const guide = casinoGameGuides[guideKey]
+  return section(guide.title, [
+    formatGameGuideBody(guide),
+    '',
+    '**This server**',
+    ...settingLines
+  ])
+}
+
 const buildGamesSections = (
   settings: TGuildConfiguration['casinoSettings'],
   showAdmin: boolean,
   globalSettings?: Partial<GlobalSettings> | null
 ): string[] => [
-  section('🪙 Coin Flip', [
+  gameSection('coinflip', [
     multiplier(settings.coinflip.winMultiplier),
     bet('Max Bet', settings.coinflip.maxBet, globalSettings),
     bet('Min Bet', settings.coinflip.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('coinflip', settings.coinflip)] : [])
   ]),
 
-  section('🃏 Hi-Lo', [
+  gameSection('hilo', [
     `- **House Edge:** ${settings.hilo.houseEdge * 100}%`,
     bet('Max Bet', settings.hilo.maxBet, globalSettings),
     bet('Min Bet', settings.hilo.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('hilo', settings.hilo)] : [])
   ]),
 
-  section('🚀 Limbo', [
+  gameSection('limbo', [
     `- **House Edge:** ${settings.limbo.houseEdge * 100}%`,
     bet('Max Bet', settings.limbo.maxBet, globalSettings),
     bet('Min Bet', settings.limbo.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('limbo', settings.limbo)] : [])
   ]),
 
-  section('🎲 Dice', [
+  gameSection('dice', [
     multiplier(settings.dice.winMultiplier),
     bet('Max Bet', settings.dice.maxBet, globalSettings),
     bet('Min Bet', settings.dice.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('dice', settings.dice)] : [])
   ]),
 
-  section('🤑 Golden Jackpot', [
+  gameSection('goldenJackpot', [
     multiplier(settings.goldenJackpot.winMultiplier),
     bet('Max Bet', settings.goldenJackpot.maxBet, globalSettings),
     bet('Min Bet', settings.goldenJackpot.minBet, globalSettings),
@@ -149,14 +166,14 @@ const buildGamesSections = (
       : [])
   ]),
 
-  section('🎟️ Lottery', [
+  gameSection('lottery', [
     multiplier(settings.lottery.winMultipliers),
     bet('Max Bet', settings.lottery.maxBet, globalSettings),
     bet('Min Bet', settings.lottery.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('lottery', settings.lottery)] : [])
   ]),
 
-  section('🎯 Plinko', [
+  gameSection('plinko', [
     multiplier(
       formatPlinkoBinMultipliersForDisplay(settings.plinko.binMultipliers)
     ),
@@ -165,21 +182,21 @@ const buildGamesSections = (
     ...(showAdmin ? [rtpLine('plinko', settings.plinko)] : [])
   ]),
 
-  section('🌀 Roulette', [
+  gameSection('roulette', [
     multiplier(settings.roulette.winMultipliers),
     bet('Max Bet', settings.roulette.maxBet, globalSettings),
     bet('Min Bet', settings.roulette.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('roulette', settings.roulette)] : [])
   ]),
 
-  section('🃏 Baccarat', [
+  gameSection('baccarat', [
     multiplier(settings.baccarat.winMultipliers),
     bet('Max Bet', settings.baccarat.maxBet, globalSettings),
     bet('Min Bet', settings.baccarat.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('baccarat', settings.baccarat)] : [])
   ]),
 
-  section('🎰 Slots', [
+  gameSection('slots', [
     multiplier(settings.slots.winMultipliers),
     bet('Max Bet', settings.slots.maxBet, globalSettings),
     bet('Min Bet', settings.slots.minBet, globalSettings),
@@ -193,14 +210,14 @@ const buildGamesSections = (
       : [])
   ]),
 
-  section('🃏 Blackjack', [
+  gameSection('blackjack', [
     multiplier(settings.blackjack.winMultipliers),
     bet('Max Bet', settings.blackjack.maxBet, globalSettings),
     bet('Min Bet', settings.blackjack.minBet, globalSettings),
     ...(showAdmin ? [rtpLine('blackjack', settings.blackjack)] : [])
   ]),
 
-  section('💣 Mines', [
+  gameSection('mines', [
     `- **House Edge:** ${settings.mines.houseEdge * 100}%`,
     `- **Mines Range:** ${settings.mines.minMines}–${settings.mines.maxMines}`,
     bet('Max Bet', settings.mines.maxBet, globalSettings),
@@ -208,18 +225,18 @@ const buildGamesSections = (
     ...(showAdmin ? [rtpLine('mines', settings.mines)] : [])
   ]),
 
-  section('🪨📄✂️ RPS', [
+  gameSection('rps', [
     `- **House Edge:** ${settings.rps.houseEdge * 100}%`,
     bet('Max Bet', settings.rps.maxBet, globalSettings),
     bet('Min Bet', settings.rps.minBet, globalSettings)
   ]),
 
-  section('👀 Prediction', [
+  gameSection('prediction', [
     bet('Max Bet', settings.prediction.maxBet, globalSettings),
     bet('Min Bet', settings.prediction.minBet, globalSettings)
   ]),
 
-  section('🎫 Raffle', [
+  gameSection('raffle', [
     `- **House Edge:** ${settings.raffle.houseEdge * 100}%`,
     ...(showAdmin ? [rtpLine('raffle', settings.raffle)] : [])
   ])
@@ -270,6 +287,7 @@ const buildConfigSections = (
       : ['- None'])
   ])
 ]
+
 export const chatInput: ChatInputCommand = async ({ interaction }) => {
   try {
     const config = await getGuildConfigByGuildId({
@@ -298,7 +316,9 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
     }
 
     await interaction.reply({
-      content: 'ℹ️ **Casino Information**\nSee threads below.',
+      content:
+        'ℹ️ **Casino Information**\nEach game section includes a short how-to, idle rules, and this server’s limits.' +
+        (showAdmin ? ' Admin RTP details are included.' : ''),
       flags: MessageFlags.Ephemeral
     })
 
@@ -313,12 +333,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         autoArchiveDuration: 1440
       })
 
-      for (const section of buildGamesSections(
+      for (const gamesSection of buildGamesSections(
         config.casinoSettings,
         showAdmin,
         config.globalSettings
       )) {
-        await gamesThread.send(`${section}\n\u200B`)
+        await gamesThread.send(`${gamesSection}\n\u200B`)
       }
     }
 
@@ -333,11 +353,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         autoArchiveDuration: 1440
       })
 
-      for (const section of buildConfigSections(
+      for (const configSection of buildConfigSections(
         config,
         vipRooms.map((r) => r.channelId)
       )) {
-        await configThread.send(`${section}\n\u200B`)
+        await configThread.send(`${configSection}\n\u200B`)
       }
     }
   } catch (error) {
