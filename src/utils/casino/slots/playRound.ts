@@ -1,11 +1,15 @@
-import { shouldAnnounceByMultiplier } from 'gambling-bot-shared/casino'
-import { formatMoney, generateId } from 'gambling-bot-shared/common'
+import {
+  bumpSessionStats,
+  shouldAnnounceByMultiplier
+} from 'gambling-bot-shared/casino'
+import { formatMoney, sessionBetId } from 'gambling-bot-shared/common'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import type { SlotsSessionPhase } from 'gambling-bot-shared/slots'
 
 import type { Guild, Message } from 'discord.js'
 
 import {
+  getSlotsGameByUserAndGuild,
   reserveCasinoBet,
   settleCasinoWinnings,
   updateSlotsGame
@@ -166,7 +170,18 @@ export const settleSlotsFromBatch = async ({
     totalBet,
     winnings: totalWinnings,
     betId,
-    game: 'slots'
+    game: 'slots',
+    rounds: spinsCount
+  })
+
+  const existing = await getSlotsGameByUserAndGuild({ userId, guildId })
+  if (!existing) {
+    throw new Error('SLOTS_SESSION_MISSING')
+  }
+  const sessionStats = bumpSessionStats(existing.sessionStats, {
+    totalBet,
+    totalPayout: totalWinnings,
+    rounds: spinsCount
   })
 
   await updateSlotsGame({
@@ -180,7 +195,8 @@ export const settleSlotsFromBatch = async ({
     lastWinsCount: winsCount,
     pendingBatchResults: null,
     activeBetId: null,
-    lockedAmount: null
+    lockedAmount: null,
+    sessionStats
   })
 
   if (message) {
@@ -215,7 +231,7 @@ export const settleSlotsFromBatch = async ({
       guildConfig,
       game: 'slots',
       lines: announcementSpins,
-      betId,
+      betId: gameId,
       sourceChannelId
     })
   }
@@ -259,7 +275,11 @@ export const playSlotsRound = async ({
   sourceChannelId: string
 }) => {
   const totalBet = slotsBatchTotal(unitBet, spinsCount)
-  const betId = generateId()
+  const existing = await getSlotsGameByUserAndGuild({ userId, guildId })
+  const betId = sessionBetId(
+    gameId,
+    (existing?.sessionStats?.roundsPlayed ?? 0) + 1
+  )
   const spinResults = Array.from({ length: spinsCount }, () =>
     spinSlot({
       symbolWeights: guildConfig.casinoSettings.slots.symbolWeights
@@ -281,7 +301,8 @@ export const playSlotsRound = async ({
       guildId,
       totalBet,
       betId,
-      game: 'slots'
+      game: 'slots',
+      rounds: spinsCount
     })
   } catch {
     await updateSlotsGame({
@@ -321,7 +342,7 @@ export const playSlotsRound = async ({
               liveNet,
               globalSettings: guildConfig.globalSettings
             }),
-            betId
+            gameId
           )
         ],
         components: []
@@ -344,7 +365,7 @@ export const playSlotsRound = async ({
               liveNet,
               globalSettings: guildConfig.globalSettings
             }),
-            betId
+            gameId
           )
         ],
         components: []
@@ -378,7 +399,7 @@ export const playSlotsRound = async ({
             '',
             `💰 Total: ${netEmoji(summaryNet)} **${formatMoney(summaryNet, guildConfig.globalSettings)}**`
           ].join('\n'),
-          betId
+          gameId
         )
       ],
       components: []

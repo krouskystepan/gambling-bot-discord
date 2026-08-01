@@ -1,17 +1,22 @@
 import type { TBlackjackGame } from 'gambling-bot-shared/blackjack'
+import { bumpSessionStats } from 'gambling-bot-shared/casino'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
-import { deleteBlackjackGame, getUser, settleCasinoWinnings } from '@/services'
+import { getUser, settleCasinoWinnings, updateBlackjackGame } from '@/services'
 import { collectBlackjackBigWinLines } from '@/utils/casino/blackjackBigWin'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 import { dealerDrawOne, dealerShouldDraw, resolveResult } from './engine'
-import { renderBlackjackEmbed } from './render'
+import { renderBlackjackEmbed, renderBlackjackResultComponents } from './render'
 import type { EngineState, FinalGameResultId } from './types'
 
 type EditableMessage = { edit: (...args: never[]) => Promise<unknown> }
 type AnnounceGuild = Parameters<typeof tryAnnounceBigWin>[0]['guild']
 
+/**
+ * Finishes the dealer hand, settles the active round and parks the session in
+ * `RESULT` so the player can rebet, change the stake, or close it.
+ */
 export const finishBlackjackDealerAndSettle = async ({
   game,
   engine,
@@ -52,16 +57,24 @@ export const finishBlackjackDealerAndSettle = async ({
   const finalResultId: FinalGameResultId =
     totalPayout === 0 ? 'LOSS' : totalPayout === totalBet ? 'EVEN' : 'WIN'
 
-  await settleCasinoWinnings({
-    userId: game.userId,
-    guildId: game.guildId,
-    totalBet,
-    winnings: totalPayout,
-    betId: game.betId,
-    game: 'blackjack'
-  })
+  const betId = game.activeBetId
+  const sessionStats = betId
+    ? bumpSessionStats(game.sessionStats, { totalBet, totalPayout })
+    : game.sessionStats
 
-  if (guildConfig) {
+  if (betId) {
+    await settleCasinoWinnings({
+      userId: game.userId,
+      guildId: game.guildId,
+      totalBet,
+      winnings: totalPayout,
+      betId,
+      game: 'blackjack',
+      rounds: 1
+    })
+  }
+
+  if (guildConfig && betId) {
     tryAnnounceBigWin({
       guild,
       guildConfig,
@@ -73,10 +86,23 @@ export const finishBlackjackDealerAndSettle = async ({
         minMultiplier:
           guildConfig.casinoSettings.winAnnouncements.blackjackMinMultiplier
       }),
-      betId: game.betId,
+      betId: game.gameId,
       sourceChannelId
     })
   }
+
+  await updateBlackjackGame({
+    userId: game.userId,
+    guildId: game.guildId,
+    phase: 'RESULT',
+    activeBetId: null,
+    deck: engine.deck,
+    deckIndex: engine.deckIndex,
+    hands: engine.hands,
+    activeHandIndex: -1,
+    dealerCards: engine.dealerCards,
+    sessionStats
+  })
 
   let userBalance: number | undefined
   if (showBalance) {
@@ -91,7 +117,7 @@ export const finishBlackjackDealerAndSettle = async ({
         renderBlackjackEmbed({
           userId: game.userId,
           guildId: game.guildId,
-          betId: game.betId,
+          gameId: game.gameId,
           hands: engine.hands,
           activeHandIndex: -1,
           dealerCards: engine.dealerCards,
@@ -101,14 +127,19 @@ export const finishBlackjackDealerAndSettle = async ({
           globalSettings: guildConfig?.globalSettings
         })
       ],
-      components: []
+      components: renderBlackjackResultComponents({
+        gameId: game.gameId,
+        showBalance
+      })
     } as never)
   }
 
-  await deleteBlackjackGame({
-    userId: game.userId,
-    guildId: game.guildId
-  })
-
-  return { totalPayout, totalBet, net, finalResultId, userBalance }
+  return {
+    totalPayout,
+    totalBet,
+    net,
+    finalResultId,
+    userBalance,
+    sessionStats
+  }
 }

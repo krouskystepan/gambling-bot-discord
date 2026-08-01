@@ -1,5 +1,8 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
 import type { Card, TBlackjackGame } from 'gambling-bot-shared/blackjack'
+import {
+  defaultCasinoSettings,
+  emptySessionStats
+} from 'gambling-bot-shared/casino'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -25,7 +28,12 @@ const baseGame: TBlackjackGame = {
   guildId: 'guild-1',
   channelId: 'channel-1',
   messageId: 'msg-1',
-  betId: 'bet-1',
+  gameId: 'game-1',
+  activeBetId: 'bet-1',
+  baseBetAmount: 100,
+  showBalance: false,
+  skipAnimations: false,
+  sessionStats: emptySessionStats(),
   deck: [],
   deckIndex: 0,
   hands: [
@@ -47,7 +55,7 @@ describe('finishBlackjackDealerAndSettle', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(services, 'settleCasinoWinnings').mockResolvedValue(999)
-    vi.spyOn(services, 'deleteBlackjackGame').mockResolvedValue(undefined)
+    vi.spyOn(services, 'updateBlackjackGame').mockResolvedValue(null as never)
     vi.spyOn(bigWin, 'tryAnnounceBigWin').mockImplementation(() => undefined)
   })
 
@@ -61,7 +69,7 @@ describe('finishBlackjackDealerAndSettle', () => {
     const result = await finishBlackjackDealerAndSettle({
       game: {
         ...baseGame,
-        betId: 'bet-even',
+        activeBetId: 'bet-even',
         deck: [card('4', 4)],
         hands: [
           {
@@ -105,11 +113,78 @@ describe('finishBlackjackDealerAndSettle', () => {
     expect(bigWin.tryAnnounceBigWin).toHaveBeenCalledTimes(1)
   })
 
+  it('parks the session in RESULT and bumps stats', async () => {
+    const result = await finishBlackjackDealerAndSettle({
+      game: { ...baseGame, activeBetId: 'bet-stats' },
+      engine: {
+        deck: [],
+        deckIndex: 0,
+        hands: [
+          {
+            cards: [card('10', 10), card('10', 10)],
+            betAmount: 100,
+            finished: true,
+            isSplitHand: false
+          }
+        ],
+        activeHandIndex: 0,
+        phase: 'DEALER',
+        dealerCards: [card('10', 10), card('7', 7)]
+      },
+      guildConfig: null,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      showBalance: false
+    })
+
+    expect(services.updateBlackjackGame).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        phase: 'RESULT',
+        activeBetId: null
+      })
+    )
+    expect(result.sessionStats).toMatchObject({
+      roundsPlayed: 1,
+      totalWagered: 100
+    })
+  })
+
+  it('skips settling when the round has no active bet', async () => {
+    const result = await finishBlackjackDealerAndSettle({
+      game: { ...baseGame, activeBetId: null },
+      engine: {
+        deck: [],
+        deckIndex: 0,
+        hands: [
+          {
+            cards: [card('10', 10), card('8', 8)],
+            betAmount: 100,
+            finished: true,
+            isSplitHand: false
+          }
+        ],
+        activeHandIndex: 0,
+        phase: 'DEALER',
+        dealerCards: [card('10', 10), card('10', 10)]
+      },
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      showBalance: false
+    })
+
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+    expect(bigWin.tryAnnounceBigWin).not.toHaveBeenCalled()
+    expect(result.sessionStats).toMatchObject({ roundsPlayed: 0 })
+  })
+
   it('skips announcements when guild config is missing', async () => {
     const result = await finishBlackjackDealerAndSettle({
       game: {
         ...baseGame,
-        betId: 'bet-loss'
+        activeBetId: 'bet-loss'
       },
       engine: {
         deck: [],
@@ -143,7 +218,7 @@ describe('finishBlackjackDealerAndSettle', () => {
     const result = await finishBlackjackDealerAndSettle({
       game: {
         ...baseGame,
-        betId: 'bet-win'
+        activeBetId: 'bet-win'
       },
       engine: {
         deck: [],
@@ -174,7 +249,7 @@ describe('finishBlackjackDealerAndSettle', () => {
     const result = await finishBlackjackDealerAndSettle({
       game: {
         ...baseGame,
-        betId: 'bet-draw-no-progress',
+        activeBetId: 'bet-draw-no-progress',
         deck: [card('4', 4)]
       },
       engine: {
@@ -209,7 +284,7 @@ describe('finishBlackjackDealerAndSettle', () => {
     const result = await finishBlackjackDealerAndSettle({
       game: {
         ...baseGame,
-        betId: 'bet-unresolved'
+        activeBetId: 'bet-unresolved'
       },
       engine: {
         deck: [],

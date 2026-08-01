@@ -108,7 +108,7 @@ export const renderBlackjackEmbed = ({
   userBalance,
   result,
   dealerHideSecondCard,
-  betId,
+  gameId,
   globalSettings
 }: RenderParams) => {
   const playerHandsText = hands
@@ -187,23 +187,27 @@ export const renderBlackjackEmbed = ({
     sections.push(resultSection)
   }
 
-  return createBetEmbed('🃏 Blackjack', color, sections.join('\n\n'), betId)
+  if (result?.kind === 'FINAL' || result?.kind === 'START') {
+    sections.push('_Rebet deals the same stake, or Change bet to edit._')
+  }
+
+  return createBetEmbed('🃏 Blackjack', color, sections.join('\n\n'), gameId)
 }
 
 export const renderBlackjackButtons = ({
-  betId,
+  gameId,
   showBalance,
   canDouble,
   canSplit
 }: {
-  betId: string
+  gameId: string
   showBalance: boolean
   canDouble: boolean
   canSplit: boolean
 }) => {
   const mk = (action: PlayerAction) =>
     encodeId({
-      betId,
+      gameId,
       action,
       showBalance
     })
@@ -240,3 +244,27 @@ export const renderBlackjackButtons = ({
 
   return row
 }
+
+/** Between-hand controls shown while the session sits in `RESULT`. */
+export const renderBlackjackResultComponents = ({
+  gameId,
+  showBalance
+}: {
+  gameId: string
+  showBalance: boolean
+}) => [
+  new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(encodeId({ gameId, action: 'REBET', showBalance }))
+      .setLabel('Rebet')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(encodeId({ gameId, action: 'CHANGE', showBalance }))
+      .setLabel('Change bet')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(encodeId({ gameId, action: 'CLOSE', showBalance }))
+      .setLabel('Close')
+      .setStyle(ButtonStyle.Secondary)
+  )
+]

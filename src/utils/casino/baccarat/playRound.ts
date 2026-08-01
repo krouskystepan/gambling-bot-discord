@@ -2,6 +2,9 @@ import {
   type BaccaratBetSide,
   type BaccaratCard,
   type BaccaratRoundResult,
+  type CasinoSessionStats,
+  bumpSessionStats,
+  emptySessionStats,
   handTotal,
   isPair,
   resolveBaccaratBet,
@@ -13,7 +16,7 @@ import type {
   TGuildConfiguration
 } from 'gambling-bot-shared/guild'
 
-import { deleteBaccaratGame, settleCasinoWinnings } from '@/services'
+import { settleCasinoWinnings, updateBaccaratGame } from '@/services'
 import { dealBaccarat } from '@/utils/casino/rng'
 import { sleep } from '@/utils/common/utils'
 import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
@@ -22,6 +25,7 @@ import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 import {
   BACCARAT_SIDE_LABELS,
   renderBaccaratDealEmbed,
+  renderBaccaratResultComponents,
   renderBaccaratResultEmbed
 } from './render'
 
@@ -39,7 +43,7 @@ const showDealStep = async ({
   playerCards,
   bankerCards,
   status,
-  betId,
+  gameId,
   globalSettings
 }: {
   message: EditableMessage
@@ -48,7 +52,7 @@ const showDealStep = async ({
   playerCards: BaccaratCard[]
   bankerCards: BaccaratCard[]
   status: string
-  betId: string
+  gameId: string
   globalSettings: MoneySettings
 }) => {
   await message.edit({
@@ -59,7 +63,7 @@ const showDealStep = async ({
         playerCards,
         bankerCards,
         status,
-        betId,
+        gameId,
         globalSettings
       })
     ],
@@ -105,8 +109,10 @@ const settleBaccaratRound = async ({
   round,
   userId,
   guildId,
+  gameId,
   betId,
   betAmount,
+  sessionStats = emptySessionStats(),
   showBalance,
   winMultipliers,
   globalSettings,
@@ -119,8 +125,10 @@ const settleBaccaratRound = async ({
   round: BaccaratRoundResult
   userId: string
   guildId: string
+  gameId: string
   betId: string
   betAmount: number
+  sessionStats?: CasinoSessionStats
   showBalance: boolean
   winMultipliers: TGuildConfiguration['casinoSettings']['baccarat']['winMultipliers']
   globalSettings: MoneySettings
@@ -142,7 +150,21 @@ const settleBaccaratRound = async ({
     totalBet: betAmount,
     winnings,
     betId,
-    game: 'baccarat'
+    game: 'baccarat',
+    rounds: 1
+  })
+
+  await updateBaccaratGame({
+    userId,
+    guildId,
+    phase: 'result',
+    activeBetId: null,
+    pendingDeal: null,
+    lastSide: side,
+    sessionStats: bumpSessionStats(sessionStats, {
+      totalBet: betAmount,
+      totalPayout: winnings
+    })
   })
 
   if (message) {
@@ -156,11 +178,11 @@ const settleBaccaratRound = async ({
           winnings,
           showBalance,
           finalBalance,
-          betId,
+          gameId,
           globalSettings
         })
       ],
-      components: []
+      components: renderBaccaratResultComponents({ gameId, canRebet: true })
     } as never)
   }
 
@@ -187,7 +209,7 @@ const settleBaccaratRound = async ({
           bet: formatMoney(betAmount, globalSettings)
         })
       ],
-      betId,
+      betId: gameId,
       sourceChannelId
     })
   }
@@ -202,8 +224,10 @@ export const recoverBaccaratDeal = async ({
   bankerCards,
   userId,
   guildId,
+  gameId,
   betId,
   betAmount,
+  sessionStats,
   showBalance,
   winMultipliers,
   globalSettings,
@@ -217,8 +241,10 @@ export const recoverBaccaratDeal = async ({
   bankerCards: BaccaratCard[]
   userId: string
   guildId: string
+  gameId: string
   betId: string
   betAmount: number
+  sessionStats?: CasinoSessionStats
   showBalance: boolean
   winMultipliers: TGuildConfiguration['casinoSettings']['baccarat']['winMultipliers']
   globalSettings: MoneySettings
@@ -237,8 +263,10 @@ export const recoverBaccaratDeal = async ({
     }).round,
     userId,
     guildId,
+    gameId,
     betId,
     betAmount,
+    sessionStats,
     showBalance,
     winMultipliers,
     globalSettings,
@@ -252,8 +280,10 @@ export const playBaccaratSide = async ({
   side,
   userId,
   guildId,
+  gameId,
   betId,
   betAmount,
+  sessionStats,
   showBalance,
   skipAnimations,
   winMultipliers,
@@ -267,8 +297,10 @@ export const playBaccaratSide = async ({
   side: BaccaratBetSide
   userId: string
   guildId: string
+  gameId: string
   betId: string
   betAmount: number
+  sessionStats?: CasinoSessionStats
   showBalance: boolean
   skipAnimations: boolean
   winMultipliers: TGuildConfiguration['casinoSettings']['baccarat']['winMultipliers']
@@ -292,7 +324,7 @@ export const playBaccaratSide = async ({
         playerCards: playerShown,
         bankerCards: bankerShown,
         status: '⏳ Dealing...',
-        betId,
+        gameId,
         globalSettings
       })
       await sleep(DEAL_STEP_MS)
@@ -305,7 +337,7 @@ export const playBaccaratSide = async ({
         playerCards: playerShown,
         bankerCards: bankerShown,
         status: '⏳ Dealing...',
-        betId,
+        gameId,
         globalSettings
       })
       await sleep(DEAL_STEP_MS)
@@ -320,7 +352,7 @@ export const playBaccaratSide = async ({
         playerCards: playerShown,
         bankerCards: bankerShown,
         status: '⏳ Player draws third...',
-        betId,
+        gameId,
         globalSettings
       })
       await sleep(DEAL_STEP_MS)
@@ -335,21 +367,23 @@ export const playBaccaratSide = async ({
         playerCards: playerShown,
         bankerCards: bankerShown,
         status: '⏳ Banker draws third...',
-        betId,
+        gameId,
         globalSettings
       })
       await sleep(DEAL_STEP_MS)
     }
   }
 
-  const settled = await settleBaccaratRound({
+  return settleBaccaratRound({
     message,
     side,
     round,
     userId,
     guildId,
+    gameId,
     betId,
     betAmount,
+    sessionStats,
     showBalance,
     winMultipliers,
     globalSettings,
@@ -357,8 +391,4 @@ export const playBaccaratSide = async ({
     guildConfig,
     sourceChannelId
   })
-
-  await deleteBaccaratGame({ userId, guildId })
-
-  return settled
 }

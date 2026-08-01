@@ -18,7 +18,7 @@ import {
 import { formatBaccaratCard } from '@/utils/casino/rng'
 import { createBetEmbed } from '@/utils/discord/createEmbed'
 
-import { encodeId } from './customId'
+import { encodeActionId, encodeSideId } from './customId'
 
 type MoneySettings = Partial<GlobalSettings> | null | undefined
 
@@ -53,12 +53,12 @@ const oddsBlock = (winMultipliers: Record<BaccaratBetSide, number>) =>
 export const renderBaccaratPromptEmbed = ({
   bet,
   winMultipliers,
-  betId,
+  gameId,
   globalSettings
 }: {
   bet: number
   winMultipliers: Record<BaccaratBetSide, number>
-  betId: string
+  gameId: string
   globalSettings: MoneySettings
 }) =>
   createBetEmbed(
@@ -66,71 +66,74 @@ export const renderBaccaratPromptEmbed = ({
     'Blue',
     [
       betLine(bet, globalSettings),
-      `**Payouts**\n${oddsBlock(winMultipliers)}`
+      `**Payouts**\n${oddsBlock(winMultipliers)}`,
+      '_Pick a side to deal, or change your bet first._'
     ].join('\n\n'),
-    betId
+    gameId
   )
 
-export const renderBaccaratButtons = ({
-  betId,
-  showBalance,
-  skipAnimations
-}: {
-  betId: string
-  showBalance: boolean
-  skipAnimations: boolean
-}) => [
+/** Side picks plus table controls, shown while the session waits for a bet. */
+export const renderBaccaratButtons = ({ gameId }: { gameId: string }) => [
   new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(
-        encodeId({ betId, side: 'player', showBalance, skipAnimations })
-      )
+      .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'player' }))
       .setLabel('Player')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
-      .setCustomId(
-        encodeId({ betId, side: 'banker', showBalance, skipAnimations })
-      )
+      .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'banker' }))
       .setLabel('Banker')
       .setStyle(ButtonStyle.Danger),
     new ButtonBuilder()
-      .setCustomId(
-        encodeId({ betId, side: 'tie', showBalance, skipAnimations })
-      )
+      .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'tie' }))
       .setLabel('Tie')
       .setStyle(ButtonStyle.Success)
   ),
   new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(
-        encodeId({ betId, side: 'playerPair', showBalance, skipAnimations })
-      )
+      .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'playerPair' }))
       .setLabel('Player Pair')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId(
-        encodeId({ betId, side: 'bankerPair', showBalance, skipAnimations })
-      )
+      .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'bankerPair' }))
       .setLabel('Banker Pair')
+      .setStyle(ButtonStyle.Secondary)
+  ),
+  new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'amount' }))
+      .setLabel('Change bet')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'close' }))
+      .setLabel('Close')
       .setStyle(ButtonStyle.Secondary)
   )
 ]
 
-export const renderBaccaratTimeoutEmbed = ({
-  betId,
-  autoRefund = false
+/** Between-round controls shown once a round is settled. */
+export const renderBaccaratResultComponents = ({
+  gameId,
+  canRebet
 }: {
-  betId: string
-  autoRefund?: boolean
-}) =>
-  createBetEmbed(
-    '🃏 Baccarat - Timed Out',
-    'Red',
-    autoRefund
-      ? 'No side chosen in time - bet was auto-refunded.'
-      : 'No side chosen in time - bet refunded.',
-    betId
+  gameId: string
+  canRebet: boolean
+}) => [
+  new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'rebet' }))
+      .setLabel('Rebet')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(!canRebet),
+    new ButtonBuilder()
+      .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'change' }))
+      .setLabel('Change')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'close' }))
+      .setLabel('Close')
+      .setStyle(ButtonStyle.Secondary)
   )
+]
 
 export const renderBaccaratDealEmbed = ({
   side,
@@ -138,7 +141,7 @@ export const renderBaccaratDealEmbed = ({
   playerCards,
   bankerCards,
   status,
-  betId,
+  gameId,
   globalSettings
 }: {
   side: BaccaratBetSide
@@ -146,7 +149,7 @@ export const renderBaccaratDealEmbed = ({
   playerCards: BaccaratCard[]
   bankerCards: BaccaratCard[]
   status: string
-  betId: string
+  gameId: string
   globalSettings: MoneySettings
 }) => {
   const lines = [
@@ -161,7 +164,7 @@ export const renderBaccaratDealEmbed = ({
     status
   ]
 
-  return createBetEmbed('🃏 Dealing...', 'Blue', lines.join('\n\n'), betId)
+  return createBetEmbed('🃏 Dealing...', 'Blue', lines.join('\n\n'), gameId)
 }
 
 export const renderBaccaratResultEmbed = ({
@@ -172,7 +175,7 @@ export const renderBaccaratResultEmbed = ({
   winnings,
   showBalance,
   finalBalance,
-  betId,
+  gameId,
   globalSettings
 }: {
   side: BaccaratBetSide
@@ -182,7 +185,7 @@ export const renderBaccaratResultEmbed = ({
   winnings: number
   showBalance: boolean | null
   finalBalance: number
-  betId: string
+  gameId: string
   globalSettings: MoneySettings
 }) => {
   const liveResult = winnings - bet
@@ -236,5 +239,7 @@ export const renderBaccaratResultEmbed = ({
     )
   }
 
-  return createBetEmbed(title, color, sections.join('\n\n'), betId)
+  sections.push('_Rebet repeats the same side and stake, or Change to edit._')
+
+  return createBetEmbed(title, color, sections.join('\n\n'), gameId)
 }

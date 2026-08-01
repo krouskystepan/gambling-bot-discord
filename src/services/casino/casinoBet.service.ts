@@ -40,7 +40,8 @@ export async function settleCasinoWinnings({
   totalBet,
   winnings,
   betId,
-  game
+  game,
+  rounds
 }: {
   userId: string
   guildId: string
@@ -48,6 +49,7 @@ export async function settleCasinoWinnings({
   winnings: number
   betId: string
   game: CasinoGameId
+  rounds?: number
 }) {
   const result = await sharedSettleCasinoWinnings({
     userId,
@@ -55,7 +57,8 @@ export async function settleCasinoWinnings({
     totalBet,
     winnings,
     betId,
-    game
+    game,
+    rounds
   })
 
   evaluateQuestsAfterCasinoActivity({ guildId, userId })
@@ -68,13 +71,15 @@ export async function reserveCasinoBet({
   guildId,
   totalBet,
   betId,
-  game
+  game,
+  rounds
 }: {
   userId: string
   guildId: string
   totalBet: number
   betId: string
   game: CasinoGameId
+  rounds?: number
 }) {
   const session = await mongoose.startSession()
 
@@ -107,7 +112,10 @@ export async function reserveCasinoBet({
               type: 'bet',
               source: 'casino',
               referenceId: betId,
-              meta: { game }
+              meta: {
+                game,
+                ...(rounds != null ? { rounds } : {})
+              }
             }
           ],
           { session }

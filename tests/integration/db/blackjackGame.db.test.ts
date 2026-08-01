@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
   deleteBlackjackGame,
   getAllOldBlackjackGames,
-  getBlackjackGameByBetId,
+  getBlackjackGameByGameId,
   getBlackjackGameByUserAndGuild,
+  getOldResultBlackjackGames,
   getStaleDealerBlackjackGames,
+  saveBlackjackGame,
   updateBlackjackGame,
   upsertBlackjackGame
 } from '@/services/db/blackjackGame.db'
@@ -20,7 +22,10 @@ const baseGame = {
   guildId: 'guild-1',
   channelId: 'channel-1',
   messageId: 'msg-1',
-  betId: 'bet-bj-1',
+  gameId: 'game-bj-1',
+  activeBetId: 'bet-bj-1',
+  baseBetAmount: 100,
+  showBalance: false,
   deck: [card('2', 2)],
   deckIndex: 1,
   hands: [
@@ -45,27 +50,29 @@ describe('blackjackGame.db', () => {
       guildId: 'guild-1'
     })
 
-    expect(game?.betId).toBe('bet-bj-1')
+    expect(game?.gameId).toBe('game-bj-1')
+    expect(game?.activeBetId).toBe('bet-bj-1')
+    expect(game?.sessionStats.roundsPlayed).toBe(0)
     expect(game?.hands[0]?.betAmount).toBe(100)
   })
 
-  it('fetches by bet id', async () => {
+  it('fetches by game id', async () => {
     await upsertBlackjackGame(baseGame)
 
-    const game = await getBlackjackGameByBetId({
-      betId: 'bet-bj-1',
+    const game = await getBlackjackGameByGameId({
+      gameId: 'game-bj-1',
       guildId: 'guild-1'
     })
 
     expect(game?.userId).toBe('user-1')
   })
 
-  it('updates an existing game document', async () => {
+  it('saves an existing game document', async () => {
     const game = await upsertBlackjackGame(baseGame)
     expect(game).toBeTruthy()
 
     game!.phase = 'DEALER'
-    await updateBlackjackGame(game!)
+    await saveBlackjackGame(game!)
 
     const updated = await getBlackjackGameByUserAndGuild({
       userId: 'user-1',
@@ -74,7 +81,21 @@ describe('blackjackGame.db', () => {
     expect(updated?.phase).toBe('DEALER')
   })
 
-  it('finds games older than N days', async () => {
+  it('patches an existing game document', async () => {
+    await upsertBlackjackGame(baseGame)
+
+    const updated = await updateBlackjackGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      phase: 'RESULT',
+      activeBetId: null
+    })
+
+    expect(updated?.phase).toBe('RESULT')
+    expect(updated?.activeBetId).toBeNull()
+  })
+
+  it('finds mid-hand games older than N days', async () => {
     await upsertBlackjackGame(baseGame)
     await BlackjackGame.collection.updateOne(
       { userId: 'user-1', guildId: 'guild-1' },
@@ -82,14 +103,28 @@ describe('blackjackGame.db', () => {
     )
 
     const old = await getAllOldBlackjackGames(1)
-    expect(old.some((g) => g.betId === 'bet-bj-1')).toBe(true)
+    expect(old.some((g) => g.gameId === 'game-bj-1')).toBe(true)
+  })
+
+  it('excludes settled sessions from the mid-hand old query', async () => {
+    await upsertBlackjackGame({ ...baseGame, phase: 'RESULT' })
+    await BlackjackGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date('2020-01-01T00:00:00Z') } }
+    )
+
+    const old = await getAllOldBlackjackGames(1)
+    expect(old.some((g) => g.gameId === 'game-bj-1')).toBe(false)
+
+    const settled = await getOldResultBlackjackGames(1)
+    expect(settled.some((g) => g.gameId === 'game-bj-1')).toBe(true)
   })
 
   it('does not return recent games in old query', async () => {
-    await upsertBlackjackGame({ ...baseGame, betId: 'bet-recent' })
+    await upsertBlackjackGame({ ...baseGame, gameId: 'game-recent' })
 
     const old = await getAllOldBlackjackGames(1)
-    expect(old.some((g) => g.betId === 'bet-recent')).toBe(false)
+    expect(old.some((g) => g.gameId === 'game-recent')).toBe(false)
   })
 
   it('finds stale dealer games by grace window', async () => {
@@ -97,14 +132,14 @@ describe('blackjackGame.db', () => {
     expect(game).toBeTruthy()
 
     game!.phase = 'DEALER'
-    await updateBlackjackGame(game!)
+    await saveBlackjackGame(game!)
     await BlackjackGame.collection.updateOne(
       { userId: 'user-1', guildId: 'guild-1' },
       { $set: { updatedAt: new Date(Date.now() - 61_000) } }
     )
 
     const stale = await getStaleDealerBlackjackGames(60_000)
-    expect(stale.some((g) => g.betId === 'bet-bj-1')).toBe(true)
+    expect(stale.some((g) => g.gameId === 'game-bj-1')).toBe(true)
   })
 
   it('deletes game by user and guild', async () => {

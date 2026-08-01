@@ -1,7 +1,9 @@
 import {
-  baccaratIdleNudgeThresholdMs,
-  baccaratIdleRefundMs
+  baccaratIdleCloseMs,
+  baccaratIdleNudgeThresholdMs
 } from 'gambling-bot-shared/baccarat'
+import { emptySessionStats } from 'gambling-bot-shared/casino'
+import { DAY_MS } from 'gambling-bot-shared/common'
 
 import BaccaratGame from '@/models/BaccaratGame'
 
@@ -18,14 +20,14 @@ export const getBaccaratGameByUserAndGuild = async ({
   return BaccaratGame.findOne({ userId, guildId })
 }
 
-export const getBaccaratGameByBetId = async ({
-  betId,
+export const getBaccaratGameByGameId = async ({
+  gameId,
   guildId
 }: {
-  betId: string
+  gameId: string
   guildId: string
 }) => {
-  return BaccaratGame.findOne({ betId, guildId })
+  return BaccaratGame.findOne({ gameId, guildId })
 }
 
 export const getBaccaratGamesByGuildId = async ({
@@ -36,10 +38,12 @@ export const getBaccaratGamesByGuildId = async ({
   return BaccaratGame.find({ guildId })
 }
 
+/** Idle sessions (waiting or settled) for the idle-close worker. */
 export const getAllOldBaccaratGames = async (days: number) => {
   return BaccaratGame.find({
+    phase: { $in: ['waiting', 'result'] },
     updatedAt: {
-      $lte: new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      $lte: new Date(Date.now() - days * DAY_MS)
     }
   })
 }
@@ -48,10 +52,10 @@ export const getBaccaratGamesNeedingIdleNudge = async () => {
   const now = Date.now()
 
   return BaccaratGame.find({
-    phase: 'waiting',
+    phase: { $in: ['waiting', 'result'] },
     updatedAt: {
       $lte: new Date(now - baccaratIdleNudgeThresholdMs()),
-      $gt: new Date(now - baccaratIdleRefundMs())
+      $gt: new Date(now - baccaratIdleCloseMs())
     },
     $or: [{ idleNudgeSentAt: null }, { idleNudgeSentAt: { $exists: false } }]
   })
@@ -80,12 +84,15 @@ export const upsertBaccaratGame = async ({
   guildId,
   channelId,
   messageId,
-  betId,
+  gameId,
+  activeBetId = null,
   betAmount,
+  lastSide = null,
   showBalance,
   skipAnimations,
   phase = 'waiting',
-  pendingDeal = null
+  pendingDeal = null,
+  sessionStats
 }: TUpsertBaccaratGame) => {
   return BaccaratGame.findOneAndUpdate(
     { userId, guildId },
@@ -93,12 +100,15 @@ export const upsertBaccaratGame = async ({
       $set: {
         channelId,
         messageId,
-        betId,
+        gameId,
+        activeBetId,
         betAmount,
+        lastSide,
         showBalance,
         skipAnimations,
         phase,
         pendingDeal,
+        sessionStats: sessionStats ?? emptySessionStats(),
         idleNudgeSentAt: null
       }
     },

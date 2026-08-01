@@ -1,3 +1,4 @@
+import type { CasinoSessionStats } from 'gambling-bot-shared/casino'
 import type {
   RouletteSessionPhase,
   TRouletteSlipBet
@@ -20,6 +21,7 @@ export type TUpsertRouletteGame = Pick<TUser, 'userId' | 'guildId'> & {
   lastNetResult?: number | null
   activeBetId?: string | null
   lockedAmount?: number | null
+  sessionStats?: CasinoSessionStats
 }
 
 export type TUpdateRouletteGame = Pick<TUser, 'userId' | 'guildId'> & {
@@ -35,4 +37,5 @@ export type TUpdateRouletteGame = Pick<TUser, 'userId' | 'guildId'> & {
   lastNetResult?: number | null
   activeBetId?: string | null
   lockedAmount?: number | null
+  sessionStats?: CasinoSessionStats
 }

@@ -1,13 +1,13 @@
 import {
-  baccaratIdleNudgeThresholdMs,
-  baccaratIdleRefundMs
+  baccaratIdleCloseMs,
+  baccaratIdleNudgeThresholdMs
 } from 'gambling-bot-shared/baccarat'
 import { describe, expect, it } from 'vitest'
 
 import {
   deleteBaccaratGame,
   getAllOldBaccaratGames,
-  getBaccaratGameByBetId,
+  getBaccaratGameByGameId,
   getBaccaratGameByUserAndGuild,
   getBaccaratGamesByGuildId,
   getBaccaratGamesNeedingIdleNudge,
@@ -26,7 +26,7 @@ const baseGame = {
   guildId: 'guild-1',
   channelId: 'channel-1',
   messageId: 'msg-1',
-  betId: 'bet-bc-1',
+  gameId: 'game-bc-1',
   betAmount: 100,
   showBalance: false,
   skipAnimations: false
@@ -41,16 +41,18 @@ describe('baccaratGame.db', () => {
       guildId: 'guild-1'
     })
 
-    expect(game?.betId).toBe('bet-bc-1')
+    expect(game?.gameId).toBe('game-bc-1')
+    expect(game?.activeBetId).toBeNull()
     expect(game?.betAmount).toBe(100)
     expect(game?.phase).toBe('waiting')
+    expect(game?.sessionStats.roundsPlayed).toBe(0)
   })
 
-  it('fetches by bet id and guild id list', async () => {
+  it('fetches by game id and guild id list', async () => {
     await upsertBaccaratGame(baseGame)
 
-    const game = await getBaccaratGameByBetId({
-      betId: 'bet-bc-1',
+    const game = await getBaccaratGameByGameId({
+      gameId: 'game-bc-1',
       guildId: 'guild-1'
     })
     expect(game?.userId).toBe('user-1')
@@ -59,7 +61,7 @@ describe('baccaratGame.db', () => {
     expect(games).toHaveLength(1)
   })
 
-  it('finds games older than N days', async () => {
+  it('finds waiting and settled games older than N days', async () => {
     await upsertBaccaratGame(baseGame)
     await BaccaratGame.collection.updateOne(
       { userId: 'user-1', guildId: 'guild-1' },
@@ -67,7 +69,20 @@ describe('baccaratGame.db', () => {
     )
 
     const old = await getAllOldBaccaratGames(1)
-    expect(old.some((g) => g.betId === 'bet-bc-1')).toBe(true)
+    expect(old.some((g) => g.gameId === 'game-bc-1')).toBe(true)
+
+    await updateBaccaratGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      phase: 'result'
+    })
+    await BaccaratGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date('2020-01-01T00:00:00Z') } }
+    )
+
+    const settled = await getAllOldBaccaratGames(1)
+    expect(settled.some((g) => g.gameId === 'game-bc-1')).toBe(true)
   })
 
   it('finds and marks idle nudge candidates', async () => {
@@ -80,7 +95,7 @@ describe('baccaratGame.db', () => {
     )
 
     const needing = await getBaccaratGamesNeedingIdleNudge()
-    expect(needing.some((g) => g.betId === 'bet-bc-1')).toBe(true)
+    expect(needing.some((g) => g.gameId === 'game-bc-1')).toBe(true)
 
     await markBaccaratIdleNudgeSent({
       userId: 'user-1',
@@ -88,20 +103,20 @@ describe('baccaratGame.db', () => {
     })
 
     const afterMark = await getBaccaratGamesNeedingIdleNudge()
-    expect(afterMark.some((g) => g.betId === 'bet-bc-1')).toBe(false)
+    expect(afterMark.some((g) => g.gameId === 'game-bc-1')).toBe(false)
 
-    // Past refund window should not be nudged.
+    // Past the close window the table is handled by the idle-close worker.
     await BaccaratGame.collection.updateOne(
       { userId: 'user-1', guildId: 'guild-1' },
       {
         $set: {
-          updatedAt: new Date(Date.now() - baccaratIdleRefundMs() - 60_000),
+          updatedAt: new Date(Date.now() - baccaratIdleCloseMs() - 60_000),
           idleNudgeSentAt: null
         }
       }
     )
-    const pastRefund = await getBaccaratGamesNeedingIdleNudge()
-    expect(pastRefund.some((g) => g.betId === 'bet-bc-1')).toBe(false)
+    const pastClose = await getBaccaratGamesNeedingIdleNudge()
+    expect(pastClose.some((g) => g.gameId === 'game-bc-1')).toBe(false)
   })
 
   it('finds stale dealing games by grace window', async () => {
@@ -110,6 +125,7 @@ describe('baccaratGame.db', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       phase: 'dealing',
+      activeBetId: 'bet-bc-1',
       pendingDeal: {
         side: 'player',
         playerCards: [
@@ -128,7 +144,8 @@ describe('baccaratGame.db', () => {
     )
 
     const stale = await getStaleDealingBaccaratGames(60_000)
-    expect(stale.some((g) => g.betId === 'bet-bc-1')).toBe(true)
+    expect(stale.some((g) => g.gameId === 'game-bc-1')).toBe(true)
+    expect(stale[0]?.activeBetId).toBe('bet-bc-1')
     expect(stale[0]?.pendingDeal?.side).toBe('player')
   })
 

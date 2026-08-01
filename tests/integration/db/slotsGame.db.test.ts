@@ -44,6 +44,7 @@ describe('slotsGame.db', () => {
     expect(game?.phase).toBe('ready')
     expect(game?.unitBet).toBeNull()
     expect(game?.spinsCount).toBe(1)
+    expect(game?.sessionStats.roundsPlayed).toBe(0)
   })
 
   it('fetches by game id and guild list', async () => {
@@ -120,9 +121,7 @@ describe('slotsGame.db', () => {
       { gameId: 'sl-game-1' },
       {
         $set: {
-          updatedAt: new Date(
-            Date.now() - slotsIdleNudgeThresholdMs() - 60_000
-          )
+          updatedAt: new Date(Date.now() - slotsIdleNudgeThresholdMs() - 60_000)
         }
       }
     )

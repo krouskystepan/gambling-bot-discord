@@ -1,4 +1,7 @@
-import { defaultCasinoSettings } from 'gambling-bot-shared/casino'
+import {
+  defaultCasinoSettings,
+  emptySessionStats
+} from 'gambling-bot-shared/casino'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import type { TMinesGame } from 'gambling-bot-shared/mines'
@@ -20,25 +23,30 @@ const guildConfig = {
 } as TGuildConfiguration
 
 const baseGame = ({
-  status,
   revealedIndices,
-  mineIndices = [0, 1, 2]
+  mineIndices = [0, 1, 2],
+  activeBetId = 'bet-mines-1',
+  status = 'RESULT'
 }: {
-  status: TMinesGame['status']
   revealedIndices: number[]
   mineIndices?: number[]
+  activeBetId?: string | null
+  status?: TMinesGame['status']
 }): TMinesGame => ({
   userId: 'user-1',
   guildId: 'guild-1',
   channelId: 'channel-1',
   messageId: 'msg-1',
-  betId: 'bet-mines-1',
+  gameId: 'game-mines-1',
+  activeBetId,
   betAmount: 100,
   mineCount: 3,
   mineIndices,
   revealedIndices,
   houseEdgeSnapshot: 0.03,
   status,
+  showBalance: false,
+  sessionStats: emptySessionStats(),
   createdAt: new Date(),
   updatedAt: new Date()
 })
@@ -47,15 +55,15 @@ describe('finishMinesAndSettle', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(services, 'settleCasinoWinnings').mockResolvedValue(999)
-    vi.spyOn(services, 'deleteMinesGame').mockResolvedValue(undefined)
+    vi.spyOn(services, 'updateMinesGame').mockResolvedValue(null as never)
     vi.spyOn(bigWin, 'tryAnnounceBigWin').mockImplementation(() => undefined)
   })
 
-  it('settles a bust without announcing', async () => {
+  it('settles a bust without announcing and parks the table in RESULT', async () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const resolved = await finishMinesAndSettle({
-      game: baseGame({ status: 'FINISHED', revealedIndices: [0] }),
+      game: baseGame({ revealedIndices: [0] }),
       guildConfig,
       guild: { id: 'guild-1' } as never,
       sourceChannelId: 'channel-1',
@@ -66,9 +74,17 @@ describe('finishMinesAndSettle', () => {
     expect(resolved.resultKind).toBe('BUST')
     expect(bigWin.tryAnnounceBigWin).not.toHaveBeenCalled()
     expect(message.edit).toHaveBeenCalled()
-    expect(services.deleteMinesGame).toHaveBeenCalledWith({
-      userId: 'user-1',
-      guildId: 'guild-1'
+    expect(services.updateMinesGame).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        guildId: 'guild-1',
+        status: 'RESULT',
+        activeBetId: null
+      })
+    )
+    expect(resolved.sessionStats).toMatchObject({
+      roundsPlayed: 1,
+      totalWagered: 100
     })
   })
 
@@ -79,7 +95,7 @@ describe('finishMinesAndSettle', () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const resolved = await finishMinesAndSettle({
-      game: baseGame({ status: 'FINISHED', revealedIndices: [5, 6] }),
+      game: baseGame({ revealedIndices: [5, 6] }),
       guildConfig,
       guild: { id: 'guild-1', channels: { fetch: vi.fn() } } as never,
       sourceChannelId: 'channel-1',
@@ -92,7 +108,7 @@ describe('finishMinesAndSettle', () => {
     expect(bigWin.tryAnnounceBigWin).toHaveBeenCalledWith(
       expect.objectContaining({
         game: 'mines',
-        betId: 'bet-mines-1',
+        betId: 'game-mines-1',
         sourceChannelId: 'channel-1'
       })
     )
@@ -103,11 +119,11 @@ describe('finishMinesAndSettle', () => {
     expect(message.edit).toHaveBeenCalled()
   })
 
-  it('settles a finished forfeit and renders without announcing', async () => {
+  it('settles a forfeit and renders without announcing', async () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const resolved = await finishMinesAndSettle({
-      game: baseGame({ status: 'FINISHED', revealedIndices: [] }),
+      game: baseGame({ revealedIndices: [] }),
       guildConfig: null,
       guild: null,
       sourceChannelId: 'channel-1',
@@ -125,12 +141,28 @@ describe('finishMinesAndSettle', () => {
         game: 'mines'
       })
     )
-    expect(services.deleteMinesGame).toHaveBeenCalled()
+    expect(services.updateMinesGame).toHaveBeenCalled()
+  })
+
+  it('skips settling when the round has no active bet', async () => {
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
+
+    const resolved = await finishMinesAndSettle({
+      game: baseGame({ revealedIndices: [0], activeBetId: null }),
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      showBalance: false,
+      message: message as never
+    })
+
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+    expect(resolved.sessionStats).toMatchObject({ roundsPlayed: 0 })
   })
 
   it('skips message edit when message is missing', async () => {
     const resolved = await finishMinesAndSettle({
-      game: baseGame({ status: 'FINISHED', revealedIndices: [0] }),
+      game: baseGame({ revealedIndices: [0] }),
       guildConfig,
       guild: null,
       sourceChannelId: 'channel-1',
@@ -138,7 +170,7 @@ describe('finishMinesAndSettle', () => {
     })
 
     expect(resolved.resultKind).toBe('BUST')
-    expect(services.deleteMinesGame).toHaveBeenCalled()
+    expect(services.updateMinesGame).toHaveBeenCalled()
   })
 
   it('skips balance lookup when user is missing', async () => {
@@ -146,7 +178,7 @@ describe('finishMinesAndSettle', () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     await finishMinesAndSettle({
-      game: baseGame({ status: 'FINISHED', revealedIndices: [5] }),
+      game: baseGame({ revealedIndices: [5] }),
       guildConfig,
       guild: null,
       sourceChannelId: 'channel-1',

@@ -1,3 +1,4 @@
+import { emptySessionStats } from 'gambling-bot-shared/casino'
 import {
   slotsIdleCloseMs,
   slotsIdleNudgeThresholdMs
@@ -92,7 +93,8 @@ export const upsertSlotsGame = async ({
   lastWinsCount = null,
   pendingBatchResults = null,
   activeBetId = null,
-  lockedAmount = null
+  lockedAmount = null,
+  sessionStats
 }: TUpsertSlotsGame) => {
   return SlotsGame.findOneAndUpdate(
     { userId, guildId },
@@ -114,6 +116,7 @@ export const upsertSlotsGame = async ({
         pendingBatchResults,
         activeBetId,
         lockedAmount,
+        sessionStats: sessionStats ?? emptySessionStats(),
         idleNudgeSentAt: null
       }
     },

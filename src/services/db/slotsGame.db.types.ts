@@ -1,3 +1,4 @@
+import type { CasinoSessionStats } from 'gambling-bot-shared/casino'
 import type { SlotsSessionPhase } from 'gambling-bot-shared/slots'
 import { TUser } from 'gambling-bot-shared/user'
 
@@ -20,6 +21,7 @@ export type TUpsertSlotsGame = Pick<TUser, 'userId' | 'guildId'> & {
   pendingBatchResults?: string[] | null
   activeBetId?: string | null
   lockedAmount?: number | null
+  sessionStats?: CasinoSessionStats
 }
 
 export type TUpdateSlotsGame = Pick<TUser, 'userId' | 'guildId'> & {
@@ -38,4 +40,5 @@ export type TUpdateSlotsGame = Pick<TUser, 'userId' | 'guildId'> & {
   pendingBatchResults?: string[] | null
   activeBetId?: string | null
   lockedAmount?: number | null
+  sessionStats?: CasinoSessionStats
 }

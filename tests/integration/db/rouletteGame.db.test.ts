@@ -43,6 +43,7 @@ describe('rouletteGame.db', () => {
     expect(game?.gameId).toBe('rl-game-1')
     expect(game?.phase).toBe('betting')
     expect(game?.bets).toEqual([])
+    expect(game?.sessionStats.roundsPlayed).toBe(0)
   })
 
   it('fetches by game id and guild list', async () => {
@@ -145,7 +146,9 @@ describe('rouletteGame.db', () => {
     expect(after.some((game) => game.gameId === 'rl-game-1')).toBe(false)
 
     // Still within close window, not past refund age
-    expect(rouletteIdleCloseMs()).toBeGreaterThan(rouletteIdleNudgeThresholdMs())
+    expect(rouletteIdleCloseMs()).toBeGreaterThan(
+      rouletteIdleNudgeThresholdMs()
+    )
   })
 
   it('deletes a game', async () => {
