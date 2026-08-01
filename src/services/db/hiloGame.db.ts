@@ -1,11 +1,17 @@
 import {
   hiloGuessTimeoutMs,
+  hiloIdleCloseMs,
   hiloIdleNudgeThresholdMs
 } from 'gambling-bot-shared/casino'
+import { emptySessionStats } from 'gambling-bot-shared/casino'
 
 import HiloGame from '@/models/HiloGame'
 
-import type { TGetHiloGame, TUpsertHiloGame } from './hiloGame.db.types'
+import type {
+  TGetHiloGame,
+  TUpdateHiloGame,
+  TUpsertHiloGame
+} from './hiloGame.db.types'
 
 export const getHiloGameByUserAndGuild = async ({
   userId,
@@ -32,11 +38,11 @@ export const getHiloGamesByGuildId = async ({
   return HiloGame.find({ guildId })
 }
 
-/** Waiting rounds past the guess timeout - worker applies timeout fee. */
+/** Waiting rounds past the guess timeout - worker auto-plays safest side. */
 export const getTimedOutHiloGames = async () => {
   return HiloGame.find({
     status: 'WAITING',
-    createdAt: {
+    updatedAt: {
       $lte: new Date(Date.now() - hiloGuessTimeoutMs())
     }
   })
@@ -48,11 +54,21 @@ export const getHiloGamesNeedingIdleNudge = async () => {
 
   return HiloGame.find({
     status: 'WAITING',
-    createdAt: {
+    updatedAt: {
       $lte: new Date(now - hiloIdleNudgeThresholdMs()),
       $gt: new Date(now - hiloGuessTimeoutMs())
     },
     $or: [{ idleNudgeSentAt: null }, { idleNudgeSentAt: { $exists: false } }]
+  })
+}
+
+/** Empty or settled tables idle long enough for the idle-close worker. */
+export const getOldIdleHiloGames = async () => {
+  return HiloGame.find({
+    status: { $in: ['BETTING', 'RESULT'] },
+    updatedAt: {
+      $lte: new Date(Date.now() - hiloIdleCloseMs())
+    }
   })
 }
 
@@ -80,14 +96,14 @@ export const upsertHiloGame = async ({
   channelId,
   messageId,
   gameId,
-  activeBetId,
+  activeBetId = null,
   betAmount,
-  firstCard,
-  remainingDeck,
+  firstCard = null,
+  remainingDeck = [],
   houseEdgeSnapshot,
-  timeoutFeeSnapshot,
   showBalance,
-  status = 'WAITING'
+  status = 'BETTING',
+  sessionStats = emptySessionStats()
 }: TUpsertHiloGame) => {
   return HiloGame.findOneAndUpdate(
     { userId, guildId },
@@ -101,13 +117,30 @@ export const upsertHiloGame = async ({
         firstCard,
         remainingDeck,
         houseEdgeSnapshot,
-        timeoutFeeSnapshot,
         showBalance,
         status,
+        sessionStats,
         idleNudgeSentAt: null
       }
     },
     { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+  )
+}
+
+export const updateHiloGame = async ({
+  userId,
+  guildId,
+  ...patch
+}: TUpdateHiloGame) => {
+  return HiloGame.findOneAndUpdate(
+    { userId, guildId },
+    {
+      $set: {
+        ...patch,
+        idleNudgeSentAt: null
+      }
+    },
+    { returnDocument: 'after' }
   )
 }
 

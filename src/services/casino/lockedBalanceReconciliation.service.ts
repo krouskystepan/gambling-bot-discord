@@ -223,7 +223,7 @@ export async function computeJustifiedLockedAmount({
   }
 
   const hiloGame = await getHiloGameByUserAndGuild({ userId, guildId })
-  if (hiloGame?.activeBetId) {
+  if (hiloGame?.activeBetId && hiloGame.betAmount != null) {
     breakdown.hilo = hiloGame.betAmount
   }
 

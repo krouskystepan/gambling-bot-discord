@@ -1,6 +1,7 @@
 import {
   type THiloGame,
-  defaultCasinoSettings
+  defaultCasinoSettings,
+  emptySessionStats
 } from 'gambling-bot-shared/casino'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
@@ -41,9 +42,9 @@ const baseGame = (overrides?: Partial<THiloGame>): THiloGame => ({
   firstCard: { label: '7', suite: '♥️', rank: 7 },
   remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
   houseEdgeSnapshot: 0.01,
-  timeoutFeeSnapshot: 0.1,
   showBalance: false,
   status: 'WAITING',
+  sessionStats: emptySessionStats(),
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides
@@ -62,7 +63,7 @@ describe('hilo finish', () => {
         gameId === 'hilo-1' ? (baseGame({ status: 'SETTLING' }) as never) : null
     )
     vi.spyOn(services, 'settleCasinoWinnings').mockResolvedValue(900)
-    vi.spyOn(services, 'deleteHiloGame').mockResolvedValue(undefined as never)
+    vi.spyOn(services, 'updateHiloGame').mockResolvedValue(undefined as never)
     vi.spyOn(services, 'getUser').mockResolvedValue({
       balance: 900,
       lockedBalance: 0
@@ -70,7 +71,7 @@ describe('hilo finish', () => {
     vi.spyOn(bigWin, 'tryAnnounceBigWin').mockImplementation(() => undefined)
   })
 
-  it('settles a winning guess and announces', async () => {
+  it('settles a winning guess and parks in RESULT', async () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const result = await settleHiloGuess({
@@ -84,7 +85,12 @@ describe('hilo finish', () => {
 
     expect(result?.outcome).toBe('win')
     expect(services.settleCasinoWinnings).toHaveBeenCalled()
-    expect(services.deleteHiloGame).toHaveBeenCalled()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'RESULT',
+        activeBetId: null
+      })
+    )
     expect(bigWin.tryAnnounceBigWin).toHaveBeenCalledWith(
       expect.objectContaining({
         game: 'hilo',
@@ -116,7 +122,7 @@ describe('hilo finish', () => {
     expect(bigWin.tryAnnounceBigWin).not.toHaveBeenCalled()
   })
 
-  it('settles a push when ranks match', async () => {
+  it('loses higher/lower when ranks match', async () => {
     vi.mocked(rng.drawHiloCard).mockReturnValueOnce({
       label: '7',
       suite: '♦️',
@@ -131,9 +137,9 @@ describe('hilo finish', () => {
       sourceChannelId: 'channel-1'
     })
 
-    expect(result?.outcome).toBe('push')
+    expect(result?.outcome).toBe('lose')
     expect(services.settleCasinoWinnings).toHaveBeenCalledWith(
-      expect.objectContaining({ winnings: 100 })
+      expect.objectContaining({ winnings: 0 })
     )
   })
 
@@ -163,12 +169,15 @@ describe('hilo finish', () => {
       }) as never
     )
 
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
+
     const result = await settleHiloGuess({
       game: baseGame({ firstCard: { label: 'A', suite: '♠️', rank: 14 } }),
       guess: 'higher',
       guildConfig,
       guild: null,
-      sourceChannelId: 'channel-1'
+      sourceChannelId: 'channel-1',
+      message: message as never
     })
 
     expect(result).toBeNull()
@@ -178,7 +187,67 @@ describe('hilo finish', () => {
         betId: 'hilo-1'
       })
     )
-    expect(services.deleteHiloGame).toHaveBeenCalled()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'RESULT' })
+    )
+    expect(message.edit).toHaveBeenCalled()
+  })
+
+  it('returns stake without editing when impossible side has no message', async () => {
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        firstCard: { label: 'A', suite: '♠️', rank: 14 },
+        status: 'SETTLING'
+      }) as never
+    )
+
+    const result = await settleHiloGuess({
+      game: baseGame({ firstCard: { label: 'A', suite: '♠️', rank: 14 } }),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result).toBeNull()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'RESULT' })
+    )
+  })
+
+  it('parks a corrupt claimed round without settling', async () => {
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        betAmount: null,
+        firstCard: null,
+        activeBetId: null,
+        status: 'SETTLING'
+      }) as never
+    )
+
+    const result = await settleHiloGuess({
+      game: baseGame(),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result).toBeNull()
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'RESULT', activeBetId: null })
+    )
+  })
+
+  it('no-ops timeout when the first card is missing', async () => {
+    const result = await settleHiloTimeout({
+      game: baseGame({ firstCard: null }),
+      guildConfig
+    })
+
+    expect(result).toBeNull()
+    expect(services.claimHiloGameForSettle).not.toHaveBeenCalled()
   })
 
   it('loads balance when showBalance is enabled', async () => {
@@ -231,14 +300,14 @@ describe('hilo finish', () => {
     vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
       baseGame({
         status: 'SETTLING',
-        remainingDeck: [stored]
+        remainingDeck: [stored!]
       }) as never
     )
 
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const result = await settleHiloGuess({
-      game: baseGame({ remainingDeck: [stored] }),
+      game: baseGame({ remainingDeck: [stored!] }),
       guess: 'higher',
       guildConfig,
       guild: null,
@@ -307,7 +376,7 @@ describe('hilo finish', () => {
     )
   })
 
-  it('applies timeout fee settlement', async () => {
+  it('auto-plays the safest side on timeout', async () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const result = await settleHiloTimeout({
@@ -316,14 +385,11 @@ describe('hilo finish', () => {
       message: message as never
     })
 
-    expect(result).toEqual({ refunded: 90, feeKept: 10 })
-    expect(services.settleCasinoWinnings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        totalBet: 100,
-        winnings: 90,
-        betId: 'hilo-1',
-        game: 'hilo'
-      })
+    // First card 7 → safest is higher (tied with lower); Ace second → win.
+    expect(result?.outcome).toBe('win')
+    expect(services.settleCasinoWinnings).toHaveBeenCalled()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'RESULT' })
     )
     expect(message.edit).toHaveBeenCalled()
   })
@@ -331,11 +397,21 @@ describe('hilo finish', () => {
   it('settles timeout without editing when message is missing', async () => {
     const result = await settleHiloTimeout({
       game: baseGame(),
+      guildConfig
+    })
+
+    expect(result?.outcome).toBe('win')
+    expect(services.updateHiloGame).toHaveBeenCalled()
+  })
+
+  it('no-ops timeout when guild config is missing', async () => {
+    const result = await settleHiloTimeout({
+      game: baseGame(),
       guildConfig: null
     })
 
-    expect(result).toEqual({ refunded: 90, feeKept: 10 })
-    expect(services.deleteHiloGame).toHaveBeenCalled()
+    expect(result).toBeNull()
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
   })
 
   it('no-ops timeout when claim loses the race', async () => {
@@ -343,7 +419,7 @@ describe('hilo finish', () => {
 
     const result = await settleHiloTimeout({
       game: baseGame(),
-      guildConfig: null
+      guildConfig
     })
 
     expect(result).toBeNull()

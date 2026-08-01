@@ -34,6 +34,7 @@ export const hiloTimeoutJob = async (client: Client<true>) => {
       const settled = await settleHiloTimeout({
         game,
         guildConfig,
+        guild,
         message
       })
 
@@ -66,7 +67,7 @@ export const hiloTimeoutJob = async (client: Client<true>) => {
         worker: 'Hi-Lo timeout',
         title: `Timed out ${count} Hi-Lo round(s)`,
         description:
-          'Players who did not guess in time were charged the timeout fee and the rest was returned.',
+          'Players who did not guess in time had the safest side auto-played.',
         level: 'info'
       })
     }

@@ -1,8 +1,9 @@
 import {
   type HiloGuess,
   type THiloGame,
-  getHiloTimeoutRefund,
+  bumpSessionStats,
   getHiloWinMultiplier,
+  pickSafestHiloGuess,
   resolveHiloRound,
   shouldAnnounceByMultiplier
 } from 'gambling-bot-shared/casino'
@@ -11,27 +12,28 @@ import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
 import {
   claimHiloGameForSettle,
-  deleteHiloGame,
   getUser,
-  settleCasinoWinnings
+  settleCasinoWinnings,
+  updateHiloGame
 } from '@/services'
 import type { HiloCard } from '@/utils/casino/rng'
 import { drawHiloCard, formatHiloCard } from '@/utils/casino/rng'
 import { sleep } from '@/utils/common/utils'
+import { createBetEmbed } from '@/utils/discord/createEmbed'
 import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 import {
+  renderHiloResultComponents,
   renderHiloResultEmbed,
-  renderHiloRevealEmbed,
-  renderHiloTimeoutEmbed
+  renderHiloRevealEmbed
 } from './render'
 
 type EditableMessage = { edit: (...args: never[]) => Promise<unknown> }
 type AnnounceGuild = Parameters<typeof tryAnnounceBigWin>[0]['guild']
 
 /** Copy card fields explicitly - mongoose subdocs do not spread via `{...card}`. */
-const toHiloCard = (card: THiloGame['firstCard']): HiloCard => ({
+const toHiloCard = (card: NonNullable<THiloGame['firstCard']>): HiloCard => ({
   label: card.label,
   suite: card.suite,
   rank: card.rank
@@ -40,8 +42,28 @@ const toHiloCard = (card: THiloGame['firstCard']): HiloCard => ({
 const toMutableDeck = (game: THiloGame): HiloCard[] =>
   game.remainingDeck.map(toHiloCard)
 
-const formatStoredCard = (card: THiloGame['firstCard']) =>
+const formatStoredCard = (card: NonNullable<THiloGame['firstCard']>) =>
   formatHiloCard(toHiloCard(card))
+
+const parkInResult = async ({
+  game,
+  sessionStats,
+  betAmount
+}: {
+  game: THiloGame
+  sessionStats: THiloGame['sessionStats']
+  betAmount: number
+}) =>
+  updateHiloGame({
+    userId: game.userId,
+    guildId: game.guildId,
+    status: 'RESULT',
+    activeBetId: null,
+    betAmount,
+    firstCard: null,
+    remainingDeck: [],
+    sessionStats
+  })
 
 export const settleHiloGuess = async ({
   game,
@@ -49,7 +71,8 @@ export const settleHiloGuess = async ({
   guildConfig,
   guild,
   sourceChannelId,
-  message
+  message,
+  autoPlayed = false
 }: {
   game: THiloGame
   guess: HiloGuess
@@ -57,6 +80,8 @@ export const settleHiloGuess = async ({
   guild: AnnounceGuild
   sourceChannelId: string
   message?: EditableMessage | null
+  /** True when the worker auto-picked the safest side after a guess timeout. */
+  autoPlayed?: boolean
 }) => {
   const claimed = await claimHiloGameForSettle({
     gameId: game.gameId,
@@ -64,9 +89,21 @@ export const settleHiloGuess = async ({
   })
   if (!claimed) return null
 
-  const firstCard = formatStoredCard(claimed.firstCard)
+  const stake = claimed.betAmount
+  const firstStored = claimed.firstCard
+  const betId = claimed.activeBetId
+  if (stake == null || !firstStored || !betId) {
+    await parkInResult({
+      game: claimed,
+      sessionStats: claimed.sessionStats,
+      betAmount: stake ?? 0
+    })
+    return null
+  }
+
+  const firstCard = formatStoredCard(firstStored)
   const winMultiplier = getHiloWinMultiplier(
-    claimed.firstCard.rank,
+    firstStored.rank,
     guess,
     claimed.houseEdgeSnapshot
   )
@@ -75,16 +112,39 @@ export const settleHiloGuess = async ({
     await settleCasinoWinnings({
       userId: claimed.userId,
       guildId: claimed.guildId,
-      totalBet: claimed.betAmount,
-      winnings: claimed.betAmount,
-      betId: claimed.activeBetId,
+      totalBet: stake,
+      winnings: stake,
+      betId,
       game: 'hilo',
       rounds: 1
     })
-    await deleteHiloGame({
-      userId: claimed.userId,
-      guildId: claimed.guildId
+
+    const sessionStats = bumpSessionStats(claimed.sessionStats, {
+      totalBet: stake,
+      totalPayout: stake
     })
+
+    await parkInResult({ game: claimed, sessionStats, betAmount: stake })
+
+    if (message) {
+      await message.edit({
+        embeds: [
+          createBetEmbed(
+            '🃏 Hi-Lo',
+            'Yellow',
+            [
+              `💵 Bet: **${formatMoney(stake, guildConfig.globalSettings)}**`,
+              `**Card**\n${firstCard}`,
+              'That side cannot win - your bet was returned.',
+              '_Rebet keeps the same stake, or Change to edit._'
+            ].join('\n\n'),
+            claimed.gameId
+          )
+        ],
+        components: renderHiloResultComponents({ gameId: claimed.gameId })
+      } as never)
+    }
+
     return null
   }
 
@@ -95,7 +155,7 @@ export const settleHiloGuess = async ({
           firstCard,
           guess,
           winMultiplier,
-          bet: claimed.betAmount,
+          bet: stake,
           betId: claimed.gameId,
           globalSettings: guildConfig.globalSettings
         })
@@ -108,31 +168,28 @@ export const settleHiloGuess = async ({
   const deck = toMutableDeck(claimed)
   const second = drawHiloCard(deck)
   const secondCard = formatHiloCard(second)
-  const outcome = resolveHiloRound(claimed.firstCard.rank, second.rank, guess)
+  const outcome = resolveHiloRound(firstStored.rank, second.rank, guess)
 
-  const totalWinnings =
-    outcome === 'win'
-      ? claimed.betAmount * winMultiplier
-      : outcome === 'push'
-        ? claimed.betAmount
-        : 0
+  const totalWinnings = outcome === 'win' ? stake * winMultiplier : 0
 
   const finalBalance = await settleCasinoWinnings({
     userId: claimed.userId,
     guildId: claimed.guildId,
-    totalBet: claimed.betAmount,
+    totalBet: stake,
     winnings: totalWinnings,
-    betId: claimed.activeBetId,
+    betId,
     game: 'hilo',
     rounds: 1
   })
 
-  await deleteHiloGame({
-    userId: claimed.userId,
-    guildId: claimed.guildId
+  const sessionStats = bumpSessionStats(claimed.sessionStats, {
+    totalBet: stake,
+    totalPayout: totalWinnings
   })
 
-  const liveResult = totalWinnings - claimed.betAmount
+  await parkInResult({ game: claimed, sessionStats, betAmount: stake })
+
+  const liveResult = totalWinnings - stake
   let balanceForEmbed = finalBalance
   if (claimed.showBalance) {
     const user = await getUser({
@@ -152,15 +209,16 @@ export const settleHiloGuess = async ({
           secondCard,
           guess,
           winMultiplier,
-          bet: claimed.betAmount,
+          bet: stake,
           liveResult,
           showBalance: claimed.showBalance,
           finalBalance: balanceForEmbed,
           betId: claimed.gameId,
-          globalSettings: guildConfig.globalSettings
+          globalSettings: guildConfig.globalSettings,
+          autoPlayed
         })
       ],
-      components: []
+      components: renderHiloResultComponents({ gameId: claimed.gameId })
     } as never)
   }
 
@@ -181,7 +239,7 @@ export const settleHiloGuess = async ({
           middle: [`**${firstCard}** → **${secondCard}** (${guess})`],
           multiplier: winMultiplier.toFixed(2),
           payout: formatMoney(totalWinnings, guildConfig.globalSettings),
-          bet: formatMoney(claimed.betAmount, guildConfig.globalSettings)
+          bet: formatMoney(stake, guildConfig.globalSettings)
         })
       ],
       betId: claimed.gameId,
@@ -189,59 +247,35 @@ export const settleHiloGuess = async ({
     })
   }
 
-  return { outcome, totalWinnings, liveResult }
+  return { outcome, totalWinnings, liveResult, sessionStats }
 }
 
+/** Timed-out waiting rounds auto-play the safest (lowest-x) side. */
 export const settleHiloTimeout = async ({
   game,
   guildConfig,
+  guild = null,
   message
 }: {
   game: THiloGame
   guildConfig: TGuildConfiguration | null
+  guild?: AnnounceGuild
   message?: EditableMessage | null
 }) => {
-  const claimed = await claimHiloGameForSettle({
-    gameId: game.gameId,
-    guildId: game.guildId
+  if (!guildConfig) return null
+
+  const firstStored = game.firstCard
+  if (!firstStored) return null
+
+  const guess = pickSafestHiloGuess(firstStored.rank, game.houseEdgeSnapshot)
+
+  return settleHiloGuess({
+    game,
+    guess,
+    guildConfig,
+    guild,
+    sourceChannelId: game.channelId,
+    message,
+    autoPlayed: true
   })
-  if (!claimed) return null
-
-  const timeoutFee = claimed.timeoutFeeSnapshot
-  const refunded = getHiloTimeoutRefund(claimed.betAmount, timeoutFee)
-  const feeKept = claimed.betAmount - refunded
-
-  await settleCasinoWinnings({
-    userId: claimed.userId,
-    guildId: claimed.guildId,
-    totalBet: claimed.betAmount,
-    winnings: refunded,
-    betId: claimed.activeBetId,
-    game: 'hilo',
-    rounds: 1
-  })
-
-  await deleteHiloGame({
-    userId: claimed.userId,
-    guildId: claimed.guildId
-  })
-
-  if (message) {
-    await message.edit({
-      embeds: [
-        renderHiloTimeoutEmbed({
-          firstCard: formatStoredCard(claimed.firstCard),
-          bet: claimed.betAmount,
-          timeoutFee,
-          feeKept,
-          refunded,
-          betId: claimed.gameId,
-          globalSettings: guildConfig?.globalSettings
-        })
-      ],
-      components: []
-    } as never)
-  }
-
-  return { refunded, feeKept }
 }

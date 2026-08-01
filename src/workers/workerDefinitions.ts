@@ -17,6 +17,7 @@ import {
   casinoInFlightRecoveryJob,
   guildOrphanCleanupJob,
   guildSettingsSyncJob,
+  hiloIdleCloseJob,
   hiloIdleNudgeJob,
   hiloTimeoutJob,
   lockedBalanceReconciliationJob,
@@ -82,7 +83,7 @@ export const workerDefinitions: WorkerDefinition[] = [
   ...withStartDelay(
     THIRTY_SECONDS,
     scheduleEvery(15 * MINUTE_MS, [
-      // Hi-Lo: DM at 30m idle, then apply timeout fee + refund after 1h.
+      // Hi-Lo waiting round: DM at 30m idle, then auto-play safest side after 1h.
       ['Hi-Lo idle nudge', hiloIdleNudgeJob],
       ['Hi-Lo timeout', hiloTimeoutJob]
     ])
@@ -109,7 +110,9 @@ export const workerDefinitions: WorkerDefinition[] = [
       ['Roulette idle nudge', rouletteIdleNudgeJob],
       ['Roulette idle close', rouletteIdleCloseJob],
       ['Slots idle nudge', slotsIdleNudgeJob],
-      ['Slots idle close', slotsIdleCloseJob]
+      ['Slots idle close', slotsIdleCloseJob],
+      // Close abandoned Hi-Lo BETTING / RESULT tables after 24h.
+      ['Hi-Lo idle close', hiloIdleCloseJob]
     ])
   ),
   ...withStartDelay(

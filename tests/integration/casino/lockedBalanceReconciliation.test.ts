@@ -305,7 +305,6 @@ describe('lockedBalanceReconciliation.service', () => {
       firstCard: { label: '7', suite: '♥️', rank: 7 },
       remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
       houseEdgeSnapshot: 0.01,
-      timeoutFeeSnapshot: 0.1,
       showBalance: false
     })
 
@@ -344,7 +343,6 @@ describe('lockedBalanceReconciliation.service', () => {
       firstCard: { label: '7', suite: '♥️', rank: 7 },
       remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
       houseEdgeSnapshot: 0.01,
-      timeoutFeeSnapshot: 0.1,
       showBalance: false
     })
     await backdateBetTx(

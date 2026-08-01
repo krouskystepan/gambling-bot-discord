@@ -61,10 +61,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       renderSection(
         '🃏 Hi-Lo',
-        formatCommand('hilo', [
-          { name: 'bet', example: '2000', required: true },
-          { name: 'show-balance', example: 'true' }
-        ])
+        formatCommand('hilo', [{ name: 'show-balance', example: 'true' }])
       ),
 
       renderSection(

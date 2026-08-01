@@ -295,13 +295,15 @@ export const runGuildOrphanCleanup = async ({
 
   for (const game of hiloGames) {
     try {
-      await refundLockedBet({
-        userId: game.userId,
-        guildId: game.guildId,
-        amount: game.betAmount,
-        betId: game.activeBetId,
-        game: 'hilo'
-      })
+      if (game.activeBetId && game.betAmount != null) {
+        await refundLockedBet({
+          userId: game.userId,
+          guildId: game.guildId,
+          amount: game.betAmount,
+          betId: game.activeBetId,
+          game: 'hilo'
+        })
+      }
 
       await deleteHiloGame({
         userId: game.userId,

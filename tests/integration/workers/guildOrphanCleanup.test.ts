@@ -579,7 +579,6 @@ describe('runGuildOrphanCleanup', () => {
       firstCard: { label: '7', suite: '♥️', rank: 7 },
       remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
       houseEdgeSnapshot: 0.01,
-      timeoutFeeSnapshot: 0.1,
       showBalance: false
     })
 
@@ -596,6 +595,38 @@ describe('runGuildOrphanCleanup', () => {
     const user = await User.findOne({ userId: 'user-1', guildId: GUILD_ID })
     expect(user?.balance).toBe(1000)
     expect(user?.lockedBalance).toBe(0)
+  })
+
+  it('deletes empty hi-lo tables without refunding', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await upsertHiloGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'hilo-empty-1',
+      activeBetId: null,
+      betAmount: null,
+      firstCard: null,
+      remainingDeck: [],
+      houseEdgeSnapshot: 0.01,
+      showBalance: false,
+      status: 'BETTING'
+    })
+
+    const refundCallsBefore = vi.mocked(refundLockedBet).mock.calls.length
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.hilo).toBe(1)
+    expect(
+      await getHiloGameByUserAndGuild({
+        userId: 'user-1',
+        guildId: GUILD_ID
+      })
+    ).toBeNull()
+    expect(vi.mocked(refundLockedBet).mock.calls.length).toBe(refundCallsBefore)
   })
 
   it('records hi-lo refund failures without deleting the game', async () => {
@@ -621,7 +652,6 @@ describe('runGuildOrphanCleanup', () => {
       firstCard: { label: '7', suite: '♥️', rank: 7 },
       remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
       houseEdgeSnapshot: 0.01,
-      timeoutFeeSnapshot: 0.1,
       showBalance: false
     })
 

@@ -39,7 +39,7 @@ export default async (interaction: Interaction) => {
   if (customId.startsWith('mines:') || customId.startsWith('minesm:')) {
     return handleMinesInteraction(interaction)
   }
-  if (customId.startsWith('hl:')) {
+  if (customId.startsWith('hl:') || customId.startsWith('hlm:')) {
     return handleHiloInteraction(interaction)
   }
 }

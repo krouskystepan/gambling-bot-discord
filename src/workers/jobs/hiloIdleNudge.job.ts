@@ -24,7 +24,7 @@ export const hiloIdleNudgeJob = async (client: Client<true>) => {
 
   for (const game of games) {
     try {
-      const minutesLeft = minutesUntilHiloTimeout(game.createdAt)
+      const minutesLeft = minutesUntilHiloTimeout(game.updatedAt)
       const jumpLink = casinoGameMessageLink(game)
 
       const delivered = await sendCasinoIdleNudgeDm({
@@ -34,7 +34,7 @@ export const hiloIdleNudgeJob = async (client: Client<true>) => {
         body: [
           `Still playing? You have about **${minutesLeft} minute(s)** left to guess.`,
           '',
-          `No guess in time takes a **${(game.timeoutFeeSnapshot * 100).toFixed(0)}%** timeout fee and the rest of your bet will be refunded.`,
+          'No guess in time auto-plays the **safest side** (lowest odds) for you.',
           '',
           `[Jump to your Hi-Lo message](${jumpLink})`
         ].join('\n'),
@@ -76,7 +76,7 @@ export const hiloIdleNudgeJob = async (client: Client<true>) => {
         worker: 'Hi-Lo reminders',
         title: `Reminded ${count} idle player(s)`,
         description:
-          'Players with inactive Hi-Lo rounds were DMed before the timeout fee.',
+          'Players with inactive Hi-Lo rounds were DMed before auto-play.',
         level: 'info'
       })
     }

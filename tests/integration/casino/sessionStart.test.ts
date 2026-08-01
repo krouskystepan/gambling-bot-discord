@@ -7,8 +7,9 @@ import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { getBlackjackGameByGameId, getMinesGameByGameId } from '@/services'
+import { getBlackjackGameByGameId, getHiloGameByGameId, getMinesGameByGameId } from '@/services'
 import { startBlackjackHand } from '@/utils/casino/blackjack'
+import { startHiloRound } from '@/utils/casino/hilo'
 import { startMinesBoard } from '@/utils/casino/mines'
 import * as rng from '@/utils/casino/rng'
 import * as bigWin from '@/utils/discord/tryAnnounceBigWin'
@@ -259,5 +260,82 @@ describe('startMinesBoard', () => {
       netProfit: -100
     })
     expect(game?.showBalance).toBe(true)
+  })
+})
+
+describe('startHiloRound', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('reserves the stake and persists a waiting round', async () => {
+    await createTestUser({ balance: 1000 })
+    vi.spyOn(rng, 'createShuffledHiloDeck').mockReturnValue([
+      { label: 'A', suite: '♠️', rank: 14 },
+      { label: '7', suite: '♥️', rank: 7 }
+    ])
+
+    const result = await startHiloRound({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      gameId: 'hilo-session-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      betAmount: 100,
+      houseEdge: 0.03,
+      showBalance: false,
+      globalSettings: defaultGlobalSettings
+    })
+
+    expect(result.embeds).toHaveLength(1)
+    expect(result.components).toHaveLength(1)
+
+    const game = await getHiloGameByGameId({
+      gameId: 'hilo-session-1',
+      guildId: 'guild-1'
+    })
+    expect(game?.status).toBe('WAITING')
+    expect(game?.activeBetId).toBeTruthy()
+    expect(game?.betAmount).toBe(100)
+    expect(game?.firstCard?.rank).toBe(7)
+    expect(game?.sessionStats.roundsPlayed).toBe(0)
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.balance).toBe(900)
+    expect(user?.lockedBalance).toBe(100)
+  })
+
+  it('carries prior session stats onto the new round', async () => {
+    await createTestUser({ balance: 1000 })
+    vi.spyOn(rng, 'createShuffledHiloDeck').mockReturnValue([
+      { label: '2', suite: '♦️', rank: 2 },
+      { label: 'K', suite: '♣️', rank: 13 }
+    ])
+
+    await startHiloRound({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      gameId: 'hilo-session-2',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      betAmount: 100,
+      houseEdge: 0.03,
+      showBalance: true,
+      sessionStats: bumpSessionStats(emptySessionStats(), {
+        totalBet: 100,
+        totalPayout: 0
+      }),
+      globalSettings: defaultGlobalSettings
+    })
+
+    const game = await getHiloGameByGameId({
+      gameId: 'hilo-session-2',
+      guildId: 'guild-1'
+    })
+    expect(game?.sessionStats).toMatchObject({
+      roundsPlayed: 1,
+      totalWagered: 100,
+      netProfit: -100
+    })
+    expect(game?.showBalance).toBe(true)
+    expect(game?.activeBetId).toContain('hilo-session-2')
   })
 })
