@@ -183,7 +183,7 @@ export const runGuildOrphanCleanup = async ({
 
   for (const game of baccaratGames) {
     try {
-      if (game.activeBetId) {
+      if (game.activeBetId && game.betAmount != null) {
         await refundLockedBet({
           userId: game.userId,
           guildId: game.guildId,
@@ -211,7 +211,7 @@ export const runGuildOrphanCleanup = async ({
 
   for (const game of minesGames) {
     try {
-      if (game.activeBetId) {
+      if (game.activeBetId && game.betAmount != null) {
         await refundLockedBet({
           userId: game.userId,
           guildId: game.guildId,

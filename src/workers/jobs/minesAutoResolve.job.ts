@@ -66,12 +66,13 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
       const engine = docToMinesEngine(game)
       const resolved = resolveIdleMines(engine)
       const betId = game.activeBetId
+      const stake = engine.betAmount
 
       if (betId) {
         await settleCasinoWinnings({
           userId: game.userId,
           guildId: game.guildId,
-          totalBet: game.betAmount,
+          totalBet: stake,
           winnings: resolved.payout,
           betId,
           game: 'mines',
@@ -97,7 +98,7 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
               label: '💣 Mines',
               multiplier: resolved.multiplier.toFixed(2),
               payout: formatMoney(resolved.payout, globalSettings),
-              bet: formatMoney(game.betAmount, globalSettings)
+              bet: formatMoney(stake, globalSettings)
             })
           ],
           betId,
@@ -113,7 +114,7 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
         revealedIndices: engine.revealedIndices,
         sessionStats: betId
           ? bumpSessionStats(game.sessionStats, {
-              totalBet: game.betAmount,
+              totalBet: stake,
               totalPayout: resolved.payout
             })
           : game.sessionStats
@@ -129,8 +130,8 @@ export const minesAutoResolveJob = async (client: Client<true>) => {
           embeds: [
             renderMinesEmbed({
               gameId: game.gameId,
-              betAmount: game.betAmount,
-              mineCount: game.mineCount,
+              betAmount: stake,
+              mineCount: engine.mineCount,
               revealedCount: engine.revealedIndices.length,
               multiplier: resolved.forfeited
                 ? 0

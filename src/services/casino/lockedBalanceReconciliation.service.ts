@@ -203,12 +203,12 @@ export async function computeJustifiedLockedAmount({
     userId,
     guildId
   })
-  if (baccaratGame?.activeBetId) {
+  if (baccaratGame?.activeBetId && baccaratGame.betAmount != null) {
     breakdown.baccarat = baccaratGame.betAmount
   }
 
   const minesGame = await getMinesGameByUserAndGuild({ userId, guildId })
-  if (minesGame?.activeBetId) {
+  if (minesGame?.activeBetId && minesGame.betAmount != null) {
     breakdown.mines = minesGame.betAmount
   }
 

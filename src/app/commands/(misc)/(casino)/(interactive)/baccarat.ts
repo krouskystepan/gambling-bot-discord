@@ -1,7 +1,5 @@
-import {
-  generateId,
-  parseReadableStringToNumber
-} from 'gambling-bot-shared/common'
+import { emptySessionStats } from 'gambling-bot-shared/casino'
+import { generateId } from 'gambling-bot-shared/common'
 
 import { MessageFlags } from 'discord.js'
 
@@ -9,7 +7,6 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
-  betOption,
   checkCasinoChannels,
   checkUserRegistration,
   getBaccaratGameByUserAndGuild,
@@ -22,13 +19,12 @@ import {
   renderBaccaratButtons,
   renderBaccaratPromptEmbed
 } from '@/utils/casino/baccarat'
-import { checkValidBet } from '@/utils/common/utils'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'baccarat',
-  description: 'Play punto banco Baccarat - pick a side, then watch the deal!',
-  options: [betOption, showBalanceOption, skipAnimationsOption],
+  description: 'Open a Baccarat table - set your bet, then pick a side!',
+  options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }
 
@@ -58,22 +54,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         })
       }
 
-      const betAmount = parseReadableStringToNumber(
-        interaction.options.getString('bet', true)
-      )
       const showBalance =
         interaction.options.getBoolean('show-balance') || false
       const skipAnimations =
         interaction.options.getBoolean('skip-animations') || false
-
-      const isBetValid = checkValidBet(
-        interaction,
-        betAmount,
-        guildConfig.casinoSettings.baccarat.maxBet,
-        guildConfig.casinoSettings.baccarat.minBet,
-        guildConfig.globalSettings
-      )
-      if (!isBetValid) return
 
       await interaction.deferReply()
 
@@ -84,13 +68,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const message = await interaction.editReply({
         embeds: [
           renderBaccaratPromptEmbed({
-            bet: betAmount,
+            bet: null,
             winMultipliers: guildConfig.casinoSettings.baccarat.winMultipliers,
             gameId,
             globalSettings: guildConfig.globalSettings
           })
         ],
-        components: renderBaccaratButtons({ gameId })
+        components: renderBaccaratButtons({ gameId, hasBet: false })
       })
 
       await upsertBaccaratGame({
@@ -99,9 +83,11 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         channelId: interaction.channelId,
         messageId: message.id,
         gameId,
-        betAmount,
+        betAmount: null,
         showBalance,
-        skipAnimations
+        skipAnimations,
+        phase: 'waiting',
+        sessionStats: emptySessionStats()
       })
     } catch (error) {
       await handleUnexpectedInteractionError(interaction, error)

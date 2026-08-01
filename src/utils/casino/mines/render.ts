@@ -212,3 +212,76 @@ export const renderMinesResultComponents = ({
       .setStyle(ButtonStyle.Danger)
   )
 ]
+
+/** Pre-start controls: set stake + mines, then start. */
+export const renderMinesSetupEmbed = ({
+  gameId,
+  betAmount,
+  mineCount,
+  globalSettings
+}: {
+  gameId: string
+  betAmount: number | null
+  mineCount: number | null
+  globalSettings?: Partial<GlobalSettings> | null
+}) =>
+  createBetEmbed(
+    '💣 Mines',
+    'Blue',
+    [
+      betAmount == null
+        ? '💵 Bet: **Not set**'
+        : `💵 Bet: **${formatMoney(betAmount, globalSettings)}**`,
+      mineCount == null
+        ? '💣 Mines: **Not set**'
+        : `💣 Mines: **${mineCount}**`,
+      betAmount == null || mineCount == null
+        ? '_Set your bet and mines, then start the board._'
+        : '_Start the board, or change your setup first._'
+    ].join('\n\n'),
+    gameId
+  )
+
+export const renderMinesSetupComponents = ({
+  gameId,
+  showBalance,
+  canStart
+}: {
+  gameId: string
+  showBalance: boolean
+  canStart: boolean
+}) => [
+  new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(
+        encodeId({
+          gameId,
+          action: { kind: 'action', action: 'start' },
+          showBalance
+        })
+      )
+      .setLabel('Start')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(!canStart),
+    new ButtonBuilder()
+      .setCustomId(
+        encodeId({
+          gameId,
+          action: { kind: 'action', action: 'change' },
+          showBalance
+        })
+      )
+      .setLabel(canStart ? 'Change setup' : 'Set setup')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(
+        encodeId({
+          gameId,
+          action: { kind: 'action', action: 'close' },
+          showBalance
+        })
+      )
+      .setLabel('Close')
+      .setStyle(ButtonStyle.Danger)
+  )
+]

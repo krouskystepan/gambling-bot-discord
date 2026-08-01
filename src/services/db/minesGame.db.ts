@@ -48,10 +48,10 @@ export const getAllOldMinesGames = async (days: number) => {
   })
 }
 
-/** Settled sessions idle long enough for the idle-close worker. */
+/** Settled or empty tables idle long enough for the idle-close worker. */
 export const getOldResultMinesGames = async (days: number) => {
   return MinesGame.find({
-    status: 'RESULT',
+    status: { $in: ['RESULT', 'SETUP'] },
     updatedAt: {
       $lte: new Date(Date.now() - days * DAY_MS)
     }

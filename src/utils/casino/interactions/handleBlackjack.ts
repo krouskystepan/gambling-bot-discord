@@ -23,7 +23,8 @@ import {
   getBlackjackGameByGameId,
   getGuildConfigByGuildId,
   reserveCasinoBet,
-  saveBlackjackGame
+  saveBlackjackGame,
+  updateBlackjackGame
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
@@ -42,6 +43,8 @@ import {
   encodeModalId,
   engineToDoc,
   finishBlackjackDealerAndSettle,
+  renderBlackjackBettingComponents,
+  renderBlackjackBettingEmbed,
   renderBlackjackButtons,
   renderBlackjackEmbed,
   startBlackjackHand
@@ -184,7 +187,7 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
       }
 
       if (interaction.isModalSubmit()) {
-        if (game.phase !== 'RESULT') {
+        if (game.phase !== 'RESULT' && game.phase !== 'BETTING') {
           await replyEphemeralError(interaction, [
             createErrorEmbed(
               'Error - Hand In Progress',
@@ -224,14 +227,41 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
           return
         }
 
-        await dealHand(amount)
+        await updateBlackjackGame({
+          userId: game.userId,
+          guildId: game.guildId,
+          baseBetAmount: amount,
+          phase: 'BETTING',
+          activeBetId: null,
+          deck: [],
+          deckIndex: 0,
+          hands: [],
+          activeHandIndex: -1,
+          dealerCards: []
+        })
+
+        await sessionMessage.edit({
+          content: null,
+          embeds: [
+            renderBlackjackBettingEmbed({
+              gameId: game.gameId,
+              bet: amount,
+              globalSettings: guildConfig.globalSettings
+            })
+          ],
+          components: renderBlackjackBettingComponents({
+            gameId: game.gameId,
+            showBalance: game.showBalance,
+            hasBet: true
+          })
+        })
         return
       }
 
       if (!buttonData) return
 
       if (buttonData.action === 'CLOSE') {
-        if (game.phase !== 'RESULT') {
+        if (game.phase !== 'RESULT' && game.phase !== 'BETTING') {
           await replyEphemeralError(interaction, [
             createErrorEmbed(
               'Error - Hand In Progress',
@@ -264,8 +294,12 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
         return
       }
 
-      if (buttonData.action === 'REBET') {
-        if (game.phase !== 'RESULT') {
+      if (buttonData.action === 'DEAL' || buttonData.action === 'REBET') {
+        if (
+          buttonData.action === 'DEAL'
+            ? game.phase !== 'BETTING'
+            : game.phase !== 'RESULT'
+        ) {
           await replyEphemeralError(interaction, [
             createErrorEmbed(
               'Error - Hand In Progress',
@@ -275,7 +309,18 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
           return
         }
 
-        await dealHand(game.baseBetAmount)
+        const stake = game.baseBetAmount
+        if (stake == null || stake <= 0) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Bet Required',
+              'Set your bet before dealing.'
+            )
+          ])
+          return
+        }
+
+        await dealHand(stake)
         return
       }
 

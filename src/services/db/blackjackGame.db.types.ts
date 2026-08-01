@@ -12,7 +12,7 @@ export type TUpsertBlackjackGame = Pick<TUser, 'userId' | 'guildId'> &
     messageId: string
     gameId: string
     activeBetId?: string | null
-    baseBetAmount: number
+    baseBetAmount: number | null
     showBalance: boolean
     skipAnimations?: boolean
     sessionStats?: CasinoSessionStats

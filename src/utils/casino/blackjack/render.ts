@@ -268,3 +268,53 @@ export const renderBlackjackResultComponents = ({
       .setStyle(ButtonStyle.Danger)
   )
 ]
+
+/** Pre-deal controls: set stake, then deal. */
+export const renderBlackjackBettingEmbed = ({
+  gameId,
+  bet,
+  globalSettings
+}: {
+  gameId: string
+  bet: number | null
+  globalSettings?: Partial<GlobalSettings> | null
+}) =>
+  createBetEmbed(
+    '🃏 Blackjack',
+    'Blue',
+    [
+      bet == null
+        ? '💵 Bet: **Not set**'
+        : `💵 Bet: **${formatMoney(bet, globalSettings)}**`,
+      bet == null
+        ? '_Set your bet, then deal a hand._'
+        : '_Deal a hand, or change your bet first._'
+    ].join('\n\n'),
+    gameId
+  )
+
+export const renderBlackjackBettingComponents = ({
+  gameId,
+  showBalance,
+  hasBet
+}: {
+  gameId: string
+  showBalance: boolean
+  hasBet: boolean
+}) => [
+  new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(encodeId({ gameId, action: 'DEAL', showBalance }))
+      .setLabel('Deal')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(!hasBet),
+    new ButtonBuilder()
+      .setCustomId(encodeId({ gameId, action: 'CHANGE', showBalance }))
+      .setLabel(hasBet ? 'Change bet' : 'Set bet')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(encodeId({ gameId, action: 'CLOSE', showBalance }))
+      .setLabel('Close')
+      .setStyle(ButtonStyle.Danger)
+  )
+]

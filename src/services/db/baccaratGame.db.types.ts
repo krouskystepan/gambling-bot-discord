@@ -15,7 +15,7 @@ export type TUpsertBaccaratGame = Pick<TUser, 'userId' | 'guildId'> & {
   messageId: string
   gameId: string
   activeBetId?: string | null
-  betAmount: number
+  betAmount: number | null
   lastSide?: BaccaratBetSide | null
   showBalance: boolean
   skipAnimations: boolean
@@ -28,7 +28,7 @@ export type TUpdateBaccaratGame = Pick<TUser, 'userId' | 'guildId'> & {
   channelId?: string
   messageId?: string
   activeBetId?: string | null
-  betAmount?: number
+  betAmount?: number | null
   lastSide?: BaccaratBetSide | null
   showBalance?: boolean
   skipAnimations?: boolean

@@ -27,8 +27,9 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
 
   for (const game of games) {
     try {
-      const isResult = game.phase === 'RESULT'
-      const hoursLeft = isResult
+      const isIdleClosePhase =
+        game.phase === 'RESULT' || game.phase === 'BETTING'
+      const hoursLeft = isIdleClosePhase
         ? hoursUntilBlackjackIdleClose(game.updatedAt)
         : hoursUntilBlackjackAutostand(game.updatedAt)
       const jumpLink = casinoGameMessageLink(game)
@@ -36,11 +37,11 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
       const delivered = await sendCasinoIdleNudgeDm({
         client,
         userId: game.userId,
-        title: isResult
+        title: isIdleClosePhase
           ? 'Warning - Blackjack Table Idle'
           : 'Warning - Blackjack Game Idle',
         body: [
-          isResult
+          isIdleClosePhase
             ? `Still playing? If you stay inactive, this table will close in about **${hoursLeft} hour(s)**.`
             : `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**.`,
           '',

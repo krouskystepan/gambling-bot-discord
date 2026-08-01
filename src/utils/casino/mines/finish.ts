@@ -48,11 +48,12 @@ export const finishMinesAndSettle = async ({
   const engine = docToMinesEngine(game)
   const resolved = resolveFinishedMines(engine)
   const globalSettings = guildConfig?.globalSettings
+  const stake = engine.betAmount
 
   const betId = game.activeBetId
   const sessionStats = betId
     ? bumpSessionStats(game.sessionStats, {
-        totalBet: game.betAmount,
+        totalBet: stake,
         totalPayout: resolved.payout
       })
     : game.sessionStats
@@ -61,7 +62,7 @@ export const finishMinesAndSettle = async ({
     await settleCasinoWinnings({
       userId: game.userId,
       guildId: game.guildId,
-      totalBet: game.betAmount,
+      totalBet: stake,
       winnings: resolved.payout,
       betId,
       game: 'mines',
@@ -87,7 +88,7 @@ export const finishMinesAndSettle = async ({
           label: '💣 Mines',
           multiplier: resolved.multiplier.toFixed(2),
           payout: formatMoney(resolved.payout, globalSettings),
-          bet: formatMoney(game.betAmount, globalSettings)
+          bet: formatMoney(stake, globalSettings)
         })
       ],
       betId: game.gameId,
@@ -119,8 +120,8 @@ export const finishMinesAndSettle = async ({
       embeds: [
         renderMinesEmbed({
           gameId: game.gameId,
-          betAmount: game.betAmount,
-          mineCount: game.mineCount,
+          betAmount: stake,
+          mineCount: engine.mineCount,
           revealedCount: engine.revealedIndices.length,
           multiplier:
             resolved.resultKind === 'BUST'

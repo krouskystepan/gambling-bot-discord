@@ -27,7 +27,7 @@ describe('blackjack customId', () => {
   })
 
   it('round-trips session actions', () => {
-    for (const action of ['REBET', 'CHANGE', 'CLOSE'] as const) {
+    for (const action of ['REBET', 'CHANGE', 'CLOSE', 'DEAL'] as const) {
       expect(
         decodeId(encodeId({ gameId: 'g1', action, showBalance: true }))
       ).toEqual({ gameId: 'g1', action, showBalance: true })

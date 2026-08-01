@@ -138,7 +138,7 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
       const sessionMessage = interaction.message
       if (!sessionMessage) return
 
-      const showWaitingTable = async (betAmount: number) => {
+      const showWaitingTable = async (betAmount: number | null) => {
         await sessionMessage.edit({
           embeds: [
             renderBaccaratPromptEmbed({
@@ -149,7 +149,10 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
               globalSettings: guildConfig.globalSettings
             })
           ],
-          components: renderBaccaratButtons({ gameId: game.gameId })
+          components: renderBaccaratButtons({
+            gameId: game.gameId,
+            hasBet: betAmount != null && betAmount > 0
+          })
         })
       }
 
@@ -163,6 +166,14 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
 
       /** Reserves the stake, then deals and settles one round. */
       const playRound = async (side: BaccaratBetSide) => {
+        const stake = game.betAmount
+        if (stake == null || stake <= 0) {
+          return followUpError(
+            'Error - Bet Required',
+            'Set your bet before picking a side.'
+          )
+        }
+
         const user = await getUser({ userId: game.userId, guildId })
 
         if (!user) {
@@ -188,7 +199,7 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
           await reserveCasinoBet({
             userId: game.userId,
             guildId,
-            totalBet: game.betAmount,
+            totalBet: stake,
             betId,
             game: 'baccarat',
             rounds: 1
@@ -228,7 +239,7 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
           guildId: game.guildId,
           gameId: game.gameId,
           betId,
-          betAmount: game.betAmount,
+          betAmount: stake,
           sessionStats: game.sessionStats,
           showBalance: game.showBalance,
           skipAnimations: game.skipAnimations,

@@ -17,7 +17,10 @@ export type PlayerAction = 'HIT' | 'STAND' | 'DOUBLE' | 'SPLIT'
 /** Actions offered between hands while the session sits in `RESULT`. */
 export type ResultAction = 'REBET' | 'CHANGE' | 'CLOSE'
 
-export type BlackjackAction = PlayerAction | ResultAction
+/** Actions offered while the table waits for a stake in `BETTING`. */
+export type BettingAction = 'DEAL' | 'CHANGE' | 'CLOSE'
+
+export type BlackjackAction = PlayerAction | ResultAction | BettingAction
 
 export type HandResultId = 'PB' | 'DB' | 'PW' | 'DW' | 'PUSH'
 

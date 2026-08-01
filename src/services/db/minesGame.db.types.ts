@@ -9,8 +9,8 @@ export type TUpsertMinesGame = Pick<TUser, 'userId' | 'guildId'> & {
   messageId: string
   gameId: string
   activeBetId?: string | null
-  betAmount: number
-  mineCount: number
+  betAmount: number | null
+  mineCount: number | null
   mineIndices: number[]
   revealedIndices: number[]
   houseEdgeSnapshot: number
@@ -23,8 +23,8 @@ export type TUpdateMinesGame = Pick<TUser, 'userId' | 'guildId'> & {
   channelId?: string
   messageId?: string
   activeBetId?: string | null
-  betAmount?: number
-  mineCount?: number
+  betAmount?: number | null
+  mineCount?: number | null
   mineIndices?: number[]
   revealedIndices?: number[]
   houseEdgeSnapshot?: number

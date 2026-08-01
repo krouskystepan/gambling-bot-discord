@@ -51,10 +51,10 @@ export const getAllOldBlackjackGames = async (days: number) => {
   })
 }
 
-/** Settled sessions idle long enough for the idle-close worker. */
+/** Settled or empty tables idle long enough for the idle-close worker. */
 export const getOldResultBlackjackGames = async (days: number) => {
   return BlackjackGame.find({
-    phase: 'RESULT',
+    phase: { $in: ['RESULT', 'BETTING'] },
     updatedAt: {
       $lte: new Date(Date.now() - days * DAY_MS)
     }

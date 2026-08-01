@@ -55,7 +55,7 @@ export const baccaratIdleCloseJob = async (client: Client<true>) => {
       }
 
       // Only a round that never settled still holds a lock.
-      if (game.activeBetId) {
+      if (game.activeBetId && game.betAmount != null) {
         await refundLockedBet({
           userId: game.userId,
           guildId: game.guildId,

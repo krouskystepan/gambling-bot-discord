@@ -36,8 +36,10 @@ const OUTCOME_LABELS = {
   tie: 'Tie'
 } as const
 
-const betLine = (bet: number, globalSettings: MoneySettings) =>
-  `💵 Bet: **${formatMoney(bet, globalSettings)}**`
+const betLine = (bet: number | null, globalSettings: MoneySettings) =>
+  bet == null
+    ? '💵 Bet: **Not set**'
+    : `💵 Bet: **${formatMoney(bet, globalSettings)}**`
 
 export const formatBaccaratHand = (cards: BaccaratCard[], total: number) =>
   `${cards.map(formatBaccaratCard).join(' ')} (**${total}**)`
@@ -56,7 +58,7 @@ export const renderBaccaratPromptEmbed = ({
   gameId,
   globalSettings
 }: {
-  bet: number
+  bet: number | null
   winMultipliers: Record<BaccaratBetSide, number>
   gameId: string
   globalSettings: MoneySettings
@@ -67,41 +69,54 @@ export const renderBaccaratPromptEmbed = ({
     [
       betLine(bet, globalSettings),
       `**Payouts**\n${oddsBlock(winMultipliers)}`,
-      '_Pick a side to deal, or change your bet first._'
+      bet == null
+        ? '_Set your bet, then pick a side to deal._'
+        : '_Pick a side to deal, or change your bet first._'
     ].join('\n\n'),
     gameId
   )
 
 /** Side picks plus table controls, shown while the session waits for a bet. */
-export const renderBaccaratButtons = ({ gameId }: { gameId: string }) => [
+export const renderBaccaratButtons = ({
+  gameId,
+  hasBet
+}: {
+  gameId: string
+  hasBet: boolean
+}) => [
   new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'player' }))
       .setLabel('Player')
-      .setStyle(ButtonStyle.Primary),
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(!hasBet),
     new ButtonBuilder()
       .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'banker' }))
       .setLabel('Banker')
-      .setStyle(ButtonStyle.Danger),
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(!hasBet),
     new ButtonBuilder()
       .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'tie' }))
       .setLabel('Tie')
       .setStyle(ButtonStyle.Success)
+      .setDisabled(!hasBet)
   ),
   new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'playerPair' }))
       .setLabel('Player Pair')
-      .setStyle(ButtonStyle.Secondary),
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!hasBet),
     new ButtonBuilder()
       .setCustomId(encodeSideId({ kind: 'side', gameId, side: 'bankerPair' }))
       .setLabel('Banker Pair')
       .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!hasBet)
   ),
   new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'amount' }))
-      .setLabel('Change bet')
+      .setLabel(hasBet ? 'Change bet' : 'Set bet')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'close' }))

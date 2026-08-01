@@ -25,7 +25,8 @@ import {
   deleteMinesGame,
   getGuildConfigByGuildId,
   getMinesGameByGameId,
-  saveMinesGame
+  saveMinesGame,
+  updateMinesGame
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
@@ -39,6 +40,8 @@ import {
   finishMinesAndSettle,
   renderMinesButtons,
   renderMinesEmbed,
+  renderMinesSetupComponents,
+  renderMinesSetupEmbed,
   startMinesBoard
 } from '@/utils/casino/mines'
 import { formatSessionSummaryEmbed } from '@/utils/casino/sessionSummary'
@@ -188,7 +191,7 @@ export const handleMinesInteraction = async (interaction: Interaction) => {
       }
 
       if (interaction.isModalSubmit()) {
-        if (game.status !== 'RESULT') {
+        if (game.status !== 'RESULT' && game.status !== 'SETUP') {
           await replyEphemeralError(interaction, [
             createErrorEmbed(
               'Error - Board In Progress',
@@ -248,14 +251,41 @@ export const handleMinesInteraction = async (interaction: Interaction) => {
           return
         }
 
-        await dealBoard(betAmount, mineCount)
+        await updateMinesGame({
+          userId: game.userId,
+          guildId: game.guildId,
+          betAmount,
+          mineCount,
+          status: 'SETUP',
+          activeBetId: null,
+          mineIndices: [],
+          revealedIndices: [],
+          houseEdgeSnapshot: minesSettings.houseEdge
+        })
+
+        await sessionMessage.edit({
+          content: null,
+          embeds: [
+            renderMinesSetupEmbed({
+              gameId: game.gameId,
+              betAmount,
+              mineCount,
+              globalSettings: guildConfig.globalSettings
+            })
+          ],
+          components: renderMinesSetupComponents({
+            gameId: game.gameId,
+            showBalance: game.showBalance,
+            canStart: true
+          })
+        })
         return
       }
 
       if (!buttonData) return
 
       if (buttonData.action.kind === 'action') {
-        if (game.status !== 'RESULT') {
+        if (game.status !== 'RESULT' && game.status !== 'SETUP') {
           await replyEphemeralError(interaction, [
             createErrorEmbed(
               'Error - Board In Progress',
@@ -291,7 +321,33 @@ export const handleMinesInteraction = async (interaction: Interaction) => {
 
         if (buttonData.action.action === 'change') return
 
-        await dealBoard(game.betAmount, game.mineCount)
+        if (
+          buttonData.action.action === 'start'
+            ? game.status !== 'SETUP'
+            : game.status !== 'RESULT'
+        ) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Board In Progress',
+              'Finish the current board first.'
+            )
+          ])
+          return
+        }
+
+        const stake = game.betAmount
+        const mines = game.mineCount
+        if (stake == null || mines == null) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Setup Required',
+              'Set your bet and mines before starting.'
+            )
+          ])
+          return
+        }
+
+        await dealBoard(stake, mines)
         return
       }
 
@@ -375,8 +431,8 @@ export const handleMinesInteraction = async (interaction: Interaction) => {
         embeds: [
           renderMinesEmbed({
             gameId: game.gameId,
-            betAmount: game.betAmount,
-            mineCount: game.mineCount,
+            betAmount: engine.betAmount,
+            mineCount: engine.mineCount,
             revealedCount: engine.revealedIndices.length,
             multiplier: reveal.multiplier,
             result: { kind: 'SAFE', multiplier: reveal.multiplier },

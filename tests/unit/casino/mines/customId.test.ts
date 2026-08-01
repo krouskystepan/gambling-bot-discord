@@ -35,7 +35,7 @@ describe('mines customId', () => {
   })
 
   it('round-trips table actions', () => {
-    for (const action of ['rebet', 'change', 'close'] as const) {
+    for (const action of ['rebet', 'change', 'close', 'start'] as const) {
       const encoded = encodeId({
         gameId: 'abc',
         action: { kind: 'action', action },

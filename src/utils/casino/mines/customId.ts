@@ -2,7 +2,7 @@ export type MinesCellAction = { kind: 'cell'; cellIndex: number }
 export type MinesCashOutAction = { kind: 'cashout' }
 export type MinesTableAction = {
   kind: 'action'
-  action: 'rebet' | 'change' | 'close'
+  action: 'rebet' | 'change' | 'close' | 'start'
 }
 export type MinesButtonAction =
   | MinesCellAction
@@ -19,7 +19,7 @@ export type MinesModalId = {
   gameId: string
 }
 
-const TABLE_ACTIONS = new Set(['rebet', 'change', 'close'])
+const TABLE_ACTIONS = new Set(['rebet', 'change', 'close', 'start'])
 
 /**
  * `mines:{gameId}:cell:{i}:{show}`, `mines:{gameId}:CASHOUT:{show}` or

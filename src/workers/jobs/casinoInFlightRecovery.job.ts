@@ -209,7 +209,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
       })
       if (!guildConfig) continue
 
-      if (game.pendingDeal && game.activeBetId) {
+      if (game.pendingDeal && game.activeBetId && game.betAmount != null) {
         await recoverBaccaratDeal({
           message,
           side: game.pendingDeal.side,
@@ -229,7 +229,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
           sourceChannelId: game.channelId
         })
       } else {
-        if (game.activeBetId) {
+        if (game.activeBetId && game.betAmount != null) {
           await refundLockedBet({
             userId: game.userId,
             guildId: game.guildId,
@@ -259,7 +259,10 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
                 globalSettings: guildConfig.globalSettings
               })
             ],
-            components: renderBaccaratButtons({ gameId: game.gameId })
+            components: renderBaccaratButtons({
+              gameId: game.gameId,
+              hasBet: game.betAmount != null && game.betAmount > 0
+            })
           })
         }
       }

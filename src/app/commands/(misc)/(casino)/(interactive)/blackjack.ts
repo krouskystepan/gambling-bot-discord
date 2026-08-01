@@ -1,10 +1,7 @@
-import {
-  formatMoney,
-  generateId,
-  parseReadableStringToNumber
-} from 'gambling-bot-shared/common'
+import { emptySessionStats } from 'gambling-bot-shared/casino'
+import { generateId } from 'gambling-bot-shared/common'
 
-import { ApplicationCommandOptionType, MessageFlags } from 'discord.js'
+import { MessageFlags } from 'discord.js'
 
 import { ChatInputCommand, CommandData } from 'commandkit'
 
@@ -13,31 +10,21 @@ import {
   checkCasinoChannels,
   checkUserRegistration,
   getBlackjackGameByUserAndGuild,
-  getUser
+  showBalanceOption,
+  skipAnimationsOption,
+  upsertBlackjackGame
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
-import { startBlackjackHand } from '@/utils/casino/blackjack'
-import { checkValidBet } from '@/utils/common/utils'
+import {
+  renderBlackjackBettingComponents,
+  renderBlackjackBettingEmbed
+} from '@/utils/casino/blackjack'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'blackjack',
-  description: 'Start a game of blackjack. You can hit, stand, or double down.',
-  options: [
-    {
-      name: 'bet',
-      description: 'Place a bet (e.g., 1000, 2k, 4.5k).',
-      type: ApplicationCommandOptionType.String,
-      required: true
-    },
-    {
-      name: 'show-balance',
-      description:
-        'Displays the current balance (WARNING: VISIBLE TO EVERYONE)!',
-      type: ApplicationCommandOptionType.Boolean,
-      required: false
-    }
-  ],
+  description: 'Open a Blackjack table - set your bet, then deal!',
+  options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }
 
@@ -47,8 +34,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const user = await checkUserRegistration({ interaction })
       if (!user) return
 
-      const configReply = await checkCasinoChannels(interaction)
-      if (!configReply) return
+      const guildConfig = await checkCasinoChannels(interaction)
+      if (!guildConfig) return
 
       const existingGame = await getBlackjackGameByUserAndGuild({
         userId: interaction.user.id,
@@ -60,68 +47,55 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           embeds: [
             createErrorEmbed(
               'Error - Blackjack Already Active',
-              `You already have an active Blackjack game running! 🃏`
+              'You already have an active Blackjack game running! 🃏'
             )
           ],
           flags: MessageFlags.Ephemeral
         })
       }
 
-      const betAmount = interaction.options.getString('bet', true)
-      const parsedBetAmount = parseReadableStringToNumber(betAmount)
       const showBalance =
         interaction.options.getBoolean('show-balance') || false
-
-      const isBetValid = checkValidBet(
-        interaction,
-        parsedBetAmount,
-        configReply.casinoSettings.blackjack.maxBet,
-        configReply.casinoSettings.blackjack.minBet,
-        configReply.globalSettings
-      )
-
-      if (!isBetValid) return
+      const skipAnimations =
+        interaction.options.getBoolean('skip-animations') || false
 
       await interaction.deferReply()
 
-      const message = await interaction.fetchReply()
+      const gameId = generateId('blackjack')
 
-      try {
-        const hand = await startBlackjackHand({
-          userId: user.userId,
-          guildId: user.guildId,
-          gameId: generateId('blackjack'),
-          channelId: interaction.channelId,
-          messageId: message.id,
-          betAmount: parsedBetAmount,
+      const message = await interaction.editReply({
+        embeds: [
+          renderBlackjackBettingEmbed({
+            gameId,
+            bet: null,
+            globalSettings: guildConfig.globalSettings
+          })
+        ],
+        components: renderBlackjackBettingComponents({
+          gameId,
           showBalance,
-          guildConfig: configReply,
-          guild: interaction.guild,
-          sourceChannelId: interaction.channelId
+          hasBet: false
         })
+      })
 
-        await interaction.editReply({
-          embeds: hand.embeds,
-          components: hand.components
-        })
-      } catch (err) {
-        if (err instanceof Error && err.message === 'INSUFFICIENT_FUNDS') {
-          const freshUser = await getUser({
-            userId: user.userId,
-            guildId: user.guildId
-          })
-
-          return await interaction.editReply({
-            embeds: [
-              createErrorEmbed(
-                'Error - Insufficient Funds',
-                `You don't have enough money to place this bet.\nYour current balance is **${formatMoney(freshUser?.balance ?? 0, configReply.globalSettings)}**.`
-              )
-            ]
-          })
-        }
-        throw err
-      }
+      await upsertBlackjackGame({
+        userId: user.userId,
+        guildId: user.guildId,
+        channelId: interaction.channelId,
+        messageId: message.id,
+        gameId,
+        activeBetId: null,
+        baseBetAmount: null,
+        showBalance,
+        skipAnimations,
+        sessionStats: emptySessionStats(),
+        deck: [],
+        deckIndex: 0,
+        hands: [],
+        activeHandIndex: -1,
+        phase: 'BETTING',
+        dealerCards: []
+      })
     } catch (error) {
       await handleUnexpectedInteractionError(interaction, error)
     }
