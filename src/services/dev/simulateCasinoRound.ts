@@ -400,7 +400,7 @@ export function simulateCasinoRound({
     fallbackMaxBet,
     userId,
     userIds,
-    referenceId: generateId()
+    referenceId: generateId('bet')
   }
 
   return simulateByGame(ctx, game)

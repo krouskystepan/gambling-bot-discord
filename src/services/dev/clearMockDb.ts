@@ -16,11 +16,12 @@ import SlotsGame from '@/models/SlotsGame'
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
 import UserBan from '@/models/UserBan'
+import UserQuestProgress from '@/models/UserQuestProgress'
 import VipRoom from '@/models/VipRoom'
 
 import type { MockDbEntity } from './index'
 
-export type ClearMockDbEntity = MockDbEntity
+export type ClearMockDbEntity = MockDbEntity | 'quests'
 
 export type ClearMockDbSummary = {
   entity: ClearMockDbEntity
@@ -38,6 +39,20 @@ const WIPE_MODELS: GuildDataWipeModels = {
   minesGames: MinesGame,
   rouletteGames: RouletteGame,
   slotsGames: SlotsGame,
+  userQuestProgress: UserQuestProgress,
+  userQuestStreaks: {
+    resetMany: async ({ guildId }) =>
+      User.updateMany(
+        { guildId },
+        {
+          $set: {
+            questDailyStreak: 0,
+            lastQuestDailyCompleteDate: null,
+            questActivityAfter: new Date()
+          }
+        }
+      )
+  },
   userBans: UserBan,
   users: User
 }

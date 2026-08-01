@@ -56,7 +56,7 @@ const computeNextRaffleCycle = (raffle: RaffleReady): RaffleCycle => {
 
   return {
     nextDrawAt: new Date(lastScheduled + intervalsMissed * interval),
-    drawId: generateId(),
+    drawId: generateId('raffle'),
     lastDrawAt: raffle.nextDrawAt
   }
 }

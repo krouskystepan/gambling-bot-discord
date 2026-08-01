@@ -65,7 +65,7 @@ export async function mockAtmRequests({
     statusCount[status] = (statusCount[status] ?? 0) + 1
 
     docs.push({
-      requestId: generateId(),
+      requestId: generateId('atm'),
       guildId,
       userId: pools.pickUser(),
       type,

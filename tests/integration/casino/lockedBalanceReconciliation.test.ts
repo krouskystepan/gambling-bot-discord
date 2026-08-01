@@ -13,10 +13,11 @@ import {
 } from '@/services/casino/lockedBalanceReconciliation.service'
 import { upsertBaccaratGame } from '@/services/db/baccaratGame.db'
 import { upsertBlackjackGame } from '@/services/db/blackjackGame.db'
+import { upsertHiloGame } from '@/services/db/hiloGame.db'
 import { upsertMinesGame } from '@/services/db/minesGame.db'
+import { createPrediction } from '@/services/db/prediction.db'
 import { upsertRouletteGame } from '@/services/db/rouletteGame.db'
 import { upsertSlotsGame } from '@/services/db/slotsGame.db'
-import { createPrediction } from '@/services/db/prediction.db'
 import { getUsersWithLockedBalance } from '@/services/db/user.db'
 import * as userDb from '@/services/db/user.db'
 import { placePredictionBet } from '@/services/predictions/placePredictionBet.service'
@@ -50,7 +51,10 @@ const seedBlackjack = async ({
     guildId: 'guild-1',
     channelId: 'channel-1',
     messageId: 'msg-1',
-    betId,
+    gameId: 'bj-game-1',
+    activeBetId: betId,
+    baseBetAmount: betAmount,
+    showBalance: false,
     deck: [card('2', 2)],
     deckIndex: 1,
     hands: [
@@ -79,7 +83,8 @@ const seedBaccarat = async ({
     guildId: 'guild-1',
     channelId: 'channel-1',
     messageId: 'msg-bc-1',
-    betId,
+    gameId: 'bc-game-1',
+    activeBetId: betId,
     betAmount,
     showBalance: false,
     skipAnimations: false
@@ -287,6 +292,75 @@ describe('lockedBalanceReconciliation.service', () => {
     expect(refunds.some((r) => r.betId === 'sl-bet-orphan-check')).toBe(false)
   })
 
+  it('justifies lock when hi-lo game is active', async () => {
+    await createTestUser({ balance: 900, lockedBalance: 100 })
+    await upsertHiloGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'hilo-game-1',
+      activeBetId: 'hilo-bet-1',
+      betAmount: 100,
+      firstCard: { label: '7', suite: '♥️', rank: 7 },
+      remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
+      houseEdgeSnapshot: 0.01,
+      timeoutFeeSnapshot: 0.1,
+      showBalance: false
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(100)
+    expect(breakdown.hilo).toBe(100)
+
+    const result = await reconcileUserLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(result).toBeNull()
+  })
+
+  it('excludes active hi-lo bet id from orphan refunds', async () => {
+    await createTestUser({ balance: 1000, lockedBalance: 0 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      betId: 'hilo-bet-orphan-check',
+      game: 'hilo'
+    })
+    await upsertHiloGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'hilo-game-orphan',
+      activeBetId: 'hilo-bet-orphan-check',
+      betAmount: 100,
+      firstCard: { label: '7', suite: '♥️', rank: 7 },
+      remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
+      houseEdgeSnapshot: 0.01,
+      timeoutFeeSnapshot: 0.1,
+      showBalance: false
+    })
+    await backdateBetTx(
+      'hilo-bet-orphan-check',
+      RECONCILIATION_GRACE_MS + 60_000
+    )
+
+    const refunds = await findOrphanBetRefunds({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      maxExcess: 100
+    })
+
+    expect(refunds.some((r) => r.betId === 'hilo-bet-orphan-check')).toBe(false)
+  })
+
   it('justifies lock when mines game is active', async () => {
     await createTestUser({ balance: 900, lockedBalance: 100 })
     await upsertMinesGame({
@@ -294,7 +368,8 @@ describe('lockedBalanceReconciliation.service', () => {
       guildId: 'guild-1',
       channelId: 'channel-1',
       messageId: 'msg-1',
-      betId: 'mines-bet-1',
+      gameId: 'mines-game-1',
+      activeBetId: 'mines-bet-1',
       betAmount: 100,
       mineCount: 3,
       mineIndices: [0, 1, 2],

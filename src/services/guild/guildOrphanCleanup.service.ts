@@ -13,6 +13,10 @@ import {
   getBlackjackGamesByGuildId
 } from '@/services/db/blackjackGame.db'
 import {
+  deleteHiloGame,
+  getHiloGamesByGuildId
+} from '@/services/db/hiloGame.db'
+import {
   deleteMinesGame,
   getMinesGamesByGuildId
 } from '@/services/db/minesGame.db'
@@ -39,6 +43,7 @@ export type GuildOrphanCleanupSummary = {
   mines: number
   roulette: number
   slots: number
+  hilo: number
   vipRooms: number
   atmRejected: number
   errors: string[]
@@ -59,6 +64,7 @@ export const runGuildOrphanCleanup = async ({
     mines: 0,
     roulette: 0,
     slots: 0,
+    hilo: 0,
     vipRooms: 0,
     atmRejected: 0,
     errors: []
@@ -144,15 +150,20 @@ export const runGuildOrphanCleanup = async ({
 
   for (const game of blackjackGames) {
     try {
-      const totalBet = game.hands.reduce((sum, hand) => sum + hand.betAmount, 0)
+      if (game.activeBetId) {
+        const totalBet = game.hands.reduce(
+          (sum, hand) => sum + hand.betAmount,
+          0
+        )
 
-      await refundLockedBet({
-        userId: game.userId,
-        guildId: game.guildId,
-        amount: totalBet,
-        betId: game.betId,
-        game: 'blackjack'
-      })
+        await refundLockedBet({
+          userId: game.userId,
+          guildId: game.guildId,
+          amount: totalBet,
+          betId: game.activeBetId,
+          game: 'blackjack'
+        })
+      }
 
       await deleteBlackjackGame({
         userId: game.userId,
@@ -162,7 +173,7 @@ export const runGuildOrphanCleanup = async ({
       summary.blackjack++
       await sleep(CLEANUP_ITEM_DELAY_MS)
     } catch (error) {
-      const message = `blackjack ${game.betId}: ${String(error)}`
+      const message = `blackjack ${game.gameId}: ${String(error)}`
       summary.errors.push(message)
       logger.error(`Guild orphan cleanup failed for ${message}`, error)
     }
@@ -172,13 +183,15 @@ export const runGuildOrphanCleanup = async ({
 
   for (const game of baccaratGames) {
     try {
-      await refundLockedBet({
-        userId: game.userId,
-        guildId: game.guildId,
-        amount: game.betAmount,
-        betId: game.betId,
-        game: 'baccarat'
-      })
+      if (game.activeBetId) {
+        await refundLockedBet({
+          userId: game.userId,
+          guildId: game.guildId,
+          amount: game.betAmount,
+          betId: game.activeBetId,
+          game: 'baccarat'
+        })
+      }
 
       await deleteBaccaratGame({
         userId: game.userId,
@@ -188,7 +201,7 @@ export const runGuildOrphanCleanup = async ({
       summary.baccarat++
       await sleep(CLEANUP_ITEM_DELAY_MS)
     } catch (error) {
-      const message = `baccarat ${game.betId}: ${String(error)}`
+      const message = `baccarat ${game.gameId}: ${String(error)}`
       summary.errors.push(message)
       logger.error(`Guild orphan cleanup failed for ${message}`, error)
     }
@@ -198,13 +211,15 @@ export const runGuildOrphanCleanup = async ({
 
   for (const game of minesGames) {
     try {
-      await refundLockedBet({
-        userId: game.userId,
-        guildId: game.guildId,
-        amount: game.betAmount,
-        betId: game.betId,
-        game: 'mines'
-      })
+      if (game.activeBetId) {
+        await refundLockedBet({
+          userId: game.userId,
+          guildId: game.guildId,
+          amount: game.betAmount,
+          betId: game.activeBetId,
+          game: 'mines'
+        })
+      }
 
       await deleteMinesGame({
         userId: game.userId,
@@ -214,7 +229,7 @@ export const runGuildOrphanCleanup = async ({
       summary.mines++
       await sleep(CLEANUP_ITEM_DELAY_MS)
     } catch (error) {
-      const message = `mines ${game.betId}: ${String(error)}`
+      const message = `mines ${game.gameId}: ${String(error)}`
       summary.errors.push(message)
       logger.error(`Guild orphan cleanup failed for ${message}`, error)
     }
@@ -271,6 +286,32 @@ export const runGuildOrphanCleanup = async ({
       await sleep(CLEANUP_ITEM_DELAY_MS)
     } catch (error) {
       const message = `slots ${game.gameId}: ${String(error)}`
+      summary.errors.push(message)
+      logger.error(`Guild orphan cleanup failed for ${message}`, error)
+    }
+  }
+
+  const hiloGames = await getHiloGamesByGuildId({ guildId })
+
+  for (const game of hiloGames) {
+    try {
+      await refundLockedBet({
+        userId: game.userId,
+        guildId: game.guildId,
+        amount: game.betAmount,
+        betId: game.activeBetId,
+        game: 'hilo'
+      })
+
+      await deleteHiloGame({
+        userId: game.userId,
+        guildId: game.guildId
+      })
+
+      summary.hilo++
+      await sleep(CLEANUP_ITEM_DELAY_MS)
+    } catch (error) {
+      const message = `hilo ${game.gameId}: ${String(error)}`
       summary.errors.push(message)
       logger.error(`Guild orphan cleanup failed for ${message}`, error)
     }
