@@ -67,6 +67,17 @@ describe('deferComponentUpdate', () => {
     )
   })
 
+  it('returns true when already acknowledged (40060)', async () => {
+    const interaction = {
+      ...baseInteraction(),
+      deferUpdate: vi.fn().mockRejectedValue({ code: 40060 })
+    }
+
+    await expect(deferComponentUpdate(interaction as never)).resolves.toBe(
+      true
+    )
+  })
+
   it('rethrows unexpected defer errors', async () => {
     const interaction = {
       ...baseInteraction(),
