@@ -6,7 +6,7 @@ import { Colors, EmbedBuilder, Interaction, MessageFlags } from 'discord.js'
 import { handleUnexpectedButtonError } from '@/errors'
 import {
   addRaffleTickets,
-  assertGlobalFeature,
+  assertCasinoGameEnabled,
   assertNotMaintenance,
   getGuildConfigByGuildId,
   getRaffleById,
@@ -38,7 +38,11 @@ export default async (interaction: Interaction) => {
       if (!guildConfigEarly) return
       if (!(await assertNotMaintenance(interaction, guildConfigEarly))) return
       if (
-        !(await assertGlobalFeature(interaction, guildConfigEarly, 'raffles'))
+        !(await assertCasinoGameEnabled(
+          interaction,
+          guildConfigEarly,
+          'raffle'
+        ))
       ) {
         return
       }
