@@ -193,10 +193,11 @@ export async function computeJustifiedLockedAmount({
     guildId
   })
   if (blackjackGame?.activeBetId) {
-    breakdown.blackjack = blackjackGame.hands.reduce(
-      (sum, hand) => sum + hand.betAmount,
-      0
-    )
+    breakdown.blackjack =
+      blackjackGame.hands.reduce((sum, hand) => sum + hand.betAmount, 0) +
+      (blackjackGame.activePairsBetAmount ?? 0) +
+      (blackjackGame.activePlusThreeBetAmount ?? 0) +
+      (blackjackGame.insuranceBetAmount ?? 0)
   }
 
   const baccaratGame = await getBaccaratGameByUserAndGuild({

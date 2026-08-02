@@ -128,6 +128,46 @@ describe('lockedBalanceReconciliation.service', () => {
     expect(result).toBeNull()
   })
 
+  it('includes blackjack pairs and insurance in justified lock', async () => {
+    await createTestUser({ balance: 825, lockedBalance: 175 })
+    await upsertBlackjackGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'bj-game-sides',
+      activeBetId: 'bj-bet-sides',
+      baseBetAmount: 100,
+      activePairsBetAmount: 25,
+      activePlusThreeBetAmount: 0,
+      insuranceBetAmount: 50,
+      pairsOutcome: 'mixed',
+      plusThreeOutcome: null,
+      showBalance: false,
+      deck: [card('2', 2)],
+      deckIndex: 1,
+      hands: [
+        {
+          cards: [card('10', 10), card('8', 8)],
+          betAmount: 100,
+          finished: false,
+          isSplitHand: false
+        }
+      ],
+      activeHandIndex: 0,
+      phase: 'INSURANCE',
+      dealerCards: [card('A', 11), card('9', 9)]
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(breakdown.blackjack).toBe(175)
+    expect(justified).toBe(175)
+  })
+
   it('justifies lock when baccarat game is active', async () => {
     await createTestUser({ balance: 900, lockedBalance: 100 })
     await seedBaccarat({ betAmount: 100 })
