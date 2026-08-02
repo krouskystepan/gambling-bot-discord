@@ -67,6 +67,8 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │       │   └─ /bonus – Daily bonus system with streaks.
 │       │      ├─ claim – Claim your daily bonus
 │       │      ├─ check – Check your streak and next bonus
+│       ├── help.ts
+│       │   └─ /help – Player guide - commands, games, limits, and how to play.
 │       ├── ping.ts
 │       │   └─ /ping – Check the bot latency.
 │       ├── quests.ts
@@ -163,13 +165,6 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
         │   └─ /ban – Ban a registered user from economy actions.
         │      ├─ user – The user to ban.
         │      ├─ reason – Optional reason for the ban.
-        ├── casino-games.ts
-        │   └─ /casino-games – Show available casino games and how to use them.
-        ├── casino-info.ts
-        │   └─ /casino-info – Get information about the casino.
-        │      ├─ games – Show information about casino games
-        │      ├─ config – Show server casino configuration
-        │      ├─ admin – Show administrator-only information
         ├── history.ts
         │   └─ /history – Show recent ledger transactions for a player.
         │      ├─ user – The player whose history to show.
