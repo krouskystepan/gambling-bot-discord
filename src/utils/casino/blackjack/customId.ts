@@ -12,7 +12,9 @@ const ACTIONS = new Set<BlackjackAction>([
   'REBET',
   'CHANGE',
   'CLOSE',
-  'DEAL'
+  'DEAL',
+  'INSURE',
+  'NO_INSURE'
 ])
 
 export const encodeId = (d: BlackjackButtonId): string =>

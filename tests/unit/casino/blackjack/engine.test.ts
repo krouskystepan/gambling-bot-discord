@@ -85,7 +85,7 @@ describe('resolveResult', () => {
   })
 
   it('uses custom win / push multipliers', () => {
-    const multipliers = { win: 1.8, blackjack: 3, push: 0.5 }
+    const multipliers = { win: 1.8, blackjack: 3, push: 0.5, insurance: 3 }
     const winState = baseState(
       [card('10', 10), card('K', 10)],
       [card('9', 9), card('9', 9)]
