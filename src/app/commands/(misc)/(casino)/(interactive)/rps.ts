@@ -16,6 +16,7 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  assertCasinoGameEnabled,
   checkCasinoChannels,
   checkTargetUserRegistration,
   checkUserRegistration,
@@ -86,6 +87,10 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       const configReply = await checkCasinoChannels(interaction)
       if (!configReply) return
+
+      if (!(await assertCasinoGameEnabled(interaction, configReply, 'rps'))) {
+        return
+      }
 
       const betAmount = parseReadableStringToNumber(
         interaction.options.getString('bet', true)

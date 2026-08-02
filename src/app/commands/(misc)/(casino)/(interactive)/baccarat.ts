@@ -7,6 +7,7 @@ import { ChatInputCommand, CommandData } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import {
+  assertCasinoGameEnabled,
   checkCasinoChannels,
   checkUserRegistration,
   getBaccaratGameByUserAndGuild,
@@ -36,6 +37,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       const guildConfig = await checkCasinoChannels(interaction)
       if (!guildConfig) return
+
+      if (
+        !(await assertCasinoGameEnabled(interaction, guildConfig, 'baccarat'))
+      ) {
+        return
+      }
 
       const existingGame = await getBaccaratGameByUserAndGuild({
         userId: interaction.user.id,

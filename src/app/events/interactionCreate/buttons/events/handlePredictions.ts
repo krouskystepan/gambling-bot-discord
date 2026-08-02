@@ -15,7 +15,7 @@ import {
 
 import { handleUnexpectedButtonError } from '@/errors'
 import {
-  assertGlobalFeature,
+  assertCasinoGameEnabled,
   assertNotMaintenance,
   getGuildConfigByGuildId,
   getPredictionById
@@ -47,7 +47,9 @@ export default async (interaction: Interaction) => {
     })
     if (!guildConfig) return
     if (!(await assertNotMaintenance(interaction, guildConfig))) return
-    if (!(await assertGlobalFeature(interaction, guildConfig, 'predictions'))) {
+    if (
+      !(await assertCasinoGameEnabled(interaction, guildConfig, 'prediction'))
+    ) {
       return
     }
 

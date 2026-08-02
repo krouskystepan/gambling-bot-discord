@@ -8,6 +8,7 @@ import { ChatInputCommand } from 'commandkit'
 
 import { handleUnexpectedInteractionError } from '@/errors'
 import { getUser } from '@/services/db/user.db'
+import { assertCasinoGameEnabled } from '@/services/guild/assertCasinoGameEnabled.service'
 import { checkCasinoChannels } from '@/services/guild/checkChannel.service'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
 import { checkUserRegistration } from '@/services/user/checkUserRegistration.service'
@@ -116,6 +117,10 @@ export const runInstantCasinoCommand = async <TInput>({
 
       const guildConfig = await checkCasinoChannels(interaction)
       if (!guildConfig) return
+
+      if (!(await assertCasinoGameEnabled(interaction, guildConfig, game))) {
+        return
+      }
 
       const showBalance = interaction.options.getBoolean('show-balance')
       const skipAnimations = interaction.options.getBoolean('skip-animations')

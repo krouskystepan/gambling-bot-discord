@@ -19,6 +19,7 @@ const coverageExclude = [
   'src/utils/logger.ts',
   ...devExclude,
   'src/utils/discord/createEmbed.ts',
+  'src/utils/discord/formatHelpEmbed.ts',
   'src/utils/discord/customEmotes.ts',
   'src/services/casino/casinoSlashOptions.ts',
   'src/services/atm/atmRequestStatusEmbed.ts',
@@ -28,7 +29,6 @@ const coverageExclude = [
   'src/utils/casino/**/playRound.ts',
   'src/utils/casino/**/types.ts',
   'src/utils/casino/interactions/**',
-  'src/utils/casino/roulette/helpers.ts',
   'src/utils/casino/roulette/math.ts',
   'src/utils/casino/gameGuides.ts'
 ]

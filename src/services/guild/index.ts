@@ -1,6 +1,7 @@
 export * from './guildOrphanCleanup.service'
 export * from './assertManagerAccess.service'
 export * from './assertModMaintenance.service'
+export * from './assertCasinoGameEnabled.service'
 export * from './checkChannel.service'
 export * from './checkGlobalFeature.service'
 export * from './guildConfiguration.db'

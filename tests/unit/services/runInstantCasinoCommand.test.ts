@@ -9,6 +9,7 @@ import {
 } from '@/services/casino/casinoBet.service'
 import { runInstantCasinoCommand } from '@/services/casino/runInstantCasinoCommand'
 import { getUser } from '@/services/db/user.db'
+import { assertCasinoGameEnabled } from '@/services/guild/assertCasinoGameEnabled.service'
 import { checkCasinoChannels } from '@/services/guild/checkChannel.service'
 import { checkUserRegistration } from '@/services/user/checkUserRegistration.service'
 import { isUserOnCooldown } from '@/utils/common/userCooldown'
@@ -20,6 +21,9 @@ vi.mock('@/services/user/checkUserRegistration.service', () => ({
 }))
 vi.mock('@/services/guild/checkChannel.service', () => ({
   checkCasinoChannels: vi.fn()
+}))
+vi.mock('@/services/guild/assertCasinoGameEnabled.service', () => ({
+  assertCasinoGameEnabled: vi.fn()
 }))
 vi.mock('@/services/db/user.db', () => ({
   getUser: vi.fn()
@@ -58,6 +62,7 @@ vi.mock('@/utils/discord/createEmbed', () => ({
 
 const mockCheckUserRegistration = vi.mocked(checkUserRegistration)
 const mockCheckCasinoChannels = vi.mocked(checkCasinoChannels)
+const mockAssertCasinoGameEnabled = vi.mocked(assertCasinoGameEnabled)
 const mockIsUserOnCooldown = vi.mocked(isUserOnCooldown)
 const mockCheckValidBet = vi.mocked(checkValidBet)
 const mockReserveCasinoBet = vi.mocked(reserveCasinoBet)
@@ -104,6 +109,7 @@ describe('runInstantCasinoCommand', () => {
     } as never)
     mockIsUserOnCooldown.mockReturnValue(false)
     mockCheckCasinoChannels.mockResolvedValue(guildConfig as never)
+    mockAssertCasinoGameEnabled.mockResolvedValue(true)
     mockCheckValidBet.mockReturnValue(true)
     mockReserveCasinoBet.mockResolvedValue(undefined as never)
     mockSettleCasinoWinnings.mockResolvedValue(900 as never)
@@ -143,6 +149,23 @@ describe('runInstantCasinoCommand', () => {
       executeGame: vi.fn()
     })
     expect(prepareInput).not.toHaveBeenCalled()
+    expect(mockAssertCasinoGameEnabled).not.toHaveBeenCalled()
+
+    mockAssertCasinoGameEnabled.mockResolvedValueOnce(false)
+    const prepareWhenDisabled = vi.fn()
+    await runInstantCasinoCommand({
+      interaction: interaction as never,
+      game: 'dice',
+      prepareInput: prepareWhenDisabled,
+      executeGame: vi.fn()
+    })
+    expect(mockAssertCasinoGameEnabled).toHaveBeenCalledWith(
+      interaction,
+      guildConfig,
+      'dice'
+    )
+    expect(prepareWhenDisabled).not.toHaveBeenCalled()
+    expect(mockReserveCasinoBet).not.toHaveBeenCalled()
 
     await runInstantCasinoCommand({
       interaction: interaction as never,

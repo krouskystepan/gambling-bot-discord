@@ -209,18 +209,8 @@ const featureCases: {
     title: 'Error - Feature Disabled'
   },
   {
-    feature: 'predictions',
-    settings: { disablePredictions: true },
-    title: 'Error - Feature Disabled'
-  },
-  {
     feature: 'predictionManagement',
     settings: { disablePredictionManagement: true },
-    title: 'Error - Feature Disabled'
-  },
-  {
-    feature: 'raffles',
-    settings: { disableRaffles: true },
     title: 'Error - Feature Disabled'
   },
   {
