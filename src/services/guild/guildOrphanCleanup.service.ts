@@ -151,10 +151,11 @@ export const runGuildOrphanCleanup = async ({
   for (const game of blackjackGames) {
     try {
       if (game.activeBetId) {
-        const totalBet = game.hands.reduce(
-          (sum, hand) => sum + hand.betAmount,
-          0
-        )
+        const totalBet =
+          game.hands.reduce((sum, hand) => sum + hand.betAmount, 0) +
+          (game.activePairsBetAmount ?? 0) +
+          (game.activePlusThreeBetAmount ?? 0) +
+          (game.insuranceBetAmount ?? 0)
 
         await refundLockedBet({
           userId: game.userId,

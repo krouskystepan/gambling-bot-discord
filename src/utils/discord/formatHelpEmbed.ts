@@ -1,5 +1,15 @@
-import { formatPlinkoBinMultipliersForDisplay } from 'gambling-bot-shared/casino'
-import { formatMoney, formatNumberWithSpaces } from 'gambling-bot-shared/common'
+import {
+  formatPlinkoBinMultipliersForDisplay,
+  isBlackjackPairsEnabled,
+  isBlackjackPlusThreeEnabled,
+  normalizeBlackjackDeckCount,
+  readableGameValueNames
+} from 'gambling-bot-shared/casino'
+import {
+  formatMoney,
+  formatNumberWithSpaces,
+  getReadableName
+} from 'gambling-bot-shared/common'
 import {
   type GlobalSettings,
   type TGuildConfiguration
@@ -29,15 +39,32 @@ const betLine = (
     value === 0 ? 'No Limit' : formatMoney(value, globalSettings)
   }`
 
-const formatMultiplierValue = (value: number | Record<string, number>) => {
+const formatMultiplierValue = (
+  value: number | Record<string, number>,
+  label = typeof value === 'number' ? 'Multiplier' : 'Multipliers',
+  options?: { omitZero?: boolean }
+): string => {
   if (typeof value === 'number') {
-    return `- **Multiplier:** ${formatNumberWithSpaces(value)}x`
+    if (options?.omitZero && !(Number.isFinite(value) && value > 0)) {
+      return ''
+    }
+    return `- **${label}:** ${formatNumberWithSpaces(value)}x`
+  }
+
+  const entries = Object.entries(value).filter(
+    ([, v]) => !options?.omitZero || (Number.isFinite(v) && v > 0)
+  )
+  if (entries.length === 0) {
+    return options?.omitZero ? '' : `- **${label}:**`
   }
 
   return (
-    '- **Multipliers:**\n' +
-    Object.entries(value)
-      .map(([k, v]) => `  - ${k}: ${formatNumberWithSpaces(v)}x`)
+    `- **${label}:**\n` +
+    entries
+      .map(
+        ([k, v]) =>
+          `  - **${getReadableName(k, readableGameValueNames)}:** ${formatNumberWithSpaces(v)}x`
+      )
       .join('\n')
   )
 }
@@ -99,12 +126,28 @@ export const buildPlayerGameSettings = (
         betLine('Min bet', settings.slots.minBet, globalSettings),
         betLine('Max bet', settings.slots.maxBet, globalSettings)
       ]
-    case 'blackjack':
+    case 'blackjack': {
+      const { blackjack } = settings
+      const decks = normalizeBlackjackDeckCount(blackjack.deckCount)
       return [
-        formatMultiplierValue(settings.blackjack.winMultipliers),
-        betLine('Min bet', settings.blackjack.minBet, globalSettings),
-        betLine('Max bet', settings.blackjack.maxBet, globalSettings)
-      ]
+        formatMultiplierValue(blackjack.winMultipliers, 'Multipliers', {
+          omitZero: true
+        }),
+        isBlackjackPairsEnabled(blackjack.pairsMultipliers)
+          ? formatMultiplierValue(blackjack.pairsMultipliers, 'Perfect Pairs', {
+              omitZero: true
+            })
+          : '',
+        isBlackjackPlusThreeEnabled(blackjack.plusThreeMultipliers)
+          ? formatMultiplierValue(blackjack.plusThreeMultipliers, '21+3', {
+              omitZero: true
+            })
+          : '',
+        `- **Decks:** ${decks}`,
+        betLine('Min bet', blackjack.minBet, globalSettings),
+        betLine('Max bet', blackjack.maxBet, globalSettings)
+      ].filter(Boolean)
+    }
     case 'hilo':
       return [
         '- **Payout:** Scales with your guess (Higher / Draw / Lower).',

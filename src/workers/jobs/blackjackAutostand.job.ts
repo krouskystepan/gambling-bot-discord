@@ -4,6 +4,7 @@ import { Client } from 'commandkit'
 
 import {
   getAllOldBlackjackGames,
+  getBlackjackGameByGameId,
   getGuildConfigByGuildId,
   saveBlackjackGame
 } from '@/services'
@@ -12,7 +13,8 @@ import {
   applyAction,
   docToEngine,
   engineToDoc,
-  finishBlackjackDealerAndSettle
+  finishBlackjackDealerAndSettle,
+  resolveBlackjackInsuranceDecision
 } from '@/utils/casino/blackjack'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
@@ -47,6 +49,71 @@ export const blackjackAutostandJob = async (client: Client<true>) => {
 
       if (message) {
         await message.edit({ components: [] })
+      }
+
+      if (game.phase === 'INSURANCE') {
+        if (!guildConfig) {
+          logger.error(
+            `Auto-stand skipped insurance game ${game.gameId}: missing guild config`
+          )
+          continue
+        }
+
+        const next = await resolveBlackjackInsuranceDecision({
+          game,
+          takeInsurance: false,
+          guildConfig,
+          guild,
+          sourceChannelId: game.channelId,
+          showBalance: false
+        })
+
+        if (next.phase === 'RESULT') {
+          if (message) {
+            await message.edit({
+              content:
+                'This game was inactive, so insurance was declined automatically.',
+              embeds: next.embeds,
+              components: next.components
+            })
+          }
+        } else {
+          const liveGame = await getBlackjackGameByGameId({
+            gameId: game.gameId,
+            guildId: game.guildId
+          })
+          if (!liveGame || liveGame.phase !== 'PLAYER') {
+            throw new Error(
+              `Expected PLAYER after declining insurance for ${game.gameId}`
+            )
+          }
+
+          const engine = docToEngine(liveGame)
+          applyAction(engine, 'STAND')
+          engine.activeHandIndex = engine.hands.length - 1
+          await finishBlackjackDealerAndSettle({
+            game: liveGame,
+            engine,
+            guildConfig,
+            guild,
+            sourceChannelId: liveGame.channelId,
+            showBalance: false,
+            message,
+            finalMessageContent:
+              'This game was inactive, so insurance was declined and auto-stand was executed.'
+          })
+        }
+
+        processed++
+        const stats = guildProcessed.get(game.guildId) ?? {
+          finished: 0,
+          channelMissed: 0
+        }
+        stats.finished++
+        if (!message) stats.channelMissed++
+        guildProcessed.set(game.guildId, stats)
+        await sleep(300)
+        continue
       }
 
       const engine = docToEngine(game)

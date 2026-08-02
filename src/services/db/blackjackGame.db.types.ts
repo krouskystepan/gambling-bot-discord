@@ -13,6 +13,13 @@ export type TUpsertBlackjackGame = Pick<TUser, 'userId' | 'guildId'> &
     gameId: string
     activeBetId?: string | null
     baseBetAmount: number | null
+    basePairsBetAmount?: number | null
+    activePairsBetAmount?: number | null
+    basePlusThreeBetAmount?: number | null
+    activePlusThreeBetAmount?: number | null
+    insuranceBetAmount?: number | null
+    pairsOutcome?: TBlackjackGame['pairsOutcome']
+    plusThreeOutcome?: TBlackjackGame['plusThreeOutcome']
     showBalance: boolean
     skipAnimations?: boolean
     sessionStats?: CasinoSessionStats
@@ -27,6 +34,13 @@ export type TUpdateBlackjackGame = Pick<TUser, 'userId' | 'guildId'> &
       | 'messageId'
       | 'activeBetId'
       | 'baseBetAmount'
+      | 'basePairsBetAmount'
+      | 'activePairsBetAmount'
+      | 'basePlusThreeBetAmount'
+      | 'activePlusThreeBetAmount'
+      | 'insuranceBetAmount'
+      | 'pairsOutcome'
+      | 'plusThreeOutcome'
       | 'showBalance'
       | 'skipAnimations'
       | 'sessionStats'

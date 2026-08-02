@@ -34,6 +34,14 @@ describe('blackjack customId', () => {
     }
   })
 
+  it('round-trips insurance actions', () => {
+    for (const action of ['INSURE', 'NO_INSURE'] as const) {
+      expect(
+        decodeId(encodeId({ gameId: 'g1', action, showBalance: false }))
+      ).toEqual({ gameId: 'g1', action, showBalance: false })
+    }
+  })
+
   it('returns null for invalid ids', () => {
     expect(decodeId('not-bj')).toBeNull()
     expect(decodeId('bj:only:three')).toBeNull()

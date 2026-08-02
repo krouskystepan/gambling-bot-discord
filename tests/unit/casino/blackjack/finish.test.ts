@@ -31,6 +31,13 @@ const baseGame: TBlackjackGame = {
   gameId: 'game-1',
   activeBetId: 'bet-1',
   baseBetAmount: 100,
+  basePairsBetAmount: null,
+  activePairsBetAmount: null,
+  basePlusThreeBetAmount: null,
+  activePlusThreeBetAmount: null,
+  insuranceBetAmount: null,
+  pairsOutcome: null,
+  plusThreeOutcome: null,
   showBalance: false,
   skipAnimations: false,
   sessionStats: emptySessionStats(),
@@ -142,13 +149,56 @@ describe('finishBlackjackDealerAndSettle', () => {
         userId: 'user-1',
         guildId: 'guild-1',
         phase: 'RESULT',
-        activeBetId: null
+        activeBetId: null,
+        activePairsBetAmount: null,
+        activePlusThreeBetAmount: null,
+        insuranceBetAmount: null,
+        pairsOutcome: null,
+        plusThreeOutcome: null
       })
     )
     expect(result.sessionStats).toMatchObject({
       roundsPlayed: 1,
       totalWagered: 100
     })
+  })
+
+  it('includes pairs stake in settle totals on the finish path', async () => {
+    await finishBlackjackDealerAndSettle({
+      game: {
+        ...baseGame,
+        activeBetId: 'bet-pairs',
+        activePairsBetAmount: 25,
+        pairsOutcome: 'mixed'
+      },
+      engine: {
+        deck: [],
+        deckIndex: 0,
+        hands: [
+          {
+            cards: [card('10', 10), card('10', 10)],
+            betAmount: 100,
+            finished: true,
+            isSplitHand: false
+          }
+        ],
+        activeHandIndex: 0,
+        phase: 'DEALER',
+        dealerCards: [card('10', 10), card('10', 10)]
+      },
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      showBalance: false
+    })
+
+    // Push main 100 + mixed pairs 25*7=175 => total payout 275, total bet 125
+    expect(services.settleCasinoWinnings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalBet: 125,
+        winnings: 275
+      })
+    )
   })
 
   it('skips settling when the round has no active bet', async () => {
@@ -274,6 +324,51 @@ describe('finishBlackjackDealerAndSettle', () => {
     })
 
     expect(result.finalResultId).toBe('EVEN')
+  })
+
+  it('treats main push with lost side bets as an overall LOSS', async () => {
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
+
+    const result = await finishBlackjackDealerAndSettle({
+      game: {
+        ...baseGame,
+        activeBetId: 'bet-push-sides-lost',
+        activePairsBetAmount: 100,
+        activePlusThreeBetAmount: 100,
+        pairsOutcome: null,
+        plusThreeOutcome: null
+      },
+      engine: {
+        deck: [],
+        deckIndex: 0,
+        hands: [
+          {
+            cards: [card('10', 10), card('K', 10)],
+            betAmount: 1000,
+            finished: true,
+            isSplitHand: false
+          }
+        ],
+        activeHandIndex: 0,
+        phase: 'DEALER',
+        dealerCards: [card('Q', 10), card('Q', 10)]
+      },
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      showBalance: false,
+      message: message as never
+    })
+
+    // Main push returns 1000; sides pay 0 → net -200.
+    expect(result.totalBet).toBe(1200)
+    expect(result.totalPayout).toBe(1000)
+    expect(result.net).toBe(-200)
+    expect(result.finalResultId).toBe('LOSS')
+
+    const embed = message.edit.mock.calls[0]?.[0]?.embeds?.[0]
+    expect(embed?.data?.description).toContain('You lose!')
+    expect(embed?.data?.description).toContain('🔴')
   })
 
   it('ignores unresolved result states when summing payouts', async () => {
