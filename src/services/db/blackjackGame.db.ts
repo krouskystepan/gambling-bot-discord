@@ -14,7 +14,7 @@ import {
 } from './blackjackGame.db.types'
 
 /** Phases where a hand is live and can still be auto-finished. */
-const MID_HAND_PHASES = ['PLAYER', 'DEALER'] as const
+const MID_HAND_PHASES = ['INSURANCE', 'PLAYER', 'DEALER'] as const
 
 export const getBlackjackGameByUserAndGuild = async ({
   userId,
@@ -123,6 +123,13 @@ export const upsertBlackjackGame = async ({
   gameId,
   activeBetId = null,
   baseBetAmount,
+  basePairsBetAmount = null,
+  activePairsBetAmount = null,
+  basePlusThreeBetAmount = null,
+  activePlusThreeBetAmount = null,
+  insuranceBetAmount = null,
+  pairsOutcome = null,
+  plusThreeOutcome = null,
   showBalance,
   skipAnimations = false,
   sessionStats,
@@ -142,6 +149,13 @@ export const upsertBlackjackGame = async ({
         gameId,
         activeBetId,
         baseBetAmount,
+        basePairsBetAmount,
+        activePairsBetAmount,
+        basePlusThreeBetAmount,
+        activePlusThreeBetAmount,
+        insuranceBetAmount,
+        pairsOutcome,
+        plusThreeOutcome,
         showBalance,
         skipAnimations,
         sessionStats: sessionStats ?? emptySessionStats(),

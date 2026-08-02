@@ -106,6 +106,21 @@ describe('blackjackGame.db', () => {
     expect(old.some((g) => g.gameId === 'game-bj-1')).toBe(true)
   })
 
+  it('treats INSURANCE as a mid-hand phase for idle queries', async () => {
+    await upsertBlackjackGame({
+      ...baseGame,
+      gameId: 'game-bj-insurance',
+      phase: 'INSURANCE'
+    })
+    await BlackjackGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date('2020-01-01T00:00:00Z') } }
+    )
+
+    const old = await getAllOldBlackjackGames(1)
+    expect(old.some((g) => g.gameId === 'game-bj-insurance')).toBe(true)
+  })
+
   it('excludes settled sessions from the mid-hand old query', async () => {
     await upsertBlackjackGame({ ...baseGame, phase: 'RESULT' })
     await BlackjackGame.collection.updateOne(
