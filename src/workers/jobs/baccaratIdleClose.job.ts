@@ -8,6 +8,7 @@ import {
   getAllOldBaccaratGames
 } from '@/services/db/baccaratGame.db'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
+import { baccaratLockedTotal } from '@/utils/casino/baccarat/slip'
 import { formatSessionSummaryEmbed } from '@/utils/casino/sessionSummary'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
@@ -55,11 +56,15 @@ export const baccaratIdleCloseJob = async (client: Client<true>) => {
       }
 
       // Only a round that never settled still holds a lock.
-      if (game.activeBetId && game.betAmount != null) {
+      const locked = baccaratLockedTotal({
+        lockedAmount: game.lockedAmount,
+        bets: game.bets
+      })
+      if (game.activeBetId && locked > 0) {
         await refundLockedBet({
           userId: game.userId,
           guildId: game.guildId,
-          amount: game.betAmount,
+          amount: locked,
           betId: game.activeBetId,
           game: 'baccarat'
         })

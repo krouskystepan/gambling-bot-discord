@@ -32,6 +32,7 @@ import {
 import { deleteVipByOwnerId } from '@/services/db/vip.db'
 import { cancelPrediction } from '@/services/predictions/payPrediction.service'
 import { cancelRaffle } from '@/services/raffles/cancelRaffle.service'
+import { baccaratLockedTotal } from '@/utils/casino/baccarat/slip'
 import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 
@@ -184,11 +185,15 @@ export const runGuildOrphanCleanup = async ({
 
   for (const game of baccaratGames) {
     try {
-      if (game.activeBetId && game.betAmount != null) {
+      const locked = baccaratLockedTotal({
+        lockedAmount: game.lockedAmount,
+        bets: game.bets
+      })
+      if (game.activeBetId && locked > 0) {
         await refundLockedBet({
           userId: game.userId,
           guildId: game.guildId,
-          amount: game.betAmount,
+          amount: locked,
           betId: game.activeBetId,
           game: 'baccarat'
         })
