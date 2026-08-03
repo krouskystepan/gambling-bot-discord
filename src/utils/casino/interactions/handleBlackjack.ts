@@ -1,6 +1,7 @@
 import {
   isBlackjackPairsEnabled,
   isBlackjackPlusThreeEnabled,
+  normalizeSessionStats,
   validateBetAmount
 } from 'gambling-bot-shared/casino'
 import {
@@ -15,7 +16,6 @@ import {
 import {
   ActionRowBuilder,
   Interaction,
-  MessageFlags,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle
@@ -23,6 +23,7 @@ import {
 
 import { handleUnexpectedButtonError } from '@/errors'
 import {
+  claimBlackjackDeal,
   deleteBlackjackGame,
   getBlackjackGameByGameId,
   getGuildConfigByGuildId,
@@ -68,16 +69,9 @@ const inFlightBlackjackInteractions = new WeakSet<object>()
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-const buildBlackjackBetModal = ({
-  gameId,
-  pairsEnabled,
-  plusThreeEnabled
-}: {
-  gameId: string
-  pairsEnabled: boolean
-  plusThreeEnabled: boolean
-}) => {
-  const modal = new ModalBuilder()
+/** Always include side-bet fields so CHANGE can showModal with no DB round-trip. */
+const buildBlackjackBetModal = (gameId: string) =>
+  new ModalBuilder()
     .setCustomId(encodeModalId({ gameId }))
     .setTitle('Change your blackjack bet')
     .addComponents(
@@ -88,11 +82,7 @@ const buildBlackjackBetModal = ({
           .setPlaceholder('e.g. 100, 4k, 10.5k')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
-      )
-    )
-
-  if (pairsEnabled) {
-    modal.addComponents(
+      ),
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId(PAIRS_INPUT_ID)
@@ -100,12 +90,7 @@ const buildBlackjackBetModal = ({
           .setPlaceholder('0 or empty for none')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
-      )
-    )
-  }
-
-  if (plusThreeEnabled) {
-    modal.addComponents(
+      ),
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId(PLUS_THREE_INPUT_ID)
@@ -115,9 +100,17 @@ const buildBlackjackBetModal = ({
           .setRequired(false)
       )
     )
-  }
 
-  return modal
+const discordErrorCode = (error: unknown): number | null => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as { code: unknown }).code === 'number'
+  ) {
+    return (error as { code: number }).code
+  }
+  return null
 }
 
 export const handleBlackjackInteraction = async (interaction: Interaction) => {
@@ -142,19 +135,20 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
     if (!guildId) return
 
     try {
-      // showModal must be the first response - load config only for field flags.
+      // showModal must be the first response - never await DB first (3s window).
       if (isButton && buttonData?.action === 'CHANGE') {
-        const guildConfig = await getGuildConfigByGuildId({ guildId })
-        const blackjack = guildConfig?.casinoSettings.blackjack
-        await interaction.showModal(
-          buildBlackjackBetModal({
-            gameId,
-            pairsEnabled: isBlackjackPairsEnabled(blackjack?.pairsMultipliers),
-            plusThreeEnabled: isBlackjackPlusThreeEnabled(
-              blackjack?.plusThreeMultipliers
-            )
-          })
-        )
+        try {
+          await interaction.showModal(buildBlackjackBetModal(gameId))
+        } catch (error) {
+          // Expired / already consumed by a parallel listener.
+          if (
+            discordErrorCode(error) === 10062 ||
+            discordErrorCode(error) === 40060
+          ) {
+            return
+          }
+          throw error
+        }
         return
       }
 
@@ -189,11 +183,9 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
       const showBalance = buttonData?.showBalance ?? game.showBalance
 
       const followUpError = async (title: string, description: string) => {
-        if (!interaction.isRepliable()) return
-        await interaction.followUp({
-          embeds: [createErrorEmbed(title, description)],
-          flags: MessageFlags.Ephemeral
-        })
+        await replyEphemeralError(interaction, [
+          createErrorEmbed(title, description)
+        ])
       }
 
       /** Deals the next hand into the same session document / message. */
@@ -209,6 +201,36 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
           )
         }
 
+        if (game.activeBetId) {
+          return followUpError(
+            'Error - Action In Progress',
+            'That deal was already processed. Wait for the table to update.'
+          )
+        }
+
+        const sessionStats = normalizeSessionStats(game.sessionStats)
+        const betId = sessionBetId(game.gameId, sessionStats.roundsPlayed + 1)
+        const claimed = await claimBlackjackDeal({
+          userId: game.userId,
+          guildId: game.guildId,
+          betId
+        })
+        if (!claimed) {
+          return followUpError(
+            'Error - Action In Progress',
+            'That deal was already processed. Wait for the table to update.'
+          )
+        }
+
+        const releaseDealClaim = async () => {
+          await updateBlackjackGame({
+            userId: game.userId,
+            guildId: game.guildId,
+            activeBetId: null
+          })
+        }
+
+        let dealt = false
         try {
           const hand = await startBlackjackHand({
             userId: game.userId,
@@ -221,11 +243,12 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
             plusThreeBetAmount,
             showBalance: game.showBalance,
             skipAnimations: game.skipAnimations,
-            sessionStats: game.sessionStats,
+            sessionStats,
             guildConfig,
             guild: interaction.guild,
             sourceChannelId: game.channelId
           })
+          dealt = true
 
           await sessionMessage.edit({
             content: null,
@@ -233,6 +256,8 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
             components: hand.components
           })
         } catch (error) {
+          if (!dealt) await releaseDealClaim()
+
           if (error instanceof Error && error.message === USER_BANNED_ERROR) {
             return followUpError(
               'Error - Account Restricted',
@@ -247,6 +272,13 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
             return followUpError(
               'Error - Bet Failed',
               'Not enough balance to place this bet.'
+            )
+          }
+
+          if (error instanceof Error && error.message === 'DUPLICATE_BET') {
+            return followUpError(
+              'Error - Action In Progress',
+              'That deal was already processed. Wait for the table to update.'
             )
           }
           throw error
@@ -422,7 +454,7 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
             formatSessionSummaryEmbed({
               gameLabel: 'Blackjack',
               emoji: '🃏',
-              stats: game.sessionStats,
+              stats: normalizeSessionStats(game.sessionStats),
               reason: 'closed',
               gameId: game.gameId,
               globalSettings,
@@ -551,6 +583,16 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
       const activeHand = engine.hands[engine.activeHandIndex]
       const action = buttonData.action
 
+      if (!activeHand || activeHand.finished) {
+        await replyEphemeralError(interaction, [
+          createErrorEmbed(
+            'Error - Invalid Action',
+            'This hand is no longer accepting that action.'
+          )
+        ])
+        return
+      }
+
       if (action === 'DOUBLE') {
         const extraBet = activeHand.betAmount
 
@@ -564,84 +606,103 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
           })
         } catch (error) {
           if (error instanceof Error && error.message === USER_BANNED_ERROR) {
-            return interaction.followUp({
-              embeds: [
-                createErrorEmbed(
-                  'Error - Account Restricted',
-                  USER_BANNED_MESSAGE
-                )
-              ],
-              flags: MessageFlags.Ephemeral
-            })
+            return followUpError(
+              'Error - Account Restricted',
+              USER_BANNED_MESSAGE
+            )
           }
 
-          return interaction.followUp({
-            embeds: [
-              createErrorEmbed(
-                'Error - Insufficient Funds',
-                `You don't have enough funds to double.`
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          return followUpError(
+            'Error - Insufficient Funds',
+            `You don't have enough funds to double.`
+          )
         }
 
         activeHand.betAmount += extraBet
       }
 
       if (action === 'SPLIT') {
+        if (!canSplit(engine)) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Invalid Action',
+              'You cannot split this hand.'
+            )
+          ])
+          return
+        }
+
         const splitBet = activeHand.betAmount
+        // Unique per split seat + shoe position (hands.length alone collides
+        // when resplitting hand 0 vs later splitting hand 1 at length 2).
+        const splitScope = `s${engine.activeHandIndex}-${engine.hands.length}-${engine.deckIndex}`
 
         try {
           await reserveCasinoBet({
             userId: game.userId,
             guildId,
             totalBet: splitBet,
-            betId: sessionBetId(betId, `s${engine.hands.length}`),
+            betId: sessionBetId(betId, splitScope),
             game: 'blackjack'
           })
         } catch (error) {
           if (error instanceof Error && error.message === USER_BANNED_ERROR) {
-            return interaction.followUp({
-              embeds: [
-                createErrorEmbed(
-                  'Error - Account Restricted',
-                  USER_BANNED_MESSAGE
-                )
-              ],
-              flags: MessageFlags.Ephemeral
-            })
+            return followUpError(
+              'Error - Account Restricted',
+              USER_BANNED_MESSAGE
+            )
           }
 
-          return interaction.followUp({
-            embeds: [
-              createErrorEmbed(
-                'Error - Insufficient Funds',
-                `You don't have enough funds to split.`
-              )
-            ],
-            flags: MessageFlags.Ephemeral
-          })
+          if (error instanceof Error && error.message === 'DUPLICATE_BET') {
+            return followUpError(
+              'Error - Action In Progress',
+              'That split was already processed. Wait for the table to update.'
+            )
+          }
+
+          return followUpError(
+            'Error - Insufficient Funds',
+            `You don't have enough funds to split.`
+          )
         }
       }
 
-      applyAction(engine, action)
-
-      const value = calculateHandValue(activeHand.cards)
-
-      if (value > 21) {
-        activeHand.finished = true
+      let actionResult
+      try {
+        actionResult = applyAction(engine, action)
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Invalid split') {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Invalid Action',
+              'You cannot split this hand.'
+            )
+          ])
+          return
+        }
+        throw error
       }
 
-      if (action === 'HIT' && value === 21) {
-        activeHand.finished = true
+      // Re-read after SPLIT/HIT - `activeHand` may be stale if the array was rebuilt.
+      const currentHand = engine.hands[engine.activeHandIndex] ?? activeHand
+      const value = calculateHandValue(currentHand.cards)
+
+      if (value > 21) {
+        currentHand.finished = true
+      }
+
+      // Natural 21 after hit or split draw - auto-stand.
+      if ((action === 'HIT' || action === 'SPLIT') && value === 21) {
+        currentHand.finished = true
       }
 
       if (action === 'STAND' || action === 'DOUBLE') {
-        activeHand.finished = true
+        currentHand.finished = true
       }
 
-      if (activeHand.finished) {
+      if ('dealerTurn' in actionResult && actionResult.dealerTurn) {
+        engine.phase = 'DEALER'
+      } else if (currentHand.finished) {
         const nextHandIndex = engine.hands.findIndex(
           (h, i) => i > engine.activeHandIndex && !h.finished
         )
@@ -653,12 +714,17 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
         }
       }
 
+      const insuranceBet = game.insuranceBetAmount
       const liveSideBets = {
         pairsBet: game.activePairsBetAmount,
         pairsOutcome: game.pairsOutcome,
         plusThreeBet: game.activePlusThreeBetAmount,
         plusThreeOutcome: game.plusThreeOutcome,
-        insuranceBet: game.insuranceBetAmount
+        insuranceBet,
+        // After peek, mid-hand insurance is always settled lost (dealer BJ ends early).
+        ...(insuranceBet != null && insuranceBet > 0
+          ? { insurancePayout: 0 }
+          : {})
       }
 
       if (engine.phase === 'DEALER') {
@@ -738,12 +804,26 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
         return
       }
 
+      const hand = engine.hands[engine.activeHandIndex]
+      if (!hand) {
+        await replyEphemeralError(interaction, [
+          createErrorEmbed(
+            'Error - Game not active',
+            'This Blackjack hand is no longer accepting actions.'
+          )
+        ])
+        return
+      }
+
+      // Snapshot before save - mongoose can wrap shared hand refs in place.
+      const canDoubleNow = hand.cards.length === 2
+      const canSplitNow = canSplit(engine)
+      const buttonSalt = `${engine.activeHandIndex}-${engine.hands.length}-${engine.deckIndex}`
+
       engineToDoc(engine, game)
       await saveBlackjackGame(game)
 
-      const hand = engine.hands[engine.activeHandIndex]
-
-      await sessionMessage.edit({
+      const playerTurnPayload = {
         embeds: [
           renderBlackjackEmbed({
             userId: game.userId,
@@ -753,21 +833,30 @@ export const handleBlackjackInteraction = async (interaction: Interaction) => {
             activeHandIndex: engine.activeHandIndex,
             dealerCards: engine.dealerCards,
             showBalance,
-            result: { kind: 'PHASE', gamePhaseId: 'PLAYER_TURN' },
+            result: {
+              kind: 'PHASE' as const,
+              gamePhaseId: 'PLAYER_TURN' as const
+            },
             dealerHideSecondCard: true,
             sideBets: liveSideBets,
             globalSettings
           })
         ],
-        components: [
-          renderBlackjackButtons({
-            gameId: game.gameId,
-            showBalance,
-            canDouble: hand.cards.length === 2,
-            canSplit: canSplit(engine)
-          })
-        ]
-      })
+        components: renderBlackjackButtons({
+          gameId: game.gameId,
+          showBalance,
+          canDouble: canDoubleNow,
+          canSplit: canSplitNow,
+          salt: buttonSalt
+        })
+      }
+
+      // Prefer editReply after deferUpdate so the clicked button is fully reset.
+      if (interaction.isMessageComponent() && interaction.deferred) {
+        await interaction.editReply(playerTurnPayload)
+      } else {
+        await sessionMessage.edit(playerTurnPayload)
+      }
     } catch (err) {
       await handleUnexpectedButtonError(interaction, err, {
         handler: 'handleBlackjack'
