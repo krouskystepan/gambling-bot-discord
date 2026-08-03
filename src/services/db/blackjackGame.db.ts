@@ -115,6 +115,36 @@ export const updateBlackjackGame = async ({
   )
 }
 
+/**
+ * Atomically claim the next deal so double Deal/Rebet cannot reserve the same
+ * ledger id. Caller must clear `activeBetId` if reserve/deal fails afterward.
+ */
+export const claimBlackjackDeal = async ({
+  userId,
+  guildId,
+  betId
+}: {
+  userId: string
+  guildId: string
+  betId: string
+}) => {
+  return BlackjackGame.findOneAndUpdate(
+    {
+      userId,
+      guildId,
+      phase: { $in: ['RESULT', 'BETTING'] },
+      $or: [{ activeBetId: null }, { activeBetId: { $exists: false } }]
+    },
+    {
+      $set: {
+        activeBetId: betId,
+        idleNudgeSentAt: null
+      }
+    },
+    { returnDocument: 'after' }
+  )
+}
+
 export const upsertBlackjackGame = async ({
   userId,
   guildId,

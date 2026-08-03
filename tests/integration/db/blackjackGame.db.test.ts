@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  claimBlackjackDeal,
   deleteBlackjackGame,
   getAllOldBlackjackGames,
   getBlackjackGameByGameId,
@@ -93,6 +94,28 @@ describe('blackjackGame.db', () => {
 
     expect(updated?.phase).toBe('RESULT')
     expect(updated?.activeBetId).toBeNull()
+  })
+
+  it('claims the next deal once from RESULT/BETTING', async () => {
+    await upsertBlackjackGame({
+      ...baseGame,
+      phase: 'RESULT',
+      activeBetId: null
+    })
+
+    const first = await claimBlackjackDeal({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      betId: 'game-bj-1:2'
+    })
+    const second = await claimBlackjackDeal({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      betId: 'game-bj-1:2'
+    })
+
+    expect(first?.activeBetId).toBe('game-bj-1:2')
+    expect(second).toBeNull()
   })
 
   it('finds mid-hand games older than N days', async () => {
