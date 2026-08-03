@@ -1,7 +1,8 @@
 import type { TBlackjackGame } from 'gambling-bot-shared/blackjack'
 import {
   classifyPerfectPairs,
-  classifyTwentyOnePlusThree
+  classifyTwentyOnePlusThree,
+  normalizeSessionStats
 } from 'gambling-bot-shared/casino'
 import { sessionBetId } from 'gambling-bot-shared/common'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
@@ -90,7 +91,7 @@ export const resolveBlackjackInsuranceDecision = async ({
     insuranceBetAmount,
     showBalance,
     skipAnimations: game.skipAnimations,
-    sessionStats: game.sessionStats,
+    sessionStats: normalizeSessionStats(game.sessionStats),
     deck: game.deck,
     playerCards: mainHand.cards,
     dealerCards: game.dealerCards,

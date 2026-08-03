@@ -326,32 +326,34 @@ describe('finishBlackjackDealerAndSettle', () => {
     expect(result.finalResultId).toBe('EVEN')
   })
 
-  it('treats main push with lost side bets as an overall LOSS', async () => {
+  it('treats split lose + push as an overall LOSS (not a win)', async () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const result = await finishBlackjackDealerAndSettle({
       game: {
         ...baseGame,
-        activeBetId: 'bet-push-sides-lost',
-        activePairsBetAmount: 100,
-        activePlusThreeBetAmount: 100,
-        pairsOutcome: null,
-        plusThreeOutcome: null
+        activeBetId: 'bet-split-push'
       },
       engine: {
         deck: [],
         deckIndex: 0,
         hands: [
           {
-            cards: [card('10', 10), card('K', 10)],
+            cards: [card('7', 7), card('7', 7)],
             betAmount: 1000,
             finished: true,
-            isSplitHand: false
+            isSplitHand: true
+          },
+          {
+            cards: [card('7', 7), card('7', 7), card('7', 7)],
+            betAmount: 2000,
+            finished: true,
+            isSplitHand: true
           }
         ],
-        activeHandIndex: 0,
+        activeHandIndex: -1,
         phase: 'DEALER',
-        dealerCards: [card('Q', 10), card('Q', 10)]
+        dealerCards: [card('9', 9), card('5', 5), card('7', 7)]
       },
       guildConfig,
       guild: null,
@@ -360,15 +362,74 @@ describe('finishBlackjackDealerAndSettle', () => {
       message: message as never
     })
 
-    // Main push returns 1000; sides pay 0 → net -200.
-    expect(result.totalBet).toBe(1200)
-    expect(result.totalPayout).toBe(1000)
-    expect(result.net).toBe(-200)
+    // Hand 1 loses 1k, hand 2 push returns 2k → net -1k.
+    expect(result.totalBet).toBe(3000)
+    expect(result.totalPayout).toBe(2000)
+    expect(result.net).toBe(-1000)
     expect(result.finalResultId).toBe('LOSS')
 
     const embed = message.edit.mock.calls[0]?.[0]?.embeds?.[0]
-    expect(embed?.data?.description).toContain('You lose!')
-    expect(embed?.data?.description).toContain('🔴')
+    const description = embed?.data?.description ?? ''
+    expect(description).toContain('You lose!')
+    expect(description).toContain('🔴')
+    expect(description).not.toContain('You win!')
+    expect(description).toContain('· Lost')
+    expect(description).toContain('· Push')
+  })
+
+  it('treats main push with lost side bets as an overall LOSS', async () => {
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
+
+    const result = await finishBlackjackDealerAndSettle({
+      game: {
+        ...baseGame,
+        activeBetId: 'bet-push-sides-lost',
+        activePairsBetAmount: 200,
+        activePlusThreeBetAmount: 200,
+        pairsOutcome: 'loss',
+        plusThreeOutcome: 'loss'
+      },
+      engine: {
+        deck: [],
+        deckIndex: 0,
+        hands: [
+          {
+            cards: [card('3', 3), card('9', 9), card('8', 8)],
+            betAmount: 2500,
+            finished: true,
+            isSplitHand: false
+          }
+        ],
+        activeHandIndex: 0,
+        phase: 'DEALER',
+        dealerCards: [card('10', 10), card('J', 10)]
+      },
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      showBalance: false,
+      message: message as never
+    })
+
+    // Main push returns 2500; sides pay 0 → net -400.
+    expect(result.totalBet).toBe(2900)
+    expect(result.totalPayout).toBe(2500)
+    expect(result.net).toBe(-400)
+    expect(result.finalResultId).toBe('LOSS')
+
+    const description = message.edit.mock.calls[0]?.[0]?.embeds?.[0]?.data
+      ?.description as string
+    const sideSection = description.split('**Result**')[0] ?? description
+
+    expect(description).toContain('· Push')
+    expect(description).toContain('You lose!')
+    expect(description).toMatch(/Total: 🔴 -/)
+    expect(description).not.toContain('You win!')
+    expect(description).not.toMatch(/Total: 🟢/)
+    expect(sideSection).toMatch(/Pairs:.*→ -/)
+    expect(sideSection).toMatch(/21\+3:.*→ -/)
+    expect(sideSection).not.toContain('🔴')
+    expect(sideSection).not.toContain('🟢')
   })
 
   it('ignores unresolved result states when summing payouts', async () => {

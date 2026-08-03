@@ -132,6 +132,28 @@ describe('resolveBlackjackInsuranceDecision', () => {
     )
   })
 
+  it('shows Insurance Lost (not Pending) when taken and dealer has no blackjack', async () => {
+    const result = await resolveBlackjackInsuranceDecision({
+      game: insuranceGame(card('9', '♣️', 9)),
+      takeInsurance: true,
+      guildConfig,
+      guild: { id: 'guild-1', channels: { fetch: vi.fn() } },
+      sourceChannelId: 'channel-1',
+      showBalance: false
+    })
+
+    expect(result.phase).toBe('PLAYER')
+    expect(services.upsertBlackjackGame).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phase: 'PLAYER',
+        insuranceBetAmount: 50
+      })
+    )
+    const description = result.embeds[0]?.data.description ?? ''
+    expect(description).toMatch(/Insurance:.*\(Lost\)/)
+    expect(description).not.toMatch(/Insurance:.*\(Pending\)/)
+  })
+
   it('classifies pairs when pairsOutcome was not persisted', async () => {
     const game = {
       ...insuranceGame(card('9', '♣️', 9)),

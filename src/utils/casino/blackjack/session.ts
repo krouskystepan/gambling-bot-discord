@@ -13,6 +13,7 @@ import {
   isBlackjackPairsEnabled,
   isBlackjackPlusThreeEnabled,
   normalizeBlackjackDeckCount,
+  normalizeSessionStats,
   shouldAnnounceByMultiplier
 } from 'gambling-bot-shared/casino'
 import { formatMoney, sessionBetId } from 'gambling-bot-shared/common'
@@ -221,7 +222,7 @@ export const resolveBlackjackAfterPeek = async ({
       plusThreeOutcome: null,
       showBalance,
       skipAnimations,
-      sessionStats: bumpSessionStats(sessionStats, {
+      sessionStats: bumpSessionStats(normalizeSessionStats(sessionStats), {
         totalBet,
         totalPayout
       }),
@@ -295,7 +296,7 @@ export const resolveBlackjackAfterPeek = async ({
     plusThreeOutcome: plusThreeBetAmount > 0 ? plusThreeOutcome : null,
     showBalance,
     skipAnimations,
-    sessionStats,
+    sessionStats: normalizeSessionStats(sessionStats),
     deck,
     deckIndex: 4,
     hands,
@@ -322,19 +323,21 @@ export const resolveBlackjackAfterPeek = async ({
           pairsOutcome,
           plusThreeBetAmount,
           plusThreeOutcome,
-          insuranceBetAmount
+          insuranceBetAmount,
+          // Peek done without dealer BJ: insurance is lost (0), not pending.
+          insurancePayout:
+            (insuranceBetAmount ?? 0) > 0 ? insurancePayout : undefined
         }),
         globalSettings: guildConfig.globalSettings
       })
     ],
-    components: [
-      renderBlackjackButtons({
-        gameId,
-        showBalance,
-        canDouble: true,
-        canSplit: playerCards[0].label === playerCards[1].label
-      })
-    ]
+    components: renderBlackjackButtons({
+      gameId,
+      showBalance,
+      canDouble: true,
+      canSplit: playerCards[0].label === playerCards[1].label,
+      salt: '0-1'
+    })
   }
 }
 
@@ -382,7 +385,10 @@ export const startBlackjackHand = async ({
   )
     ? Math.max(0, plusThreeBetAmount)
     : 0
-  const betId = sessionBetId(gameId, sessionStats.roundsPlayed + 1)
+  const betId = sessionBetId(
+    gameId,
+    normalizeSessionStats(sessionStats).roundsPlayed + 1
+  )
 
   await reserveCasinoBet({
     userId,
@@ -397,8 +403,8 @@ export const startBlackjackHand = async ({
     guildConfig.casinoSettings.blackjack.deckCount
   )
   const deck = shuffleDeck(createDeck(deckCount))
-  const playerCards = [deck[0], deck[1]]
-  const dealerCards = [deck[2], deck[3]]
+  const playerCards = [deck[0]!, deck[1]!]
+  const dealerCards = [deck[2]!, deck[3]!]
   const pairsOutcome = classifyPerfectPairs(playerCards[0], playerCards[1])
   const plusThreeOutcome = classifyTwentyOnePlusThree(
     playerCards[0],
@@ -461,7 +467,7 @@ export const startBlackjackHand = async ({
       plusThreeOutcome: plusThreeStake > 0 ? plusThreeOutcome : null,
       showBalance,
       skipAnimations,
-      sessionStats,
+      sessionStats: normalizeSessionStats(sessionStats),
       deck,
       deckIndex: 4,
       hands,
