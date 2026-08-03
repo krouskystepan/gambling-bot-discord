@@ -11,12 +11,14 @@ import {
 import { createBetEmbed } from '@/utils/discord/createEmbed'
 
 import { encodeId } from './customId'
+import { resolveResult } from './engine'
 import { calculateHandValue } from './math'
 import { blackjackFinalResultFromNet } from './netOutcome'
 import { sumHandBets } from './sideBets'
 import type {
-  FinalGameResultId,
+  EngineState,
   GamePhaseId,
+  HandResultId,
   InsuranceAction,
   PerfectPairsOutcome,
   PlayerAction,
@@ -25,6 +27,19 @@ import type {
   SideBetSummary,
   StartBlackjackResultId
 } from './types'
+
+const handResultLabel = (resultId: HandResultId): string => {
+  switch (resultId) {
+    case 'PUSH':
+      return 'Push'
+    case 'PW':
+    case 'DB':
+      return 'Won'
+    case 'DW':
+    case 'PB':
+      return 'Lost'
+  }
+}
 
 const formatPairsOutcome = (outcome: PerfectPairsOutcome): string => {
   switch (outcome) {
@@ -141,6 +156,12 @@ const formatSideBetsSection = (
       formatSideStakeLine({
         label: 'Insurance',
         stake: sideBets.insuranceBet,
+        outcomeLabel:
+          typeof sideBets.insurancePayout === 'number'
+            ? sideBets.insurancePayout > 0
+              ? 'Won'
+              : 'Lost'
+            : 'Pending',
         payout:
           typeof sideBets.insurancePayout === 'number'
             ? sideBets.insurancePayout
@@ -154,23 +175,26 @@ const formatSideBetsSection = (
 }
 
 const formatFinalResult = (
-  _result: FinalGameResultId,
   netProfit: number,
   globalSettings?: Partial<GlobalSettings> | null
 ): {
   color: ColorResolvable
   text: string
 } => {
-  switch (blackjackFinalResultFromNet(netProfit)) {
+  // Net chips only - a main-hand push with lost sides is a LOSS, not a win.
+  const kind = blackjackFinalResultFromNet(netProfit)
+  const absMoney = formatMoney(Math.abs(netProfit), globalSettings)
+
+  switch (kind) {
     case 'WIN':
       return {
         color: 'Green',
-        text: `You win!\n💰 Total: 🟢 **${formatMoney(netProfit, globalSettings)}**`
+        text: `You win!\n💰 Total: 🟢 **${absMoney}**`
       }
     case 'LOSS':
       return {
         color: 'Red',
-        text: `You lose!\n💰 Total: 🔴 -**${formatMoney(Math.abs(netProfit), globalSettings)}**`
+        text: `You lose!\n💰 Total: 🔴 -**${absMoney}**`
       }
     case 'EVEN':
       return {
@@ -254,16 +278,44 @@ export const renderBlackjackEmbed = ({
   sideBets,
   globalSettings
 }: RenderParams) => {
+  const settleEngine: EngineState | null =
+    result?.kind === 'FINAL'
+      ? {
+          deck: [],
+          deckIndex: 0,
+          hands,
+          activeHandIndex: -1,
+          phase: 'RESULT',
+          dealerCards
+        }
+      : null
+
   const playerHandsText = hands
     .map((hand, index) => {
       const total = calculateHandValue(hand.cards)
       const cards = hand.cards.map((c) => `${c.label}${c.suite}`).join(' ')
       const isActive = activeHandIndex !== -1 && index === activeHandIndex
       const busted = total > 21
+      const settled =
+        settleEngine != null
+          ? resolveResult(settleEngine, index)
+          : { finished: false as const }
+
+      // One outcome tag only - Bust replaces Lost .
+      let outcome = ''
+      if (busted) {
+        outcome = ' · Bust'
+      } else if (
+        settleEngine != null &&
+        settled.finished &&
+        'resultId' in settled
+      ) {
+        outcome = ` · ${handResultLabel(settled.resultId)}`
+      }
 
       return [
         `**Hand ${index + 1}** ${isActive ? '👉 **ACTIVE**' : ''}`,
-        `${cards} (**${total}**)${busted ? ' 💥 BUST' : ''}`,
+        `${cards} (**${total}**)${outcome}`,
         `💵 Bet: **${formatMoney(hand.betAmount, globalSettings)}**`
       ].join('\n')
     })
@@ -311,11 +363,7 @@ export const renderBlackjackEmbed = ({
       }
 
       case 'FINAL': {
-        const formatted = formatFinalResult(
-          result.finalResultId,
-          result.netProfit,
-          globalSettings
-        )
+        const formatted = formatFinalResult(result.netProfit, globalSettings)
         color = formatted.color
         resultText = formatted.text
         break
@@ -353,34 +401,37 @@ export const renderBlackjackButtons = ({
   gameId,
   showBalance,
   canDouble,
-  canSplit
+  canSplit,
+  salt
 }: {
   gameId: string
   showBalance: boolean
   canDouble: boolean
   canSplit: boolean
+  /** Changes whenever table state changes so Discord re-enables action buttons. */
+  salt?: string
 }) => {
   const mk = (action: PlayerAction) =>
     encodeId({
       gameId,
       action,
-      showBalance
+      showBalance,
+      salt
     })
 
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+  const buttons = [
     new ButtonBuilder()
       .setCustomId(mk('HIT'))
       .setLabel('Hit')
       .setStyle(ButtonStyle.Success),
-
     new ButtonBuilder()
       .setCustomId(mk('STAND'))
       .setLabel('Stand')
       .setStyle(ButtonStyle.Danger)
-  )
+  ]
 
   if (canDouble) {
-    row.addComponents(
+    buttons.push(
       new ButtonBuilder()
         .setCustomId(mk('DOUBLE'))
         .setLabel('Double')
@@ -389,7 +440,7 @@ export const renderBlackjackButtons = ({
   }
 
   if (canSplit) {
-    row.addComponents(
+    buttons.push(
       new ButtonBuilder()
         .setCustomId(mk('SPLIT'))
         .setLabel('Split')
@@ -397,7 +448,7 @@ export const renderBlackjackButtons = ({
     )
   }
 
-  return row
+  return [new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons)]
 }
 
 export const renderBlackjackInsuranceComponents = ({
@@ -466,27 +517,29 @@ export const renderBlackjackBettingEmbed = ({
   plusThreeEnabled?: boolean
   globalSettings?: Partial<GlobalSettings> | null
 }) => {
-  const sections: string[] = []
+  const stakeLines: string[] = []
 
   if (bet != null) {
-    sections.push(`💵 **Main:** ${formatMoney(bet, globalSettings)}`)
+    stakeLines.push(`💵 **Main:** ${formatMoney(bet, globalSettings)}`)
   }
 
   if (pairsEnabled && pairsBet != null && pairsBet > 0) {
-    sections.push(`**Pairs:** ${formatMoney(pairsBet, globalSettings)}`)
+    stakeLines.push(`**Pairs:** ${formatMoney(pairsBet, globalSettings)}`)
   }
 
   if (plusThreeEnabled && plusThreeBet != null && plusThreeBet > 0) {
-    sections.push(`**21+3:** ${formatMoney(plusThreeBet, globalSettings)}`)
+    stakeLines.push(`**21+3:** ${formatMoney(plusThreeBet, globalSettings)}`)
   }
 
-  sections.push(
+  const hint =
     bet == null
       ? '_Set your bet, then deal a hand._'
       : '_Deal a hand, or change your bet first._'
-  )
 
-  return createBetEmbed('🃏 Blackjack', 'Blue', sections.join('\n\n'), gameId)
+  const description =
+    stakeLines.length > 0 ? `${stakeLines.join('\n')}\n\n${hint}` : hint
+
+  return createBetEmbed('🃏 Blackjack', 'Blue', description, gameId)
 }
 
 export const renderBlackjackBettingComponents = ({

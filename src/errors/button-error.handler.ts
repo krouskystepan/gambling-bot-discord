@@ -40,19 +40,22 @@ export const handleUnexpectedButtonError = async (
   ]
 
   try {
-    if (interaction.replied || interaction.deferred) {
-      if (interaction.isMessageComponent()) {
-        await interaction.editReply({ embeds })
-      }
-      return
-    }
+    if (!interaction.isRepliable()) return
 
-    if (interaction.isRepliable()) {
-      await interaction.reply({
+    // After deferUpdate(), editReply would overwrite the game message.
+    // Always surface handler failures as ephemeral follow-ups / replies.
+    if (interaction.deferred || interaction.replied) {
+      await interaction.followUp({
         embeds,
         flags: MessageFlags.Ephemeral
       })
+      return
     }
+
+    await interaction.reply({
+      embeds,
+      flags: MessageFlags.Ephemeral
+    })
   } catch {
     // Interaction may have expired; error is already logged.
   }

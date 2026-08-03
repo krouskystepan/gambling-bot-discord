@@ -222,24 +222,94 @@ describe('canSplit', () => {
     expect(canSplit(state)).toBe(false)
   })
 
-  it('disallows split when already split', () => {
+  it('allows resplit on a non-Ace pair when under the hand cap', () => {
     const state: EngineState = {
       ...baseState([card('8', 8), card('8', 8)], []),
       hands: [
         {
-          cards: [card('8', 8)],
+          cards: [card('8', 8), card('8', 8)],
           betAmount: 100,
           finished: false,
           isSplitHand: true
         },
         {
-          cards: [card('8', 8)],
+          cards: [card('8', 8), card('9', 9)],
           betAmount: 100,
           finished: false,
           isSplitHand: true
         }
-      ]
+      ],
+      activeHandIndex: 0
+    }
+    expect(canSplit(state)).toBe(true)
+  })
+
+  it('allows resplit when already at 3 hands', () => {
+    const pairHand = {
+      cards: [card('8', 8), card('8', 8)],
+      betAmount: 100,
+      finished: false,
+      isSplitHand: true
+    }
+    const otherHand = {
+      cards: [card('8', 8), card('9', 9)],
+      betAmount: 100,
+      finished: false,
+      isSplitHand: true
+    }
+    const state: EngineState = {
+      ...baseState([card('8', 8), card('8', 8)], []),
+      hands: [pairHand, otherHand, { ...otherHand }],
+      activeHandIndex: 0
+    }
+    expect(canSplit(state)).toBe(true)
+  })
+
+  it('disallows split at the 4-hand cap', () => {
+    const pairHand = {
+      cards: [card('8', 8), card('8', 8)],
+      betAmount: 100,
+      finished: false,
+      isSplitHand: true
+    }
+    const otherHand = {
+      cards: [card('8', 8), card('9', 9)],
+      betAmount: 100,
+      finished: false,
+      isSplitHand: true
+    }
+    const state: EngineState = {
+      ...baseState([card('8', 8), card('8', 8)], []),
+      hands: [pairHand, otherHand, { ...otherHand }, { ...otherHand }],
+      activeHandIndex: 0
     }
     expect(canSplit(state)).toBe(false)
+  })
+
+  it('disallows Ace resplit after an earlier split', () => {
+    const state: EngineState = {
+      ...baseState([card('A', 11), card('A', 11)], []),
+      hands: [
+        {
+          cards: [card('A', 11), card('A', 11)],
+          betAmount: 100,
+          finished: false,
+          isSplitHand: true
+        },
+        {
+          cards: [card('8', 8), card('9', 9)],
+          betAmount: 100,
+          finished: false,
+          isSplitHand: true
+        }
+      ],
+      activeHandIndex: 0
+    }
+    expect(canSplit(state)).toBe(false)
+  })
+
+  it('allows Ace split from the original deal', () => {
+    const state = baseState([card('A', 11), card('A', 11)], [])
+    expect(canSplit(state)).toBe(true)
   })
 })

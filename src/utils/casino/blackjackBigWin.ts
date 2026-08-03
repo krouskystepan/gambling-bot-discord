@@ -5,7 +5,8 @@ import {
 import { formatMoney } from 'gambling-bot-shared/common'
 import { GlobalSettings } from 'gambling-bot-shared/guild'
 
-import { EngineState, resolveResult } from '@/utils/casino/blackjack'
+import { resolveResult } from '@/utils/casino/blackjack/engine'
+import { EngineState } from '@/utils/casino/blackjack/types'
 import { formatBigWinLine } from '@/utils/discord/formatBigWinMessage'
 
 export const collectBlackjackBigWinLines = ({
@@ -26,6 +27,8 @@ export const collectBlackjackBigWinLines = ({
     const result = resolveResult(engine, i, winMultipliers)
 
     if (!hand || !result.finished || result.payout <= 0) continue
+    // Push returns stake only - never a big-win announcement.
+    if (result.resultId === 'PUSH') continue
 
     const multiplier = result.payout / hand.betAmount
     if (!shouldAnnounceByMultiplier(multiplier, minMultiplier)) continue

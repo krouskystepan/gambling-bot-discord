@@ -1,5 +1,8 @@
 import type { TBlackjackGame } from 'gambling-bot-shared/blackjack'
-import { bumpSessionStats } from 'gambling-bot-shared/casino'
+import {
+  bumpSessionStats,
+  normalizeSessionStats
+} from 'gambling-bot-shared/casino'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
 import { getUser, settleCasinoWinnings, updateBlackjackGame } from '@/services'
@@ -91,8 +94,12 @@ export const finishBlackjackDealerAndSettle = async ({
 
   const betId = game.activeBetId
   const sessionStats = betId
-    ? bumpSessionStats(game.sessionStats, { totalBet, totalPayout })
-    : game.sessionStats
+    ? bumpSessionStats(normalizeSessionStats(game.sessionStats), {
+        totalBet,
+        totalPayout
+      })
+    : normalizeSessionStats(game.sessionStats)
+  game.sessionStats = sessionStats
 
   if (betId) {
     await settleCasinoWinnings({

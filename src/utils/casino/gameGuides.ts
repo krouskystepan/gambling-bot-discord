@@ -94,7 +94,7 @@ export const casinoGameGuides = {
     title: '🃏 Blackjack',
     command: 'blackjack',
     usage: '',
-    how: 'Open a table, set your bet (optional Perfect Pairs / 21+3 when enabled), then Deal. Hit / Stand / Double / Split - beat the dealer without going over 21. Insurance is offered on Ace-up when enabled. Rebet / Change / Close between hands.',
+    how: 'Open a table, set your bet (optional Perfect Pairs / 21+3 when enabled), then Deal. Hit / Stand / Double / Split - beat the dealer without going over 21. You may resplit up to 4 hands total; Aces split once only (one card each). Insurance is offered on Ace-up when enabled. Every hand is dealt from a freshly shuffled shoe (new set of decks each round). Rebet / Change / Close between hands.',
     idle: 'DM reminder after ~3 hours. Mid-hand games auto-stand after ~24 hours. Empty tables close after ~24 hours.'
   },
   mines: {

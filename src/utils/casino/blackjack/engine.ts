@@ -17,15 +17,25 @@ const draw = (s: EngineState): Card => {
   return card
 }
 
+/** Max hands after resplits (original + up to 3 splits). */
+const MAX_SPLIT_HANDS = 4
+
 export const canSplit = (s: EngineState): boolean => {
   const hand = s.hands[s.activeHandIndex]
   if (!hand) return false
 
-  if (s.hands.length > 1) return false
+  if (s.hands.length >= MAX_SPLIT_HANDS) return false
 
   if (hand.cards.length !== 2) return false
 
-  return hand.cards[0].label === hand.cards[1].label
+  const label0 = String(hand.cards[0].label)
+  const label1 = String(hand.cards[1].label)
+  if (label0 !== label1) return false
+
+  // Aces may be split once from the original deal only (no Ace resplit).
+  if (label0 === 'A' && s.hands.length > 1) return false
+
+  return true
 }
 
 export const applyAction = (

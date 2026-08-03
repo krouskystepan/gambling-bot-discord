@@ -5,12 +5,13 @@ import { MessageFlags } from 'discord.js'
 
 import { AutocompleteCommand, ChatInputCommand } from 'commandkit'
 
-import { checkUserRegistration, getGuildConfigByGuildId } from '@/services'
 import {
   getLatestUserPendingAtmRequest,
   getUserAtmRequest,
   searchUserPendingAtmRequestsForAutocomplete
 } from '@/services/db/atmRequest.db'
+import { getGuildConfigByGuildId } from '@/services/guild/guildConfiguration.db'
+import { checkUserRegistration } from '@/services/user/checkUserRegistration.service'
 import { formatDate } from '@/utils/common/utils'
 import {
   createErrorEmbed,

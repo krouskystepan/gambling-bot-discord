@@ -112,12 +112,12 @@ describe('startBlackjackHand', () => {
 
     const result = await dealHand()
 
-    const buttons = result.components[0] as {
+    const rows = result.components as {
       components: { data: { custom_id: string; disabled?: boolean } }[]
-    }
-    const split = buttons.components.find((b) =>
-      b.data.custom_id.endsWith('SPLIT:1')
-    )
+    }[]
+    const split = rows
+      .flatMap((row) => row.components)
+      .find((b) => b.data.custom_id.includes(':SPLIT:'))
     expect(split?.data.disabled).toBeFalsy()
   })
 

@@ -51,6 +51,22 @@ describe('blackjack state mapping', () => {
     expect(engine.dealerCards).toHaveLength(1)
   })
 
+  it('docToEngine clones cards so engine mutations do not touch the document', () => {
+    const game = sampleGame()
+    const engine = docToEngine(game)
+
+    engine.hands[0]!.cards.push(card('2', 2))
+    engine.hands.push({
+      cards: [card('8', 8), card('8', 8)],
+      betAmount: 50,
+      finished: false,
+      isSplitHand: true
+    })
+
+    expect(game.hands).toHaveLength(1)
+    expect(game.hands[0]?.cards).toHaveLength(2)
+  })
+
   it('engineToDoc writes engine state back onto document', () => {
     const game = sampleGame()
     const engine = docToEngine(game)

@@ -143,7 +143,7 @@ export const buildPlayerGameSettings = (
               omitZero: true
             })
           : '',
-        `- **Decks:** ${decks}`,
+        `- **Decks:** ${decks} (fresh shoe every hand)`,
         betLine('Min bet', blackjack.minBet, globalSettings),
         betLine('Max bet', blackjack.maxBet, globalSettings)
       ].filter(Boolean)

@@ -1,3 +1,5 @@
+import { normalizeSessionStats } from 'gambling-bot-shared/casino'
+
 import { ChannelType } from 'discord.js'
 
 import { Client } from 'commandkit'
@@ -44,7 +46,7 @@ export const blackjackIdleCloseJob = async (client: Client<true>) => {
             formatSessionSummaryEmbed({
               gameLabel: 'Blackjack',
               emoji: '🃏',
-              stats: game.sessionStats,
+              stats: normalizeSessionStats(game.sessionStats),
               reason: 'timeout',
               gameId: game.gameId,
               globalSettings: guildConfig?.globalSettings,

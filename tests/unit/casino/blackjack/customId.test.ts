@@ -20,6 +20,19 @@ describe('blackjack customId', () => {
     expect(decodeId(id)).toEqual(payload)
   })
 
+  it('round-trips encode and decode with a salt', () => {
+    const payload = {
+      gameId: 'game-abc',
+      action: 'SPLIT' as const,
+      showBalance: false,
+      salt: '0-2-4'
+    }
+
+    const id = encodeId(payload)
+    expect(id).toBe('bj:game-abc:SPLIT:0:0-2-4')
+    expect(decodeId(id)).toEqual(payload)
+  })
+
   it('decodes showBalance false', () => {
     expect(
       decodeId(encodeId({ gameId: 'x', action: 'STAND', showBalance: false }))
