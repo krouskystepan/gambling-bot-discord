@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { checkUserRegistration, getGuildConfigByGuildId } from '@/services'
 import {
   handleAtmStatusSubcommand,
   respondAtmRequestStatusAutocomplete
@@ -10,10 +9,15 @@ import {
   getUserAtmRequest,
   searchUserAtmRequestsForAutocomplete
 } from '@/services/db/atmRequest.db'
+import { getGuildConfigByGuildId } from '@/services/guild/guildConfiguration.db'
+import { checkUserRegistration } from '@/services/user/checkUserRegistration.service'
 import { logger } from '@/utils/logger'
 
-vi.mock('@/services', () => ({
-  checkUserRegistration: vi.fn(),
+vi.mock('@/services/user/checkUserRegistration.service', () => ({
+  checkUserRegistration: vi.fn()
+}))
+
+vi.mock('@/services/guild/guildConfiguration.db', () => ({
   getGuildConfigByGuildId: vi.fn()
 }))
 

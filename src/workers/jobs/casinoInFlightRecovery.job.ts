@@ -23,6 +23,7 @@ import {
   renderBaccaratButtons,
   renderBaccaratPromptEmbed
 } from '@/utils/casino/baccarat'
+import { baccaratLockedTotal } from '@/utils/casino/baccarat/slip'
 import {
   docToEngine,
   finishBlackjackDealerAndSettle
@@ -209,31 +210,41 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
       })
       if (!guildConfig) continue
 
-      if (game.pendingDeal && game.activeBetId && game.betAmount != null) {
+      const locked = baccaratLockedTotal({
+        lockedAmount: game.lockedAmount,
+        bets: game.bets
+      })
+      const slip = game.bets ?? []
+
+      if (
+        game.pendingDeal &&
+        game.activeBetId &&
+        slip.length > 0 &&
+        locked > 0
+      ) {
         await recoverBaccaratDeal({
           message,
-          side: game.pendingDeal.side,
           playerCards: game.pendingDeal.playerCards,
           bankerCards: game.pendingDeal.bankerCards,
+          bets: slip,
           userId: game.userId,
           guildId: game.guildId,
           gameId: game.gameId,
           betId: game.activeBetId,
-          betAmount: game.betAmount,
           sessionStats: game.sessionStats,
           showBalance: game.showBalance,
-          winMultipliers: guildConfig.casinoSettings.baccarat.winMultipliers,
+          baccaratSettings: guildConfig.casinoSettings.baccarat,
           globalSettings: guildConfig.globalSettings,
           guild,
           guildConfig,
           sourceChannelId: game.channelId
         })
       } else {
-        if (game.activeBetId && game.betAmount != null) {
+        if (game.activeBetId && locked > 0) {
           await refundLockedBet({
             userId: game.userId,
             guildId: game.guildId,
-            amount: game.betAmount,
+            amount: locked,
             betId: game.activeBetId,
             game: 'baccarat'
           })
@@ -245,6 +256,7 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
           guildId: game.guildId,
           phase: 'waiting',
           activeBetId: null,
+          lockedAmount: null,
           pendingDeal: null
         })
 
@@ -252,16 +264,15 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
           await message.edit({
             embeds: [
               renderBaccaratPromptEmbed({
-                bet: game.betAmount,
-                winMultipliers:
-                  guildConfig.casinoSettings.baccarat.winMultipliers,
+                bets: slip,
                 gameId: game.gameId,
                 globalSettings: guildConfig.globalSettings
               })
             ],
             components: renderBaccaratButtons({
               gameId: game.gameId,
-              hasBet: game.betAmount != null && game.betAmount > 0
+              hasBets: slip.length > 0,
+              hasLastBets: (game.lastBets?.length ?? 0) > 0
             })
           })
         }

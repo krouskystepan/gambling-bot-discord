@@ -10,6 +10,7 @@ import { getMinesGameByUserAndGuild } from '@/services/db/minesGame.db'
 import { getRouletteGameByUserAndGuild } from '@/services/db/rouletteGame.db'
 import { getSlotsGameByUserAndGuild } from '@/services/db/slotsGame.db'
 import { getUser } from '@/services/db/user.db'
+import { baccaratLockedTotal } from '@/utils/casino/baccarat/slip'
 
 import {
   refundLockedBet,
@@ -204,8 +205,12 @@ export async function computeJustifiedLockedAmount({
     userId,
     guildId
   })
-  if (baccaratGame?.activeBetId && baccaratGame.betAmount != null) {
-    breakdown.baccarat = baccaratGame.betAmount
+  if (baccaratGame?.activeBetId) {
+    const locked = baccaratLockedTotal({
+      lockedAmount: baccaratGame.lockedAmount,
+      bets: baccaratGame.bets
+    })
+    if (locked > 0) breakdown.baccarat = locked
   }
 
   const minesGame = await getMinesGameByUserAndGuild({ userId, guildId })

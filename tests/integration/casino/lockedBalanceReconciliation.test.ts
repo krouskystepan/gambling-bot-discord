@@ -85,7 +85,8 @@ const seedBaccarat = async ({
     messageId: 'msg-bc-1',
     gameId: 'bc-game-1',
     activeBetId: betId,
-    betAmount,
+    bets: [{ side: 'player', amount: betAmount }],
+    lockedAmount: betAmount,
     showBalance: false,
     skipAnimations: false
   })
@@ -185,6 +186,30 @@ describe('lockedBalanceReconciliation.service', () => {
       guildId: 'guild-1'
     })
     expect(result).toBeNull()
+  })
+
+  it('ignores baccarat activeBetId when no amount is locked', async () => {
+    await createTestUser({ balance: 1000, lockedBalance: 0 })
+    await upsertBaccaratGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-bc-empty',
+      gameId: 'bc-game-empty',
+      activeBetId: 'bc-bet-empty',
+      bets: [],
+      lockedAmount: null,
+      showBalance: false,
+      skipAnimations: false
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(0)
+    expect(breakdown.baccarat).toBe(0)
   })
 
   it('excludes active baccarat bet id from orphan refunds', async () => {

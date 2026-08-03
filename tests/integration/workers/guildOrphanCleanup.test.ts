@@ -323,7 +323,8 @@ describe('runGuildOrphanCleanup', () => {
       messageId: 'msg-bc-1',
       gameId: 'game-settled-bc',
       activeBetId: null,
-      betAmount: 100,
+      bets: [],
+      lastBets: [{ side: 'player', amount: 100 }],
       showBalance: false,
       skipAnimations: false,
       phase: 'result'
@@ -389,7 +390,8 @@ describe('runGuildOrphanCleanup', () => {
       messageId: 'msg-bc-1',
       gameId: 'game-bc-orphan',
       activeBetId: 'bet-bc-orphan',
-      betAmount: 100,
+      bets: [{ side: 'player', amount: 100 }],
+      lockedAmount: 100,
       showBalance: false,
       skipAnimations: false
     })
@@ -933,7 +935,8 @@ describe('runGuildOrphanCleanup', () => {
       messageId: 'msg-bc-fail',
       gameId: 'game-fail-bc',
       activeBetId: 'bet-fail-bc',
-      betAmount: 100,
+      bets: [{ side: 'player', amount: 100 }],
+      lockedAmount: 100,
       showBalance: false,
       skipAnimations: false
     })
