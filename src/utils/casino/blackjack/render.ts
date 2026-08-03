@@ -517,29 +517,46 @@ export const renderBlackjackBettingEmbed = ({
   plusThreeEnabled?: boolean
   globalSettings?: Partial<GlobalSettings> | null
 }) => {
-  const stakeLines: string[] = []
+  const betLines: string[] = []
 
-  if (bet != null) {
-    stakeLines.push(`💵 **Main:** ${formatMoney(bet, globalSettings)}`)
+  if (bet != null && bet > 0) {
+    betLines.push(`• **${formatMoney(bet, globalSettings)}** on **Main**`)
   }
 
   if (pairsEnabled && pairsBet != null && pairsBet > 0) {
-    stakeLines.push(`**Pairs:** ${formatMoney(pairsBet, globalSettings)}`)
+    betLines.push(`• **${formatMoney(pairsBet, globalSettings)}** on **Pairs**`)
   }
 
   if (plusThreeEnabled && plusThreeBet != null && plusThreeBet > 0) {
-    stakeLines.push(`**21+3:** ${formatMoney(plusThreeBet, globalSettings)}`)
+    betLines.push(
+      `• **${formatMoney(plusThreeBet, globalSettings)}** on **21+3**`
+    )
   }
 
-  const hint =
-    bet == null
-      ? '_Set your bet, then deal a hand._'
-      : '_Deal a hand, or change your bet first._'
+  const total =
+    (bet != null && bet > 0 ? bet : 0) +
+    (pairsEnabled && pairsBet != null && pairsBet > 0 ? pairsBet : 0) +
+    (plusThreeEnabled && plusThreeBet != null && plusThreeBet > 0
+      ? plusThreeBet
+      : 0)
 
-  const description =
-    stakeLines.length > 0 ? `${stakeLines.join('\n')}\n\n${hint}` : hint
+  const betsBlock =
+    betLines.length > 0
+      ? betLines.join('\n')
+      : '_No bets yet - set your bet, then Deal._'
 
-  return createBetEmbed('🃏 Blackjack', 'Blue', description, gameId)
+  return createBetEmbed(
+    '🃏 Blackjack',
+    'Blue',
+    [
+      `💵 Slip total: **${formatMoney(total, globalSettings)}**`,
+      `**Bets**\n${betsBlock}`,
+      bet == null
+        ? '_Set your bet, then Deal. Payouts: `/help` → Games._'
+        : '_Deal a hand, or change your bet first. Payouts: `/help` → Games._'
+    ].join('\n\n'),
+    gameId
+  )
 }
 
 export const renderBlackjackBettingComponents = ({
