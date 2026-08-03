@@ -222,7 +222,7 @@ function simulateRngGame(
       const { multiplier } = resolveBaccaratBet(
         side,
         round,
-        ctx.casinoSettings.baccarat.winMultipliers
+        ctx.casinoSettings.baccarat
       )
       return betAmount * multiplier
     }

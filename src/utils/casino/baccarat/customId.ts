@@ -3,10 +3,16 @@ import {
   isValidBaccaratBetSide
 } from 'gambling-bot-shared/casino'
 
-export type BaccaratTableAction = 'rebet' | 'change' | 'close' | 'amount'
+export type BaccaratTableAction =
+  | 'deal'
+  | 'rebet'
+  | 'undo'
+  | 'clear'
+  | 'close'
+  | 'change'
 
-export type BaccaratSideButtonId = {
-  kind: 'side'
+export type BaccaratPlaceButtonId = {
+  kind: 'place'
   gameId: string
   side: BaccaratBetSide
 }
@@ -17,26 +23,30 @@ export type BaccaratActionButtonId = {
   action: BaccaratTableAction
 }
 
-export type BaccaratButtonId = BaccaratSideButtonId | BaccaratActionButtonId
+export type BaccaratButtonId = BaccaratPlaceButtonId | BaccaratActionButtonId
 
 export type BaccaratModalId = {
   gameId: string
+  side: BaccaratBetSide
 }
 
 const ACTIONS = new Set<BaccaratTableAction>([
+  'deal',
   'rebet',
-  'change',
+  'undo',
+  'clear',
   'close',
-  'amount'
+  'change'
 ])
 
-export const encodeSideId = (d: BaccaratSideButtonId): string =>
-  `bc:${d.gameId}:s:${d.side}`
+export const encodePlaceId = (d: BaccaratPlaceButtonId): string =>
+  `bc:${d.gameId}:p:${d.side}`
 
 export const encodeActionId = (d: BaccaratActionButtonId): string =>
   `bc:${d.gameId}:a:${d.action}`
 
-export const encodeModalId = (d: BaccaratModalId): string => `bcm:${d.gameId}`
+export const encodeModalId = (d: BaccaratModalId): string =>
+  `bcm:${d.gameId}:${d.side}`
 
 export const decodeId = (id: string): BaccaratButtonId | null => {
   if (!id.startsWith('bc:')) return null
@@ -47,9 +57,9 @@ export const decodeId = (id: string): BaccaratButtonId | null => {
   const [, gameId, kind, value] = parts
   if (!gameId || !kind || !value) return null
 
-  if (kind === 's') {
+  if (kind === 'p') {
     if (!isValidBaccaratBetSide(value)) return null
-    return { kind: 'side', gameId, side: value }
+    return { kind: 'place', gameId, side: value }
   }
 
   if (kind === 'a') {
@@ -64,10 +74,10 @@ export const decodeModalId = (id: string): BaccaratModalId | null => {
   if (!id.startsWith('bcm:')) return null
 
   const parts = id.split(':')
-  if (parts.length !== 2) return null
+  if (parts.length !== 3) return null
 
-  const [, gameId] = parts
-  if (!gameId) return null
+  const [, gameId, side] = parts
+  if (!gameId || !side || !isValidBaccaratBetSide(side)) return null
 
-  return { gameId }
+  return { gameId, side }
 }
