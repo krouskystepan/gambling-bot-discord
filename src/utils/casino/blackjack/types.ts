@@ -60,6 +60,8 @@ export type BlackjackButtonId = {
   gameId: string
   action: BlackjackAction
   showBalance: boolean
+  /** Optional uniqueness token so re-rendered action buttons stay clickable. */
+  salt?: string
 }
 
 export type BlackjackModalId = {
