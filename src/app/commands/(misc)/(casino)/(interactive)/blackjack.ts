@@ -1,4 +1,8 @@
-import { emptySessionStats } from 'gambling-bot-shared/casino'
+import {
+  emptySessionStats,
+  isBlackjackPairsEnabled,
+  isBlackjackPlusThreeEnabled
+} from 'gambling-bot-shared/casino'
 import { generateId } from 'gambling-bot-shared/common'
 
 import { MessageFlags } from 'discord.js'
@@ -75,6 +79,12 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
           renderBlackjackBettingEmbed({
             gameId,
             bet: null,
+            pairsEnabled: isBlackjackPairsEnabled(
+              guildConfig.casinoSettings.blackjack.pairsMultipliers
+            ),
+            plusThreeEnabled: isBlackjackPlusThreeEnabled(
+              guildConfig.casinoSettings.blackjack.plusThreeMultipliers
+            ),
             globalSettings: guildConfig.globalSettings
           })
         ],
@@ -93,6 +103,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         gameId,
         activeBetId: null,
         baseBetAmount: null,
+        basePairsBetAmount: null,
+        activePairsBetAmount: null,
+        basePlusThreeBetAmount: null,
+        activePlusThreeBetAmount: null,
+        insuranceBetAmount: null,
+        pairsOutcome: null,
+        plusThreeOutcome: null,
         showBalance,
         skipAnimations,
         sessionStats: emptySessionStats(),

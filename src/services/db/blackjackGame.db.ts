@@ -14,7 +14,7 @@ import {
 } from './blackjackGame.db.types'
 
 /** Phases where a hand is live and can still be auto-finished. */
-const MID_HAND_PHASES = ['PLAYER', 'DEALER'] as const
+const MID_HAND_PHASES = ['INSURANCE', 'PLAYER', 'DEALER'] as const
 
 export const getBlackjackGameByUserAndGuild = async ({
   userId,
@@ -115,6 +115,36 @@ export const updateBlackjackGame = async ({
   )
 }
 
+/**
+ * Atomically claim the next deal so double Deal/Rebet cannot reserve the same
+ * ledger id. Caller must clear `activeBetId` if reserve/deal fails afterward.
+ */
+export const claimBlackjackDeal = async ({
+  userId,
+  guildId,
+  betId
+}: {
+  userId: string
+  guildId: string
+  betId: string
+}) => {
+  return BlackjackGame.findOneAndUpdate(
+    {
+      userId,
+      guildId,
+      phase: { $in: ['RESULT', 'BETTING'] },
+      $or: [{ activeBetId: null }, { activeBetId: { $exists: false } }]
+    },
+    {
+      $set: {
+        activeBetId: betId,
+        idleNudgeSentAt: null
+      }
+    },
+    { returnDocument: 'after' }
+  )
+}
+
 export const upsertBlackjackGame = async ({
   userId,
   guildId,
@@ -123,6 +153,13 @@ export const upsertBlackjackGame = async ({
   gameId,
   activeBetId = null,
   baseBetAmount,
+  basePairsBetAmount = null,
+  activePairsBetAmount = null,
+  basePlusThreeBetAmount = null,
+  activePlusThreeBetAmount = null,
+  insuranceBetAmount = null,
+  pairsOutcome = null,
+  plusThreeOutcome = null,
   showBalance,
   skipAnimations = false,
   sessionStats,
@@ -142,6 +179,13 @@ export const upsertBlackjackGame = async ({
         gameId,
         activeBetId,
         baseBetAmount,
+        basePairsBetAmount,
+        activePairsBetAmount,
+        basePlusThreeBetAmount,
+        activePlusThreeBetAmount,
+        insuranceBetAmount,
+        pairsOutcome,
+        plusThreeOutcome,
         showBalance,
         skipAnimations,
         sessionStats: sessionStats ?? emptySessionStats(),

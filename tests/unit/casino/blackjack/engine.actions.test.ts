@@ -94,4 +94,26 @@ describe('applyAction', () => {
     expect(state.hands[0]?.finished).toBe(true)
     expect(state.hands[1]?.finished).toBe(true)
   })
+
+  it('resplit creates a third hand from a non-Ace pair', () => {
+    const deck = makeDeck(card('4', 4), card('5', 5), card('6', 6))
+    const state = playerState([card('8', 8), card('8', 8)], deck)
+    applyAction(state, 'SPLIT')
+
+    // Force active hand back to a resplittable pair for the test.
+    state.hands[0] = {
+      cards: [card('8', 8), card('8', 8)],
+      betAmount: 100,
+      finished: false,
+      isSplitHand: true
+    }
+    state.activeHandIndex = 0
+    state.deck = makeDeck(card('2', 2), card('3', 3))
+    state.deckIndex = 0
+
+    const result = applyAction(state, 'SPLIT')
+
+    expect(result).toEqual({ finished: false })
+    expect(state.hands).toHaveLength(3)
+  })
 })

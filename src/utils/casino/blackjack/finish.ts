@@ -1,5 +1,8 @@
 import type { TBlackjackGame } from 'gambling-bot-shared/blackjack'
-import { bumpSessionStats } from 'gambling-bot-shared/casino'
+import {
+  bumpSessionStats,
+  normalizeSessionStats
+} from 'gambling-bot-shared/casino'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 
 import { getUser, settleCasinoWinnings, updateBlackjackGame } from '@/services'
@@ -7,8 +10,14 @@ import { collectBlackjackBigWinLines } from '@/utils/casino/blackjackBigWin'
 import { tryAnnounceBigWin } from '@/utils/discord/tryAnnounceBigWin'
 
 import { dealerDrawOne, dealerShouldDraw, resolveResult } from './engine'
+import { blackjackFinalResultFromNet } from './netOutcome'
 import { renderBlackjackEmbed, renderBlackjackResultComponents } from './render'
-import type { EngineState, FinalGameResultId } from './types'
+import {
+  blackjackLockedTotal,
+  computeBlackjackSidePayouts,
+  sumHandBets
+} from './sideBets'
+import type { EngineState } from './types'
 
 type EditableMessage = { edit: (...args: never[]) => Promise<unknown> }
 type AnnounceGuild = Parameters<typeof tryAnnounceBigWin>[0]['guild']
@@ -45,22 +54,52 @@ export const finishBlackjackDealerAndSettle = async ({
     }
   }
 
-  const winMultipliers = guildConfig?.casinoSettings.blackjack.winMultipliers
-  let totalPayout = 0
+  const blackjackSettings = guildConfig?.casinoSettings.blackjack
+  const winMultipliers = blackjackSettings?.winMultipliers
+  const pairsMultipliers = blackjackSettings?.pairsMultipliers
+  const plusThreeMultipliers = blackjackSettings?.plusThreeMultipliers
+
+  let mainPayout = 0
   for (let i = 0; i < engine.hands.length; i++) {
     const r = resolveResult(engine, i, winMultipliers)
-    if (r.finished) totalPayout += r.payout
+    if (r.finished) mainPayout += r.payout
   }
 
-  const totalBet = engine.hands.reduce((sum, hand) => sum + hand.betAmount, 0)
+  // Dealer natural was already peeked before PLAYER; insurance never pays here.
+  const { pairsPayout, plusThreePayout, insurancePayout } =
+    winMultipliers && pairsMultipliers && plusThreeMultipliers
+      ? computeBlackjackSidePayouts({
+          activePairsBetAmount: game.activePairsBetAmount,
+          pairsOutcome: game.pairsOutcome,
+          activePlusThreeBetAmount: game.activePlusThreeBetAmount,
+          plusThreeOutcome: game.plusThreeOutcome,
+          insuranceBetAmount: game.insuranceBetAmount,
+          dealerHasBlackjack: false,
+          winMultipliers,
+          pairsMultipliers,
+          plusThreeMultipliers
+        })
+      : { pairsPayout: 0, plusThreePayout: 0, insurancePayout: 0 }
+
+  const totalPayout =
+    mainPayout + pairsPayout + plusThreePayout + insurancePayout
+  const totalBet = blackjackLockedTotal({
+    hands: engine.hands,
+    activePairsBetAmount: game.activePairsBetAmount,
+    activePlusThreeBetAmount: game.activePlusThreeBetAmount,
+    insuranceBetAmount: game.insuranceBetAmount
+  })
   const net = totalPayout - totalBet
-  const finalResultId: FinalGameResultId =
-    totalPayout === 0 ? 'LOSS' : totalPayout === totalBet ? 'EVEN' : 'WIN'
+  const finalResultId = blackjackFinalResultFromNet(net)
 
   const betId = game.activeBetId
   const sessionStats = betId
-    ? bumpSessionStats(game.sessionStats, { totalBet, totalPayout })
-    : game.sessionStats
+    ? bumpSessionStats(normalizeSessionStats(game.sessionStats), {
+        totalBet,
+        totalPayout
+      })
+    : normalizeSessionStats(game.sessionStats)
+  game.sessionStats = sessionStats
 
   if (betId) {
     await settleCasinoWinnings({
@@ -96,6 +135,11 @@ export const finishBlackjackDealerAndSettle = async ({
     guildId: game.guildId,
     phase: 'RESULT',
     activeBetId: null,
+    activePairsBetAmount: null,
+    activePlusThreeBetAmount: null,
+    insuranceBetAmount: null,
+    pairsOutcome: null,
+    plusThreeOutcome: null,
     deck: engine.deck,
     deckIndex: engine.deckIndex,
     hands: engine.hands,
@@ -124,6 +168,16 @@ export const finishBlackjackDealerAndSettle = async ({
           showBalance,
           userBalance,
           result: { kind: 'FINAL', finalResultId, netProfit: net },
+          sideBets: {
+            pairsBet: game.activePairsBetAmount,
+            pairsOutcome: game.pairsOutcome,
+            pairsPayout,
+            plusThreeBet: game.activePlusThreeBetAmount,
+            plusThreeOutcome: game.plusThreeOutcome,
+            plusThreePayout,
+            insuranceBet: game.insuranceBetAmount,
+            insurancePayout
+          },
           globalSettings: guildConfig?.globalSettings
         })
       ],
@@ -137,6 +191,7 @@ export const finishBlackjackDealerAndSettle = async ({
   return {
     totalPayout,
     totalBet,
+    mainHandsBet: sumHandBets(engine.hands),
     net,
     finalResultId,
     userBalance,

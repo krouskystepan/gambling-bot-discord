@@ -85,7 +85,8 @@ const seedBaccarat = async ({
     messageId: 'msg-bc-1',
     gameId: 'bc-game-1',
     activeBetId: betId,
-    betAmount,
+    bets: [{ side: 'player', amount: betAmount }],
+    lockedAmount: betAmount,
     showBalance: false,
     skipAnimations: false
   })
@@ -128,6 +129,46 @@ describe('lockedBalanceReconciliation.service', () => {
     expect(result).toBeNull()
   })
 
+  it('includes blackjack pairs and insurance in justified lock', async () => {
+    await createTestUser({ balance: 825, lockedBalance: 175 })
+    await upsertBlackjackGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'bj-game-sides',
+      activeBetId: 'bj-bet-sides',
+      baseBetAmount: 100,
+      activePairsBetAmount: 25,
+      activePlusThreeBetAmount: 0,
+      insuranceBetAmount: 50,
+      pairsOutcome: 'mixed',
+      plusThreeOutcome: null,
+      showBalance: false,
+      deck: [card('2', 2)],
+      deckIndex: 1,
+      hands: [
+        {
+          cards: [card('10', 10), card('8', 8)],
+          betAmount: 100,
+          finished: false,
+          isSplitHand: false
+        }
+      ],
+      activeHandIndex: 0,
+      phase: 'INSURANCE',
+      dealerCards: [card('A', 11), card('9', 9)]
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(breakdown.blackjack).toBe(175)
+    expect(justified).toBe(175)
+  })
+
   it('justifies lock when baccarat game is active', async () => {
     await createTestUser({ balance: 900, lockedBalance: 100 })
     await seedBaccarat({ betAmount: 100 })
@@ -145,6 +186,30 @@ describe('lockedBalanceReconciliation.service', () => {
       guildId: 'guild-1'
     })
     expect(result).toBeNull()
+  })
+
+  it('ignores baccarat activeBetId when no amount is locked', async () => {
+    await createTestUser({ balance: 1000, lockedBalance: 0 })
+    await upsertBaccaratGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-bc-empty',
+      gameId: 'bc-game-empty',
+      activeBetId: 'bc-bet-empty',
+      bets: [],
+      lockedAmount: null,
+      showBalance: false,
+      skipAnimations: false
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(0)
+    expect(breakdown.baccarat).toBe(0)
   })
 
   it('excludes active baccarat bet id from orphan refunds', async () => {

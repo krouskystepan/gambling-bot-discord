@@ -27,7 +27,7 @@ const baseGame = {
   channelId: 'channel-1',
   messageId: 'msg-1',
   gameId: 'game-bc-1',
-  betAmount: 100,
+  bets: [{ side: 'player' as const, amount: 100 }],
   showBalance: false,
   skipAnimations: false
 }
@@ -43,7 +43,7 @@ describe('baccaratGame.db', () => {
 
     expect(game?.gameId).toBe('game-bc-1')
     expect(game?.activeBetId).toBeNull()
-    expect(game?.betAmount).toBe(100)
+    expect(game?.bets).toMatchObject([{ side: 'player', amount: 100 }])
     expect(game?.phase).toBe('waiting')
     expect(game?.sessionStats.roundsPlayed).toBe(0)
   })
@@ -127,7 +127,6 @@ describe('baccaratGame.db', () => {
       phase: 'dealing',
       activeBetId: 'bet-bc-1',
       pendingDeal: {
-        side: 'player',
         playerCards: [
           { label: 'A', suite: '♠️' },
           { label: '9', suite: '♥️' }
@@ -146,7 +145,7 @@ describe('baccaratGame.db', () => {
     const stale = await getStaleDealingBaccaratGames(60_000)
     expect(stale.some((g) => g.gameId === 'game-bc-1')).toBe(true)
     expect(stale[0]?.activeBetId).toBe('bet-bc-1')
-    expect(stale[0]?.pendingDeal?.side).toBe('player')
+    expect(stale[0]?.pendingDeal?.playerCards).toHaveLength(2)
   })
 
   it('deletes game by user and guild', async () => {

@@ -1,4 +1,7 @@
-import type { BaccaratBetSide } from 'gambling-bot-shared/casino'
+import type {
+  BaccaratBetSide,
+  BaccaratSlipBet
+} from 'gambling-bot-shared/casino'
 import { validateBetAmount } from 'gambling-bot-shared/casino'
 import {
   parseReadableStringToNumber,
@@ -30,12 +33,17 @@ import {
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
+  BACCARAT_MAX_SLIP_BETS,
+  BACCARAT_SIDE_LABELS,
+  buildSlipBet,
   decodeId,
   decodeModalId,
   encodeModalId,
-  playBaccaratSide,
+  mergeSlipBet,
+  playBaccaratSlip,
   renderBaccaratButtons,
-  renderBaccaratPromptEmbed
+  renderBaccaratPromptEmbed,
+  slipTotal
 } from '@/utils/casino/baccarat'
 import {
   replyBetValidationError,
@@ -48,6 +56,30 @@ import { deferComponentUpdate } from '@/utils/discord/deferComponentUpdate'
 
 const AMOUNT_INPUT_ID = 'amount'
 
+const showAmountModal = async (
+  interaction: Interaction,
+  gameId: string,
+  side: BaccaratBetSide
+) => {
+  if (!interaction.isMessageComponent()) return
+
+  await interaction.showModal(
+    new ModalBuilder()
+      .setCustomId(encodeModalId({ gameId, side }))
+      .setTitle(`Bet on ${BACCARAT_SIDE_LABELS[side]}`.slice(0, 45))
+      .addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(
+          new TextInputBuilder()
+            .setCustomId(AMOUNT_INPUT_ID)
+            .setLabel('How much would you like to bet?')
+            .setPlaceholder('e.g. 100, 4k, 10.5k')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        )
+      )
+  )
+}
+
 export const handleBaccaratInteraction = async (interaction: Interaction) => {
   const isButton = interaction.isButton()
   const isModal = interaction.isModalSubmit()
@@ -58,41 +90,148 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
   if (!customId.startsWith('bc:') && !customId.startsWith('bcm:')) return
 
   return runWithQuestNotifyInteraction(interaction, async () => {
-    const modalData = isModal ? decodeModalId(interaction.customId) : null
-    const buttonData = isButton ? decodeId(interaction.customId) : null
-    const gameId = modalData?.gameId ?? buttonData?.gameId
-    if (!gameId) return
-
     const guildId = interaction.guildId
     if (!guildId) return
 
     try {
-      // showModal must be the first response - open immediately from customId.
-      if (
-        isButton &&
-        buttonData != null &&
-        'action' in buttonData &&
-        buttonData.action === 'amount'
-      ) {
-        await interaction.showModal(
-          new ModalBuilder()
-            .setCustomId(encodeModalId({ gameId }))
-            .setTitle('Change your baccarat bet')
-            .addComponents(
-              new ActionRowBuilder<TextInputBuilder>().addComponents(
-                new TextInputBuilder()
-                  .setCustomId(AMOUNT_INPUT_ID)
-                  .setLabel('How much would you like to bet?')
-                  .setPlaceholder('e.g. 100, 4k, 10.5k')
-                  .setStyle(TextInputStyle.Short)
-                  .setRequired(true)
-              )
+      if (isModal) {
+        const modalData = decodeModalId(interaction.customId)
+        if (!modalData) return
+
+        if (!(await deferComponentUpdate(interaction))) return
+
+        const game = await getBaccaratGameByGameId({
+          gameId: modalData.gameId,
+          guildId
+        })
+
+        if (!game) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Invalid Game',
+              'This game no longer exists.'
             )
+          ])
+          return
+        }
+
+        if (interaction.user.id !== game.userId) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed('Error - Invalid Input', 'This is not your game.')
+          ])
+          return
+        }
+
+        if (game.phase !== 'waiting') {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Table Busy',
+              'Finish or change bets from the result buttons first.'
+            )
+          ])
+          return
+        }
+
+        const guildConfig = await getGuildConfigByGuildId({ guildId })
+        if (!guildConfig) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Missing Config',
+              'Guild casino configuration was not found.'
+            )
+          ])
+          return
+        }
+
+        const amount = parseReadableStringToNumber(
+          interaction.fields.getTextInputValue(AMOUNT_INPUT_ID)
         )
+
+        const lineValidation = validateBetAmount(
+          amount,
+          guildConfig.casinoSettings.baccarat.maxBet,
+          guildConfig.casinoSettings.baccarat.minBet
+        )
+        if (!lineValidation.ok) {
+          await replyBetValidationError(
+            interaction,
+            lineValidation.error,
+            guildConfig.casinoSettings.baccarat.maxBet,
+            guildConfig.casinoSettings.baccarat.minBet,
+            guildConfig.globalSettings
+          )
+          return
+        }
+
+        const merged = mergeSlipBet(
+          game.bets ?? [],
+          buildSlipBet(modalData.side, amount)
+        )
+        if (
+          merged.length > BACCARAT_MAX_SLIP_BETS &&
+          merged.length > (game.bets?.length ?? 0)
+        ) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Slip Full',
+              `You can place at most **${BACCARAT_MAX_SLIP_BETS}** different sides on one deal.`
+            )
+          ])
+          return
+        }
+
+        const total = slipTotal(merged)
+        const totalValidation = validateBetAmount(
+          total,
+          guildConfig.casinoSettings.baccarat.maxBet,
+          guildConfig.casinoSettings.baccarat.minBet
+        )
+        if (!totalValidation.ok) {
+          await replyBetValidationError(
+            interaction,
+            totalValidation.error,
+            guildConfig.casinoSettings.baccarat.maxBet,
+            guildConfig.casinoSettings.baccarat.minBet,
+            guildConfig.globalSettings
+          )
+          return
+        }
+
+        const updated = await updateBaccaratGame({
+          userId: game.userId,
+          guildId: game.guildId,
+          bets: merged,
+          phase: 'waiting'
+        })
+
+        if (!updated || !interaction.message) return
+
+        await interaction.message.edit({
+          embeds: [
+            renderBaccaratPromptEmbed({
+              bets: updated.bets,
+              gameId: game.gameId,
+              globalSettings: guildConfig.globalSettings
+            })
+          ],
+          components: renderBaccaratButtons({
+            gameId: game.gameId,
+            hasBets: updated.bets.length > 0,
+            hasLastBets: (updated.lastBets?.length ?? 0) > 0
+          })
+        })
         return
       }
 
-      // Acknowledge immediately before any DB work (Discord ~3s timeout).
+      const buttonData = decodeId(interaction.customId)
+      if (!buttonData) return
+
+      // Place opens a modal - showModal must be the first response.
+      if (buttonData.kind === 'place') {
+        await showAmountModal(interaction, buttonData.gameId, buttonData.side)
+        return
+      }
+
       if (!(await deferComponentUpdate(interaction))) return
 
       const guildConfig = await getGuildConfigByGuildId({ guildId })
@@ -106,7 +245,10 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
         return
       }
 
-      const game = await getBaccaratGameByGameId({ gameId, guildId })
+      const game = await getBaccaratGameByGameId({
+        gameId: buttonData.gameId,
+        guildId
+      })
 
       if (!game) {
         await replyEphemeralError(interaction, [
@@ -138,20 +280,19 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
       const sessionMessage = interaction.message
       if (!sessionMessage) return
 
-      const showWaitingTable = async (betAmount: number | null) => {
+      const showWaitingTable = async (bets: BaccaratSlipBet[]) => {
         await sessionMessage.edit({
           embeds: [
             renderBaccaratPromptEmbed({
-              bet: betAmount,
-              winMultipliers:
-                guildConfig.casinoSettings.baccarat.winMultipliers,
+              bets,
               gameId: game.gameId,
               globalSettings: guildConfig.globalSettings
             })
           ],
           components: renderBaccaratButtons({
             gameId: game.gameId,
-            hasBet: betAmount != null && betAmount > 0
+            hasBets: bets.length > 0,
+            hasLastBets: (game.lastBets?.length ?? 0) > 0
           })
         })
       }
@@ -164,14 +305,30 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
         })
       }
 
-      /** Reserves the stake, then deals and settles one round. */
-      const playRound = async (side: BaccaratBetSide) => {
-        const stake = game.betAmount
-        if (stake == null || stake <= 0) {
+      /** Reserves the slip total, then deals and settles one round. */
+      const playRound = async (slip: BaccaratSlipBet[]) => {
+        if (slip.length === 0) {
           return followUpError(
-            'Error - Bet Required',
-            'Set your bet before picking a side.'
+            'Error - Empty Slip',
+            'Add at least one bet before dealing.'
           )
+        }
+
+        const stake = slipTotal(slip)
+        const validation = validateBetAmount(
+          stake,
+          guildConfig.casinoSettings.baccarat.maxBet,
+          guildConfig.casinoSettings.baccarat.minBet
+        )
+        if (!validation.ok) {
+          await replyBetValidationError(
+            interaction,
+            validation.error,
+            guildConfig.casinoSettings.baccarat.maxBet,
+            guildConfig.casinoSettings.baccarat.minBet,
+            guildConfig.globalSettings
+          )
+          return
         }
 
         const user = await getUser({ userId: game.userId, guildId })
@@ -225,79 +382,31 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
           guildId: game.guildId,
           phase: 'dealing',
           activeBetId: betId,
+          bets: slip,
+          lockedAmount: stake,
           pendingDeal: {
-            side,
             playerCards: round.playerCards,
             bankerCards: round.bankerCards
           }
         })
 
-        await playBaccaratSide({
+        await playBaccaratSlip({
           message: sessionMessage,
-          side,
+          bets: slip,
           userId: game.userId,
           guildId: game.guildId,
           gameId: game.gameId,
           betId,
-          betAmount: stake,
           sessionStats: game.sessionStats,
           showBalance: game.showBalance,
           skipAnimations: game.skipAnimations,
-          winMultipliers: guildConfig.casinoSettings.baccarat.winMultipliers,
+          baccaratSettings: guildConfig.casinoSettings.baccarat,
           globalSettings: guildConfig.globalSettings,
           guild: interaction.guild,
           guildConfig,
           sourceChannelId: game.channelId,
           round
         })
-      }
-
-      if (interaction.isModalSubmit()) {
-        const amount = parseReadableStringToNumber(
-          interaction.fields.getTextInputValue(AMOUNT_INPUT_ID)
-        )
-
-        const validation = validateBetAmount(
-          amount,
-          guildConfig.casinoSettings.baccarat.maxBet,
-          guildConfig.casinoSettings.baccarat.minBet
-        )
-        if (!validation.ok) {
-          await replyBetValidationError(
-            interaction,
-            validation.error,
-            guildConfig.casinoSettings.baccarat.maxBet,
-            guildConfig.casinoSettings.baccarat.minBet,
-            guildConfig.globalSettings
-          )
-          return
-        }
-
-        await updateBaccaratGame({
-          userId: game.userId,
-          guildId: game.guildId,
-          betAmount: amount,
-          phase: 'waiting'
-        })
-        await showWaitingTable(amount)
-        return
-      }
-
-      if (!buttonData) return
-
-      if (buttonData.kind === 'side') {
-        if (game.phase !== 'waiting') {
-          await replyEphemeralError(interaction, [
-            createErrorEmbed(
-              'Error - Table Busy',
-              'Use Change before picking a new side.'
-            )
-          ])
-          return
-        }
-
-        await playRound(buttonData.side)
-        return
       }
 
       if (buttonData.action === 'close') {
@@ -326,24 +435,77 @@ export const handleBaccaratInteraction = async (interaction: Interaction) => {
         await updateBaccaratGame({
           userId: game.userId,
           guildId: game.guildId,
-          phase: 'waiting'
+          phase: 'waiting',
+          bets: []
         })
-        await showWaitingTable(game.betAmount)
+        await showWaitingTable([])
         return
       }
 
-      if (buttonData.action === 'rebet') {
-        if (game.phase !== 'result' || !game.lastSide) {
+      if (buttonData.action === 'undo') {
+        if (game.phase !== 'waiting' || (game.bets?.length ?? 0) === 0) {
           await replyEphemeralError(interaction, [
             createErrorEmbed(
-              'Error - Nothing to Rebet',
-              'There is no previous side to rebet.'
+              'Error - Nothing to Undo',
+              'Your slip is already empty.'
             )
           ])
           return
         }
 
-        await playRound(game.lastSide)
+        const nextBets = game.bets.slice(0, -1)
+        await updateBaccaratGame({
+          userId: game.userId,
+          guildId: game.guildId,
+          bets: nextBets
+        })
+        await showWaitingTable(nextBets)
+        return
+      }
+
+      if (buttonData.action === 'clear') {
+        if (game.phase !== 'waiting') {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Table Busy',
+              'Use Change from the result view first.'
+            )
+          ])
+          return
+        }
+
+        await updateBaccaratGame({
+          userId: game.userId,
+          guildId: game.guildId,
+          bets: []
+        })
+        await showWaitingTable([])
+        return
+      }
+
+      if (buttonData.action === 'deal' || buttonData.action === 'rebet') {
+        const slip =
+          buttonData.action === 'rebet'
+            ? (game.lastBets ?? [])
+            : game.phase === 'waiting'
+              ? (game.bets ?? [])
+              : []
+
+        if (slip.length === 0) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              buttonData.action === 'rebet'
+                ? 'Error - Nothing to Rebet'
+                : 'Error - Empty Slip',
+              buttonData.action === 'rebet'
+                ? 'There is no previous slip to rebet.'
+                : 'Add at least one bet before dealing.'
+            )
+          ])
+          return
+        }
+
+        await playRound(slip)
       }
     } catch (error) {
       await handleUnexpectedButtonError(interaction, error, {

@@ -29,10 +29,15 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
     try {
       const isIdleClosePhase =
         game.phase === 'RESULT' || game.phase === 'BETTING'
+      const isInsurancePhase = game.phase === 'INSURANCE'
       const hoursLeft = isIdleClosePhase
         ? hoursUntilBlackjackIdleClose(game.updatedAt)
         : hoursUntilBlackjackAutostand(game.updatedAt)
       const jumpLink = casinoGameMessageLink(game)
+
+      const midHandBody = isInsurancePhase
+        ? `Still playing? You have a pending insurance decision. If you stay inactive, insurance will be declined and the hand finished in about **${hoursLeft} hour(s)**.`
+        : `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**.`
 
       const delivered = await sendCasinoIdleNudgeDm({
         client,
@@ -43,7 +48,7 @@ export const blackjackIdleNudgeJob = async (client: Client<true>) => {
         body: [
           isIdleClosePhase
             ? `Still playing? If you stay inactive, this table will close in about **${hoursLeft} hour(s)**.`
-            : `Still playing? If you stay inactive, this game will auto-stand in about **${hoursLeft} hour(s)**.`,
+            : midHandBody,
           '',
           `[Jump to your game message](${jumpLink})`
         ].join('\n'),

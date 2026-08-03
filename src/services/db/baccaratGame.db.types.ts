@@ -3,7 +3,7 @@ import type {
   TBaccaratPendingDeal
 } from 'gambling-bot-shared/baccarat'
 import type {
-  BaccaratBetSide,
+  BaccaratSlipBet,
   CasinoSessionStats
 } from 'gambling-bot-shared/casino'
 import { TUser } from 'gambling-bot-shared/user'
@@ -15,8 +15,9 @@ export type TUpsertBaccaratGame = Pick<TUser, 'userId' | 'guildId'> & {
   messageId: string
   gameId: string
   activeBetId?: string | null
-  betAmount: number | null
-  lastSide?: BaccaratBetSide | null
+  bets?: BaccaratSlipBet[]
+  lastBets?: BaccaratSlipBet[]
+  lockedAmount?: number | null
   showBalance: boolean
   skipAnimations: boolean
   phase?: BaccaratSessionPhase
@@ -28,8 +29,9 @@ export type TUpdateBaccaratGame = Pick<TUser, 'userId' | 'guildId'> & {
   channelId?: string
   messageId?: string
   activeBetId?: string | null
-  betAmount?: number | null
-  lastSide?: BaccaratBetSide | null
+  bets?: BaccaratSlipBet[]
+  lastBets?: BaccaratSlipBet[]
+  lockedAmount?: number | null
   showBalance?: boolean
   skipAnimations?: boolean
   phase?: BaccaratSessionPhase

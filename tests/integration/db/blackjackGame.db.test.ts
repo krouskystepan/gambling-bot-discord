@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  claimBlackjackDeal,
   deleteBlackjackGame,
   getAllOldBlackjackGames,
   getBlackjackGameByGameId,
@@ -95,6 +96,28 @@ describe('blackjackGame.db', () => {
     expect(updated?.activeBetId).toBeNull()
   })
 
+  it('claims the next deal once from RESULT/BETTING', async () => {
+    await upsertBlackjackGame({
+      ...baseGame,
+      phase: 'RESULT',
+      activeBetId: null
+    })
+
+    const first = await claimBlackjackDeal({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      betId: 'game-bj-1:2'
+    })
+    const second = await claimBlackjackDeal({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      betId: 'game-bj-1:2'
+    })
+
+    expect(first?.activeBetId).toBe('game-bj-1:2')
+    expect(second).toBeNull()
+  })
+
   it('finds mid-hand games older than N days', async () => {
     await upsertBlackjackGame(baseGame)
     await BlackjackGame.collection.updateOne(
@@ -104,6 +127,21 @@ describe('blackjackGame.db', () => {
 
     const old = await getAllOldBlackjackGames(1)
     expect(old.some((g) => g.gameId === 'game-bj-1')).toBe(true)
+  })
+
+  it('treats INSURANCE as a mid-hand phase for idle queries', async () => {
+    await upsertBlackjackGame({
+      ...baseGame,
+      gameId: 'game-bj-insurance',
+      phase: 'INSURANCE'
+    })
+    await BlackjackGame.collection.updateOne(
+      { userId: 'user-1', guildId: 'guild-1' },
+      { $set: { updatedAt: new Date('2020-01-01T00:00:00Z') } }
+    )
+
+    const old = await getAllOldBlackjackGames(1)
+    expect(old.some((g) => g.gameId === 'game-bj-insurance')).toBe(true)
   })
 
   it('excludes settled sessions from the mid-hand old query', async () => {

@@ -24,7 +24,7 @@ import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'baccarat',
-  description: 'Open a Baccarat table - set your bet, then pick a side!',
+  description: 'Open a Baccarat table - build a slip, then Deal!',
   options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }
@@ -70,18 +70,16 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       const gameId = generateId('baccarat')
 
-      // Nothing is reserved until a side is picked, so an idle table can be
-      // closed without a refund.
+      // Nothing is reserved until Deal, so an idle table can be closed without a refund.
       const message = await interaction.editReply({
         embeds: [
           renderBaccaratPromptEmbed({
-            bet: null,
-            winMultipliers: guildConfig.casinoSettings.baccarat.winMultipliers,
+            bets: [],
             gameId,
             globalSettings: guildConfig.globalSettings
           })
         ],
-        components: renderBaccaratButtons({ gameId, hasBet: false })
+        components: renderBaccaratButtons({ gameId, hasBets: false })
       })
 
       await upsertBaccaratGame({
@@ -90,7 +88,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         channelId: interaction.channelId,
         messageId: message.id,
         gameId,
-        betAmount: null,
+        bets: [],
+        lastBets: [],
         showBalance,
         skipAnimations,
         phase: 'waiting',

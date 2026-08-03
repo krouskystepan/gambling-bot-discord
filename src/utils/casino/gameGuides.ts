@@ -80,7 +80,7 @@ export const casinoGameGuides = {
     title: '🃏 Baccarat',
     command: 'baccarat',
     usage: '',
-    how: 'Open a table, set your bet, then pick Player, Banker, or Tie. Closer hand to 9 wins. Rebet / Change / Close between rounds.',
+    how: 'Open a table, tap sides (modal for the amount), then Deal. Stack several sides on one hand - pairs, Big/Small, Dragon Bonus, Lucky 6. Payouts are in `/help` → Games. Rebet repeats your last slip; Change rebuilds it.',
     idle: 'DM reminder after ~3 hours idle. Tables close after ~24 hours of no new round.'
   },
   slots: {
@@ -94,7 +94,7 @@ export const casinoGameGuides = {
     title: '🃏 Blackjack',
     command: 'blackjack',
     usage: '',
-    how: 'Open a table, set your bet, then Deal. Hit / Stand / Double / Split - beat the dealer without going over 21. Rebet / Change / Close between hands.',
+    how: 'Open a table, set your bet (optional Perfect Pairs / 21+3 when enabled), then Deal. Hit / Stand / Double / Split - beat the dealer without going over 21. You may resplit up to 4 hands total; Aces split once only (one card each). Insurance is offered on Ace-up when enabled. Every hand is dealt from a freshly shuffled shoe (new set of decks each round). Payouts are in `/help` → Games. Rebet / Change / Close between hands.',
     idle: 'DM reminder after ~3 hours. Mid-hand games auto-stand after ~24 hours. Empty tables close after ~24 hours.'
   },
   mines: {

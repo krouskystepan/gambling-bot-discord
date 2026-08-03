@@ -112,12 +112,12 @@ describe('startBlackjackHand', () => {
 
     const result = await dealHand()
 
-    const buttons = result.components[0] as {
+    const rows = result.components as {
       components: { data: { custom_id: string; disabled?: boolean } }[]
-    }
-    const split = buttons.components.find((b) =>
-      b.data.custom_id.endsWith('SPLIT:1')
-    )
+    }[]
+    const split = rows
+      .flatMap((row) => row.components)
+      .find((b) => b.data.custom_id.includes(':SPLIT:'))
     expect(split?.data.disabled).toBeFalsy()
   })
 
@@ -160,7 +160,8 @@ describe('startBlackjackHand', () => {
 
   it('settles a dealer blackjack as a loss', async () => {
     await createTestUser({ balance: 1000 })
-    stackDeck(card('10', 10), card('7', 7), card('A', 11), card('10', 10))
+    // Non-Ace up so insurance is not offered before settle.
+    stackDeck(card('10', 10), card('7', 7), card('10', 10), card('A', 11))
 
     const result = await dealHand()
 
@@ -171,9 +172,29 @@ describe('startBlackjackHand', () => {
     expect(user?.lockedBalance).toBe(0)
   })
 
+  it('offers insurance when the dealer upcard is an Ace', async () => {
+    await createTestUser({ balance: 1000 })
+    stackDeck(card('10', 10), card('7', 7), card('A', 11), card('9', 9))
+
+    const result = await dealHand()
+
+    expect(result.phase).toBe('INSURANCE')
+
+    const game = await getBlackjackGameByGameId({
+      gameId: 'bj-session-1',
+      guildId: 'guild-1'
+    })
+    expect(game?.phase).toBe('INSURANCE')
+    expect(game?.activeBetId).toBeTruthy()
+
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+    expect(user?.lockedBalance).toBe(100)
+  })
+
   it('pushes when both sides have blackjack and keeps prior stats', async () => {
     await createTestUser({ balance: 1000 })
-    stackDeck(card('A', 11), card('10', 10), card('A', 11), card('10', 10))
+    // Dealer 10-up + Ace hole avoids the insurance window.
+    stackDeck(card('A', 11), card('10', 10), card('10', 10), card('A', 11))
 
     const result = await dealHand({
       sessionStats: bumpSessionStats(emptySessionStats(), {

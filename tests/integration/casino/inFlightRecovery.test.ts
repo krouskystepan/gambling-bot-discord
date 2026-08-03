@@ -186,12 +186,12 @@ describe('in-flight casino recovery helpers', () => {
       messageId: 'msg-1',
       gameId: 'baccarat-game-1',
       activeBetId: 'baccarat-stale-1',
-      betAmount: 100,
+      bets: [{ side: 'player', amount: 100 }],
+      lockedAmount: 100,
       showBalance: false,
       skipAnimations: false,
       phase: 'dealing',
       pendingDeal: {
-        side: 'player',
         playerCards: [
           { label: '9', suite: '♠️' },
           { label: '9', suite: '♥️' }
@@ -209,7 +209,6 @@ describe('in-flight casino recovery helpers', () => {
 
     const settled = await recoverBaccaratDeal({
       message: message as never,
-      side: 'player',
       playerCards: [
         { label: '9', suite: '♠️' },
         { label: '9', suite: '♥️' }
@@ -218,13 +217,13 @@ describe('in-flight casino recovery helpers', () => {
         { label: '2', suite: '♣️' },
         { label: '5', suite: '♦️' }
       ],
+      bets: [{ side: 'player', amount: 100 }],
       userId: 'user-1',
       guildId: 'guild-1',
       gameId: 'baccarat-game-1',
       betId: 'baccarat-stale-1',
-      betAmount: 100,
       showBalance: false,
-      winMultipliers: guildConfig.casinoSettings.baccarat.winMultipliers,
+      baccaratSettings: guildConfig.casinoSettings.baccarat,
       globalSettings: guildConfig.globalSettings,
       guild: null,
       guildConfig,
@@ -238,10 +237,11 @@ describe('in-flight casino recovery helpers', () => {
     const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
 
     expect(message.edit).toHaveBeenCalled()
-    expect(settled.resolution.won).toBe(true)
+    expect(settled.slip.lines[0]?.won).toBe(true)
     expect(game?.phase).toBe('result')
     expect(game?.activeBetId).toBeNull()
-    expect(game?.lastSide).toBe('player')
+    expect(game?.lastBets).toMatchObject([{ side: 'player', amount: 100 }])
+    expect(game?.bets).toMatchObject([])
     expect(game?.pendingDeal).toBeNull()
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBeGreaterThan(1000)
