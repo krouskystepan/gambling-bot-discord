@@ -114,12 +114,18 @@ export const buildPlayerGameSettings = (
         betLine('Min bet', settings.roulette.minBet, globalSettings),
         betLine('Max bet', settings.roulette.maxBet, globalSettings)
       ]
-    case 'baccarat':
+    case 'baccarat': {
+      const { winMultipliers, dragonBonusMultipliers, lucky6Multipliers } =
+        settings.baccarat
+      const fmt = (n: number) => `${formatNumberWithSpaces(n)}x`
       return [
-        formatMultiplierValue(settings.baccarat.winMultipliers),
+        formatMultiplierValue(winMultipliers),
+        `- **Dragon Bonus:** natural ${fmt(dragonBonusMultipliers.naturalWin)} · by 4–9 ${fmt(dragonBonusMultipliers.winBy4)}–${fmt(dragonBonusMultipliers.winBy9)} (natural tie push)`,
+        `- **Lucky 6:** 2-card ${fmt(lucky6Multipliers.twoCard)} · 3-card ${fmt(lucky6Multipliers.threeCard)}`,
         betLine('Min bet', settings.baccarat.minBet, globalSettings),
         betLine('Max bet', settings.baccarat.maxBet, globalSettings)
       ]
+    }
     case 'slots':
       return [
         formatMultiplierValue(settings.slots.winMultipliers),
