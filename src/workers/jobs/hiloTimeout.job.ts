@@ -67,7 +67,7 @@ export const hiloTimeoutJob = async (client: Client<true>) => {
         worker: 'Hi-Lo timeout',
         title: `Timed out ${count} Hi-Lo round(s)`,
         description:
-          'Players who did not guess in time had the safest side auto-played.',
+          'Idle streaks were auto cashed out; first decisions used the safest auto-guess.',
         level: 'info'
       })
     }

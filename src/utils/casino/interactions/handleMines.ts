@@ -1,7 +1,7 @@
 import { validateBetAmount } from 'gambling-bot-shared/casino'
 import { parseReadableStringToNumber } from 'gambling-bot-shared/common'
 import {
-  cashOutPayout,
+  cashOutMinesPayout,
   docToMinesEngine,
   isValidMineCount,
   revealCell
@@ -376,7 +376,7 @@ export const handleMinesInteraction = async (interaction: Interaction) => {
       }
 
       if (action.kind === 'cashout') {
-        const cash = cashOutPayout(engine)
+        const cash = cashOutMinesPayout(engine)
         if (cash.kind === 'IGNORED') {
           return followUpError(
             'Error - Cannot Cash Out',
@@ -415,7 +415,7 @@ export const handleMinesInteraction = async (interaction: Interaction) => {
       }
 
       if (reveal.boardCleared) {
-        const cash = cashOutPayout(engine)
+        const cash = cashOutMinesPayout(engine)
         game.status = 'RESULT'
         game.revealedIndices = engine.revealedIndices
         await saveMinesGame(game)

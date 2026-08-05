@@ -156,7 +156,7 @@ export const buildPlayerGameSettings = (
     }
     case 'hilo':
       return [
-        '- **Payout:** Scales with your guess (Higher / Draw / Lower).',
+        '- **Payout:** Compounds on each correct guess; Cash Out locks in the streak.',
         betLine('Min bet', settings.hilo.minBet, globalSettings),
         betLine('Max bet', settings.hilo.maxBet, globalSettings)
       ]

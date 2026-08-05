@@ -27,6 +27,7 @@ export const startHiloRound = async ({
   betAmount,
   houseEdge,
   showBalance,
+  skipAnimations = false,
   sessionStats = emptySessionStats(),
   globalSettings
 }: {
@@ -38,6 +39,7 @@ export const startHiloRound = async ({
   betAmount: number
   houseEdge: number
   showBalance: boolean
+  skipAnimations?: boolean
   sessionStats?: CasinoSessionStats
   globalSettings: MoneySettings
 }) => {
@@ -55,9 +57,14 @@ export const startHiloRound = async ({
   const deck = createShuffledHiloDeck()
   const first = drawHiloCard(deck)
   const firstCard = formatHiloCard(first)
-  const higherMult = getHiloWinMultiplier(first.rank, 'higher', houseEdge)
-  const lowerMult = getHiloWinMultiplier(first.rank, 'lower', houseEdge)
-  const sameMult = getHiloWinMultiplier(first.rank, 'same', houseEdge)
+  const higherMult = getHiloWinMultiplier(
+    first.rank,
+    'higher',
+    houseEdge,
+    deck
+  )
+  const lowerMult = getHiloWinMultiplier(first.rank, 'lower', houseEdge, deck)
+  const sameMult = getHiloWinMultiplier(first.rank, 'same', houseEdge, deck)
 
   await upsertHiloGame({
     userId,
@@ -69,8 +76,11 @@ export const startHiloRound = async ({
     betAmount,
     firstCard: first,
     remainingDeck: deck,
+    currentMultiplier: 1,
+    streak: 0,
     houseEdgeSnapshot: houseEdge,
     showBalance,
+    skipAnimations,
     status: 'WAITING',
     sessionStats
   })
@@ -83,6 +93,8 @@ export const startHiloRound = async ({
         lowerMult,
         sameMult,
         bet: betAmount,
+        streak: 0,
+        currentMultiplier: 1,
         betId: gameId,
         globalSettings
       })
@@ -90,7 +102,10 @@ export const startHiloRound = async ({
     components: renderHiloGuessComponents({
       gameId,
       firstRank: first.rank,
-      houseEdge
+      houseEdge,
+      remainingDeck: deck,
+      streak: 0,
+      currentMultiplier: 1
     })
   }
 }

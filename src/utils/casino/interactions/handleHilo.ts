@@ -27,6 +27,7 @@ import {
   replyEphemeralError
 } from '@/utils/casino/betValidationReply'
 import {
+  cashOutHilo,
   decodeHiloId,
   decodeModalId,
   encodeModalId,
@@ -140,6 +141,7 @@ export const handleHiloInteraction = async (interaction: Interaction) => {
             betAmount,
             houseEdge: guildConfig.casinoSettings.hilo.houseEdge,
             showBalance: game.showBalance,
+            skipAnimations: game.skipAnimations,
             sessionStats: game.sessionStats,
             globalSettings: guildConfig.globalSettings
           })
@@ -220,6 +222,8 @@ export const handleHiloInteraction = async (interaction: Interaction) => {
           activeBetId: null,
           firstCard: null,
           remainingDeck: [],
+          currentMultiplier: 1,
+          streak: 0,
           houseEdgeSnapshot: hiloSettings.houseEdge
         })
 
@@ -241,6 +245,47 @@ export const handleHiloInteraction = async (interaction: Interaction) => {
       }
 
       if (!buttonData) return
+
+      if (buttonData.kind === 'action' && buttonData.action === 'cashout') {
+        if (game.status !== 'WAITING') {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Invalid Game',
+              'This Hi-Lo round is no longer waiting for a cash-out.'
+            )
+          ])
+          return
+        }
+
+        if ((game.streak ?? 0) < 1) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Cannot Cash Out',
+              'Win at least one guess before cashing out.'
+            )
+          ])
+          return
+        }
+
+        if (!guildConfig) {
+          await replyEphemeralError(interaction, [
+            createErrorEmbed(
+              'Error - Missing Config',
+              'Casino settings could not be loaded.'
+            )
+          ])
+          return
+        }
+
+        await cashOutHilo({
+          game,
+          guildConfig,
+          guild: interaction.guild,
+          sourceChannelId: interaction.channelId,
+          message: sessionMessage
+        })
+        return
+      }
 
       if (buttonData.kind === 'action') {
         if (game.status !== 'RESULT' && game.status !== 'BETTING') {

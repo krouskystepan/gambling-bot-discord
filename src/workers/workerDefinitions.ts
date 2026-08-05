@@ -83,7 +83,7 @@ export const workerDefinitions: WorkerDefinition[] = [
   ...withStartDelay(
     THIRTY_SECONDS,
     scheduleEvery(15 * MINUTE_MS, [
-      // Hi-Lo waiting round: DM at 30m idle, then auto-play safest side after 1h.
+      // Hi-Lo waiting round: DM at 30m idle, then cash-out / safest guess after 1h.
       ['Hi-Lo idle nudge', hiloIdleNudgeJob],
       ['Hi-Lo timeout', hiloTimeoutJob]
     ])

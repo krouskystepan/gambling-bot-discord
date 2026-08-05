@@ -10,6 +10,7 @@ import {
   PLINKO_ROW_COUNT,
   getHiloWinMultiplier,
   getPlinkoMultiplierAtPathIndex,
+  hiloFullDeckRemaining,
   isLimboWin,
   normalizePlinkoBinMultipliers,
   resolveBaccaratBet,
@@ -167,16 +168,42 @@ function simulateRngGame(
         : 0
     }
     case 'hilo': {
-      const { first, second } = rollHiloRanks()
+      // Simulate a short compound streak (1-3 steps) or a bust.
       const houseEdge = ctx.casinoSettings.hilo.houseEdge
-      const options = (['higher', 'lower', 'same'] as const).filter(
-        (guess) => getHiloWinMultiplier(first, guess, houseEdge) != null
-      )
-      const guess = randomChoice(options) as HiloGuess
-      const outcome = resolveHiloRound(first, second, guess)
-      if (outcome === 'lose') return 0
-      const mult = getHiloWinMultiplier(first, guess, houseEdge) ?? 0
-      return betAmount * mult
+      let first = rollHiloRanks().first
+      let remaining = hiloFullDeckRemaining(first)
+      let currentMultiplier = 1
+      const maxSteps = 1 + Math.floor(Math.random() * 3)
+
+      for (let step = 0; step < maxSteps; step++) {
+        if (remaining.length < 1) break
+
+        const options = (['higher', 'lower', 'same'] as const).filter(
+          (guess) =>
+            getHiloWinMultiplier(first, guess, houseEdge, remaining) != null
+        )
+        if (options.length < 1) break
+
+        const guess = randomChoice(options) as HiloGuess
+        const stepMult = getHiloWinMultiplier(
+          first,
+          guess,
+          houseEdge,
+          remaining
+        )
+        if (stepMult == null) break
+
+        const secondIndex = Math.floor(Math.random() * remaining.length)
+        const second = remaining[secondIndex]!.rank
+        remaining = remaining.filter((_, i) => i !== secondIndex)
+
+        if (resolveHiloRound(first, second, guess) === 'lose') return 0
+
+        currentMultiplier *= stepMult
+        first = second
+      }
+
+      return betAmount * currentMultiplier
     }
     case 'limbo': {
       const houseEdge = ctx.casinoSettings.limbo.houseEdge
