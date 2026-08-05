@@ -7,6 +7,7 @@ import { getBaccaratGameByUserAndGuild } from '@/services/db/baccaratGame.db'
 import { getBlackjackGameByUserAndGuild } from '@/services/db/blackjackGame.db'
 import { getHiloGameByUserAndGuild } from '@/services/db/hiloGame.db'
 import { getMinesGameByUserAndGuild } from '@/services/db/minesGame.db'
+import { getPlinkoGameByUserAndGuild } from '@/services/db/plinkoGame.db'
 import { getRouletteGameByUserAndGuild } from '@/services/db/rouletteGame.db'
 import { getSlotsGameByUserAndGuild } from '@/services/db/slotsGame.db'
 import { getUser } from '@/services/db/user.db'
@@ -40,6 +41,7 @@ type JustifiedBreakdown = {
   mines: number
   roulette: number
   slots: number
+  plinko: number
   hilo: number
   predictions: number
   graceBets: number
@@ -183,6 +185,7 @@ export async function computeJustifiedLockedAmount({
     mines: 0,
     roulette: 0,
     slots: 0,
+    plinko: 0,
     hilo: 0,
     predictions: 0,
     graceBets: 0,
@@ -228,6 +231,11 @@ export async function computeJustifiedLockedAmount({
     breakdown.slots = slotsGame.lockedAmount
   }
 
+  const plinkoGame = await getPlinkoGameByUserAndGuild({ userId, guildId })
+  if (plinkoGame?.lockedAmount && plinkoGame.lockedAmount > 0) {
+    breakdown.plinko = plinkoGame.lockedAmount
+  }
+
   const hiloGame = await getHiloGameByUserAndGuild({ userId, guildId })
   if (hiloGame?.activeBetId && hiloGame.betAmount != null) {
     breakdown.hilo = hiloGame.betAmount
@@ -251,6 +259,9 @@ export async function computeJustifiedLockedAmount({
   }
   if (slotsGame?.activeBetId) {
     excludedFromCasinoBets.add(slotsGame.activeBetId)
+  }
+  if (plinkoGame?.activeBetId) {
+    excludedFromCasinoBets.add(plinkoGame.activeBetId)
   }
   if (hiloGame?.activeBetId) {
     excludedFromCasinoBets.add(hiloGame.activeBetId)
@@ -290,6 +301,7 @@ export async function computeJustifiedLockedAmount({
     breakdown.mines +
     breakdown.roulette +
     breakdown.slots +
+    breakdown.plinko +
     breakdown.hilo +
     breakdown.predictions +
     breakdown.graceBets +
@@ -315,6 +327,7 @@ export async function findOrphanBetRefunds({
     minesGame,
     rouletteGame,
     slotsGame,
+    plinkoGame,
     hiloGame,
     predictionContext,
     pendingRpsRefs,
@@ -325,6 +338,7 @@ export async function findOrphanBetRefunds({
     getMinesGameByUserAndGuild({ userId, guildId }),
     getRouletteGameByUserAndGuild({ userId, guildId }),
     getSlotsGameByUserAndGuild({ userId, guildId }),
+    getPlinkoGameByUserAndGuild({ userId, guildId }),
     getHiloGameByUserAndGuild({ userId, guildId }),
     getPredictionLockContext({ userId, guildId }),
     getPendingRpsReferenceIds(guildId),
@@ -350,6 +364,9 @@ export async function findOrphanBetRefunds({
   }
   if (slotsGame?.activeBetId) {
     excludedRefs.add(slotsGame.activeBetId)
+  }
+  if (plinkoGame?.activeBetId) {
+    excludedRefs.add(plinkoGame.activeBetId)
   }
   if (hiloGame?.activeBetId) {
     excludedRefs.add(hiloGame.activeBetId)
