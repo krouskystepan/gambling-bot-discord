@@ -36,8 +36,6 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │   │   ├── lottery.ts
 │   │   │   │   └─ /lottery – Play the lottery! Pick 4 numbers and see if you win.
 │   │   │   │      ├─ numbers – Pick 4 numbers between 1-50, separated by commas (e.g., 3, 14, 25, 38).
-│   │   │   └── plinko.ts
-│   │   │       └─ /plinko – Drop balls down the Plinko board!
 │   │   └── (interactive)
 │   │       ├── baccarat.ts
 │   │       │   └─ /baccarat – Play punto banco Baccarat - pick a side, then watch the deal!
@@ -52,6 +50,8 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │       │      ├─ bet – Place a bet (e.g., 1000, 2k, 4.5k).
 │   │       │      ├─ mines – Number of mines on the board.
 │   │       │      ├─ show-balance – Displays the current balance (WARNING: VISIBLE TO EVERYONE)!
+│   │       ├── plinko.ts
+│   │       │   └─ /plinko – Open a Plinko board - set your bet, then drop!
 │   │       ├── roulette.ts
 │   │       │   └─ /roulette – Open a Mini Roulette table - place bets, then spin!
 │   │       ├── rps.ts
