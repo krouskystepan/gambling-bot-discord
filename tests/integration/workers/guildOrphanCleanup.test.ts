@@ -35,6 +35,10 @@ import {
   getSlotsGameByUserAndGuild,
   upsertSlotsGame
 } from '@/services/db/slotsGame.db'
+import {
+  getPlinkoGameByUserAndGuild,
+  upsertPlinkoGame
+} from '@/services/db/plinkoGame.db'
 import { createTransaction } from '@/services/db/transaction.db'
 import { deleteVipByOwnerId } from '@/services/db/vip.db'
 import { createVip } from '@/services/db/vip.db'
@@ -558,6 +562,78 @@ describe('runGuildOrphanCleanup', () => {
     expect(user?.lockedBalance).toBe(0)
   })
 
+  it('refunds locked plinko batches and deletes boards', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 100,
+      betId: 'bet-orphan-plinko',
+      game: 'plinko'
+    })
+
+    await upsertPlinkoGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'pk-orphan-1',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      ballsCount: 2,
+      activeBetId: 'bet-orphan-plinko',
+      lockedAmount: 100
+    })
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.plinko).toBe(1)
+
+    const game = await getPlinkoGameByUserAndGuild({
+      userId: 'user-1',
+      guildId: GUILD_ID
+    })
+    expect(game).toBeNull()
+
+    const user = await User.findOne({ userId: 'user-1', guildId: GUILD_ID })
+    expect(user?.balance).toBe(1000)
+    expect(user?.lockedBalance).toBe(0)
+  })
+
+  it('deletes idle plinko boards without a locked batch', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await upsertPlinkoGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'pk-idle-1',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      ballsCount: 1
+    })
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.plinko).toBe(1)
+    expect(
+      await getPlinkoGameByUserAndGuild({
+        userId: 'user-1',
+        guildId: GUILD_ID
+      })
+    ).toBeNull()
+
+    const user = await User.findOne({ userId: 'user-1', guildId: GUILD_ID })
+    expect(user?.balance).toBe(1000)
+    expect(user?.lockedBalance).toBe(0)
+  })
+
   it('refunds locked hi-lo rounds and deletes games', async () => {
     await seedGuild()
     await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
@@ -775,6 +851,7 @@ describe('runGuildOrphanCleanup', () => {
       mines: 0,
       roulette: 0,
       slots: 0,
+      plinko: 0,
       hilo: 0,
       vipRooms: 0,
       atmRejected: 0,
@@ -1063,6 +1140,44 @@ describe('runGuildOrphanCleanup', () => {
     expect(summary.slots).toBe(0)
     expect(summary.errors).toEqual([
       'slots sl-fail-1: Error: slots refund failed'
+    ])
+  })
+
+  it('records plinko refund failures without deleting the board', async () => {
+    await seedGuild()
+    await createTestUser({ userId: 'user-1', balance: 1000, guildId: GUILD_ID })
+
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      totalBet: 50,
+      betId: 'bet-fail-plinko',
+      game: 'plinko'
+    })
+
+    await upsertPlinkoGame({
+      userId: 'user-1',
+      guildId: GUILD_ID,
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'pk-fail-1',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 25,
+      ballsCount: 2,
+      activeBetId: 'bet-fail-plinko',
+      lockedAmount: 50
+    })
+
+    vi.mocked(refundLockedBet).mockRejectedValueOnce(
+      new Error('plinko refund failed')
+    )
+
+    const summary = await runGuildOrphanCleanup({ guildId: GUILD_ID })
+
+    expect(summary.plinko).toBe(0)
+    expect(summary.errors).toEqual([
+      'plinko pk-fail-1: Error: plinko refund failed'
     ])
   })
 

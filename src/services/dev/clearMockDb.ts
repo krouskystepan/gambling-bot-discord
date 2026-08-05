@@ -9,6 +9,7 @@ import AtmRequest from '@/models/AtmRequest'
 import BaccaratGame from '@/models/BaccaratGame'
 import BlackjackGame from '@/models/BlackjackGame'
 import MinesGame from '@/models/MinesGame'
+import PlinkoGame from '@/models/PlinkoGame'
 import Prediction from '@/models/Prediction'
 import Raffle from '@/models/Raffle'
 import RouletteGame from '@/models/RouletteGame'
@@ -39,6 +40,7 @@ const WIPE_MODELS: GuildDataWipeModels = {
   minesGames: MinesGame,
   rouletteGames: RouletteGame,
   slotsGames: SlotsGame,
+  plinkoGames: PlinkoGame,
   userQuestProgress: UserQuestProgress,
   userQuestStreaks: {
     resetMany: async ({ guildId }) =>

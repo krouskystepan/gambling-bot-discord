@@ -10,18 +10,21 @@ import {
   getBaccaratGameByGameId,
   getBlackjackGameByGameId,
   getMinesGameByGameId,
+  getPlinkoGameByGameId,
   getRouletteGameByGameId,
   getSlotsGameByGameId,
   reserveCasinoBet,
   upsertBaccaratGame,
   upsertBlackjackGame,
   upsertMinesGame,
+  upsertPlinkoGame,
   upsertRouletteGame,
   upsertSlotsGame
 } from '@/services'
 import { recoverBaccaratDeal } from '@/utils/casino/baccarat/playRound'
 import { finishBlackjackDealerAndSettle } from '@/utils/casino/blackjack'
 import { finishMinesAndSettle } from '@/utils/casino/mines'
+import { recoverPlinkoBatch } from '@/utils/casino/plinko'
 import { recoverRouletteSpin } from '@/utils/casino/roulette/playRound'
 import { recoverSlotsBatch } from '@/utils/casino/slots'
 
@@ -305,6 +308,73 @@ describe('in-flight casino recovery helpers', () => {
     expect(game?.lastWinsCount).toBe(1)
     expect(user?.lockedBalance).toBe(0)
     expect(user?.balance).toBe(1300)
+  })
+
+  it('settles a stale plinko batch from pending paths', async () => {
+    await createTestUser({ balance: 1000 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 200,
+      betId: 'plinko-stale-1',
+      game: 'plinko'
+    })
+
+    // Final path index 0 -> bin 1 (edge, typically high mult in defaults).
+    // Use short paths with final indexes that map cleanly for settle math.
+    const paths = [
+      [0, 0, 0],
+      [0, 1, 4]
+    ]
+
+    await upsertPlinkoGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'plinko-game-1',
+      showBalance: false,
+      skipAnimations: true,
+      unitBet: 100,
+      ballsCount: 2,
+      phase: 'dropping',
+      pendingBatchResults: paths,
+      activeBetId: 'plinko-stale-1',
+      lockedAmount: 200
+    })
+
+    const message = {
+      edit: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const settled = await recoverPlinkoBatch({
+      message: message as never,
+      userId: 'user-1',
+      guildId: 'guild-1',
+      gameId: 'plinko-game-1',
+      unitBet: 100,
+      ballsCount: 2,
+      paths,
+      showBalance: false,
+      guild: null,
+      guildConfig,
+      sourceChannelId: 'channel-1',
+      betId: 'plinko-stale-1'
+    })
+
+    const game = await getPlinkoGameByGameId({
+      gameId: 'plinko-game-1',
+      guildId: 'guild-1'
+    })
+    const user = await User.findOne({ userId: 'user-1', guildId: 'guild-1' })
+
+    expect(message.edit).toHaveBeenCalled()
+    expect(game?.phase).toBe('result')
+    expect(game?.pendingBatchResults).toBeNull()
+    expect(game?.activeBetId).toBeNull()
+    expect(game?.lockedAmount).toBeNull()
+    expect(typeof settled.net).toBe('number')
+    expect(user?.lockedBalance).toBe(0)
   })
 
   it('settles a mines board stuck mid-settlement', async () => {
