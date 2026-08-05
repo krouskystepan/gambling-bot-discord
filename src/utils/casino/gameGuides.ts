@@ -31,8 +31,8 @@ export const casinoGameGuides = {
     title: '🃏 Hi-Lo',
     command: 'hilo',
     usage: '',
-    how: 'Open a table, set your bet, then Deal. Guess Higher, Draw, or Lower than the shown card. After a round: Rebet, Change bet, or Close.',
-    idle: 'Waiting for a guess: DM reminder at ~30 minutes, then the safest side is auto-played at 1 hour. Empty tables close after ~24 hours.'
+    how: 'Open a table, set your bet, then Deal. Guess Higher, Draw, or Lower to build a streak and compound the multiplier. Cash Out after a correct guess, or bust on a miss. After a round: Rebet, Change bet, or Close.',
+    idle: 'Waiting: DM reminder at ~30 minutes. After 1 hour, an active streak is auto cashed out; otherwise the safest first guess is auto-played. Empty tables close after ~24 hours.'
   },
   limbo: {
     title: '🚀 Limbo',

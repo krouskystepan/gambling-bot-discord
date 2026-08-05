@@ -32,9 +32,9 @@ export const hiloIdleNudgeJob = async (client: Client<true>) => {
         userId: game.userId,
         title: 'Warning - Hi-Lo Round Idle',
         body: [
-          `Still playing? You have about **${minutesLeft} minute(s)** left to guess.`,
+          `Still playing? You have about **${minutesLeft} minute(s)** left.`,
           '',
-          'No guess in time auto-plays the **safest side** (lowest odds) for you.',
+          'If time runs out: an active streak is **cashed out** automatically; otherwise the **safest first guess** is auto-played.',
           '',
           `[Jump to your Hi-Lo message](${jumpLink})`
         ].join('\n'),
