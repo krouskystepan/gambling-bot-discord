@@ -450,8 +450,7 @@ export const settleHiloGuess = async ({
     }
   }
 
-  const payout =
-    applied.kind === 'DECK_EMPTY_CASHOUT' ? applied.payout : applied.payout
+  const payout = applied.payout
   const settleMultiplier =
     applied.kind === 'DECK_EMPTY_CASHOUT' ? applied.currentMultiplier : 0
 
@@ -503,9 +502,7 @@ export const settleHiloGuess = async ({
       stake,
       multiplier: settleMultiplier,
       payout,
-      middle: [
-        `**${firstCard}** → **${secondCard}** (${guess}, deck cleared)`
-      ]
+      middle: [`**${firstCard}** → **${secondCard}** (${guess}, deck cleared)`]
     })
   }
 

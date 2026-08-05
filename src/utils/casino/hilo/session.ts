@@ -57,12 +57,7 @@ export const startHiloRound = async ({
   const deck = createShuffledHiloDeck()
   const first = drawHiloCard(deck)
   const firstCard = formatHiloCard(first)
-  const higherMult = getHiloWinMultiplier(
-    first.rank,
-    'higher',
-    houseEdge,
-    deck
-  )
+  const higherMult = getHiloWinMultiplier(first.rank, 'higher', houseEdge, deck)
   const lowerMult = getHiloWinMultiplier(first.rank, 'lower', houseEdge, deck)
   const sameMult = getHiloWinMultiplier(first.rank, 'same', houseEdge, deck)
 
