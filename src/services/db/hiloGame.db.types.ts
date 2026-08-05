@@ -19,8 +19,11 @@ export type TUpsertHiloGame = {
   betAmount: number | null
   firstCard?: HiloStoredCard | null
   remainingDeck?: HiloStoredCard[]
+  currentMultiplier?: number
+  streak?: number
   houseEdgeSnapshot: number
   showBalance: boolean
+  skipAnimations?: boolean
   status?: THiloGame['status']
   sessionStats?: CasinoSessionStats
 }
@@ -34,8 +37,11 @@ export type TUpdateHiloGame = {
   betAmount?: number | null
   firstCard?: HiloStoredCard | null
   remainingDeck?: HiloStoredCard[]
+  currentMultiplier?: number
+  streak?: number
   houseEdgeSnapshot?: number
   showBalance?: boolean
+  skipAnimations?: boolean
   status?: THiloGame['status']
   sessionStats?: CasinoSessionStats
 }
