@@ -4,6 +4,7 @@ import { handleBaccaratInteraction } from '@/utils/casino/interactions/handleBac
 import { handleBlackjackInteraction } from '@/utils/casino/interactions/handleBlackjack'
 import { handleHiloInteraction } from '@/utils/casino/interactions/handleHilo'
 import { handleMinesInteraction } from '@/utils/casino/interactions/handleMines'
+import { handlePlinkoInteraction } from '@/utils/casino/interactions/handlePlinko'
 import { handleRouletteInteraction } from '@/utils/casino/interactions/handleRoulette'
 import { handleSlotsInteraction } from '@/utils/casino/interactions/handleSlots'
 
@@ -24,6 +25,9 @@ export default async (interaction: Interaction) => {
 
   const customId = interaction.customId
 
+  if (customId.startsWith('pk:') || customId.startsWith('pkm:')) {
+    return handlePlinkoInteraction(interaction)
+  }
   if (customId.startsWith('sl:') || customId.startsWith('slm:')) {
     return handleSlotsInteraction(interaction)
   }
