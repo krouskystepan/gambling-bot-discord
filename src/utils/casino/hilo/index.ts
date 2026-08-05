@@ -13,7 +13,8 @@ export {
   renderHiloGuessComponents,
   renderHiloRevealEmbed,
   renderHiloResultEmbed,
+  renderHiloCashOutEmbed,
   renderHiloResultComponents
 } from './render'
-export { settleHiloGuess, settleHiloTimeout } from './finish'
+export { settleHiloGuess, settleHiloTimeout, cashOutHilo } from './finish'
 export { startHiloRound } from './session'
