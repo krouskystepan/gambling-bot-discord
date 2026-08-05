@@ -12,6 +12,7 @@ import {
   checkUserRegistration,
   getHiloGameByUserAndGuild,
   showBalanceOption,
+  skipAnimationsOption,
   upsertHiloGame
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
@@ -24,7 +25,7 @@ import { createErrorEmbed } from '@/utils/discord/createEmbed'
 export const command: CommandData = {
   name: 'hilo',
   description: 'Open a Hi-Lo table - set your bet, then deal!',
-  options: [showBalanceOption],
+  options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }
 
@@ -60,6 +61,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       const showBalance =
         interaction.options.getBoolean('show-balance') || false
+      const skipAnimations =
+        interaction.options.getBoolean('skip-animations') || false
 
       await interaction.deferReply()
 
@@ -92,6 +95,7 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         remainingDeck: [],
         houseEdgeSnapshot: hiloSettings.houseEdge,
         showBalance,
+        skipAnimations,
         status: 'BETTING',
         sessionStats: emptySessionStats()
       })
