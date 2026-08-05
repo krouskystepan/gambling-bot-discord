@@ -31,8 +31,8 @@ export const casinoGameGuides = {
     title: '🃏 Hi-Lo',
     command: 'hilo',
     usage: '',
-    how: 'Open a table, set your bet, then Deal. Guess Higher, Draw, or Lower than the shown card. After a round: Rebet, Change bet, or Close.',
-    idle: 'Waiting for a guess: DM reminder at ~30 minutes, then the safest side is auto-played at 1 hour. Empty tables close after ~24 hours.'
+    how: 'Open a table, set your bet, then Deal. Guess Higher, Draw, or Lower to build a streak and compound the multiplier. Cash Out after a correct guess, or bust on a miss. After a round: Rebet, Change bet, or Close.',
+    idle: 'Waiting round: DM reminder after ~30 minutes. After ~1 hour, an active streak is auto cashed out; otherwise the safest first guess is auto-played. Abandoned tables (no active round) close after ~24 hours.'
   },
   limbo: {
     title: '🚀 Limbo',
@@ -65,9 +65,9 @@ export const casinoGameGuides = {
   plinko: {
     title: '🎯 Plinko',
     command: 'plinko',
-    usage: 'bet:1000',
-    how: 'Drop one or more balls down the peg board. Where each ball lands pays that bin multiplier.',
-    idle: instantIdle
+    usage: '',
+    how: 'Open a board, set your bet, then Drop x1 / x5 / x10. Each ball pays the bin multiplier where it lands. Drop as many times as you want.',
+    idle: 'DM reminder after ~3 hours idle. Boards close after ~24 hours of no new drop.'
   },
   roulette: {
     title: '🌀 Roulette',

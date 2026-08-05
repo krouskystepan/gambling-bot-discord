@@ -18,6 +18,7 @@ import { upsertMinesGame } from '@/services/db/minesGame.db'
 import { createPrediction } from '@/services/db/prediction.db'
 import { upsertRouletteGame } from '@/services/db/rouletteGame.db'
 import { upsertSlotsGame } from '@/services/db/slotsGame.db'
+import { upsertPlinkoGame } from '@/services/db/plinkoGame.db'
 import { getUsersWithLockedBalance } from '@/services/db/user.db'
 import * as userDb from '@/services/db/user.db'
 import { placePredictionBet } from '@/services/predictions/placePredictionBet.service'
@@ -355,6 +356,70 @@ describe('lockedBalanceReconciliation.service', () => {
     })
 
     expect(refunds.some((r) => r.betId === 'sl-bet-orphan-check')).toBe(false)
+  })
+
+  it('justifies lock when plinko batch is reserved', async () => {
+    await createTestUser({ balance: 900, lockedBalance: 100 })
+    await upsertPlinkoGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'pk-bet-1',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      ballsCount: 2,
+      activeBetId: 'pk-active-1',
+      lockedAmount: 100
+    })
+
+    const { justified, breakdown } = await computeJustifiedLockedAmount({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+
+    expect(justified).toBe(100)
+    expect(breakdown.plinko).toBe(100)
+
+    const result = await reconcileUserLockedBalance({
+      userId: 'user-1',
+      guildId: 'guild-1'
+    })
+    expect(result).toBeNull()
+  })
+
+  it('excludes active plinko bet id from orphan refunds', async () => {
+    await createTestUser({ balance: 1000, lockedBalance: 0 })
+    await reserveCasinoBet({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      totalBet: 100,
+      betId: 'pk-bet-orphan-check',
+      game: 'plinko'
+    })
+    await upsertPlinkoGame({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      channelId: 'channel-1',
+      messageId: 'msg-1',
+      gameId: 'pk-game-orphan',
+      showBalance: false,
+      skipAnimations: false,
+      unitBet: 50,
+      ballsCount: 2,
+      activeBetId: 'pk-bet-orphan-check',
+      lockedAmount: 100
+    })
+    await backdateBetTx('pk-bet-orphan-check', RECONCILIATION_GRACE_MS + 60_000)
+
+    const refunds = await findOrphanBetRefunds({
+      userId: 'user-1',
+      guildId: 'guild-1',
+      maxExcess: 100
+    })
+
+    expect(refunds.some((r) => r.betId === 'pk-bet-orphan-check')).toBe(false)
   })
 
   it('justifies lock when hi-lo game is active', async () => {

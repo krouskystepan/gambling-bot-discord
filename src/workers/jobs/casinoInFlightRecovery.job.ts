@@ -9,11 +9,13 @@ import {
   getGuildConfigByGuildId,
   getStaleDealerBlackjackGames,
   getStaleDealingBaccaratGames,
+  getStaleDroppingPlinkoGames,
   getStaleSettlingMinesGames,
   getStaleSpinningRouletteGames,
   getStaleSpinningSlotsGames,
   refundLockedBet,
   updateBaccaratGame,
+  updatePlinkoGame,
   updateRouletteGame,
   updateSlotsGame
 } from '@/services'
@@ -29,6 +31,11 @@ import {
   finishBlackjackDealerAndSettle
 } from '@/utils/casino/blackjack'
 import { finishMinesAndSettle } from '@/utils/casino/mines'
+import {
+  recoverPlinkoBatch,
+  renderPlinkoBoardEmbed,
+  renderPlinkoComponents
+} from '@/utils/casino/plinko'
 import {
   renderRouletteComponents,
   renderRouletteTableEmbed,
@@ -64,14 +71,21 @@ const fetchGameMessage = async (
 }
 
 export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
-  const [rouletteGames, blackjackGames, baccaratGames, slotsGames, minesGames] =
-    await Promise.all([
-      getStaleSpinningRouletteGames(CASINO_IN_FLIGHT_GRACE_MS),
-      getStaleDealerBlackjackGames(CASINO_IN_FLIGHT_GRACE_MS),
-      getStaleDealingBaccaratGames(CASINO_IN_FLIGHT_GRACE_MS),
-      getStaleSpinningSlotsGames(CASINO_IN_FLIGHT_GRACE_MS),
-      getStaleSettlingMinesGames(CASINO_IN_FLIGHT_GRACE_MS)
-    ])
+  const [
+    rouletteGames,
+    blackjackGames,
+    baccaratGames,
+    slotsGames,
+    plinkoGames,
+    minesGames
+  ] = await Promise.all([
+    getStaleSpinningRouletteGames(CASINO_IN_FLIGHT_GRACE_MS),
+    getStaleDealerBlackjackGames(CASINO_IN_FLIGHT_GRACE_MS),
+    getStaleDealingBaccaratGames(CASINO_IN_FLIGHT_GRACE_MS),
+    getStaleSpinningSlotsGames(CASINO_IN_FLIGHT_GRACE_MS),
+    getStaleDroppingPlinkoGames(CASINO_IN_FLIGHT_GRACE_MS),
+    getStaleSettlingMinesGames(CASINO_IN_FLIGHT_GRACE_MS)
+  ])
 
   const guildProcessed = new Map<string, number>()
   let processed = 0
@@ -377,6 +391,93 @@ export const casinoInFlightRecoveryJob = async (client: Client<true>) => {
       )
     } catch (error) {
       logger.error(`Slots in-flight recovery failed for ${game.gameId}`, error)
+    }
+  }
+
+  for (const game of plinkoGames) {
+    try {
+      const { guild, message } = await fetchGameMessage(client, game)
+      const guildConfig = await getGuildConfigByGuildId({
+        guildId: game.guildId
+      })
+      if (!guildConfig) continue
+
+      if (
+        game.pendingBatchResults &&
+        game.pendingBatchResults.length > 0 &&
+        game.activeBetId &&
+        game.unitBet != null
+      ) {
+        await recoverPlinkoBatch({
+          message,
+          userId: game.userId,
+          guildId: game.guildId,
+          gameId: game.gameId,
+          unitBet: game.unitBet,
+          ballsCount: game.pendingBatchResults.length,
+          paths: game.pendingBatchResults,
+          showBalance: game.showBalance,
+          guild,
+          guildConfig,
+          sourceChannelId: game.channelId,
+          betId: game.activeBetId
+        })
+      } else if (
+        game.activeBetId &&
+        game.lockedAmount &&
+        game.lockedAmount > 0
+      ) {
+        await refundLockedBet({
+          userId: game.userId,
+          guildId: game.guildId,
+          amount: game.lockedAmount,
+          betId: game.activeBetId,
+          game: 'plinko'
+        })
+
+        const resumePhase =
+          game.lastNetResult != null ? ('result' as const) : ('ready' as const)
+
+        await updatePlinkoGame({
+          userId: game.userId,
+          guildId: game.guildId,
+          phase: resumePhase,
+          pendingBatchResults: null,
+          activeBetId: null,
+          lockedAmount: null
+        })
+
+        if (message) {
+          await message.edit({
+            embeds: [
+              renderPlinkoBoardEmbed({
+                gameId: game.gameId,
+                phase: resumePhase,
+                unitBet: game.unitBet,
+                lastNetResult: game.lastNetResult,
+                lastTotalBet: game.lastTotalBet,
+                lastBallsCount: game.lastBallsCount,
+                showBalance: game.showBalance,
+                globalSettings: guildConfig.globalSettings,
+                binMultipliers: guildConfig.casinoSettings.plinko.binMultipliers
+              })
+            ],
+            components: renderPlinkoComponents({
+              gameId: game.gameId,
+              phase: resumePhase,
+              hasUnitBet: game.unitBet != null
+            })
+          })
+        }
+      }
+
+      processed++
+      guildProcessed.set(
+        game.guildId,
+        (guildProcessed.get(game.guildId) ?? 0) + 1
+      )
+    } catch (error) {
+      logger.error(`Plinko in-flight recovery failed for ${game.gameId}`, error)
     }
   }
 

@@ -48,6 +48,14 @@ describe('hilo customId', () => {
       gameId: 'hilo-ABC',
       action: 'close'
     })
+    expect(decodeHiloId('hl:hilo-ABC:a:cashout')).toEqual({
+      kind: 'action',
+      gameId: 'hilo-ABC',
+      action: 'cashout'
+    })
+    expect(encodeActionId({ gameId: 'hilo-ABC', action: 'cashout' })).toBe(
+      'hl:hilo-ABC:a:cashout'
+    )
   })
 
   it('encodes and decodes bet modals', () => {

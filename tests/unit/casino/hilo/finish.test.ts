@@ -3,20 +3,25 @@ import {
   defaultCasinoSettings,
   emptySessionStats
 } from 'gambling-bot-shared/casino'
+import * as casinoShared from 'gambling-bot-shared/casino'
 import type { TGuildConfiguration } from 'gambling-bot-shared/guild'
 import { defaultGlobalSettings } from 'gambling-bot-shared/guild'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as services from '@/services'
-import { settleHiloGuess, settleHiloTimeout } from '@/utils/casino/hilo/finish'
-import * as rng from '@/utils/casino/rng'
+import {
+  cashOutHilo,
+  settleHiloGuess,
+  settleHiloTimeout
+} from '@/utils/casino/hilo/finish'
 import * as bigWin from '@/utils/discord/tryAnnounceBigWin'
 
-vi.mock('@/utils/casino/rng', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/utils/casino/rng')>()
+vi.mock('gambling-bot-shared/casino', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('gambling-bot-shared/casino')>()
   return {
     ...actual,
-    drawHiloCard: vi.fn(() => ({ label: 'A', suite: '♠️', rank: 14 }))
+    applyHiloGuess: vi.fn(actual.applyHiloGuess),
+    cashOutHiloPayout: vi.fn(actual.cashOutHiloPayout)
   }
 })
 
@@ -41,8 +46,11 @@ const baseGame = (overrides?: Partial<THiloGame>): THiloGame => ({
   betAmount: 100,
   firstCard: { label: '7', suite: '♥️', rank: 7 },
   remainingDeck: [{ label: 'A', suite: '♠️', rank: 14 }],
+  currentMultiplier: 1,
+  streak: 0,
   houseEdgeSnapshot: 0.01,
   showBalance: false,
+  skipAnimations: false,
   status: 'WAITING',
   sessionStats: emptySessionStats(),
   createdAt: new Date(),
@@ -53,11 +61,6 @@ const baseGame = (overrides?: Partial<THiloGame>): THiloGame => ({
 describe('hilo finish', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(rng.drawHiloCard).mockReturnValue({
-      label: 'A',
-      suite: '♠️',
-      rank: 14
-    })
     vi.spyOn(services, 'claimHiloGameForSettle').mockImplementation(
       async ({ gameId }) =>
         gameId === 'hilo-1' ? (baseGame({ status: 'SETTLING' }) as never) : null
@@ -71,11 +74,19 @@ describe('hilo finish', () => {
     vi.spyOn(bigWin, 'tryAnnounceBigWin').mockImplementation(() => undefined)
   })
 
-  it('settles a winning guess and parks in RESULT', async () => {
+  it('settles a winning guess when the deck empties and parks in RESULT', async () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
+    // Low house edge so compounded step mult clears announce threshold.
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        houseEdgeSnapshot: 0
+      }) as never
+    )
+
     const result = await settleHiloGuess({
-      game: baseGame(),
+      game: baseGame({ houseEdgeSnapshot: 0 }),
       guess: 'higher',
       guildConfig,
       guild: { id: 'guild-1' } as never,
@@ -84,11 +95,14 @@ describe('hilo finish', () => {
     })
 
     expect(result?.outcome).toBe('win')
+    expect(result?.continued).toBe(false)
     expect(services.settleCasinoWinnings).toHaveBeenCalled()
     expect(services.updateHiloGame).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'RESULT',
-        activeBetId: null
+        activeBetId: null,
+        currentMultiplier: 1,
+        streak: 0
       })
     )
     expect(bigWin.tryAnnounceBigWin).toHaveBeenCalledWith(
@@ -100,19 +114,133 @@ describe('hilo finish', () => {
     expect(message.edit).toHaveBeenCalled()
   })
 
-  it('settles a losing guess without announcing', async () => {
-    vi.mocked(rng.drawHiloCard).mockReturnValueOnce({
-      label: '2',
-      suite: '♣️',
-      rank: 2
-    })
+  it('continues after a correct guess when cards remain', async () => {
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        remainingDeck: [
+          { label: '10', suite: '♣️', rank: 10 },
+          { label: 'A', suite: '♠️', rank: 14 }
+        ]
+      }) as never
+    )
+
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const result = await settleHiloGuess({
-      game: baseGame(),
+      game: baseGame({
+        remainingDeck: [
+          { label: '10', suite: '♣️', rank: 10 },
+          { label: 'A', suite: '♠️', rank: 14 }
+        ]
+      }),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      message: message as never
+    })
+
+    expect(result?.outcome).toBe('win')
+    expect(result?.continued).toBe(true)
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'WAITING',
+        streak: 1,
+        firstCard: expect.objectContaining({ rank: 14 })
+      })
+    )
+    expect(message.edit).toHaveBeenCalled()
+  })
+
+  it('continues without editing when message is missing', async () => {
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        remainingDeck: [
+          { label: '10', suite: '♣️', rank: 10 },
+          { label: 'A', suite: '♠️', rank: 14 }
+        ]
+      }) as never
+    )
+
+    const result = await settleHiloGuess({
+      game: baseGame({
+        remainingDeck: [
+          { label: '10', suite: '♣️', rank: 10 },
+          { label: 'A', suite: '♠️', rank: 14 }
+        ]
+      }),
       guess: 'higher',
       guildConfig,
       guild: null,
       sourceChannelId: 'channel-1'
+    })
+
+    expect(result?.continued).toBe(true)
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+  })
+
+  it('auto-cashes after a win without editing when message is missing', async () => {
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        houseEdgeSnapshot: 0,
+        remainingDeck: [
+          { label: '10', suite: '♣️', rank: 10 },
+          { label: 'A', suite: '♠️', rank: 14 }
+        ]
+      }) as never
+    )
+
+    const result = await settleHiloGuess({
+      game: baseGame({
+        houseEdgeSnapshot: 0,
+        remainingDeck: [
+          { label: '10', suite: '♣️', rank: 10 },
+          { label: 'A', suite: '♠️', rank: 14 }
+        ]
+      }),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      cashOutAfterWin: true
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        outcome: 'win',
+        continued: false
+      })
+    )
+    expect(services.settleCasinoWinnings).toHaveBeenCalled()
+  })
+
+  it('settles a losing guess without announcing', async () => {
+    // Trailing reveal is 2 (lose); Ace keeps "higher" possible.
+    const deck = [
+      { label: 'A', suite: '♠️' as const, rank: 14 },
+      { label: '2', suite: '♣️' as const, rank: 2 }
+    ]
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        remainingDeck: deck
+      }) as never
+    )
+
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
+    const result = await settleHiloGuess({
+      game: baseGame({
+        remainingDeck: deck
+      }),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      message: message as never
     })
 
     expect(result?.outcome).toBe('lose')
@@ -120,17 +248,26 @@ describe('hilo finish', () => {
       expect.objectContaining({ winnings: 0 })
     )
     expect(bigWin.tryAnnounceBigWin).not.toHaveBeenCalled()
+    expect(message.edit).toHaveBeenCalled()
   })
 
   it('loses higher/lower when ranks match', async () => {
-    vi.mocked(rng.drawHiloCard).mockReturnValueOnce({
-      label: '7',
-      suite: '♦️',
-      rank: 7
-    })
+    // Trailing reveal ties at 7; Ace keeps "higher" possible.
+    const deck = [
+      { label: 'A', suite: '♠️' as const, rank: 14 },
+      { label: '7', suite: '♦️' as const, rank: 7 }
+    ]
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        remainingDeck: deck
+      }) as never
+    )
 
     const result = await settleHiloGuess({
-      game: baseGame(),
+      game: baseGame({
+        remainingDeck: deck
+      }),
       guess: 'higher',
       guildConfig,
       guild: null,
@@ -165,6 +302,7 @@ describe('hilo finish', () => {
     vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
       baseGame({
         firstCard: { label: 'A', suite: '♠️', rank: 14 },
+        remainingDeck: [{ label: 'K', suite: '♥️', rank: 13 }],
         status: 'SETTLING'
       }) as never
     )
@@ -197,6 +335,7 @@ describe('hilo finish', () => {
     vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
       baseGame({
         firstCard: { label: 'A', suite: '♠️', rank: 14 },
+        remainingDeck: [{ label: 'K', suite: '♥️', rank: 13 }],
         status: 'SETTLING'
       }) as never
     )
@@ -292,11 +431,6 @@ describe('hilo finish', () => {
       rank: 13
     }) as THiloGame['firstCard']
 
-    vi.mocked(rng.drawHiloCard).mockImplementationOnce((deck) => {
-      const card = deck.pop()
-      if (!card) throw new Error('Hi-Lo deck is empty')
-      return card
-    })
     vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
       baseGame({
         status: 'SETTLING',
@@ -330,14 +464,19 @@ describe('hilo finish', () => {
   })
 
   it('settles a same-rank draw win', async () => {
-    vi.mocked(rng.drawHiloCard).mockReturnValueOnce({
-      label: '7',
-      suite: '♣️',
-      rank: 7
-    })
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        houseEdgeSnapshot: 0,
+        remainingDeck: [{ label: '7', suite: '♣️', rank: 7 }]
+      }) as never
+    )
 
     const result = await settleHiloGuess({
-      game: baseGame(),
+      game: baseGame({
+        houseEdgeSnapshot: 0,
+        remainingDeck: [{ label: '7', suite: '♣️', rank: 7 }]
+      }),
       guess: 'same',
       guildConfig,
       guild: null,
@@ -352,18 +491,25 @@ describe('hilo finish', () => {
     )
     const winnings = vi.mocked(services.settleCasinoWinnings).mock.calls[0]?.[0]
       .winnings as number
-    expect(winnings).toBeGreaterThan(100)
+    // Only one matching card left → fair odds are even money before house edge.
+    expect(winnings).toBe(100)
   })
 
   it('settles a same-rank draw loss', async () => {
-    vi.mocked(rng.drawHiloCard).mockReturnValueOnce({
-      label: 'A',
-      suite: '♠️',
-      rank: 14
-    })
+    // Trailing reveal is Ace (lose); matching 7 keeps "same" possible.
+    const deck = [
+      { label: '7', suite: '♣️' as const, rank: 7 },
+      { label: 'A', suite: '♠️' as const, rank: 14 }
+    ]
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        remainingDeck: deck
+      }) as never
+    )
 
     const result = await settleHiloGuess({
-      game: baseGame(),
+      game: baseGame({ remainingDeck: deck }),
       guess: 'same',
       guildConfig,
       guild: null,
@@ -376,7 +522,83 @@ describe('hilo finish', () => {
     )
   })
 
-  it('auto-plays the safest side on timeout', async () => {
+  it('cashes out a streak on cashOutHilo', async () => {
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        streak: 2,
+        currentMultiplier: 3.5,
+        remainingDeck: [
+          { label: '10', suite: '♣️', rank: 10 },
+          { label: '2', suite: '♦️', rank: 2 }
+        ]
+      }) as never
+    )
+
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
+
+    const result = await cashOutHilo({
+      game: baseGame({ streak: 2, currentMultiplier: 3.5 }),
+      guildConfig,
+      guild: { id: 'guild-1' } as never,
+      sourceChannelId: 'channel-1',
+      message: message as never
+    })
+
+    expect(result?.multiplier).toBe(3.5)
+    expect(services.settleCasinoWinnings).toHaveBeenCalledWith(
+      expect.objectContaining({ winnings: 350 })
+    )
+    expect(bigWin.tryAnnounceBigWin).toHaveBeenCalled()
+    expect(message.edit).toHaveBeenCalled()
+  })
+
+  it('ignores cash-out when streak is 0', async () => {
+    const result = await cashOutHilo({
+      game: baseGame({ streak: 0 }),
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result).toBeNull()
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'WAITING' })
+    )
+  })
+
+  it('auto-cashes out on timeout when streak >= 1', async () => {
+    const waiting = baseGame({
+      streak: 1,
+      currentMultiplier: 2,
+      remainingDeck: [
+        { label: '10', suite: '♣️', rank: 10 },
+        { label: '3', suite: '♦️', rank: 3 }
+      ]
+    })
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce({
+      ...waiting,
+      status: 'SETTLING'
+    } as never)
+
+    const result = await settleHiloTimeout({
+      game: waiting,
+      guildConfig
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        totalWinnings: 200,
+        multiplier: 2
+      })
+    )
+    expect(services.settleCasinoWinnings).toHaveBeenCalledWith(
+      expect.objectContaining({ winnings: 200 })
+    )
+  })
+
+  it('auto-plays the safest side on timeout when streak is 0', async () => {
     const message = { edit: vi.fn().mockResolvedValue(undefined) }
 
     const result = await settleHiloTimeout({
@@ -385,13 +607,167 @@ describe('hilo finish', () => {
       message: message as never
     })
 
-    // First card 7 → safest is higher (tied with lower); Ace second → win.
-    expect(result?.outcome).toBe('win')
+    // First card 7 → safest is higher; Ace second + empty deck → settle win.
+    expect(result).toEqual(
+      expect.objectContaining({
+        outcome: 'win',
+        continued: false
+      })
+    )
     expect(services.settleCasinoWinnings).toHaveBeenCalled()
     expect(services.updateHiloGame).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'RESULT' })
     )
     expect(message.edit).toHaveBeenCalled()
+  })
+
+  it('cashes out after a timeout auto-win when cards remain', async () => {
+    const deck = [
+      { label: '10', suite: '♣️' as const, rank: 10 },
+      { label: 'A', suite: '♠️' as const, rank: 14 }
+    ]
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        houseEdgeSnapshot: 0,
+        remainingDeck: deck
+      }) as never
+    )
+
+    const message = { edit: vi.fn().mockResolvedValue(undefined) }
+    const result = await settleHiloTimeout({
+      game: baseGame({
+        houseEdgeSnapshot: 0,
+        remainingDeck: deck
+      }),
+      guildConfig,
+      guild: { id: 'guild-1' } as never,
+      message: message as never
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        outcome: 'win',
+        continued: false
+      })
+    )
+    expect(services.settleCasinoWinnings).toHaveBeenCalled()
+    expect(bigWin.tryAnnounceBigWin).toHaveBeenCalled()
+    expect(message.edit).toHaveBeenCalled()
+  })
+
+  it('parks when applyHiloGuess is ignored after a valid multiplier', async () => {
+    vi.mocked(casinoShared.applyHiloGuess).mockReturnValueOnce({
+      kind: 'IGNORED',
+      reason: 'EMPTY_DECK'
+    })
+
+    const result = await settleHiloGuess({
+      game: baseGame(),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result).toBeNull()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'RESULT', activeBetId: null })
+    )
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+  })
+
+  it('parks when applyHiloGuess is impossible after a valid multiplier', async () => {
+    vi.mocked(casinoShared.applyHiloGuess).mockReturnValueOnce({
+      kind: 'IMPOSSIBLE',
+      reason: 'NO_FAVORABLE'
+    })
+
+    const result = await settleHiloGuess({
+      game: baseGame(),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result).toBeNull()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'RESULT', activeBetId: null })
+    )
+  })
+
+  it('parks when cash-out after a winning continue fails', async () => {
+    vi.mocked(casinoShared.applyHiloGuess).mockReturnValueOnce({
+      kind: 'CONTINUE',
+      guess: 'higher',
+      revealed: { label: 'A', suite: '♠️', rank: 14 },
+      stepMultiplier: 1.5,
+      currentMultiplier: 1.5,
+      streak: 1
+    })
+    vi.mocked(casinoShared.cashOutHiloPayout).mockReturnValueOnce({
+      kind: 'IGNORED',
+      reason: 'NO_STREAK'
+    })
+
+    const result = await settleHiloGuess({
+      game: baseGame({
+        remainingDeck: [
+          { label: '10', suite: '♣️', rank: 10 },
+          { label: 'A', suite: '♠️', rank: 14 }
+        ]
+      }),
+      guess: 'higher',
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1',
+      cashOutAfterWin: true
+    })
+
+    expect(result).toBeNull()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'RESULT', activeBetId: null })
+    )
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+  })
+
+  it('no-ops cash-out when claim loses the race', async () => {
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(null)
+
+    const result = await cashOutHilo({
+      game: baseGame({ streak: 2, currentMultiplier: 2 }),
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result).toBeNull()
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
+  })
+
+  it('parks incomplete cash-out claims into RESULT', async () => {
+    vi.mocked(services.claimHiloGameForSettle).mockResolvedValueOnce(
+      baseGame({
+        status: 'SETTLING',
+        betAmount: null,
+        firstCard: null,
+        activeBetId: null
+      }) as never
+    )
+
+    const result = await cashOutHilo({
+      game: baseGame({ streak: 2, currentMultiplier: 2 }),
+      guildConfig,
+      guild: null,
+      sourceChannelId: 'channel-1'
+    })
+
+    expect(result).toBeNull()
+    expect(services.updateHiloGame).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'RESULT', activeBetId: null })
+    )
+    expect(services.settleCasinoWinnings).not.toHaveBeenCalled()
   })
 
   it('settles timeout without editing when message is missing', async () => {
@@ -400,7 +776,12 @@ describe('hilo finish', () => {
       guildConfig
     })
 
-    expect(result?.outcome).toBe('win')
+    expect(result).toEqual(
+      expect.objectContaining({
+        outcome: 'win',
+        continued: false
+      })
+    )
     expect(services.updateHiloGame).toHaveBeenCalled()
   })
 

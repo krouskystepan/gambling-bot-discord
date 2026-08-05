@@ -1,4 +1,3 @@
-import { emptySessionStats } from 'gambling-bot-shared/casino'
 import { generateId } from 'gambling-bot-shared/common'
 
 import { MessageFlags } from 'discord.js'
@@ -10,21 +9,21 @@ import {
   assertCasinoGameEnabled,
   checkCasinoChannels,
   checkUserRegistration,
-  getHiloGameByUserAndGuild,
+  getPlinkoGameByUserAndGuild,
   showBalanceOption,
   skipAnimationsOption,
-  upsertHiloGame
+  upsertPlinkoGame
 } from '@/services'
 import { runWithQuestNotifyInteraction } from '@/services/quests'
 import {
-  renderHiloBettingComponents,
-  renderHiloBettingEmbed
-} from '@/utils/casino/hilo'
+  renderPlinkoBoardEmbed,
+  renderPlinkoComponents
+} from '@/utils/casino/plinko'
 import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
-  name: 'hilo',
-  description: 'Open a Hi-Lo table - set your bet, then deal!',
+  name: 'plinko',
+  description: 'Open a Plinko board - set your bet, then drop!',
   options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }
@@ -38,11 +37,13 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
       const guildConfig = await checkCasinoChannels(interaction)
       if (!guildConfig) return
 
-      if (!(await assertCasinoGameEnabled(interaction, guildConfig, 'hilo'))) {
+      if (
+        !(await assertCasinoGameEnabled(interaction, guildConfig, 'plinko'))
+      ) {
         return
       }
 
-      const existingGame = await getHiloGameByUserAndGuild({
+      const existingGame = await getPlinkoGameByUserAndGuild({
         userId: interaction.user.id,
         guildId: interaction.guildId!
       })
@@ -51,8 +52,8 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
         return interaction.reply({
           embeds: [
             createErrorEmbed(
-              'Error - Hi-Lo Already Active',
-              'You already have an active Hi-Lo table running! 🃏'
+              'Error - Plinko Already Active',
+              'You already have an open Plinko board! Close it or finish that game first. 🎯'
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -66,38 +67,34 @@ export const chatInput: ChatInputCommand = async ({ interaction }) => {
 
       await interaction.deferReply()
 
-      const gameId = generateId('hilo')
-      const hiloSettings = guildConfig.casinoSettings.hilo
+      const gameId = generateId('plinko')
 
       const message = await interaction.editReply({
         embeds: [
-          renderHiloBettingEmbed({
+          renderPlinkoBoardEmbed({
             gameId,
-            bet: null,
-            globalSettings: guildConfig.globalSettings
+            phase: 'ready',
+            unitBet: null,
+            showBalance,
+            globalSettings: guildConfig.globalSettings,
+            binMultipliers: guildConfig.casinoSettings.plinko.binMultipliers
           })
         ],
-        components: renderHiloBettingComponents({
+        components: renderPlinkoComponents({
           gameId,
-          hasBet: false
+          phase: 'ready',
+          hasUnitBet: false
         })
       })
 
-      await upsertHiloGame({
+      await upsertPlinkoGame({
         userId: user.userId,
         guildId: user.guildId,
         channelId: interaction.channelId,
         messageId: message.id,
         gameId,
-        activeBetId: null,
-        betAmount: null,
-        firstCard: null,
-        remainingDeck: [],
-        houseEdgeSnapshot: hiloSettings.houseEdge,
         showBalance,
-        skipAnimations,
-        status: 'BETTING',
-        sessionStats: emptySessionStats()
+        skipAnimations
       })
     } catch (error) {
       await handleUnexpectedInteractionError(interaction, error)

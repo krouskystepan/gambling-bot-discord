@@ -38,7 +38,7 @@ export const getHiloGamesByGuildId = async ({
   return HiloGame.find({ guildId })
 }
 
-/** Waiting rounds past the guess timeout - worker auto-plays safest side. */
+/** Waiting rounds past the guess timeout - cash out or safest auto-guess. */
 export const getTimedOutHiloGames = async () => {
   return HiloGame.find({
     status: 'WAITING',
@@ -100,8 +100,11 @@ export const upsertHiloGame = async ({
   betAmount,
   firstCard = null,
   remainingDeck = [],
+  currentMultiplier = 1,
+  streak = 0,
   houseEdgeSnapshot,
   showBalance,
+  skipAnimations = false,
   status = 'BETTING',
   sessionStats = emptySessionStats()
 }: TUpsertHiloGame) => {
@@ -116,8 +119,11 @@ export const upsertHiloGame = async ({
         betAmount,
         firstCard,
         remainingDeck,
+        currentMultiplier,
+        streak,
         houseEdgeSnapshot,
         showBalance,
+        skipAnimations,
         status,
         sessionStats,
         idleNudgeSentAt: null

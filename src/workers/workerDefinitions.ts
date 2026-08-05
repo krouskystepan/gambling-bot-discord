@@ -24,6 +24,8 @@ import {
   minesAutoResolveJob,
   minesIdleCloseJob,
   minesIdleNudgeJob,
+  plinkoIdleCloseJob,
+  plinkoIdleNudgeJob,
   predictionAutolockJob,
   raffleDrawJob,
   rouletteIdleCloseJob,
@@ -80,14 +82,6 @@ export const workerDefinitions: WorkerDefinition[] = [
       ['Casino in-flight recovery', casinoInFlightRecoveryJob]
     ])
   ),
-  ...withStartDelay(
-    THIRTY_SECONDS,
-    scheduleEvery(15 * MINUTE_MS, [
-      // Hi-Lo waiting round: DM at 30m idle, then auto-play safest side after 1h.
-      ['Hi-Lo idle nudge', hiloIdleNudgeJob],
-      ['Hi-Lo timeout', hiloTimeoutJob]
-    ])
-  ),
   ...scheduleEvery(SIX_HOURS, [
     // Backfill/normalize guild settings so older configs match current defaults.
     ['Guild settings sync', guildSettingsSyncJob],
@@ -111,7 +105,12 @@ export const workerDefinitions: WorkerDefinition[] = [
       ['Roulette idle close', rouletteIdleCloseJob],
       ['Slots idle nudge', slotsIdleNudgeJob],
       ['Slots idle close', slotsIdleCloseJob],
-      // Close abandoned Hi-Lo BETTING / RESULT tables after 24h.
+      ['Plinko idle nudge', plinkoIdleNudgeJob],
+      ['Plinko idle close', plinkoIdleCloseJob],
+      // Hi-Lo waiting round: DM after ~30m idle, then cash-out / safest guess after ~1h.
+      ['Hi-Lo idle nudge', hiloIdleNudgeJob],
+      ['Hi-Lo timeout', hiloTimeoutJob],
+      // Close abandoned Hi-Lo BETTING / RESULT tables after ~24h.
       ['Hi-Lo idle close', hiloIdleCloseJob]
     ])
   ),

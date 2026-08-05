@@ -20,6 +20,10 @@ import {
   deleteMinesGame,
   getMinesGamesByGuildId
 } from '@/services/db/minesGame.db'
+import {
+  deletePlinkoGame,
+  getPlinkoGamesByGuildId
+} from '@/services/db/plinkoGame.db'
 import { updatePredictionStatus } from '@/services/db/prediction.db'
 import {
   deleteRouletteGame,
@@ -44,6 +48,7 @@ export type GuildOrphanCleanupSummary = {
   mines: number
   roulette: number
   slots: number
+  plinko: number
   hilo: number
   vipRooms: number
   atmRejected: number
@@ -65,6 +70,7 @@ export const runGuildOrphanCleanup = async ({
     mines: 0,
     roulette: 0,
     slots: 0,
+    plinko: 0,
     hilo: 0,
     vipRooms: 0,
     atmRejected: 0,
@@ -292,6 +298,34 @@ export const runGuildOrphanCleanup = async ({
       await sleep(CLEANUP_ITEM_DELAY_MS)
     } catch (error) {
       const message = `slots ${game.gameId}: ${String(error)}`
+      summary.errors.push(message)
+      logger.error(`Guild orphan cleanup failed for ${message}`, error)
+    }
+  }
+
+  const plinkoGames = await getPlinkoGamesByGuildId({ guildId })
+
+  for (const game of plinkoGames) {
+    try {
+      if (game.activeBetId && game.lockedAmount && game.lockedAmount > 0) {
+        await refundLockedBet({
+          userId: game.userId,
+          guildId: game.guildId,
+          amount: game.lockedAmount,
+          betId: game.activeBetId,
+          game: 'plinko'
+        })
+      }
+
+      await deletePlinkoGame({
+        userId: game.userId,
+        guildId: game.guildId
+      })
+
+      summary.plinko++
+      await sleep(CLEANUP_ITEM_DELAY_MS)
+    } catch (error) {
+      const message = `plinko ${game.gameId}: ${String(error)}`
       summary.errors.push(message)
       logger.error(`Guild orphan cleanup failed for ${message}`, error)
     }

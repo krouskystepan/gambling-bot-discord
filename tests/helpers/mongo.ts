@@ -22,6 +22,8 @@ import '@/models/RouletteGame'
 import RouletteGame from '@/models/RouletteGame'
 import '@/models/SlotsGame'
 import SlotsGame from '@/models/SlotsGame'
+import '@/models/PlinkoGame'
+import PlinkoGame from '@/models/PlinkoGame'
 import '@/models/Transaction'
 import Transaction from '@/models/Transaction'
 import '@/models/User'
@@ -94,6 +96,7 @@ export {
   MinesGame,
   RouletteGame,
   SlotsGame,
+  PlinkoGame,
   Transaction,
   User,
   UserBan,

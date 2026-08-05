@@ -156,7 +156,7 @@ export const buildPlayerGameSettings = (
     }
     case 'hilo':
       return [
-        '- **Payout:** Scales with your guess (Higher / Draw / Lower).',
+        '- **Payout:** Compounds on each correct guess; Cash Out locks in the streak.',
         betLine('Min bet', settings.hilo.minBet, globalSettings),
         betLine('Max bet', settings.hilo.maxBet, globalSettings)
       ]
@@ -274,10 +274,10 @@ export const buildHelpCommands = (): {
     '`/bonus` · `/quests` · `/vip`',
     '',
     '**Instant games** (one reply)',
-    '`/coin-flip` · `/dice` · `/limbo` · `/lottery` · `/plinko` · `/goldenjackpot`',
+    '`/coin-flip` · `/dice` · `/limbo` · `/lottery` · `/goldenjackpot`',
     '',
     '**Live tables** (session stays open)',
-    '`/hilo` · `/roulette` · `/baccarat` · `/slots` · `/blackjack` · `/mines` · `/rps`',
+    '`/hilo` · `/roulette` · `/baccarat` · `/slots` · `/plinko` · `/blackjack` · `/mines` · `/rps`',
     '',
     '**Events** (staff posts a message)',
     'Predictions and raffles - use the buttons on those messages.',

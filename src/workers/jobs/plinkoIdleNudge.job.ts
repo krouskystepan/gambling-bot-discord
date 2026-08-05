@@ -1,11 +1,11 @@
-import { minutesUntilHiloTimeout } from 'gambling-bot-shared/casino'
+import { hoursUntilPlinkoIdleClose } from 'gambling-bot-shared/plinko'
 
 import { Client } from 'commandkit'
 
 import {
-  getHiloGamesNeedingIdleNudge,
-  markHiloIdleNudgeSent
-} from '@/services/db/hiloGame.db'
+  getPlinkoGamesNeedingIdleNudge,
+  markPlinkoIdleNudgeSent
+} from '@/services/db/plinkoGame.db'
 import { postWorkerLog } from '@/services/worker/workerDiscordLog.service'
 import {
   casinoGameMessageLink,
@@ -15,8 +15,8 @@ import { sleep } from '@/utils/common/utils'
 import { logger } from '@/utils/logger'
 import { logMultiGuildCountSummary } from '@/utils/worker/multiGuildWorkerLog'
 
-export const hiloIdleNudgeJob = async (client: Client<true>) => {
-  const games = await getHiloGamesNeedingIdleNudge()
+export const plinkoIdleNudgeJob = async (client: Client<true>) => {
+  const games = await getPlinkoGamesNeedingIdleNudge()
   if (!games.length) return
 
   let sent = 0
@@ -24,25 +24,22 @@ export const hiloIdleNudgeJob = async (client: Client<true>) => {
 
   for (const game of games) {
     try {
-      const minutesLeft = minutesUntilHiloTimeout(game.updatedAt)
+      const hoursLeft = hoursUntilPlinkoIdleClose(game.updatedAt)
       const jumpLink = casinoGameMessageLink(game)
 
       const delivered = await sendCasinoIdleNudgeDm({
         client,
         userId: game.userId,
-        title: 'Warning - Hi-Lo Round Idle',
+        title: 'Warning - Plinko Board Idle',
         body: [
-          `Still playing? You have about **${minutesLeft} minute(s)** left.`,
+          `Still dropping? If you stay inactive, this Plinko session will close in about **${hoursLeft} hour(s)**.`,
           '',
-          'If time runs out: an active streak is **cashed out** automatically; otherwise the **safest first guess** is auto-played.',
-          '',
-          `[Jump to your Hi-Lo message](${jumpLink})`
+          `[Jump to your board](${jumpLink})`
         ].join('\n'),
         gameId: game.gameId
       })
 
-      // Mark either way so we do not retry endlessly when DMs are closed.
-      await markHiloIdleNudgeSent({
+      await markPlinkoIdleNudgeSent({
         userId: game.userId,
         guildId: game.guildId
       })
@@ -56,14 +53,14 @@ export const hiloIdleNudgeJob = async (client: Client<true>) => {
       guildSent.set(game.guildId, (guildSent.get(game.guildId) ?? 0) + 1)
       await sleep(500)
     } catch (err) {
-      logger.error(`Hi-Lo idle nudge failed for game ${game.gameId}`, err)
+      logger.error(`Plinko idle nudge failed for game ${game.gameId}`, err)
     }
   }
 
   if (sent > 0) {
     logMultiGuildCountSummary({
       client,
-      job: 'Hi-Lo idle nudge',
+      job: 'Plinko idle nudge',
       verb: 'sent',
       total: sent,
       unit: 'nudge(s)',
@@ -73,10 +70,10 @@ export const hiloIdleNudgeJob = async (client: Client<true>) => {
     for (const [guildId, count] of guildSent) {
       await postWorkerLog(client, {
         guildId,
-        worker: 'Hi-Lo reminders',
+        worker: 'Plinko reminders',
         title: `Reminded ${count} idle player(s)`,
         description:
-          'Players with inactive Hi-Lo rounds were DMed before auto-play.',
+          'Players with inactive Plinko boards were DMed before auto-close.',
         level: 'info'
       })
     }

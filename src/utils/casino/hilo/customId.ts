@@ -6,7 +6,7 @@ export type HiloGuessButtonData = {
   guess: HiloGuess
 }
 
-export type HiloAction = 'deal' | 'rebet' | 'change' | 'close'
+export type HiloAction = 'deal' | 'rebet' | 'change' | 'close' | 'cashout'
 
 export type HiloActionButtonData = {
   kind: 'action'
@@ -20,7 +20,13 @@ export type HiloModalId = {
   gameId: string
 }
 
-const ACTIONS = new Set<HiloAction>(['deal', 'rebet', 'change', 'close'])
+const ACTIONS = new Set<HiloAction>([
+  'deal',
+  'rebet',
+  'change',
+  'close',
+  'cashout'
+])
 
 const isHiloGuess = (value: string): value is HiloGuess =>
   value === 'higher' || value === 'lower' || value === 'same'
