@@ -1,0 +1,61 @@
+src/workers
+Source: src/workers/workerDefinitions.ts | jobs: src/workers/jobs
+
+├── every 1m
+│   ├── vipExpiryWarning.job.ts
+│   │   └─ VIP expiry warning – Warn before VIP ends, then strip expired VIP so roles/perks stay accurate.
+│   ├── vipExpiration.job.ts
+│   │   └─ VIP expiration
+│   ├── predictionAutolock.job.ts
+│   │   └─ Prediction autolock – Lock prediction markets when their betting window ends.
+│   └── raffleDraw.job.ts
+│       └─ Raffle auto-draw – Draw due raffles and pay winners without waiting for a command.
+├── every 1m (startDelay 15s)
+│   └── casinoInFlightRecovery.job.ts
+│       └─ Casino in-flight recovery – Finish or refund games stuck mid-deal/spin after a crash or restart.
+├── every 6h
+│   ├── guildSettingsSync.job.ts
+│   │   └─ Guild settings sync – Backfill/normalize guild settings so older configs match current defaults.
+│   └── banRoleSync.job.ts
+│       └─ Ban role sync – Keep Discord banned roles aligned with DB ban state.
+├── every 1h (startDelay 30s)
+│   ├── blackjackIdleNudge.job.ts
+│   │   └─ Blackjack idle nudge – Interactive casino: DM idle players, auto-resolve when needed, then close abandoned sessions so locked bets are not stuck forever.
+│   ├── blackjackAutostand.job.ts
+│   │   └─ Blackjack auto-stand
+│   ├── blackjackIdleClose.job.ts
+│   │   └─ Blackjack idle close
+│   ├── baccaratIdleNudge.job.ts
+│   │   └─ Baccarat idle nudge
+│   ├── baccaratIdleClose.job.ts
+│   │   └─ Baccarat idle close
+│   ├── minesIdleNudge.job.ts
+│   │   └─ Mines idle nudge
+│   ├── minesAutoResolve.job.ts
+│   │   └─ Mines auto-resolve
+│   ├── minesIdleClose.job.ts
+│   │   └─ Mines idle close
+│   ├── rouletteIdleNudge.job.ts
+│   │   └─ Roulette idle nudge
+│   ├── rouletteIdleClose.job.ts
+│   │   └─ Roulette idle close
+│   ├── slotsIdleNudge.job.ts
+│   │   └─ Slots idle nudge
+│   ├── slotsIdleClose.job.ts
+│   │   └─ Slots idle close
+│   ├── plinkoIdleNudge.job.ts
+│   │   └─ Plinko idle nudge
+│   ├── plinkoIdleClose.job.ts
+│   │   └─ Plinko idle close
+│   ├── hiloIdleNudge.job.ts
+│   │   └─ Hi-Lo idle nudge – Hi-Lo waiting round: DM after ~30m idle, then cash-out / safest guess after ~1h.
+│   ├── hiloTimeout.job.ts
+│   │   └─ Hi-Lo timeout
+│   └── hiloIdleClose.job.ts
+│       └─ Hi-Lo idle close – Close abandoned Hi-Lo BETTING / RESULT tables after ~24h.
+├── every 1d (startDelay 1m)
+│   └── guildOrphanCleanup.job.ts
+│       └─ Guild orphan cleanup – Purge DB data for guilds the bot no longer belongs to.
+└── every 15m (startDelay 1m)
+    └── lockedBalanceReconciliation.job.ts
+        └─ Locked balance reconciliation – Safety net: unlock leftover balance that no longer matches an active bet.
