@@ -19,7 +19,7 @@ export type RouletteTableAction =
   | 'close'
   | 'change'
 
-export type RouletteSelectKind = 'group' | 'number'
+export type RouletteSelectKind = 'group' | 'number' | 'numberHigh'
 
 export type RoulettePlaceButtonId = {
   kind: 'place'
@@ -58,7 +58,7 @@ const ACTIONS = new Set<RouletteTableAction>([
   'change'
 ])
 
-const SELECTS = new Set<RouletteSelectKind>(['group', 'number'])
+const SELECTS = new Set<RouletteSelectKind>(['group', 'number', 'numberHigh'])
 const OUTSIDES = new Set<string>(ROULETTE_OUTSIDE_TARGETS)
 
 export const encodePlaceId = (d: RoulettePlaceButtonId): string =>

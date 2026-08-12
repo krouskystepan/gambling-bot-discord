@@ -236,6 +236,8 @@ export const handleRouletteInteraction = async (interaction: Interaction) => {
         if (!value) return
 
         const labels: Record<string, string> = {
+          low: 'Low (1-18)',
+          high: 'High (19-36)',
           d1: 'Dozen 1',
           d2: 'Dozen 2',
           d3: 'Dozen 3',

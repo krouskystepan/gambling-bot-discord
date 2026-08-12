@@ -143,7 +143,7 @@ function randomRouletteBet(betAmount: number): RouletteBet {
     return { type: 'range', value, amount: betAmount, displayValue: value }
   }
 
-  const value = String(randomInt(0, 18))
+  const value = String(randomInt(0, 37))
   return { type: 'number', value, amount: betAmount, displayValue: value }
 }
 

@@ -26,6 +26,9 @@ describe('inferTypeFromValue', () => {
 
   it('infers number bets', () => {
     expect(inferTypeFromValue('17')).toBe('number')
+    expect(inferTypeFromValue('19')).toBe('number')
+    expect(inferTypeFromValue('32')).toBe('number')
+    expect(inferTypeFromValue('36')).toBe('number')
   })
 
   it('throws on invalid values', () => {

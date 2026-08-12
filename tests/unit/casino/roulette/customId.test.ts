@@ -64,5 +64,11 @@ describe('roulette customId', () => {
         encodeSelectId({ kind: 'select', gameId: 'g1', select: 'number' })
       )
     ).toEqual({ kind: 'select', gameId: 'g1', select: 'number' })
+
+    expect(
+      decodeId(
+        encodeSelectId({ kind: 'select', gameId: 'g1', select: 'numberHigh' })
+      )
+    ).toEqual({ kind: 'select', gameId: 'g1', select: 'numberHigh' })
   })
 })

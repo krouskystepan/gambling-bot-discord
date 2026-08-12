@@ -53,7 +53,7 @@ Permission tiers: (misc) = players | (mod) = moderators/admins
 │   │       ├── plinko.ts
 │   │       │   └─ /plinko – Open a Plinko board - set your bet, then drop!
 │   │       ├── roulette.ts
-│   │       │   └─ /roulette – Open a Mini Roulette table - place bets, then spin!
+│   │       │   └─ /roulette – Open a roulette table - place bets, then spin!
 │   │       ├── rps.ts
 │   │       │   └─ /rps – Play rock, paper, scissors with another user.
 │   │       │      ├─ player – The user you want to play against.

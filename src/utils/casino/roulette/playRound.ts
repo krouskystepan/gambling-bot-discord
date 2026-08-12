@@ -1,6 +1,5 @@
 import crypto from 'crypto'
 import {
-  MINI_NUMBERS,
   bumpSessionStats,
   shouldAnnounceByMultiplier
 } from 'gambling-bot-shared/casino'
@@ -29,8 +28,8 @@ import {
 import { toRouletteBets } from './slip'
 
 /**
- * Single-zero wheel (IRL pocket order).
- * Spin animation scrolls this full strip; result lands on a mini (0–18) pocket only.
+ * European single-zero wheel (IRL pocket order).
+ * Spin animation scrolls this strip; any pocket can land.
  */
 const SINGLE_ZERO_WHEEL_ORDER = [
   '0',
@@ -72,11 +71,8 @@ const SINGLE_ZERO_WHEEL_ORDER = [
   '26'
 ] as const
 
-const WHEEL_ORDER: readonly string[] = SINGLE_ZERO_WHEEL_ORDER
+export const WHEEL_ORDER: readonly string[] = SINGLE_ZERO_WHEEL_ORDER
 
-const PLAYABLE_INDEXES = WHEEL_ORDER.map((n, i) =>
-  n in MINI_NUMBERS ? i : -1
-).filter((i) => i >= 0)
 const WINDOW_RADIUS = 1
 
 const randomInt = (minInclusive: number, maxExclusive: number) =>
@@ -127,10 +123,10 @@ export const formatSpinningWheelRow = (centerIndex: number) => {
 }
 
 /**
- * Random length path on the single-zero strip that lands on a playable mini pocket.
+ * Random length path on the single-zero strip that lands on any pocket.
  */
 export const planSpin = () => {
-  const endIndex = PLAYABLE_INDEXES[randomInt(0, PLAYABLE_INDEXES.length)]!
+  const endIndex = randomInt(0, WHEEL_ORDER.length)
   const spinPockets = randomSpinPockets()
   const startIndex = wrapIndex(endIndex - (spinPockets - 1))
   const centers = Array.from({ length: spinPockets }, (_, step) =>
