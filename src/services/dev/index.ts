@@ -115,6 +115,11 @@ export async function runMockDb(
     lines.push(
       `👥 **Users**: ${formatNumberToReadableString(users.created)} created, ${formatNumberToReadableString(users.skipped)} already existed`
     )
+    if (users.profilesAssigned > 0) {
+      lines.push(
+        `🖼️ **Profiles**: ${formatNumberToReadableString(users.profilesAssigned)} synthetic avatars from randomuser.me`
+      )
+    }
   }
 
   if (seedsTransactions) {
