@@ -1,3 +1,4 @@
+import MockUserProfile from '@/models/MockUserProfile'
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
 
@@ -90,31 +91,31 @@ export async function mockUsers({
       : undefined
 
     try {
-      const update: {
-        $setOnInsert: Record<string, unknown>
-        $set?: Record<string, unknown>
-      } = {
-        $setOnInsert: {
-          userId,
-          guildId,
-          ...profile
-        }
-      }
+      const result = await User.updateOne(
+        { userId, guildId },
+        {
+          $setOnInsert: {
+            userId,
+            guildId,
+            ...profile
+          }
+        },
+        { upsert: true, timestamps: false }
+      )
 
       if (identity) {
-        update.$set = {
-          mockUsername: identity.username,
-          mockNickname: identity.nickname,
-          mockAvatarUrl: identity.avatarUrl
-        }
-      }
-
-      const result = await User.updateOne({ userId, guildId }, update, {
-        upsert: true,
-        timestamps: false
-      })
-
-      if (identity) {
+        await MockUserProfile.updateOne(
+          { userId, guildId },
+          {
+            $set: {
+              username: identity.username,
+              nickname: identity.nickname,
+              avatarUrl: identity.avatarUrl
+            },
+            $setOnInsert: { userId, guildId }
+          },
+          { upsert: true }
+        )
         profilesAssigned++
       }
 

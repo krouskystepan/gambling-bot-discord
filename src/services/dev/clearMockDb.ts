@@ -9,6 +9,7 @@ import AtmRequest from '@/models/AtmRequest'
 import BaccaratGame from '@/models/BaccaratGame'
 import BlackjackGame from '@/models/BlackjackGame'
 import MinesGame from '@/models/MinesGame'
+import MockUserProfile from '@/models/MockUserProfile'
 import PlinkoGame from '@/models/PlinkoGame'
 import Prediction from '@/models/Prediction'
 import Raffle from '@/models/Raffle'
@@ -71,6 +72,14 @@ export async function runClearMockDb({
     entities: [entity as GuildWipeEntity],
     models: WIPE_MODELS
   })
+
+  const wipeUsers = entity === 'all' || entity === 'users'
+  if (wipeUsers) {
+    const profiles = await MockUserProfile.deleteMany({ guildId })
+    if ((profiles.deletedCount ?? 0) > 0) {
+      summary.deleted.mockUserProfiles = profiles.deletedCount ?? 0
+    }
+  }
 
   return {
     entity,

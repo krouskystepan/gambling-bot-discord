@@ -117,7 +117,7 @@ export async function runMockDb(
     )
     if (users.profilesAssigned > 0) {
       lines.push(
-        `🖼️ **Profiles**: ${formatNumberToReadableString(users.profilesAssigned)} synthetic avatars from randomuser.me`
+        `🖼️ **Profiles**: ${formatNumberToReadableString(users.profilesAssigned)} synthetic avatars from pravatar.cc`
       )
     }
   }

@@ -9,8 +9,6 @@ export type MockProfileIdentity = {
 type RandomUserApiPerson = {
   login?: { username?: string }
   name?: { first?: string }
-  gender?: string
-  picture?: { medium?: string; large?: string }
 }
 
 type RandomUserApiResponse = {
@@ -29,9 +27,9 @@ function sanitizeUsername(raw: string, fallbackIndex: number): string {
   return cleaned.length >= 2 ? cleaned : `player${fallbackIndex}`
 }
 
-function portraitUrl(gender: string | undefined, index: number): string {
-  const folder = gender === 'female' ? 'women' : 'men'
-  return `https://randomuser.me/api/portraits/${folder}/${index % 100}.jpg`
+/** Single avatar host - unique image per seed. */
+export function pravatarUrl(seed: string): string {
+  return `https://i.pravatar.cc/150?u=${encodeURIComponent(seed)}`
 }
 
 function identityFromApiPerson(
@@ -45,26 +43,23 @@ function identityFromApiPerson(
   const nickname =
     person.name?.first?.trim() ||
     username.charAt(0).toUpperCase() + username.slice(1)
-  const avatarUrl =
-    person.picture?.medium ||
-    person.picture?.large ||
-    portraitUrl(person.gender, index)
 
-  return { username, nickname, avatarUrl }
+  return {
+    username,
+    nickname,
+    avatarUrl: pravatarUrl(`${username}-${index}`)
+  }
 }
 
 function fallbackIdentities(count: number): MockProfileIdentity[] {
   const identities: MockProfileIdentity[] = []
 
   for (let i = 0; i < count; i++) {
-    const gender = Math.random() < 0.5 ? 'female' : 'male'
-    const portraitIndex = randomInt(0, 99)
     const username = `player${randomInt(1000, 999_999)}`
-
     identities.push({
       username,
       nickname: username.charAt(0).toUpperCase() + username.slice(1),
-      avatarUrl: portraitUrl(gender, portraitIndex)
+      avatarUrl: pravatarUrl(`${username}-${i}`)
     })
   }
 
@@ -72,8 +67,7 @@ function fallbackIdentities(count: number): MockProfileIdentity[] {
 }
 
 /**
- * Pulls realistic usernames + portrait URLs from the free randomuser.me API.
- * Falls back to deterministic portrait CDN URLs if the API is unreachable.
+ * Fetches usernames from randomuser.me, avatars from pravatar.cc (one image host).
  */
 export async function fetchMockProfileIdentities(
   count: number
@@ -90,7 +84,7 @@ export async function fetchMockProfileIdentities(
       )
       const url = new URL(RANDOM_USER_API)
       url.searchParams.set('results', String(batchSize))
-      url.searchParams.set('inc', 'login,name,picture,gender')
+      url.searchParams.set('inc', 'login,name')
       url.searchParams.set('noinfo', 'true')
 
       const response = await fetch(url)
