@@ -262,6 +262,8 @@ export function randomCasinoGame(): MockCasinoGameId {
 
 export type MockUserPools = {
   userIds: string[]
+  /** Fabricated snowflakes (not real Discord / DB members) that need mock profiles. */
+  syntheticUserIds: string[]
   adminIds: string[]
   pickUser: () => string
   pickAdmin: () => string
@@ -283,6 +285,7 @@ export async function resolveMockUserPools({
   getAdminIds: () => string[]
 }): Promise<MockUserPools> {
   let userIds: string[] = [invokingUserId]
+  const syntheticIds = new Set<string>()
 
   if (useGuildUsers) {
     const { getGuildUserIds } = await import('@/services/db/user.db')
@@ -300,7 +303,9 @@ export async function resolveMockUserPools({
   }
 
   while (userIds.length < userCount) {
-    userIds.push(fakeDiscordSnowflake())
+    const id = fakeDiscordSnowflake()
+    userIds.push(id)
+    syntheticIds.add(id)
   }
 
   if (userIds.length > userCount) {
@@ -323,6 +328,7 @@ export async function resolveMockUserPools({
 
   return {
     userIds,
+    syntheticUserIds: userIds.filter((id) => syntheticIds.has(id)),
     adminIds,
     pickUser: buildUserPicker(userIds),
     pickAdmin: () => randomChoice(adminIds)

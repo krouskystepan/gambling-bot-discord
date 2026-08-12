@@ -1,11 +1,14 @@
+import MockUserProfile from '@/models/MockUserProfile'
 import Transaction from '@/models/Transaction'
 import User from '@/models/User'
 
 import { type MockUserPools, randomCreatedAt, randomInt } from './constants'
+import { fetchMockProfileIdentities } from './mockProfiles'
 
 export type MockUsersResult = {
   created: number
   skipped: number
+  profilesAssigned: number
 }
 
 function randomUserBalance(maxBalance: number): {
@@ -66,6 +69,11 @@ export async function mockUsers({
 }): Promise<MockUsersResult> {
   let created = 0
   let skipped = 0
+  let profilesAssigned = 0
+
+  const syntheticSet = new Set(pools.syntheticUserIds)
+  const identities = await fetchMockProfileIdentities(syntheticSet.size)
+  let identityIndex = 0
 
   for (const userId of pools.userIds) {
     const profile = zeroBalance
@@ -78,6 +86,9 @@ export async function mockUsers({
         }
       : randomUserBalance(maxBalance)
     const createdAt = randomCreatedAt(days)
+    const identity = syntheticSet.has(userId)
+      ? identities[identityIndex++]
+      : undefined
 
     try {
       const result = await User.updateOne(
@@ -91,6 +102,22 @@ export async function mockUsers({
         },
         { upsert: true, timestamps: false }
       )
+
+      if (identity) {
+        await MockUserProfile.updateOne(
+          { userId, guildId },
+          {
+            $set: {
+              username: identity.username,
+              nickname: identity.nickname,
+              avatarUrl: identity.avatarUrl
+            },
+            $setOnInsert: { userId, guildId }
+          },
+          { upsert: true }
+        )
+        profilesAssigned++
+      }
 
       if (result.upsertedCount > 0) {
         await User.updateOne(
@@ -106,7 +133,7 @@ export async function mockUsers({
     }
   }
 
-  return { created, skipped }
+  return { created, skipped, profilesAssigned }
 }
 
 /** Align user balances with mock transaction history (player net cash position). */
