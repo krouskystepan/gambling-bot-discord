@@ -23,7 +23,7 @@ import { createErrorEmbed } from '@/utils/discord/createEmbed'
 
 export const command: CommandData = {
   name: 'roulette',
-  description: 'Open a Mini Roulette table - place bets, then spin!',
+  description: 'Open a roulette table - place bets, then spin!',
   options: [showBalanceOption, skipAnimationsOption],
   dm_permission: false
 }

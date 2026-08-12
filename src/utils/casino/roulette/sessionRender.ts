@@ -1,6 +1,6 @@
 import {
   type CasinoSessionStats,
-  MINI_NUMBERS
+  EUROPEAN_NUMBERS
 } from 'gambling-bot-shared/casino'
 import { formatMoney } from 'gambling-bot-shared/common'
 import type { GlobalSettings } from 'gambling-bot-shared/guild'
@@ -38,23 +38,39 @@ const OUTSIDE_LABELS: Record<
   black: 'Black',
   odd: 'Odd',
   even: 'Even',
-  low: 'Low (1-9)',
-  high: 'High (10-18)'
+  low: 'Low (1-18)',
+  high: 'High (19-36)'
 }
 
-const miniWheelNumbers = Object.keys(MINI_NUMBERS)
+const wheelNumbers = Object.keys(EUROPEAN_NUMBERS)
   .map(Number)
   .filter((n) => n !== 0)
   .sort((a, b) => a - b)
 
 const columnNumbers = (col: 1 | 2 | 3) =>
-  miniWheelNumbers.filter((n) => ((n - 1) % 3) + 1 === col)
+  wheelNumbers.filter((n) => ((n - 1) % 3) + 1 === col)
 
 const dozenNumbers = (dozen: 1 | 2 | 3) =>
-  miniWheelNumbers.filter((n) => Math.ceil(n / 6) === dozen)
+  wheelNumbers.filter((n) => Math.ceil(n / 12) === dozen)
 
 const formatGroupLabel = (title: string, nums: number[]) =>
   `${title} (${nums.join(', ')})`.slice(0, 100)
+
+const straightNumberOptions = (from: number, to: number) =>
+  Object.keys(EUROPEAN_NUMBERS)
+    .filter((n) => {
+      const value = Number(n)
+      return value >= from && value <= to
+    })
+    .sort((a, b) => Number(a) - Number(b))
+    .map((n) => {
+      const color = EUROPEAN_NUMBERS[n]!
+      const colorLabel =
+        color === 'red' ? 'Red' : color === 'black' ? 'Black' : 'Green'
+      return new StringSelectMenuOptionBuilder()
+        .setLabel(`${n} - ${colorLabel}`)
+        .setValue(n)
+    })
 
 export const slipTotal = (bets: TRouletteSlipBet[]) =>
   bets.reduce((sum, bet) => sum + bet.amount, 0)
@@ -223,19 +239,15 @@ export const renderRouletteComponents = ({
       .setLabel(OUTSIDE_LABELS[target])
       .setStyle(style)
 
-  const colorsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+  // Discord max 5 rows / 5 buttons per row.
+  // Low/High live in the group select so we can fit two straight-number menus.
+  const colorsParityRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     placeButton('red', ButtonStyle.Danger),
-    placeButton('black', ButtonStyle.Secondary)
-  )
-
-  const outsidesRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    placeButton('black', ButtonStyle.Secondary),
     placeButton('odd', ButtonStyle.Primary),
-    placeButton('even', ButtonStyle.Primary),
-    placeButton('low', ButtonStyle.Primary),
-    placeButton('high', ButtonStyle.Primary)
+    placeButton('even', ButtonStyle.Primary)
   )
 
-  // Discord max 5 rows - keep Undo/Clear/Spin/Close on one controls row.
   const controlsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(encodeActionId({ kind: 'action', gameId, action: 'undo' }))
@@ -264,8 +276,14 @@ export const renderRouletteComponents = ({
         .setCustomId(
           encodeSelectId({ kind: 'select', gameId, select: 'group' })
         )
-        .setPlaceholder('Dozen / Column')
+        .setPlaceholder('Low / High / Dozen / Column')
         .addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel(OUTSIDE_LABELS.low)
+            .setValue('low'),
+          new StringSelectMenuOptionBuilder()
+            .setLabel(OUTSIDE_LABELS.high)
+            .setValue('high'),
           new StringSelectMenuOptionBuilder()
             .setLabel(formatGroupLabel('Dozen 1', dozenNumbers(1)))
             .setValue('d1'),
@@ -287,26 +305,31 @@ export const renderRouletteComponents = ({
         )
     )
 
-  const numberSelect =
+  const numberLowSelect =
     new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId(
           encodeSelectId({ kind: 'select', gameId, select: 'number' })
         )
-        .setPlaceholder('Straight number')
-        .addOptions(
-          ...Object.keys(MINI_NUMBERS)
-            .sort((a, b) => Number(a) - Number(b))
-            .map((n) => {
-              const color = MINI_NUMBERS[n]!
-              const colorLabel =
-                color === 'red' ? 'Red' : color === 'black' ? 'Black' : 'Green'
-              return new StringSelectMenuOptionBuilder()
-                .setLabel(`${n} - ${colorLabel}`)
-                .setValue(n)
-            })
-        )
+        .setPlaceholder('Straight 0-18')
+        .addOptions(...straightNumberOptions(0, 18))
     )
 
-  return [colorsRow, outsidesRow, controlsRow, groupSelect, numberSelect]
+  const numberHighSelect =
+    new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(
+          encodeSelectId({ kind: 'select', gameId, select: 'numberHigh' })
+        )
+        .setPlaceholder('Straight 19-36')
+        .addOptions(...straightNumberOptions(19, 36))
+    )
+
+  return [
+    colorsParityRow,
+    controlsRow,
+    groupSelect,
+    numberLowSelect,
+    numberHighSelect
+  ]
 }

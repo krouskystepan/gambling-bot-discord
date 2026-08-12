@@ -3,9 +3,9 @@ import {
   BACCARAT_DECK_COUNT,
   type BaccaratCard,
   type BaccaratRoundResult,
+  EUROPEAN_NUMBERS,
   LOTTERY_NUM_TO_DRAW,
   LOTTERY_TOTAL_NUMBERS,
-  MINI_NUMBERS,
   SUITES,
   TCasinoSettings,
   VALUES,
@@ -159,7 +159,7 @@ export const drawGoldenJackpot = (goldenJackpotConfig: {
 }
 
 export const spinRouletteWheel = (): string => {
-  const keys = Object.keys(MINI_NUMBERS)
+  const keys = Object.keys(EUROPEAN_NUMBERS)
   const index = Math.floor(random() * keys.length)
   return keys[index]
 }

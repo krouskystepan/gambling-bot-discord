@@ -158,7 +158,7 @@ describe('rng', () => {
     expect(drawGoldenJackpot({ oneInChance: 100 })).toBe(100)
   })
 
-  it('spinRouletteWheel returns a mini roulette key', () => {
+  it('spinRouletteWheel returns a European roulette key', () => {
     mockRandomInt(0)
     const key = spinRouletteWheel()
     expect(typeof key).toBe('string')
